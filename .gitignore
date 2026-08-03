@@ -1,0 +1,7 @@
+dist/
+.work/
+bindings/*/build/
+bindings/*/manifest.toml
+plugins/*/build/
+plugins/*/manifest.toml
+
