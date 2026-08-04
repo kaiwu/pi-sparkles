@@ -1,8 +1,10 @@
-import { bindings, requirePlugins } from "./modules.js";
+import { binding, requirePlugins } from "./modules.js";
 import { run } from "./process.js";
 
 const filter = process.argv[2];
-const packages = filter ? requirePlugins(filter) : [...bindings(), ...requirePlugins()];
+const packages = filter
+  ? requirePlugins(filter)
+  : [binding(), ...requirePlugins()];
 
 for (const pkg of packages) {
   console.log(`testing ${pkg.shortName}`);
@@ -10,4 +12,3 @@ for (const pkg of packages) {
     cwd: pkg.directory,
   });
 }
-

@@ -1,7 +1,6 @@
 dist/
 .work/
-bindings/*/build/
-bindings/*/manifest.toml
+pi_gleam/build/
+pi_gleam/manifest.toml
 plugins/*/build/
 plugins/*/manifest.toml
-

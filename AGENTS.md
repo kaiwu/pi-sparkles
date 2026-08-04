@@ -2,8 +2,8 @@
 
 ## Project Structure & Module Organization
 
-The root is a private Bun task runner, not a Gleam package. Shared Pi bindings
-live in `bindings/pi_gleam/`. Each `plugins/<name>/` directory is an independent
+The root is a private Bun task runner, not a Gleam package. The shared Pi binding
+lives in `pi_gleam/`. Each `plugins/<name>/` directory is an independent
 Gleam project with its own `gleam.toml`, `src/`, `test/`, and `README.md`.
 Orchestration lives in `scripts/`; FFI and bundle tests live in `test/binding/`
 and `test/artifacts/`. Generated `build/`, `dist/`, `.work/`, and

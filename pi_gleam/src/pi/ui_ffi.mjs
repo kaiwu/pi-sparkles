@@ -85,4 +85,3 @@ export function get_tools_expanded(ui) {
 export function set_tools_expanded(ui, expanded) {
   ui.setToolsExpanded(expanded);
 }
-

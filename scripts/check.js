@@ -1,8 +1,7 @@
-import { bindings, plugins } from "./modules.js";
+import { binding, plugins } from "./modules.js";
 import { run } from "./process.js";
 
-const packages = [...bindings(), ...plugins()];
-if (packages.length === 0) throw new Error("No Gleam packages found");
+const packages = [binding(), ...plugins()];
 
 for (const pkg of packages) {
   console.log(`checking ${pkg.shortName}`);
@@ -13,4 +12,3 @@ for (const pkg of packages) {
     { cwd: pkg.directory },
   );
 }
-

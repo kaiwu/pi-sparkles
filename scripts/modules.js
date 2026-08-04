@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 
 export const ROOT = resolve(import.meta.dir, "..");
-export const BINDINGS_DIR = join(ROOT, "bindings");
+export const BINDING_DIR = join(ROOT, "pi_gleam");
 export const PLUGINS_DIR = join(ROOT, "plugins");
 export const DIST_DIR = join(ROOT, "dist");
 export const WORK_DIR = join(ROOT, ".work");
@@ -32,8 +32,8 @@ export function discoverPackages(parent) {
     .sort((a, b) => a.shortName.localeCompare(b.shortName));
 }
 
-export function bindings() {
-  return discoverPackages(BINDINGS_DIR);
+export function binding() {
+  return readGleamPackage(BINDING_DIR);
 }
 
 export function plugins(filter) {
@@ -51,4 +51,3 @@ export function requirePlugins(filter) {
   }
   return found;
 }
-

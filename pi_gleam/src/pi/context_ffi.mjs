@@ -85,4 +85,3 @@ export function switch_session(context, sessionPath) {
 export function reload(context) {
   return context.reload();
 }
-

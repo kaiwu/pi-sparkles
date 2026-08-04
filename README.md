@@ -107,18 +107,17 @@ code, not a sandbox.
 
 ```text
 pi-sparkles/
-├── bindings/
-│   └── pi_gleam/                 independent Gleam package
-│       ├── src/pi.gleam
-│       ├── src/pi/
-│       │   ├── context.gleam
-│       │   ├── event.gleam
-│       │   ├── event_bus.gleam
-│       │   ├── raw.gleam
-│       │   ├── schema.gleam
-│       │   ├── tool.gleam
-│       │   └── ui.gleam
-│       └── test/
+├── pi_gleam/                     shared Gleam binding package
+│   ├── src/pi.gleam
+│   ├── src/pi/
+│   │   ├── context.gleam
+│   │   ├── event.gleam
+│   │   ├── event_bus.gleam
+│   │   ├── raw.gleam
+│   │   ├── schema.gleam
+│   │   ├── tool.gleam
+│   │   └── ui.gleam
+│   └── test/
 ├── plugins/
 │   ├── hello/                    command and typed-tool example
 │   └── safety_gate/              typed event/async-UI example
@@ -130,9 +129,9 @@ pi-sparkles/
 └── dist/                         generated, gitignored Pi artifacts
 ```
 
-The root is not a Gleam package. Every directory below `bindings/` and
-`plugins/` owns its `gleam.toml`, version, README, source, and tests, so it can
-be versioned and released independently.
+The root is not a Gleam package. The root-level `pi_gleam/` binding and every
+directory below `plugins/` own a `gleam.toml`, version, README, source, and
+tests, so each package can be versioned and released independently.
 
 ## Common binding
 
@@ -188,7 +187,7 @@ typed helpers for the first high-value events:
 such as `block_tool`, `transform_input`, and `replace_messages` produce the
 plain JavaScript shapes Pi expects.
 
-See [the binding README](bindings/pi_gleam/README.md) and the two reference
+See [the binding README](pi_gleam/README.md) and the two reference
 plugins for authoring examples.
 
 ## Plugin project contract
@@ -207,7 +206,7 @@ Each plugin should:
 - publish source and FFI, excluding `build/`, `dist/`, and caches.
 
 During development the reference plugins use a local path dependency on
-`../../bindings/pi_gleam`. Gleam correctly refuses to publish such a package.
+`../../pi_gleam`. Gleam correctly refuses to publish such a package.
 After the binding receives its first Hex release, plugin release manifests must
 replace that path with a normal version constraint. A staging builder will make
 that switch testable without forcing local development through Hex.
