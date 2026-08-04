@@ -5,6 +5,7 @@ import gleam/javascript/promise.{type Promise}
 import gleam/option.{type Option, None, Some}
 import gleam/string
 import pi.{type AbortSignal, type Context, type ExtensionApi}
+import pi/session
 
 pub const project_trust = "project_trust"
 
@@ -76,18 +77,135 @@ pub type Event {
   Event(type_: String, raw: Dynamic)
 }
 
+pub type SessionStartReason {
+  StartStartup
+  StartReload
+  StartNew
+  StartResume
+  StartFork
+  StartUnknown(String)
+}
+
+pub type SessionShutdownReason {
+  ShutdownQuit
+  ShutdownReload
+  ShutdownNew
+  ShutdownResume
+  ShutdownFork
+  ShutdownUnknown(String)
+}
+
+pub type SessionSwitchReason {
+  SwitchNew
+  SwitchResume
+  SwitchUnknown(String)
+}
+
+pub type ForkPosition {
+  ForkBefore
+  ForkAt
+  ForkPositionUnknown(String)
+}
+
+pub type CompactionReason {
+  CompactManual
+  CompactThreshold
+  CompactOverflow
+  CompactUnknown(String)
+}
+
 pub type SessionStart {
   SessionStart(
-    reason: String,
+    reason: SessionStartReason,
     previous_session_file: Option(String),
+    raw: Dynamic,
+  )
+}
+
+pub type SessionInfoChanged {
+  SessionInfoChanged(name: Option(String), raw: Dynamic)
+}
+
+pub type SessionBeforeSwitch {
+  SessionBeforeSwitch(
+    reason: SessionSwitchReason,
+    target_session_file: Option(String),
+    raw: Dynamic,
+  )
+}
+
+pub type SessionBeforeFork {
+  SessionBeforeFork(entry_id: String, position: ForkPosition, raw: Dynamic)
+}
+
+pub type CompactionPreparation {
+  CompactionPreparation(
+    first_kept_entry_id: String,
+    is_split_turn: Bool,
+    tokens_before: Int,
+    previous_summary: Option(String),
+    raw: Dynamic,
+  )
+}
+
+pub type SessionBeforeCompact {
+  SessionBeforeCompact(
+    preparation: CompactionPreparation,
+    branch_entries: List(session.Entry),
+    custom_instructions: Option(String),
+    reason: CompactionReason,
+    will_retry: Bool,
+    signal: AbortSignal,
+    raw: Dynamic,
+  )
+}
+
+pub type SessionCompact {
+  SessionCompact(
+    compaction_entry: session.Entry,
+    from_extension: Bool,
+    reason: CompactionReason,
+    will_retry: Bool,
     raw: Dynamic,
   )
 }
 
 pub type SessionShutdown {
   SessionShutdown(
-    reason: String,
+    reason: SessionShutdownReason,
     target_session_file: Option(String),
+    raw: Dynamic,
+  )
+}
+
+pub type TreePreparation {
+  TreePreparation(
+    target_id: String,
+    old_leaf_id: Option(String),
+    common_ancestor_id: Option(String),
+    entries_to_summarize: List(session.Entry),
+    user_wants_summary: Bool,
+    custom_instructions: Option(String),
+    replace_instructions: Bool,
+    label: Option(String),
+    raw: Dynamic,
+  )
+}
+
+pub type SessionBeforeTree {
+  SessionBeforeTree(
+    preparation: TreePreparation,
+    signal: AbortSignal,
+    raw: Dynamic,
+  )
+}
+
+pub type SessionTree {
+  SessionTree(
+    new_leaf_id: Option(String),
+    old_leaf_id: Option(String),
+    summary_entry: Option(session.Entry),
+    from_extension: Bool,
     raw: Dynamic,
   )
 }
@@ -222,11 +340,85 @@ pub fn on_session_start(
   observe_decoded(api, session_start, session_start_decoder(), handler)
 }
 
+pub fn on_session_info_changed(
+  api: ExtensionApi,
+  handler: fn(SessionInfoChanged, Context) -> Promise(Nil),
+) -> Nil {
+  observe_decoded(
+    api,
+    session_info_changed,
+    session_info_changed_decoder(),
+    handler,
+  )
+}
+
+pub fn on_session_before_switch(
+  api: ExtensionApi,
+  handler: fn(SessionBeforeSwitch, Context) -> Promise(Option(Dynamic)),
+) -> Nil {
+  respond_decoded(
+    api,
+    session_before_switch,
+    session_before_switch_decoder(),
+    handler,
+  )
+}
+
+pub fn on_session_before_fork(
+  api: ExtensionApi,
+  handler: fn(SessionBeforeFork, Context) -> Promise(Option(Dynamic)),
+) -> Nil {
+  respond_decoded(
+    api,
+    session_before_fork,
+    session_before_fork_decoder(),
+    handler,
+  )
+}
+
+pub fn on_session_before_compact(
+  api: ExtensionApi,
+  handler: fn(SessionBeforeCompact, Context) -> Promise(Option(Dynamic)),
+) -> Nil {
+  respond_decoded(
+    api,
+    session_before_compact,
+    session_before_compact_decoder(),
+    handler,
+  )
+}
+
+pub fn on_session_compact(
+  api: ExtensionApi,
+  handler: fn(SessionCompact, Context) -> Promise(Nil),
+) -> Nil {
+  observe_decoded(api, session_compact, session_compact_decoder(), handler)
+}
+
 pub fn on_session_shutdown(
   api: ExtensionApi,
   handler: fn(SessionShutdown, Context) -> Promise(Nil),
 ) -> Nil {
   observe_decoded(api, session_shutdown, session_shutdown_decoder(), handler)
+}
+
+pub fn on_session_before_tree(
+  api: ExtensionApi,
+  handler: fn(SessionBeforeTree, Context) -> Promise(Option(Dynamic)),
+) -> Nil {
+  respond_decoded(
+    api,
+    session_before_tree,
+    session_before_tree_decoder(),
+    handler,
+  )
+}
+
+pub fn on_session_tree(
+  api: ExtensionApi,
+  handler: fn(SessionTree, Context) -> Promise(Nil),
+) -> Nil {
+  observe_decoded(api, session_tree, session_tree_decoder(), handler)
 }
 
 pub fn on_tool_call(
@@ -298,6 +490,30 @@ pub fn resource_paths(
 @external(javascript, "./event_ffi.mjs", "cancel")
 pub fn cancel() -> Dynamic
 
+@external(javascript, "./event_ffi.mjs", "skip_conversation_restore")
+pub fn skip_conversation_restore() -> Dynamic
+
+@external(javascript, "./event_ffi.mjs", "custom_compaction")
+pub fn custom_compaction(
+  summary: String,
+  first_kept_entry_id: String,
+  tokens_before: Int,
+) -> Dynamic
+
+@external(javascript, "./event_ffi.mjs", "custom_compaction_with_details")
+pub fn custom_compaction_with_details(
+  summary: String,
+  first_kept_entry_id: String,
+  tokens_before: Int,
+  details: Dynamic,
+) -> Dynamic
+
+@external(javascript, "./event_ffi.mjs", "tree_summary")
+pub fn tree_summary(summary: String) -> Dynamic
+
+@external(javascript, "./event_ffi.mjs", "tree_summary_with_details")
+pub fn tree_summary_with_details(summary: String, details: Dynamic) -> Dynamic
+
 @external(javascript, "./event_ffi.mjs", "block_tool")
 pub fn block_tool(reason: String) -> Dynamic
 
@@ -334,7 +550,109 @@ fn session_start_decoder() -> Decoder(SessionStart) {
     decode.map(decode.string, Some),
   )
   use raw <- decode.then(decode.dynamic)
-  decode.success(SessionStart(reason:, previous_session_file:, raw:))
+  decode.success(SessionStart(
+    reason: session_start_reason(reason),
+    previous_session_file:,
+    raw:,
+  ))
+}
+
+fn session_info_changed_decoder() -> Decoder(SessionInfoChanged) {
+  use name <- decode.field("name", decode.optional(decode.string))
+  use raw <- decode.then(decode.dynamic)
+  decode.success(SessionInfoChanged(name:, raw:))
+}
+
+fn session_before_switch_decoder() -> Decoder(SessionBeforeSwitch) {
+  use reason <- decode.field("reason", decode.string)
+  use target_session_file <- decode.optional_field(
+    "targetSessionFile",
+    None,
+    decode.map(decode.string, Some),
+  )
+  use raw <- decode.then(decode.dynamic)
+  decode.success(SessionBeforeSwitch(
+    reason: session_switch_reason(reason),
+    target_session_file:,
+    raw:,
+  ))
+}
+
+fn session_before_fork_decoder() -> Decoder(SessionBeforeFork) {
+  use entry_id <- decode.field("entryId", decode.string)
+  use position <- decode.field("position", decode.string)
+  use raw <- decode.then(decode.dynamic)
+  decode.success(SessionBeforeFork(
+    entry_id:,
+    position: fork_position(position),
+    raw:,
+  ))
+}
+
+fn compaction_preparation_decoder() -> Decoder(CompactionPreparation) {
+  use first_kept_entry_id <- decode.field("firstKeptEntryId", decode.string)
+  use is_split_turn <- decode.field("isSplitTurn", decode.bool)
+  use tokens_before <- decode.field("tokensBefore", decode.int)
+  use previous_summary <- decode.optional_field(
+    "previousSummary",
+    None,
+    decode.map(decode.string, Some),
+  )
+  use raw <- decode.then(decode.dynamic)
+  decode.success(CompactionPreparation(
+    first_kept_entry_id:,
+    is_split_turn:,
+    tokens_before:,
+    previous_summary:,
+    raw:,
+  ))
+}
+
+fn session_before_compact_decoder() -> Decoder(SessionBeforeCompact) {
+  use preparation <- decode.field(
+    "preparation",
+    compaction_preparation_decoder(),
+  )
+  use branch_entries <- decode.field(
+    "branchEntries",
+    decode.list(of: session.entry_decoder()),
+  )
+  use custom_instructions <- decode.optional_field(
+    "customInstructions",
+    None,
+    decode.map(decode.string, Some),
+  )
+  use reason <- decode.field("reason", decode.string)
+  use will_retry <- decode.field("willRetry", decode.bool)
+  use _signal <- decode.field("signal", decode.dynamic)
+  use raw <- decode.then(decode.dynamic)
+  decode.success(SessionBeforeCompact(
+    preparation:,
+    branch_entries:,
+    custom_instructions:,
+    reason: compaction_reason(reason),
+    will_retry:,
+    signal: signal(raw),
+    raw:,
+  ))
+}
+
+fn session_compact_decoder() -> Decoder(SessionCompact) {
+  use compaction_entry <- decode.field(
+    "compactionEntry",
+    session.entry_decoder(),
+  )
+  use from_extension <- decode.field("fromExtension", decode.bool)
+  use reason <- decode.field("reason", decode.string)
+  use will_retry <- decode.field("willRetry", decode.bool)
+  use raw <- decode.then(decode.dynamic)
+  decode.success(SessionCompact(
+    compaction_entry:,
+    from_extension:,
+    reason: compaction_reason(reason),
+    will_retry:,
+    raw:,
+  ))
 }
 
 fn session_shutdown_decoder() -> Decoder(SessionShutdown) {
@@ -345,7 +663,176 @@ fn session_shutdown_decoder() -> Decoder(SessionShutdown) {
     decode.map(decode.string, Some),
   )
   use raw <- decode.then(decode.dynamic)
-  decode.success(SessionShutdown(reason:, target_session_file:, raw:))
+  decode.success(SessionShutdown(
+    reason: session_shutdown_reason(reason),
+    target_session_file:,
+    raw:,
+  ))
+}
+
+fn tree_preparation_decoder() -> Decoder(TreePreparation) {
+  use target_id <- decode.field("targetId", decode.string)
+  use old_leaf_id <- decode.field("oldLeafId", decode.optional(decode.string))
+  use common_ancestor_id <- decode.field(
+    "commonAncestorId",
+    decode.optional(decode.string),
+  )
+  use entries_to_summarize <- decode.field(
+    "entriesToSummarize",
+    decode.list(of: session.entry_decoder()),
+  )
+  use user_wants_summary <- decode.field("userWantsSummary", decode.bool)
+  use custom_instructions <- decode.optional_field(
+    "customInstructions",
+    None,
+    decode.map(decode.string, Some),
+  )
+  use replace_instructions <- decode.optional_field(
+    "replaceInstructions",
+    False,
+    decode.bool,
+  )
+  use label <- decode.optional_field(
+    "label",
+    None,
+    decode.map(decode.string, Some),
+  )
+  use raw <- decode.then(decode.dynamic)
+  decode.success(TreePreparation(
+    target_id:,
+    old_leaf_id:,
+    common_ancestor_id:,
+    entries_to_summarize:,
+    user_wants_summary:,
+    custom_instructions:,
+    replace_instructions:,
+    label:,
+    raw:,
+  ))
+}
+
+fn session_before_tree_decoder() -> Decoder(SessionBeforeTree) {
+  use preparation <- decode.field("preparation", tree_preparation_decoder())
+  use _signal <- decode.field("signal", decode.dynamic)
+  use raw <- decode.then(decode.dynamic)
+  decode.success(SessionBeforeTree(preparation:, signal: signal(raw), raw:))
+}
+
+fn session_tree_decoder() -> Decoder(SessionTree) {
+  use new_leaf_id <- decode.field("newLeafId", decode.optional(decode.string))
+  use old_leaf_id <- decode.field("oldLeafId", decode.optional(decode.string))
+  use summary_entry <- decode.optional_field(
+    "summaryEntry",
+    None,
+    decode.map(session.entry_decoder(), Some),
+  )
+  use from_extension <- decode.optional_field(
+    "fromExtension",
+    False,
+    decode.bool,
+  )
+  use raw <- decode.then(decode.dynamic)
+  decode.success(SessionTree(
+    new_leaf_id:,
+    old_leaf_id:,
+    summary_entry:,
+    from_extension:,
+    raw:,
+  ))
+}
+
+pub fn session_start_reason_name(reason: SessionStartReason) -> String {
+  case reason {
+    StartStartup -> "startup"
+    StartReload -> "reload"
+    StartNew -> "new"
+    StartResume -> "resume"
+    StartFork -> "fork"
+    StartUnknown(value) -> value
+  }
+}
+
+pub fn session_shutdown_reason_name(reason: SessionShutdownReason) -> String {
+  case reason {
+    ShutdownQuit -> "quit"
+    ShutdownReload -> "reload"
+    ShutdownNew -> "new"
+    ShutdownResume -> "resume"
+    ShutdownFork -> "fork"
+    ShutdownUnknown(value) -> value
+  }
+}
+
+pub fn session_switch_reason_name(reason: SessionSwitchReason) -> String {
+  case reason {
+    SwitchNew -> "new"
+    SwitchResume -> "resume"
+    SwitchUnknown(value) -> value
+  }
+}
+
+pub fn fork_position_name(position: ForkPosition) -> String {
+  case position {
+    ForkBefore -> "before"
+    ForkAt -> "at"
+    ForkPositionUnknown(value) -> value
+  }
+}
+
+pub fn compaction_reason_name(reason: CompactionReason) -> String {
+  case reason {
+    CompactManual -> "manual"
+    CompactThreshold -> "threshold"
+    CompactOverflow -> "overflow"
+    CompactUnknown(value) -> value
+  }
+}
+
+fn session_start_reason(value: String) -> SessionStartReason {
+  case value {
+    "startup" -> StartStartup
+    "reload" -> StartReload
+    "new" -> StartNew
+    "resume" -> StartResume
+    "fork" -> StartFork
+    value -> StartUnknown(value)
+  }
+}
+
+fn session_shutdown_reason(value: String) -> SessionShutdownReason {
+  case value {
+    "quit" -> ShutdownQuit
+    "reload" -> ShutdownReload
+    "new" -> ShutdownNew
+    "resume" -> ShutdownResume
+    "fork" -> ShutdownFork
+    value -> ShutdownUnknown(value)
+  }
+}
+
+fn session_switch_reason(value: String) -> SessionSwitchReason {
+  case value {
+    "new" -> SwitchNew
+    "resume" -> SwitchResume
+    value -> SwitchUnknown(value)
+  }
+}
+
+fn fork_position(value: String) -> ForkPosition {
+  case value {
+    "before" -> ForkBefore
+    "at" -> ForkAt
+    value -> ForkPositionUnknown(value)
+  }
+}
+
+fn compaction_reason(value: String) -> CompactionReason {
+  case value {
+    "manual" -> CompactManual
+    "threshold" -> CompactThreshold
+    "overflow" -> CompactOverflow
+    value -> CompactUnknown(value)
+  }
 }
 
 fn tool_call_decoder() -> Decoder(ToolCall) {

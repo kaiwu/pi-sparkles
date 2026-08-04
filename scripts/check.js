@@ -1,9 +1,7 @@
-import { binding, plugins } from "./modules.js";
+import { unitPackages } from "./modules.js";
 import { run } from "./process.js";
 
-const packages = [binding(), ...plugins()];
-
-for (const pkg of packages) {
+for (const pkg of unitPackages()) {
   console.log(`checking ${pkg.shortName}`);
   run("gleam", ["format", "--check", "src", "test"], { cwd: pkg.directory });
   run(

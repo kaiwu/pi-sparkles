@@ -7,6 +7,7 @@
     "build": "bun scripts/build.js",
     "check": "bun scripts/check.js",
     "test:unit": "bun scripts/test-unit.js",
+    "test:architecture": "bun test test/architecture",
     "test:ffi": "bun scripts/build.js && bun test test/binding",
     "test:artifacts": "bun scripts/build.js && bun test test/artifacts",
     "test:pi": "bun scripts/test-pi.js",
@@ -14,4 +15,3 @@
     "clean": "bun scripts/clean.js"
   }
 }
-

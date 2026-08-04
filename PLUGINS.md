@@ -34,6 +34,13 @@ does not create a sandbox. Typed modules cover the normal authoring path, while
 `pi/raw` provides dynamic access to Pi surfaces that do not yet have dedicated
 Gleam wrappers.
 
+The deeper advantage is architectural. Following
+[`FUNCTIONAL_DESIGN.md`](FUNCTIONAL_DESIGN.md), finance calculations, policies,
+and workflow transitions are immutable Gleam transformations, while Pi, HTTP,
+storage, clocks, and UI live in a narrow effect shell. The same domain core can
+be composed into another Gleam application and tested through values and laws
+without loading Pi, starting Bun integrations, or mocking ambient globals.
+
 ## Capability surface
 
 ### Agent tools and external integrations

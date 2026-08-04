@@ -3,6 +3,7 @@ import { basename, join, resolve } from "node:path";
 
 export const ROOT = resolve(import.meta.dir, "..");
 export const BINDING_DIR = join(ROOT, "pi_gleam");
+export const FINANCE_DIR = join(ROOT, "finance");
 export const PLUGINS_DIR = join(ROOT, "plugins");
 export const DIST_DIR = join(ROOT, "dist");
 export const WORK_DIR = join(ROOT, ".work");
@@ -36,6 +37,14 @@ export function binding() {
   return readGleamPackage(BINDING_DIR);
 }
 
+export function financeLibraries(filter) {
+  const found = discoverPackages(FINANCE_DIR);
+  if (!filter) return found;
+  return found.filter(
+    (pkg) => pkg.shortName === filter || pkg.name === filter,
+  );
+}
+
 export function plugins(filter) {
   const found = discoverPackages(PLUGINS_DIR);
   if (!filter) return found;
@@ -48,6 +57,22 @@ export function requirePlugins(filter) {
   const found = plugins(filter);
   if (found.length === 0) {
     throw new Error(filter ? `Plugin not found: ${filter}` : "No plugins found");
+  }
+  return found;
+}
+
+export function unitPackages(filter) {
+  const found = [binding(), ...financeLibraries(), ...plugins()];
+  if (!filter) return found;
+  return found.filter(
+    (pkg) => pkg.shortName === filter || pkg.name === filter,
+  );
+}
+
+export function requireUnitPackages(filter) {
+  const found = unitPackages(filter);
+  if (found.length === 0) {
+    throw new Error(`Package not found: ${filter}`);
   }
   return found;
 }

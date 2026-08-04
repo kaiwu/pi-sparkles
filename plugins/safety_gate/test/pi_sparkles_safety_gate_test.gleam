@@ -7,11 +7,27 @@ pub fn main() -> Nil {
 }
 
 pub fn dangerous_command_test() {
-  check.is_dangerous("rm -rf build")
-  |> should.be_true
+  check.classify("rm -rf build")
+  |> should.equal(check.RequiresConfirmation([check.RecursiveDelete]))
 }
 
 pub fn ordinary_command_test() {
-  check.is_dangerous("rg TODO src")
-  |> should.be_false
+  check.classify("rg TODO src")
+  |> should.equal(check.Ordinary)
+}
+
+pub fn risks_compose_in_rule_order_test() {
+  check.classify("sudo chmod 777 output")
+  |> should.equal(
+    check.RequiresConfirmation([
+      check.PrivilegeEscalation,
+      check.WorldWritablePermissions,
+    ]),
+  )
+}
+
+pub fn risk_explanation_is_a_pure_projection_test() {
+  [check.RecursiveDelete, check.OwnershipChange]
+  |> check.explain
+  |> should.equal("recursive deletion, ownership change")
 }

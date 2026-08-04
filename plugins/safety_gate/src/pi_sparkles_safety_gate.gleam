@@ -11,9 +11,9 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   event.on_tool_call(api, fn(call, ctx) {
     case call.tool_name, command(call.input) {
       "bash", Ok(command) ->
-        case check.is_dangerous(command) {
-          True -> decide(command, ctx)
-          False -> promise.resolve(None)
+        case check.classify(command) {
+          check.RequiresConfirmation(risks) -> decide(command, risks, ctx)
+          check.Ordinary -> promise.resolve(None)
         }
       _, _ -> promise.resolve(None)
     }
@@ -22,7 +22,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   promise.resolve(Nil)
 }
 
-fn decide(command: String, ctx: pi.Context) {
+fn decide(command: String, risks: List(check.Risk), ctx: pi.Context) {
   case context.has_ui(ctx) {
     False ->
       event.block_tool("Dangerous command blocked because no UI is available")
@@ -32,7 +32,10 @@ fn decide(command: String, ctx: pi.Context) {
       use allowed <- promise.await(ui.confirm(
         context.ui(ctx),
         "Dangerous command",
-        "Allow this command?\n\n" <> command,
+        "Detected "
+          <> check.explain(risks)
+          <> ".\n\nAllow this command?\n\n"
+          <> command,
       ))
       case allowed {
         True -> promise.resolve(None)

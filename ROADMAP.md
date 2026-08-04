@@ -71,6 +71,12 @@ much smaller failure cost.
 
 Finance tools need a stricter contract than ordinary convenience plugins:
 
+- Follow `FUNCTIONAL_DESIGN.md`: finance rules, calculations, validation, and
+  workflow transitions are pure functions over immutable types. Pi, HTTP,
+  clocks, storage, randomness, and credentials remain explicit shell
+  capabilities.
+- Model multi-step workflows as typed events and effects so they can be folded,
+  replayed, audited, and tested without Pi or provider access.
 - Every observation carries its source, `as_of` time, retrieval time, timezone,
   currency/unit, and delayed/real-time status.
 - Prices say whether they are raw or adjusted and identify the session
@@ -98,22 +104,61 @@ Finance tools need a stricter contract than ordinary convenience plugins:
 These are reusable Hex libraries rather than Pi extensions. Building them first
 prevents every plugin from inventing incompatible finance types.
 
-| Package | Purpose | First types/capabilities |
-| --- | --- | --- |
-| `finance_core` | Canonical domain model | `Instrument`, `Listing`, `Money`, `Decimal`, `Currency`, `Exchange`, `Timeframe`, `Observation(a)`, freshness and adjustment metadata |
-| `finance_series` | Time-series operations | dated observations, alignment, resampling, returns, drawdown, rolling windows, missing-value policy |
-| `finance_calendar` | Trading-time rules | sessions, holidays, early closes, timezone-safe date ranges; provider data remains pluggable |
-| `finance_provenance` | Reproducible evidence | source URLs/identifiers, retrieved/as-of timestamps, licence tags, input fingerprints, assumption records |
-| `finance_http` | Provider-safe transport | retry/backoff, rate-limit headers, bounded concurrency, cache hooks, user-agent policy, redacted errors |
-| `finance_table` | Agent-friendly output | compact Markdown/CSV/JSON tables, units, significant digits, missing-value markers, truncation summaries |
-| `finance_math` | Deterministic analytics | descriptive statistics, covariance, beta, CAGR, IRR/XIRR, volatility, VaR helpers, numerical error types |
-| `finance_testkit` | Provider fixtures | frozen clocks, cassette responses, market calendars, split/dividend fixtures, decoder conformance tests |
+| Package | State | Purpose | First types/capabilities |
+| --- | --- | --- | --- |
+| `finance_core` | Implementing | Canonical domain model | `Instrument`, `Listing`, `Money`, `Decimal`, `Currency`, `Exchange`, `Timeframe`, `Observation(a)`, freshness and adjustment metadata |
+| `finance_series` | Draft | Time-series operations | dated observations, alignment, resampling, returns, drawdown, rolling windows, missing-value policy |
+| `finance_calendar` | Draft | Trading-time rules | sessions, holidays, early closes, timezone-safe date ranges; provider data remains pluggable |
+| `finance_provenance` | Implementing | Reproducible evidence | source URLs/identifiers, retrieved/as-of timestamps, licence tags, input fingerprints, assumption records |
+| `finance_http` | Implementing | Provider-safe transport | retry/backoff, rate-limit headers, bounded concurrency, cache hooks, user-agent policy, redacted errors |
+| `finance_table` | Implementing | Agent-friendly output | compact Markdown/CSV/JSON tables, units, significant digits, missing-value markers, truncation summaries |
+| `finance_math` | Draft | Deterministic analytics | descriptive statistics, covariance, beta, CAGR, IRR/XIRR, volatility, VaR helpers, numerical error types |
+| `finance_testkit` | Implementing | Provider fixtures | frozen clocks, cassette responses, market calendars, split/dividend fixtures, decoder conformance tests |
 
 Provider adapters should also be ordinary packages when possible—for example,
 `finance_sec`, `finance_fred`, `finance_openfigi`, and
 `finance_market_alpaca`. Pi plugins then compose those libraries and expose
 agent tools. This makes the data client reusable outside Pi and keeps its test
 surface independent of the extension runtime.
+
+### Wave A arbitration — 2026-08-04
+
+The five packages supplied in the first-batch proposal are confirmed as the
+initial substrate and have graduated to **Implementing**. They live under
+`finance/<name>/`; they are libraries, not loadable Pi extensions, so they do
+not export `extension` and are not bundled into `dist/`.
+
+The proposal is accepted with these binding decisions:
+
+- Dependencies form a directed graph: `finance_core` imports no other finance
+  package; `finance_provenance`, `finance_http`, and `finance_table` may import
+  core; `finance_testkit` may import core and HTTP. Core tests cannot depend on
+  testkit.
+- Core owns the minimal `SourceRef` and optional evidence identifier carried by
+  `Observation(a)`. Provenance enriches those references. This avoids a
+  core/provenance cycle while keeping every observation attributable.
+- HTTP transport, retry sleeps, cassette file access, and evidence verification
+  are promise-returning operations. Their Gleam APIs must not disguise network
+  or file I/O as synchronous `Result` values.
+- `finance_http` owns cassette request/response formats and replay transport.
+  Testkit supplies builders and fixtures rather than a competing cassette type.
+- A transport never silently substitutes stale data after rate limiting or an
+  outage. Provider adapters may request a cached fallback, but must return its
+  source, age, and stale status explicitly.
+- Source fingerprints identify normalized requests; evidence identifiers are
+  content-addressed and include the observed content/as-of identity. Fetching
+  the same request with changed content therefore produces new evidence.
+- Table rendering validates column/cell compatibility. Currency codes are the
+  portable default; locale-specific symbols are an explicit rendering policy.
+- Authoritative calendar fixtures must be licence-reviewed and
+  provenance-labelled. Synthetic market data is seeded and unmistakably fake;
+  personal database exports are never package fixtures.
+
+No Wave B Pi plugin is confirmed yet. Setup, guardrails, symbols, SEC, quote,
+history, and report orchestration remain Draft until the substrate acceptance
+tests pass and their provider-adapter packages, credentials, entitlements, and
+licence policies have individual designs. This is a sequencing decision, not a
+rejection of those proposals.
 
 ## Plugin proposals
 

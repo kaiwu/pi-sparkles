@@ -26,6 +26,31 @@ export function cancel() {
   return { cancel: true };
 }
 
+export function skip_conversation_restore() {
+  return { skipConversationRestore: true };
+}
+
+export function custom_compaction(summary, firstKeptEntryId, tokensBefore) {
+  return { compaction: { summary, firstKeptEntryId, tokensBefore } };
+}
+
+export function custom_compaction_with_details(
+  summary,
+  firstKeptEntryId,
+  tokensBefore,
+  details,
+) {
+  return { compaction: { summary, firstKeptEntryId, tokensBefore, details } };
+}
+
+export function tree_summary(summary) {
+  return { summary: { summary } };
+}
+
+export function tree_summary_with_details(summary, details) {
+  return { summary: { summary, details } };
+}
+
 export function block_tool(reason) {
   return { block: true, reason };
 }

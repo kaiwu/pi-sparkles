@@ -2,5 +2,7 @@ dist/
 .work/
 pi_gleam/build/
 pi_gleam/manifest.toml
+finance/*/build/
+finance/*/manifest.toml
 plugins/*/build/
 plugins/*/manifest.toml

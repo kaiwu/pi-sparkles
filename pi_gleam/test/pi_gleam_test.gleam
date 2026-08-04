@@ -1,6 +1,7 @@
 import gleam/dynamic/decode
 import gleeunit
 import gleeunit/should
+import pi/event
 import pi/raw
 
 pub fn main() -> Nil {
@@ -17,4 +18,26 @@ pub fn raw_object_test() {
   value
   |> decode.run(decoder)
   |> should.equal(Ok("Ada"))
+}
+
+pub fn lifecycle_reason_names_test() {
+  event.session_start_reason_name(event.StartReload)
+  |> should.equal("reload")
+
+  event.session_shutdown_reason_name(event.ShutdownFork)
+  |> should.equal("fork")
+
+  event.session_switch_reason_name(event.SwitchResume)
+  |> should.equal("resume")
+
+  event.fork_position_name(event.ForkBefore)
+  |> should.equal("before")
+
+  event.compaction_reason_name(event.CompactOverflow)
+  |> should.equal("overflow")
+}
+
+pub fn future_lifecycle_reason_is_preserved_test() {
+  event.session_start_reason_name(event.StartUnknown("future"))
+  |> should.equal("future")
 }

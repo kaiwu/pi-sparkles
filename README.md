@@ -4,7 +4,8 @@ Gleam plugins for the Pi coding agent, compiled with Gleam and bundled for Pi
 with Bun.
 
 See [ROADMAP.md](ROADMAP.md) for the proposed finance and stock-market plugin
-family.
+family and [FUNCTIONAL_DESIGN.md](FUNCTIONAL_DESIGN.md) for the mandatory
+functional-core/effect-shell architecture.
 
 ## Status
 
@@ -12,12 +13,14 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
+- five implementing-stage finance substrate packages under `finance/`;
 - `hello`, a reference command and typed tool;
 - `safety_gate`, a reference result-bearing event handler with asynchronous UI;
+- `lifecycle`, a reference for typed state restoration and safe cleanup;
 - Bun-driven checking, testing, bundling, artifact tests, and Pi load tests.
 
 The implementation was developed against Pi `0.83.0` at commit `305c014dc`,
-Gleam `1.18.0`, and Bun `1.3.14`. Both reference plugins build to standalone
+Gleam `1.18.0`, and Bun `1.3.14`. All three reference plugins build to standalone
 ESM artifacts and load with Pi `0.83.0` without model credentials.
 
 The binding is an initial `0.1.0` implementation, not a published Hex package.
@@ -115,11 +118,19 @@ pi-sparkles/
 │   │   ├── event_bus.gleam
 │   │   ├── raw.gleam
 │   │   ├── schema.gleam
+│   │   ├── session.gleam
 │   │   ├── tool.gleam
 │   │   └── ui.gleam
 │   └── test/
+├── finance/                      reusable non-Pi Gleam libraries
+│   ├── finance_core/
+│   ├── finance_http/
+│   ├── finance_provenance/
+│   ├── finance_table/
+│   └── finance_testkit/
 ├── plugins/
 │   ├── hello/                    command and typed-tool example
+│   ├── lifecycle/                state restoration/lifecycle example
 │   └── safety_gate/              typed event/async-UI example
 ├── scripts/                      Bun task drivers
 ├── test/
@@ -130,8 +141,9 @@ pi-sparkles/
 ```
 
 The root is not a Gleam package. The root-level `pi_gleam/` binding and every
-directory below `plugins/` own a `gleam.toml`, version, README, source, and
-tests, so each package can be versioned and released independently.
+package below `finance/` and `plugins/` own a `gleam.toml`, version, README,
+source, and tests, so each can be versioned and released independently. Finance
+libraries are checked and unit-tested by the root tasks but are not Pi bundles.
 
 ## Common binding
 
@@ -147,6 +159,7 @@ boundaries are dynamically decoded where a typed API is offered.
 | `pi/event` | every current event name, generic decoded handlers, typed core events, and Pi-compatible result builders |
 | `pi/event_bus` | emit, subscribe, and unsubscribe |
 | `pi/schema` | JSON Schema construction, objects, enums, arrays, unions, constraints, and raw schemas |
+| `pi/session` | read-only metadata and decoder-backed persisted custom-state restoration |
 | `pi/tool` | schema-plus-decoder parameters, typed execution, text/image results, updates, cancellation, and rejected failures |
 | `pi/ui` | notifications, prompts, status, widgets, editor text, themes, and tool expansion |
 | `pi/raw` | object access/calls and raw event, tool, renderer, and markdown registration |
@@ -176,7 +189,8 @@ shape required by Pi's Google-provider compatibility guidance.
 `observe`, `respond`, `observe_decoded`, and `respond_decoded` functions, plus
 typed helpers for the first high-value events:
 
-- session start and shutdown;
+- the complete session lifecycle: start, metadata, switch, fork, compaction,
+  tree navigation, and shutdown;
 - tool call decisions;
 - input decisions;
 - turn start;
@@ -187,7 +201,7 @@ typed helpers for the first high-value events:
 such as `block_tool`, `transform_input`, and `replace_messages` produce the
 plain JavaScript shapes Pi expects.
 
-See [the binding README](pi_gleam/README.md) and the two reference
+See [the binding README](pi_gleam/README.md) and the three reference
 plugins for authoring examples.
 
 ## Plugin project contract
@@ -196,11 +210,17 @@ Each plugin should:
 
 - be an ordinary, independent Gleam project targeting JavaScript;
 - use Bun as the JavaScript runtime;
-- keep its root module as a thin Pi adapter and reusable logic below a package
-  namespace;
+- keep its root module as a thin Pi effect shell and reusable logic below a
+  package namespace;
+- decode external values once, then express policy, calculation, and workflow
+  state as pure functions over immutable Gleam types;
+- return typed decisions/effects as data when workflows benefit from replay,
+  composition, or audit, and interpret them only at the shell;
+- inject clocks, transports, storage, randomness, and entitlements explicitly;
 - export `extension` with the promise-returning signature above;
 - use `pi_gleam` as a normal Hex version dependency when published;
-- keep policies, transformations, and state machines testable without Pi;
+- keep policies, transformations, and state machines testable without Pi, Bun,
+  network access, filesystem access, or real time;
 - document its commands, tools, events, state, permissions, and supported Pi
   versions;
 - publish source and FFI, excluding `build/`, `dist/`, and caches.
@@ -219,7 +239,8 @@ Commands implemented now:
 | --- | --- |
 | `bun run check` | formatting and warnings-as-errors builds for every package |
 | `bun run build [-- name]` | build and bundle every plugin or one plugin |
-| `bun run test:unit [-- name]` | Gleam tests with Bun |
+| `bun run test:unit [-- name]` | Gleam tests with Bun for the binding, finance libraries, and plugins |
+| `bun run test:architecture` | enforce functional-core/effect-shell import and FFI boundaries |
 | `bun run test:ffi` | build and run JavaScript binding contracts |
 | `bun run test:artifacts` | build and inspect the generated extension modules |
 | `bun run test:pi [-- name]` | load artifacts in Pi without invoking a model |
@@ -232,14 +253,16 @@ must never alter Hex or other external state.
 
 ## Test strategy
 
-The repository uses four layers:
+The repository uses five layers:
 
 1. Pure Gleam tests run on the JavaScript target with Bun.
-2. Bun FFI tests invoke bundled plugins with strict fake Pi objects and verify
+2. Architecture tests reject Pi/Promise imports in plugin domain modules,
+   Pi imports in finance libraries, and misplaced plugin FFI.
+3. Bun FFI tests invoke bundled plugins with strict fake Pi objects and verify
    callbacks, schemas, event results, asynchronous decisions, and failures.
-3. Artifact tests ensure every bundle has a callable default export and a Pi
+4. Artifact tests ensure every bundle has a callable default export and a Pi
    directory manifest.
-4. Pi smoke tests ask the real loader to initialize each extension using
+5. Pi smoke tests ask the real loader to initialize each extension using
    `--list-models`, which needs no provider credentials.
 
 Before a release, the matrix should also cover a hydrated Pi source runtime,
@@ -272,14 +295,14 @@ performing the explicit external publish action.
 | --- | --- | --- |
 | 0. End-to-end spike | Complete | Gleam command plugin bundles through Bun and loads in Pi. |
 | 1. Core binding | Complete | Typed schemas/tools, decode-before-execute behavior, errors, cancellation, updates, and FFI tests. |
-| 2. Events and lifecycle | In progress | Core typed events and `safety_gate` work; remaining work is typed state restoration/cleanup documentation and broader lifecycle fixtures. |
+| 2. Events and lifecycle | Complete | Typed lifecycle records/results, decoded custom-state restoration, idempotent cleanup guidance, and replacement/compaction/tree fixtures. |
 | 3. Hex round trip | Planned | Finalize the binding name, add tarball audits/staging, release binding first, and rebuild an exact plugin Hex version in a clean directory. |
-| 4. Typed breadth | Planned | Type resource discovery, compaction/state, message content, model/provider configuration, renderers, and advanced TUI in response to real plugin needs. |
+| 4. Typed breadth | Planned | Type resource discovery, message content, model/provider configuration, full compaction payloads, renderers, and advanced TUI in response to real plugin needs. |
 | 5. Release automation | Planned | CI matrix, compatibility table, checksums, and documented release/retirement process. |
 
-Phase 2 completion comes next. It should add lifecycle tests showing safe
-cleanup and reconstruction across `/reload`, `/new`, `/resume`, and `/fork`,
-then turn the remaining commonly used raw shapes into typed records.
+Phase 3 comes next. Phase 2 now proves cleanup and reconstruction across
+`/reload`, `/new`, `/resume`, and `/fork`, rejects malformed persisted state,
+and contract-tests typed replacement, compaction, and tree-navigation shapes.
 
 Phase 3 acceptance is the definitive distribution proof: on a clean machine
 with Gleam, Bun, Pi, and the builder, fetch a plugin's source by exact Hex

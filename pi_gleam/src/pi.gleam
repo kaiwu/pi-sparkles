@@ -28,6 +28,9 @@ pub type UpdateSink
 /// Pi's shared inter-extension event bus.
 pub type EventBus
 
+/// Pi's read-only session manager for the active callback context.
+pub type SessionManager
+
 /// An untyped JavaScript value for APIs not yet given a typed wrapper.
 pub type JsValue =
   Dynamic

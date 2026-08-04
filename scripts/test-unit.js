@@ -1,10 +1,8 @@
-import { binding, requirePlugins } from "./modules.js";
+import { requireUnitPackages, unitPackages } from "./modules.js";
 import { run } from "./process.js";
 
 const filter = process.argv[2];
-const packages = filter
-  ? requirePlugins(filter)
-  : [binding(), ...requirePlugins()];
+const packages = filter ? requireUnitPackages(filter) : unitPackages();
 
 for (const pkg of packages) {
   console.log(`testing ${pkg.shortName}`);

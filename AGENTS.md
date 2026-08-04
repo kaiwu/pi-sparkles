@@ -3,7 +3,8 @@
 ## Project Structure & Module Organization
 
 The root is a private Bun task runner, not a Gleam package. The shared Pi binding
-lives in `pi_gleam/`. Each `plugins/<name>/` directory is an independent
+lives in `pi_gleam/`. Reusable non-Pi libraries live in `finance/<name>/`, and
+loadable extensions live in `plugins/<name>/`. Each package is an independent
 Gleam project with its own `gleam.toml`, `src/`, `test/`, and `README.md`.
 Orchestration lives in `scripts/`; FFI and bundle tests live in `test/binding/`
 and `test/artifacts/`. Generated `build/`, `dist/`, `.work/`, and
@@ -18,11 +19,19 @@ default-export adapter and `dist/<plugin>/index.js`. Hex distributes Gleam and
 FFI source; users must build it before Pi can load it. Put typed APIs in
 `pi_gleam` and isolate unsupported surfaces behind `pi/raw`.
 
+Use the functional-core/effect-shell rules in `FUNCTIONAL_DESIGN.md`. Domain
+modules operate on immutable Gleam values and must not import Pi, promises, or
+FFI. Decode at the shell, run pure total transitions, then interpret typed
+effects. Pass clocks, transport, storage, randomness, and entitlements as
+explicit capabilities. Keep unavoidable mutable cells generic and put no
+business logic in JavaScript.
+
 ## Build, Test, and Development Commands
 
 - `bun run check`: check formatting and warnings-as-errors builds.
 - `bun run build [-- hello]`: bundle all plugins or one named plugin.
 - `bun run test:unit [-- hello]`: run Gleam/gleeunit tests using Bun.
+- `bun run test:architecture`: enforce functional core/effect shell boundaries.
 - `bun run test:ffi`: run binding contract tests.
 - `bun run test:artifacts`: verify bundled extension exports.
 - `bun run test:pi [-- hello]`: smoke-load bundles without a model call.
@@ -41,8 +50,10 @@ not runtime validation.
 
 Use gleeunit for pure logic. Name Gleam tests `*_test.gleam` and Bun tests
 `*.test.js`. New binding wrappers need Bun contract tests for applicable shapes,
-promises, options, failures, and callbacks. Plugins need artifact and Pi-load
-smoke tests. Run `bun run test` before submission.
+promises, options, failures, and callbacks. Finance libraries need deterministic
+unit tests, laws/invariants, transition-sequence tests, and FFI contracts where
+applicable. Plugins additionally need artifact and Pi-load smoke tests. Run
+`bun run test` before submission.
 
 ## Commit & Pull Request Guidelines
 
