@@ -6,6 +6,7 @@ import finance_core/money
 import finance_core/observation
 import finance_core/source
 import finance_core/time
+import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/order
@@ -77,6 +78,143 @@ pub fn decimal_canonical_encoding_is_idempotent_test() {
   })
 }
 
+pub fn decimal_arithmetic_stays_exact_beyond_javascript_integer_range_test() {
+  decimal.add(parsed_decimal("9007199254740993.01"), parsed_decimal("0.99"))
+  |> decimal.to_string
+  |> should.equal("9007199254740994")
+  decimal.subtract(parsed_decimal("1.25"), parsed_decimal("2.5"))
+  |> decimal.to_string
+  |> should.equal("-1.25")
+  decimal.multiply(
+    parsed_decimal("-12345678901234567890.12"),
+    parsed_decimal("3"),
+  )
+  |> decimal.to_string
+  |> should.equal("-37037036703703703670.36")
+}
+
+pub fn decimal_arithmetic_laws_hold_for_canonical_values_test() {
+  let a = parsed_decimal("123.45")
+  let b = parsed_decimal("-7.5")
+  let c = parsed_decimal("0.125")
+
+  decimal.add(a, b)
+  |> should.equal(decimal.add(b, a))
+  decimal.add(decimal.add(a, b), c)
+  |> should.equal(decimal.add(a, decimal.add(b, c)))
+  decimal.multiply(a, decimal.add(b, c))
+  |> should.equal(decimal.add(decimal.multiply(a, b), decimal.multiply(a, c)))
+  decimal.subtract(a, a)
+  |> should.equal(decimal.zero())
+}
+
+pub fn decimal_quantization_has_explicit_rounding_test() {
+  decimal.quantize(
+    parsed_decimal("1.245"),
+    scale: 2,
+    rounding: decimal.HalfEven,
+  )
+  |> should.equal(Ok(parsed_decimal("1.24")))
+  decimal.quantize(
+    parsed_decimal("1.255"),
+    scale: 2,
+    rounding: decimal.HalfEven,
+  )
+  |> should.equal(Ok(parsed_decimal("1.26")))
+  decimal.quantize(
+    parsed_decimal("-1.251"),
+    scale: 2,
+    rounding: decimal.AwayFromZero,
+  )
+  |> should.equal(Ok(parsed_decimal("-1.26")))
+  decimal.quantize(
+    parsed_decimal("-1.251"),
+    scale: 2,
+    rounding: decimal.TowardZero,
+  )
+  |> should.equal(Ok(parsed_decimal("-1.25")))
+  decimal.quantize(parsed_decimal("9.999"), scale: 2, rounding: decimal.HalfUp)
+  |> should.equal(Ok(parsed_decimal("10")))
+  decimal.quantize(parsed_decimal("1"), scale: -1, rounding: decimal.HalfEven)
+  |> should.equal(Error(decimal.NegativeScale))
+}
+
+pub fn decimal_arithmetic_matches_exhaustive_small_integer_model_test() {
+  check_integer_range(-20, 20)
+}
+
+pub fn decimal_division_has_explicit_precision_and_rounding_test() {
+  decimal.divide(
+    parsed_decimal("1"),
+    by: parsed_decimal("8"),
+    scale: 3,
+    rounding: decimal.HalfEven,
+  )
+  |> should.equal(Ok(parsed_decimal("0.125")))
+  decimal.divide(
+    parsed_decimal("2"),
+    by: parsed_decimal("3"),
+    scale: 4,
+    rounding: decimal.HalfUp,
+  )
+  |> should.equal(Ok(parsed_decimal("0.6667")))
+  decimal.divide(
+    parsed_decimal("5"),
+    by: parsed_decimal("2"),
+    scale: 0,
+    rounding: decimal.HalfEven,
+  )
+  |> should.equal(Ok(parsed_decimal("2")))
+  decimal.divide(
+    parsed_decimal("7"),
+    by: parsed_decimal("2"),
+    scale: 0,
+    rounding: decimal.HalfEven,
+  )
+  |> should.equal(Ok(parsed_decimal("4")))
+  decimal.divide(
+    parsed_decimal("-10"),
+    by: parsed_decimal("4"),
+    scale: 2,
+    rounding: decimal.TowardZero,
+  )
+  |> should.equal(Ok(parsed_decimal("-2.5")))
+}
+
+pub fn decimal_division_stays_exact_for_large_coefficients_test() {
+  let numerator = parsed_decimal("90071992547409931234567890")
+  let denominator = parsed_decimal("10")
+  let assert Ok(result) =
+    decimal.divide(
+      numerator,
+      by: denominator,
+      scale: 1,
+      rounding: decimal.HalfEven,
+    )
+
+  decimal.to_string(result)
+  |> should.equal("9007199254740993123456789")
+  decimal.multiply(result, denominator)
+  |> should.equal(numerator)
+}
+
+pub fn decimal_division_rejects_invalid_domain_test() {
+  decimal.divide(
+    parsed_decimal("1"),
+    by: decimal.zero(),
+    scale: 2,
+    rounding: decimal.HalfEven,
+  )
+  |> should.equal(Error(decimal.DivisionByZero))
+  decimal.divide(
+    parsed_decimal("1"),
+    by: parsed_decimal("2"),
+    scale: -1,
+    rounding: decimal.HalfEven,
+  )
+  |> should.equal(Error(decimal.NegativeResultScale))
+}
+
 pub fn date_validation_handles_leap_years_test() {
   time.date(2024, 2, 29)
   |> should.be_ok
@@ -145,4 +283,40 @@ pub fn observation_map_preserves_metadata_test() {
     value + 1
   })
   |> should.equal(observation.map(original, fn(value) { value * 2 + 1 }))
+}
+
+fn parsed_decimal(value: String) -> decimal.Decimal {
+  let assert Ok(value) = decimal.parse(value)
+  value
+}
+
+fn check_integer_range(value: Int, maximum: Int) -> Nil {
+  case value > maximum {
+    True -> Nil
+    False -> {
+      check_integer_pairs(value, -20, maximum)
+      check_integer_range(value + 1, maximum)
+    }
+  }
+}
+
+fn check_integer_pairs(left: Int, right: Int, maximum: Int) -> Nil {
+  case right > maximum {
+    True -> Nil
+    False -> {
+      let left_decimal = left |> int.to_string |> parsed_decimal
+      let right_decimal = right |> int.to_string |> parsed_decimal
+
+      decimal.add(left_decimal, right_decimal)
+      |> decimal.to_string
+      |> should.equal(int.to_string(left + right))
+      decimal.subtract(left_decimal, right_decimal)
+      |> decimal.to_string
+      |> should.equal(int.to_string(left - right))
+      decimal.multiply(left_decimal, right_decimal)
+      |> decimal.to_string
+      |> should.equal(int.to_string(left * right))
+      check_integer_pairs(left, right + 1, maximum)
+    }
+  }
 }

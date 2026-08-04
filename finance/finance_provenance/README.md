@@ -8,12 +8,16 @@ into portable, redacted, verifiable manifests. It is a library rather than a Pi
 extension; a future source-ledger plugin will own session persistence and user
 commands.
 
-The implemented first slice includes validated SHA-256 identities, distinct
-source fingerprints and evidence IDs, licence/availability-labelled evidence,
-and immutable manifests that require parents before children, reject
+The implemented slice includes validated SHA-256 identities, distinct source
+fingerprints and evidence IDs, typed assumptions, recursive/idempotent
+structural redaction, licence/availability-labelled evidence, and immutable
+manifests that require assumptions and parents before derived evidence, reject
 conflicting IDs, add roots idempotently, and merge deterministic evidence
-sequences. Canonical hashing/JSON, structural redaction, assumptions, external
-dependencies, and asynchronous verification remain 0.1 work.
+sequences. Canonical manifest JSON sorts identity-bearing collections and hashes
+through a known-vector-tested SHA-256 FFI. URL redaction removes fragments,
+userinfo, signed parameters, encoded secret keys, and provider-configured keys.
+External dependencies, canonical decoding, and asynchronous verification remain
+0.1 work.
 
 ## User stories
 

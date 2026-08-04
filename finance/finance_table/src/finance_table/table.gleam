@@ -1,5 +1,6 @@
 import finance_core/decimal.{type Decimal}
 import finance_core/money.{type Money}
+import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 
@@ -49,6 +50,10 @@ pub opaque type Table {
   )
 }
 
+pub type Omission {
+  Omission(rows: Int)
+}
+
 pub type TableError {
   NoColumns
   EmptyColumnKey
@@ -60,6 +65,8 @@ pub type TableError {
     expected: ColumnKind,
     actual: ColumnKind,
   )
+  UnsafeInteger(row: Int, column: String)
+  InvalidRowLimit
 }
 
 pub fn new(
@@ -96,6 +103,23 @@ pub fn rows(table: Table) -> List(Row) {
 pub fn notes(table: Table) -> List(String) {
   let Table(_, _, _, notes) = table
   notes
+}
+
+pub fn truncate_rows(
+  table: Table,
+  maximum_rows: Int,
+) -> Result(#(Table, Omission), TableError) {
+  case maximum_rows < 0 {
+    True -> Error(InvalidRowLimit)
+    False -> {
+      let Table(caption, columns, rows, notes) = table
+      let omitted = int.max(list.length(rows) - maximum_rows, 0)
+      Ok(#(
+        Table(caption, columns, list.take(rows, maximum_rows), notes),
+        Omission(omitted),
+      ))
+    }
+  }
 }
 
 pub fn cell_kind(cell: Cell) -> Option(ColumnKind) {
@@ -160,14 +184,21 @@ fn validate_cells(
 ) -> Result(Nil, TableError) {
   case cells, columns {
     [], [] -> Ok(Nil)
-    [cell, ..rest_cells], [column, ..rest_columns] ->
-      case cell_kind(cell) {
-        None -> validate_cells(rest_cells, rest_columns, row)
-        Some(kind) if kind == column.kind ->
+    [cell, ..rest_cells], [column, ..rest_columns] -> {
+      let unsafe_integer = case cell {
+        IntegerCell(value) ->
+          value < -9_007_199_254_740_991 || value > 9_007_199_254_740_991
+        _ -> False
+      }
+      case unsafe_integer, cell_kind(cell) {
+        True, _ -> Error(UnsafeInteger(row, column.key))
+        False, None -> validate_cells(rest_cells, rest_columns, row)
+        False, Some(kind) if kind == column.kind ->
           validate_cells(rest_cells, rest_columns, row)
-        Some(kind) ->
+        False, Some(kind) ->
           Error(CellKindMismatch(row, column.key, column.kind, kind))
       }
+    }
     _, _ -> Ok(Nil)
   }
 }

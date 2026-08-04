@@ -7,10 +7,11 @@ files, and structured tool details. It makes units, missing values, precision,
 ordering, and truncation visible. It is a pure library with no Pi, terminal,
 filesystem, provider, or network dependency.
 
-The implemented first slice includes typed columns/cells, exact decimal and
-money cells, explicit missing reasons, duplicate/width/kind validation, stable
-alignment, escaping, captions/notes, and deterministic Markdown rendering.
-Formatting policies, annotations, JSON/CSV, projections, truncation and
+The implemented slice includes typed columns/cells, exact decimal and money
+cells, explicit missing reasons, duplicate/width/kind/safe-integer validation,
+stable alignment, escaping, captions/notes, deterministic Markdown and CSV,
+versioned semantic JSON, and immutable row truncation with omission counts.
+Formatting policies, annotations, projections, column/cell budgets, and richer
 omission summaries remain 0.1 work.
 
 ## User stories

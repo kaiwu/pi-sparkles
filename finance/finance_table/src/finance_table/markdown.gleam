@@ -1,7 +1,5 @@
-import finance_core/decimal
-import finance_core/money
+import finance_table/render
 import finance_table/table.{type Cell, type Row, type Table}
-import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/string
@@ -50,18 +48,7 @@ fn markdown_row(values: List(String)) -> String {
 }
 
 fn render_cell(cell: Cell) -> String {
-  case cell {
-    table.TextCell(value) -> escape(value)
-    table.DecimalCell(value) -> decimal.to_string(value)
-    table.MoneyCell(value) -> money.to_string(value)
-    table.IntegerCell(value) -> int.to_string(value)
-    table.BooleanCell(True) -> "true"
-    table.BooleanCell(False) -> "false"
-    table.MissingCell(table.Unavailable) -> "—"
-    table.MissingCell(table.NotApplicable) -> "N/A"
-    table.MissingCell(table.NotReported) -> "not reported"
-    table.MissingCell(table.Suppressed) -> "suppressed"
-  }
+  cell |> render.cell_text |> escape
 }
 
 fn escape(value: String) -> String {

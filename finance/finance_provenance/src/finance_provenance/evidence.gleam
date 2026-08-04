@@ -1,5 +1,6 @@
 import finance_core/source.{type SourceRef}
 import finance_core/time.{type Instant}
+import finance_provenance/assumption.{type AssumptionId}
 import finance_provenance/identity.{
   type EvidenceId, type Sha256, type SourceFingerprint,
 }
@@ -38,6 +39,7 @@ pub type Evidence {
     byte_length: Int,
     content_hash: Sha256,
     parents: List(EvidenceId),
+    assumptions: List(AssumptionId),
     availability: Availability,
   )
 }
@@ -59,6 +61,7 @@ pub fn new(
   byte_length byte_length: Int,
   content_hash content_hash: Sha256,
   parents parents: List(EvidenceId),
+  assumptions assumptions: List(AssumptionId),
 ) -> Result(Evidence, EvidenceError) {
   case string.trim(media_type) == media_type && media_type != "", byte_length {
     False, _ -> Error(InvalidMediaType)
@@ -80,6 +83,7 @@ pub fn new(
             byte_length: byte_length,
             content_hash: content_hash,
             parents: parents,
+            assumptions: assumptions,
             availability: Available,
           ))
       }

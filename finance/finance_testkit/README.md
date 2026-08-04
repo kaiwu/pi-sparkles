@@ -8,11 +8,16 @@ fixtures. It helps provider adapters and Pi plugins test bad data and failure
 paths without live APIs. It is test infrastructure, not a production market
 data source.
 
-The implemented first slice includes an immutable manual clock, ordered generic
+The implemented base includes an immutable manual clock, ordered generic
 success/failure scripts with typed exhaustion, and a repeatable Park-Miller seed
-with explicit range generation. Scripted HTTP effects, cassette builders,
-synthetic finance observations, decoder-conformance matrices, redaction law
-harnesses, file helpers and reviewed fixtures remain 0.1 work.
+with explicit range generation. A generic scenario fold captures every state
+and emitted effect. The pure scripted HTTP model consumes typed
+`Response`/`TransportError` outcomes and captures only redacted stable request
+keys; its original value remains unchanged. The cassette helper builds and
+strictly replays complete immutable request/outcome sequences using the single
+`finance_http` cassette format. Synthetic observations, decoder-conformance
+matrices, redaction law harnesses, file helpers, latency/body pause simulation,
+and reviewed fixtures remain 0.1 work.
 
 ## User stories
 
@@ -60,7 +65,7 @@ contract without changing expected domain results.
 | Module | Responsibility |
 | --- | --- |
 | `finance_testkit/clock` | frozen/manual clock, scripted sleeper, deadline and cancellation assertions |
-| `finance_testkit/transport` | scripted async transport, request capture, failure/latency sequences |
+| `finance_testkit/transport` | pure scripted typed outcomes and redacted request capture; async/latency adapters later |
 | `finance_testkit/cassette` | builders and assertions over `finance_http/cassette` |
 | `finance_testkit/generator` | seeded synthetic instruments, observations, quotes, bars, and actions |
 | `finance_testkit/fixtures` | small named edge cases with explicit provenance/licence metadata |
@@ -74,10 +79,12 @@ the test requests it. The scripted sleeper records requested delays and resolves
 when the test advances time. Timeout, retry, and cancellation tests therefore
 contain no wall-clock wait.
 
-The scripted transport returns a sequence of asynchronous successes or typed
-failures and records safe request summaries. It can pause at headers/body,
-simulate cancellation, enforce body limits, repeat rate-limit responses, and
-assert that no unexpected call occurred.
+The scripted transport currently advances as a pure immutable transition. Each
+send consumes one typed success/failure, records `request.safe_key`, and returns
+typed `Exhausted` when an unexpected call occurs. Tests can fold this directly
+through reducers and add `promise.resolve` only in their outer interpreter.
+Future adapters will add virtual latency and pause points at headers/body;
+production code must continue to use the real asynchronous transport.
 
 ## Cassette helpers
 

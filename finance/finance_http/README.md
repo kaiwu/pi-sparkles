@@ -7,11 +7,75 @@ adapters. It centralizes retry, pacing, bounded concurrency, cache hooks,
 redaction, cancellation, response limits, and deterministic cassette replay.
 It does not understand quotes, filings, calendars, or any particular provider.
 
-The implemented first slice is deliberately pure: safe HTTPS request identity,
-explicit idempotency, validated finite retry policy, retryable-failure
-classification, capped exponential delays, bounded `Retry-After`, and typed
-stop reasons. Transport, cancellation, queue/rate-limit reducers, cache,
-cassettes, redaction, response limits, and Bun interpreters remain 0.1 work.
+The implemented base keeps policy pure and effects narrow. It includes safe
+HTTPS request construction, public/secret headers and query parameters, body
+variants, explicit idempotency, finite response/time limits, a persistent
+bounded FIFO queue, and response values that redact sensitive headers and expose
+a body-free diagnostic summary. Retry classification, capped backoff,
+`Retry-After`, immutable rate-limit/cache decisions, strict cassette replay,
+and the event/effect workflow reducer are deterministic transformations.
+
+The Bun interpreter is the deliberate effect boundary. It performs encoded URL
+construction, timeout and caller cancellation, redirect refusal, bounded stream
+reading, UTF-8 decoding, and typed result conversion. Provider exception text
+does not cross that boundary. Direct Bun contracts cover outgoing request
+shape, limits, cancellation, timeout, and non-leaking failures. Policy
+composition now executes through injected transport, clock, sleeper, and status
+acceptor capabilities. It retries only eligible methods/failures, parses both
+standard `Retry-After` forms without reading a global clock, and keeps response
+bodies out of errors. A pure scheduler enforces global and per-origin
+concurrency, bounded waiting, duplicate IDs, fair first-eligible admission, and
+two-phase active cancellation. An explicit asynchronous `Pool` now owns that
+state and launches admitted client calls without moving scheduling policy into
+the effect layer. Cache interfaces, cassette recorder persistence, jitter, and
+binary bodies remain 0.1 work. Cassette bodies are currently required to be
+pre-redacted by the caller.
+
+## Reuse audit
+
+This package deliberately uses the host's global standards-based `fetch`; it
+does not ship Undici, Axios, or another connection pool. Pi configures its
+global fetch with an Undici dispatcher that supplies environment proxy support,
+connection reuse, and header/body idle timeouts. Pi also tells extensions to
+pass the callback `AbortSignal` to nested fetch work. A plugin adapts that
+host-owned signal without giving this library ownership of Pi's controller:
+
+```gleam
+import finance_http/transport
+import pi/raw
+
+let cancellation =
+  signal
+  |> raw.dynamic
+  |> transport.from_abort_signal
+```
+
+Calling `transport.cancel` on an adapted host token is a no-op; cancellation
+flows from Pi. Standalone callers use `new_cancellation` and may cancel that
+library-owned token. An absent Pi signal becomes an independent non-cancelled
+token. The adapter therefore works in both active tool calls and idle extension
+contexts.
+
+The reuse decision was checked against:
+
+- [Pi's HTTP dispatcher](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/src/core/http-dispatcher.ts), which is host bootstrap infrastructure rather than a public extension client;
+- [Pi's extension cancellation guidance](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md#ctxsignal);
+- the official [Gleam Fetch](https://hexdocs.pm/gleam_fetch/gleam/fetch.html) package, which provides good generic Gleam HTTP types, fetch calls, and chunk reads but does not currently expose the combined host-signal/timeout and reader-cancellation contract required by the hard body limit;
+- [Bun's Fetch implementation](https://bun.sh/docs/runtime/networking/fetch), whose standard `AbortSignal` and `ReadableStream` behavior is used by the boundary tests; and
+- the ecosystem [Pi fetch extension](https://github.com/rytswd/pi-agent-extensions/tree/main/fetch), a useful general LLM web/API tool with HTML extraction and file downloads, but not a provider transport with credential-safe keys, deterministic retry policy, provenance, or streaming hard limits.
+
+Pi's LLM-provider retry helpers are also intentionally not imported. They
+operate on assistant-message failures and use host/provider policy; finance
+requests need method/idempotency classification, provider rate-limit state,
+explicit stale-cache results, and deterministic injected jitter. Importing Pi
+internals would couple this standalone Hex library to one Pi release while
+still leaving those rules unimplemented.
+
+The remaining JavaScript FFI is consequently narrow: create/adapt cancellation,
+construct one fetch request, refuse redirects, stop a response stream at the
+byte limit, return a bounded structural result, store one scheduler value, and
+attach/remove abort listeners. Request policy, retry, admission, fairness,
+queueing, caching, cassettes, and error classification remain typed Gleam.
 
 ## User stories
 
@@ -41,6 +105,10 @@ cassettes, redaction, response limits, and Bun interpreters remain 0.1 work.
 | --- | --- |
 | `finance_http/request` | safe method, URL, headers, body, idempotency, and normalized key types |
 | `finance_http/response` | bounded bytes/text, status, safe headers, timings, and cache metadata |
+| `finance_http/transport` | cancellable Bun fetch interpreter with timeout, redirect, and body limits |
+| `finance_http/queue` | pure persistent bounded FIFO with first-match extraction |
+| `finance_http/scheduler` | pure global/per-origin admission, completion, overflow, and cancellation transitions |
+| `finance_http/pool` | explicit async owner that interprets scheduler transitions and launches clients |
 | `finance_http/client` | policy composition and promise-returning request execution |
 | `finance_http/retry` | retry classification, backoff, jitter, attempt budget, and `Retry-After` |
 | `finance_http/rate_limit` | per-origin/token-bucket state and provider header observations |
@@ -55,51 +123,108 @@ normalization, retry classification, backoff calculation, rate-limit state,
 queue selection, cache eligibility, cassette matching, redaction, and error
 construction are pure functions over immutable policy/state values.
 
-The client workflow is modeled as a reducer from `(State, Event)` to
-`#(State, List(Effect))`. Effects describe transport attempts, sleeps, cache
-reads/writes, and observer notifications. The Bun interpreter executes them and
-feeds typed outcomes back into the reducer. This makes attempt sequences,
-budgets, cancellation races, fairness, and stale-result rejection testable by
-folding values with a manual clock. Transport, clock, sleeper, jitter, and cache
-remain explicit capabilities; no module-level client or rate-limit singleton is
-allowed.
+The retry workflow is modeled as a reducer from `(State, Event)` to
+`#(State, List(Effect))`; its current effects describe transport attempts and
+sleeps. The policy client supplies a concrete interpreter through injected
+`Sender`, `Sleeper`, `Clock`, and `StatusAcceptor` functions. This makes attempt
+sequences, budgets, cancellation races, and stale-result rejection testable
+without networking or wall-clock sleeps. Cache and observer effects will extend
+the reducer rather than becoming hidden globals. No module-level client or
+rate-limit singleton is allowed.
+
+The current low-level `finance_http/transport.send` accepts an explicit
+cancellation value and returns `Promise(Result(Response, TransportError))`.
+Callers create independent cancellation values with `new_cancellation`; no
+global abort state exists. The interpreter returns only typed timeout,
+cancellation, size, network, response-validation, or FFI-contract failures. It
+never includes thrown JavaScript messages.
 
 ## Core API shape
 
 Every real request is asynchronous:
 
 ```gleam
-pub type Transport =
-  fn(Request, AbortSignal) -> Promise(Result(Response, TransportError))
+pub type Sender =
+  fn(Request, Cancellation) -> Promise(Result(Response, TransportError))
 
 pub fn send(
   client: Client,
   request: Request,
-  signal: AbortSignal,
-) -> Promise(Result(Response, HttpError))
+  cancellation: Cancellation,
+) -> Promise(Result(Response, ClientError))
+
+pub fn send(
+  pool: Pool,
+  id: String,
+  request: Request,
+  cancellation: Cancellation,
+) -> Promise(Result(Response, PoolError))
 ```
 
-The exact public names may change during implementation, but a network, retry
-sleep, or file-backed cache operation must never be exposed as a synchronous
-`Result`. Cancellation propagates through queueing, sleep, transport, body
-reading, cache, and cassette operations.
+`ClientError` is deliberately safe to inspect. It records cancellation or the
+typed stop reason, attempt count, and either a transport-error variant or
+`SafeSummary(status, byte_length, elapsed)`. It never retains the response body
+or arbitrary JavaScript exception text. A network, retry sleep, or future
+file-backed cache operation is never exposed as a synchronous `Result`.
+Cancellation currently propagates through retry sleep, transport, and body
+reading. The pool also removes waiting work immediately and prevents cancelled
+active work from releasing its slot before the client promise settles. Cache
+and cassette cancellation arrive with those interpreters.
 
-`Client` is constructed with explicit dependencies: transport, clock, sleeper,
-random/jitter source, retry policy, concurrency policy, rate-limit policy,
-cache, redactor, response limits, and user-agent. Tests replace all of them.
+`Client` is currently constructed with explicit sender, clock, sleeper, retry
+policy, and successful-status predicate. Tests replace all of them. Concurrency
+is composed by wrapping it in a `Pool`; rate-limit, cache, redactor, jitter, and
+observer capabilities will be composed as their interpreters land rather than
+read from process globals.
+
+## Concurrency scheduling
+
+`scheduler.for_request` derives a job's concurrency namespace from the
+validated request origin, preventing an adapter from accidentally placing a
+request in the wrong provider bucket. Submission either starts immediately or
+returns a bounded queue position. Duplicate IDs, invalid limits, overflow, and
+unknown completion/cancellation are typed errors.
+
+When capacity opens, the scheduler selects the oldest eligible waiting job. It
+may pass an older job whose origin is still saturated, so that origin cannot
+head-of-line block unrelated providers; ordering within each eligible set is
+preserved. Every transition returns a new scheduler and leaves the old value
+unchanged.
+
+Cancelling a waiting job removes it immediately. Cancelling an active job emits
+`CancelledActive` but deliberately keeps the slot occupied. The effect shell
+aborts its transport and calls `complete` only after termination is observed;
+only then may a queued job start. This two-phase rule prevents cancellation
+races from temporarily exceeding the configured limit.
+
+`pool.new` allocates one scheduler owner; it is passed explicitly and is never
+a process singleton. Each `pool.send` performs its read/reduce/write transition
+synchronously before returning a promise, which makes batches of submissions
+atomic with respect to the JavaScript event loop. The tiny FFI cell contains
+only the latest immutable scheduler. A second FFI registry subscribes to the
+already-explicit cancellation tokens and removes listeners on completion.
+
+The pool resolves queue admission failures without launching the client,
+converts client failures to `PoolError`, and contains a rejected injected
+client promise as the body-free `UnexpectedClientFailure`. The default client
+and transport observe cancellation. A custom injected `Sender` is likewise
+required to settle after its cancellation token aborts; the pool intentionally
+does not forge completion for an effect it cannot prove has stopped.
 
 ## Request normalization
 
-A request has method, parsed URL, ordered multi-value headers, optional bounded
-body, timeout, response-byte limit, and idempotency classification. Its
-normalized key includes method, canonical origin/path, sorted non-secret query
-parameters, selected representation headers, safe body hash, and an explicit
-provider/entitlement namespace.
+A request has method, validated HTTPS origin/path, ordered multi-value headers
+and query parameters, optional text body, timeout, response-byte limit, and
+idempotency classification. Its current safe key includes method, origin/path,
+sorted query parameters with secret values replaced, and an explicit body
+variant supplied by the adapter.
 
 Authorization, cookies, signed parameters, timestamps/nonces, and configured
-secret fields are excluded or replaced before a key or cassette is emitted.
-Collisions between materially different requests are a typed error, not a
-replay guess.
+secret fields must be marked `Secret`; those values are replaced before a key
+or cassette is emitted. Text bodies require a non-empty `safe_variant` so raw
+provider data never enters matching metadata. Selected representation-header
+keys, a safe body hash, entitlement namespaces, and typed collision detection
+remain client-layer work.
 
 ## Retry and rate-limit policy
 
@@ -112,8 +237,9 @@ replay guess.
 - Attempts, elapsed time, total sleep, and response-body work all share finite
   budgets. Defaults never retry forever.
 - Jitter is injected and deterministic in tests.
-- Per-origin concurrency and rate limits are independent. Queues are bounded
-  and cancellation removes waiting requests.
+- Per-origin concurrency and rate limits are independent. Queues are bounded,
+  waiting cancellation removes the job, and active cancellation retains its
+  slot until interpreter acknowledgement.
 
 When a limit is exhausted, `HttpError` reports the safe origin, attempts,
 observed limit state, and next retry time when known. It does not return an old
@@ -201,6 +327,5 @@ so old fixtures fail clearly rather than replay incorrectly.
   smaller package-owned transport record.
 - Whether 0.1 includes file-backed cache/cassette helpers or only injected
   interfaces plus Bun reference implementations.
-- Fairness algorithm for concurrent origins and whether rate-limit state needs
-  an optional cross-process adapter later.
+- Whether rate-limit state needs an optional cross-process adapter later.
 - Default response-size, retry-attempt, and elapsed-time limits.

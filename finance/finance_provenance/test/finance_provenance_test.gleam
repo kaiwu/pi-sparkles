@@ -1,9 +1,13 @@
 import finance_core/source
 import finance_core/time
 import finance_provenance
+import finance_provenance/assumption
+import finance_provenance/canonical
 import finance_provenance/evidence
+import finance_provenance/hash
 import finance_provenance/identity
 import finance_provenance/manifest
+import finance_provenance/redact
 import gleam/list
 import gleam/option.{None}
 import gleam/string
@@ -43,6 +47,7 @@ pub fn evidence_rejects_time_travel_test() {
     byte_length: 10,
     content_hash: hash("c"),
     parents: [],
+    assumptions: [],
   )
   |> should.equal(Error(evidence.RetrievedBeforeAsOf))
 }
@@ -101,9 +106,140 @@ pub fn disjoint_manifests_merge_deterministically_test() {
   ])
 }
 
+pub fn evidence_requires_declared_assumptions_test() {
+  let assumption = test_assumption("discount-rate", "0.08")
+  let derived = fixture_with_assumptions("c", [], [assumption.id], 20)
+
+  manifest.new()
+  |> manifest.add_evidence(derived)
+  |> should.equal(Error(manifest.MissingAssumption("discount-rate")))
+
+  let assert Ok(with_assumption) =
+    manifest.new() |> manifest.add_assumption(assumption)
+  let assert Ok(with_evidence) =
+    with_assumption |> manifest.add_evidence(derived)
+
+  manifest.assumptions(with_evidence)
+  |> should.equal([assumption])
+}
+
+pub fn structural_redaction_is_recursive_and_idempotent_test() {
+  let input =
+    redact.Object([
+      #("symbol", redact.Text("AAPL")),
+      #("Authorization", redact.Text("Bearer secret")),
+      #(
+        "nested",
+        redact.Object([
+          #("api_key", redact.Text("secret-key")),
+          #("safe", redact.Boolean(True)),
+        ]),
+      ),
+      #(
+        "items",
+        redact.Array([
+          redact.Object([#("private-token", redact.Text("custom-secret"))]),
+        ]),
+      ),
+    ])
+  let expected =
+    redact.Object([
+      #("symbol", redact.Text("AAPL")),
+      #("Authorization", redact.Text("[REDACTED]")),
+      #(
+        "nested",
+        redact.Object([
+          #("api_key", redact.Text("[REDACTED]")),
+          #("safe", redact.Boolean(True)),
+        ]),
+      ),
+      #(
+        "items",
+        redact.Array([
+          redact.Object([#("private-token", redact.Text("[REDACTED]"))]),
+        ]),
+      ),
+    ])
+  let redacted = redact.apply(input, ["private-token"])
+
+  redacted
+  |> should.equal(expected)
+  redact.apply(redacted, ["private-token"])
+  |> should.equal(redacted)
+}
+
+pub fn sha256_ffi_matches_published_vector_test() {
+  let assert Ok(digest) = hash.text("abc")
+
+  identity.sha256_value(digest)
+  |> should.equal(
+    "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+  )
+}
+
+pub fn url_redaction_removes_userinfo_fragments_and_signed_queries_test() {
+  let unsafe =
+    "https://user:pass@example.test/path?symbol=AAPL&api_key=secret&X-Amz-Signature=signature#token=fragment-secret"
+  let safe = redact.url(unsafe, [])
+
+  safe
+  |> should.equal(
+    "https://[REDACTED]@example.test/path?symbol=AAPL&api_key=%5BREDACTED%5D&X-Amz-Signature=%5BREDACTED%5D",
+  )
+  redact.url(safe, [])
+  |> should.equal(safe)
+}
+
+pub fn url_redaction_decodes_keys_and_accepts_provider_policy_test() {
+  redact.url(
+    "https://example.test/data?api%5Fkey=secret&provider_nonce=abc&safe=yes",
+    ["provider_nonce"],
+  )
+  |> should.equal(
+    "https://example.test/data?api%5Fkey=%5BREDACTED%5D&provider_nonce=%5BREDACTED%5D&safe=yes",
+  )
+}
+
+pub fn canonical_manifest_is_independent_of_insertion_order_test() {
+  let first = fixture("a", [], 10)
+  let second = fixture("b", [], 20)
+  let low_assumption = test_assumption("a-rate", "0.03")
+  let high_assumption = test_assumption("z-rate", "0.08")
+  let assert Ok(left) =
+    manifest.new()
+    |> manifest.add_assumption(high_assumption)
+    |> result_then(manifest.add_assumption(_, low_assumption))
+    |> result_then(manifest.add_evidence(_, second))
+    |> result_then(manifest.add_evidence(_, first))
+    |> result_then(manifest.add_root(_, second.id))
+    |> result_then(manifest.add_root(_, first.id))
+  let assert Ok(right) =
+    manifest.new()
+    |> manifest.add_assumption(low_assumption)
+    |> result_then(manifest.add_assumption(_, high_assumption))
+    |> result_then(manifest.add_evidence(_, first))
+    |> result_then(manifest.add_evidence(_, second))
+    |> result_then(manifest.add_root(_, first.id))
+    |> result_then(manifest.add_root(_, second.id))
+
+  canonical.encode_manifest(left)
+  |> should.equal(canonical.encode_manifest(right))
+  hash.manifest(left)
+  |> should.equal(hash.manifest(right))
+}
+
 fn fixture(
   identity_character: String,
   parents: List(identity.EvidenceId),
+  byte_length: Int,
+) -> evidence.Evidence {
+  fixture_with_assumptions(identity_character, parents, [], byte_length)
+}
+
+fn fixture_with_assumptions(
+  identity_character: String,
+  parents: List(identity.EvidenceId),
+  assumptions: List(assumption.AssumptionId),
   byte_length: Int,
 ) -> evidence.Evidence {
   let assert Ok(as_of) = time.instant(100)
@@ -120,8 +256,22 @@ fn fixture(
       byte_length: byte_length,
       content_hash: hash(identity_character),
       parents: parents,
+      assumptions: assumptions,
     )
   item
+}
+
+fn test_assumption(id_value: String, value: String) -> assumption.Assumption {
+  let assert Ok(id) = assumption.id(id_value)
+  let assert Ok(value) =
+    assumption.new(
+      id: id,
+      name: "Discount rate",
+      value: assumption.TextValue(value),
+      origin: assumption.User,
+      explanation: "Explicit test assumption",
+    )
+  value
 }
 
 fn source_ref() -> source.SourceRef {
@@ -157,4 +307,14 @@ fn fingerprint(character: String) -> identity.SourceFingerprint {
   character
   |> hash
   |> identity.source_fingerprint
+}
+
+fn result_then(
+  result: Result(value, error),
+  next: fn(value) -> Result(next, error),
+) -> Result(next, error) {
+  case result {
+    Ok(value) -> next(value)
+    Error(error) -> Error(error)
+  }
 }

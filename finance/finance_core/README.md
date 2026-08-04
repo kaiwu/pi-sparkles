@@ -6,12 +6,13 @@ Status: **Implementing** · version: `0.1.0` · target: JavaScript/Bun
 finance packages. It contains no Pi extension code, networking, storage,
 provider authentication, or analytical algorithms.
 
-The implemented first slice includes exact decimal parsing, normalization and
-comparison without JavaScript `Number`; validated instants, durations, dates,
+The implemented slice includes exact decimal parsing, normalization,
+comparison, addition, subtraction, multiplication, and explicit quantization
+and division without JavaScript `Number`; validated instants, durations, dates,
 currencies, MICs, symbols and identifiers; money values; instrument/listing
 records; positive timeframes; safe source references; and metadata-preserving
-`Observation(a).map`. Arithmetic, canonical JSON, timezone conversion, richer
-adjustment/session types, and broader law/property tests remain 0.1 work.
+`Observation(a).map`. Canonical JSON, timezone conversion, and richer
+adjustment/session types remain 0.1 work.
 
 ## User stories
 

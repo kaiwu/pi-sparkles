@@ -1,8 +1,19 @@
 import finance_core/time
+import finance_http/cassette
+import finance_http/request
+import finance_http/response
+import finance_http/retry
+import finance_http/transport as http_transport
+import finance_http/workflow
 import finance_testkit
+import finance_testkit/cassette as cassette_testkit
 import finance_testkit/clock
+import finance_testkit/scenario
 import finance_testkit/script
 import finance_testkit/seed
+import finance_testkit/transport as transport_testkit
+import gleam/list
+import gleam/option.{None}
 import gleeunit
 import gleeunit/should
 
@@ -77,4 +88,130 @@ pub fn seeded_range_is_explicit_test() {
   seed
   |> seed.between(12, 10)
   |> should.equal(Error(seed.InvalidRange))
+}
+
+pub fn scenario_folds_http_workflow_without_an_interpreter_test() {
+  let request = test_request()
+  let initial = workflow.new(request, test_policy(), duration(0))
+  let trace =
+    scenario.run(
+      initial,
+      [
+        workflow.Start,
+        workflow.TransportFailed(
+          1,
+          retry.Transport(retry.Timeout),
+          duration(10),
+        ),
+        workflow.SleepFinished(2),
+      ],
+      workflow.update,
+    )
+
+  trace.effects
+  |> should.equal([
+    workflow.Send(1, request),
+    workflow.Sleep(duration(100), 2),
+    workflow.Send(2, request),
+  ])
+  trace.states
+  |> list.length
+  |> should.equal(4)
+  trace.final
+  |> workflow.phase
+  |> should.equal(workflow.Waiting(2))
+}
+
+pub fn cassette_helper_replays_a_complete_pure_scenario_test() {
+  let first = test_request()
+  let second = test_request_at("/bars")
+  let cassette =
+    cassette_testkit.from_pairs([
+      #(first, cassette.Responded(cassette.Response(200, "quote"))),
+      #(second, cassette.Responded(cassette.Response(200, "bars"))),
+    ])
+  let assert Ok(replay) = cassette_testkit.replay_all(cassette, [first, second])
+
+  replay.outcomes
+  |> should.equal([
+    cassette.Responded(cassette.Response(200, "quote")),
+    cassette.Responded(cassette.Response(200, "bars")),
+  ])
+  cassette.schema_version(replay.cassette)
+  |> should.equal(1)
+  cassette.consumed(replay.cassette)
+  |> should.equal(2)
+}
+
+pub fn scripted_transport_is_pure_ordered_and_captures_only_safe_keys_test() {
+  let assert Ok(base) =
+    request.new(
+      method: request.Get,
+      origin: "https://data.example.test",
+      path: "/quotes",
+      idempotency_key: None,
+    )
+  let assert Ok(with_secret) =
+    request.with_query(
+      base,
+      name: "api_key",
+      value: "never-capture-this",
+      sensitivity: request.Secret,
+    )
+  let assert Ok(success) =
+    response.new(
+      status: 200,
+      headers: [],
+      body: "quote",
+      byte_length: 5,
+      elapsed: duration(10),
+    )
+  let original =
+    transport_testkit.new([Ok(success), Error(http_transport.Timeout)])
+  let assert Ok(#(after_success, Ok(actual))) =
+    transport_testkit.send(original, with_secret)
+  let assert Ok(#(after_timeout, Error(http_transport.Timeout))) =
+    transport_testkit.send(after_success, with_secret)
+
+  response.body(actual) |> should.equal("quote")
+  transport_testkit.remaining(original) |> should.equal(2)
+  transport_testkit.remaining(after_timeout) |> should.equal(0)
+  transport_testkit.captured(after_timeout)
+  |> should.equal([
+    "GET https://data.example.test/quotes?api_key=[REDACTED]",
+    "GET https://data.example.test/quotes?api_key=[REDACTED]",
+  ])
+  transport_testkit.send(after_timeout, with_secret)
+  |> should.equal(Error(transport_testkit.Exhausted))
+}
+
+fn test_request() -> request.Request {
+  test_request_at("/quotes")
+}
+
+fn test_request_at(path: String) -> request.Request {
+  let assert Ok(value) =
+    request.new(
+      method: request.Get,
+      origin: "https://data.example.test",
+      path: path,
+      idempotency_key: None,
+    )
+  value
+}
+
+fn test_policy() -> retry.Policy {
+  let assert Ok(value) =
+    retry.policy(
+      maximum_attempts: 3,
+      maximum_elapsed: duration(5000),
+      base_delay: duration(100),
+      maximum_delay: duration(1000),
+    )
+  value
+}
+
+fn duration(milliseconds: Int) -> time.Duration {
+  let assert Ok(value) = time.duration(milliseconds)
+  value
 }
