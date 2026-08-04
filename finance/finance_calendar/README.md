@@ -1,10 +1,11 @@
 # finance_calendar
 
-Status: **Implementing** · version: `0.1.0` · target: JavaScript/Bun
+Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
-`finance_calendar` supplies pure civil-date, market-session, business-day, and
-financial day-count rules. It is the market-time policy layer used before
-`finance_series` resampling and time-dependent `finance_math` calculations.
+`finance_calendar` supplies pure civil-date, market-session, business-day,
+joint-calendar, coupon-schedule, and financial day-count rules. It is the
+market-time policy layer used before `finance_series` resampling and
+time-dependent `finance_math` calculations.
 
 The package depends on `finance_core` through a local path. It includes no Pi,
 HTTP, filesystem, system clock, timezone database, JavaScript FFI, or bundled
@@ -32,7 +33,9 @@ alone constitute an authoritative trading calendar.
 | `finance_calendar/local` | validated IANA-style zone IDs, local wall times, and explicitly offset zoned date-times |
 | `finance_calendar/calendar` | weekly trading templates, dated closures/overrides, same-day and overnight sessions, local-time classification |
 | `finance_calendar/business` | bounded following/preceding adjustments and business-day shifts |
-| `finance_calendar/day_count` | Actual/360, Actual/365 Fixed, Actual/Actual ISDA, 30/360 US, and 30E/360 |
+| `finance_calendar/day_count` | Actual/360, Actual/365 Fixed, ISDA/ICMA actual, US/European/ISDA 30/360, and Business/252 |
+| `finance_calendar/joint` | explicit all-open and any-open calendar composition |
+| `finance_calendar/schedule` | bounded coupon/payment boundaries, stub rules, end-of-month preservation, and adjustment |
 
 ## Civil dates
 
@@ -104,8 +107,13 @@ calendars and select the correct one as an explicit metric assumption.
 - `Actual360` and `Actual365Fixed` divide actual Gregorian days by a fixed
   denominator;
 - `ActualActualIsda` partitions cross-year intervals by each calendar year’s
-  actual length; and
+  actual length; `actual_actual_icma` takes an explicit reference coupon period;
 - `Thirty360Us` and `ThirtyE360` apply their distinct month-end rules.
+
+The separate ISDA 30E/360 helper makes termination-date treatment explicit,
+and `business_252` counts a caller-supplied calendar over a bounded half-open
+interval. Coupon schedules require a finite period count, a short/long first or
+last stub rule, and an explicit end-of-month policy.
 
 The convention must be carried with any interest, yield, accrual, duration, or
 XIRR result. The package never selects one based on currency or instrument name.
@@ -142,13 +150,11 @@ the same functions without networking or a system clock.
 - The package remains pure and contains no FFI or bundled unreviewed datasets.
 - Formatting and warnings-as-errors builds pass.
 
-## Remaining 0.1 work
+## Post-foundation expansion
 
-- recurrence and coupon/payment schedule generation with explicit stub rules;
-- end-of-month schedule preservation and ex-date/record-date helpers;
-- additional conventions such as Actual/Actual ICMA, 30E/360 ISDA, and
-  Business/252;
-- composed/joint calendars and separate trading versus settlement helpers;
+- ex-date/record-date helpers and specialized settlement schedules;
+- additional market-specific day-count interpretations;
+- higher-level trading versus settlement convenience helpers;
 - pure calendar-to-series bucket adapters around an injected timezone resolver;
 - versioned provider-calendar metadata, effective dates, provenance, and
   licence labels; and

@@ -1,3 +1,6 @@
+import finance_core/currency
+import finance_core/decimal
+import finance_core/source
 import finance_core/time
 import finance_http/cassette
 import finance_http/request
@@ -8,12 +11,17 @@ import finance_http/workflow
 import finance_testkit
 import finance_testkit/cassette as cassette_testkit
 import finance_testkit/clock
+import finance_testkit/decoder
+import finance_testkit/fixture
+import finance_testkit/generator
+import finance_testkit/redaction
 import finance_testkit/scenario
 import finance_testkit/script
 import finance_testkit/seed
 import finance_testkit/transport as transport_testkit
 import gleam/list
 import gleam/option.{None}
+import gleam/order
 import gleeunit
 import gleeunit/should
 
@@ -21,9 +29,9 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
-pub fn package_is_implementing_test() {
+pub fn package_is_experimental_test() {
   finance_testkit.status()
-  |> should.equal(finance_testkit.Implementing)
+  |> should.equal(finance_testkit.Experimental)
 }
 
 pub fn manual_clock_advances_without_wall_time_test() {
@@ -183,6 +191,107 @@ pub fn scripted_transport_is_pure_ordered_and_captures_only_safe_keys_test() {
   ])
   transport_testkit.send(after_timeout, with_secret)
   |> should.equal(Error(transport_testkit.Exhausted))
+}
+
+pub fn synthetic_quotes_are_seeded_labelled_and_byte_stable_test() {
+  let assert Ok(first_seed) = seed.new(42)
+  let assert Ok(second_seed) = seed.new(42)
+  let assert Ok(usd) = currency.from_code("USD")
+  let assert Ok(now) = time.instant(1_700_000_000_000)
+  let assert Ok(#(first_next, first)) =
+    generator.quote(seed: first_seed, as_of: now, currency: usd)
+  let assert Ok(#(second_next, second)) =
+    generator.quote(seed: second_seed, as_of: now, currency: usd)
+
+  first
+  |> should.equal(second)
+  seed.value(first_next)
+  |> should.equal(seed.value(second_next))
+  first.price.source
+  |> source.provider
+  |> should.equal(generator.provider)
+  generator.algorithm_version
+  |> should.equal(1)
+}
+
+pub fn synthetic_bar_generator_preserves_ohlc_invariants_test() {
+  let assert Ok(initial) = seed.new(99)
+  let assert Ok(now) = time.instant(1000)
+  let assert Ok(#(_, bar)) = generator.bar(seed: initial, as_of: now)
+
+  let high_vs_open = decimal.compare(bar.high, bar.open)
+  { high_vs_open == order.Gt || high_vs_open == order.Eq }
+  |> should.be_true
+  let high_vs_close = decimal.compare(bar.high, bar.close)
+  { high_vs_close == order.Gt || high_vs_close == order.Eq }
+  |> should.be_true
+  let low_vs_close = decimal.compare(bar.low, bar.close)
+  { low_vs_close == order.Lt || low_vs_close == order.Eq }
+  |> should.be_true
+}
+
+pub fn decoder_conformance_reports_unsafe_acceptance_and_value_drift_test() {
+  let cases = [
+    decoder.Accept(
+      "exact-decimal",
+      "\"9007199254740993.01\"",
+      "9007199254740993.01",
+    ),
+    ..decoder.required_boundary_rejections(
+      "{}",
+      "{\"value\":null}",
+      "{\"value\":[]}",
+      "{\"value\":9007199254740993.01}",
+      "{\"kind\":\"future-value\"}",
+    )
+  ]
+  let unsafe_report = decoder.check(cases, fn(payload) { Ok(payload) })
+
+  decoder.passed(unsafe_report)
+  |> should.be_false
+  unsafe_report.failures
+  |> list.length
+  |> should.equal(6)
+
+  let strict_report =
+    decoder.check(cases, fn(payload) {
+      case payload {
+        "\"9007199254740993.01\"" -> Ok("9007199254740993.01")
+        _ -> Error("typed decoder failure")
+      }
+    })
+  decoder.passed(strict_report)
+  |> should.be_true
+}
+
+pub fn redaction_law_reports_secret_labels_without_echoing_values_test() {
+  redaction.find_leaks("GET /quotes?api_key=[REDACTED] account=[REDACTED]", [
+    #("api-key", "secret-123"),
+    #("account", "account-999"),
+  ])
+  |> should.equal([])
+  redaction.find_leaks("log secret-123", [#("api-key", "secret-123")])
+  |> should.equal([redaction.Leak("api-key")])
+}
+
+pub fn authoritative_fixture_metadata_cannot_omit_governance_fields_test() {
+  let assert Ok(date) = time.date(2026, 8, 4)
+  fixture.metadata(
+    kind: fixture.Authoritative,
+    source: "",
+    licence: "public-domain",
+    retrieved_on: date,
+    covered_market: "XNAS",
+  )
+  |> should.equal(Error(fixture.InvalidSource))
+  fixture.metadata(
+    kind: fixture.Authoritative,
+    source: "https://official.example.test/calendar",
+    licence: "public-domain",
+    retrieved_on: date,
+    covered_market: "XNAS",
+  )
+  |> should.be_ok
 }
 
 fn test_request() -> request.Request {

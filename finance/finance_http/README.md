@@ -1,6 +1,6 @@
 # finance_http
 
-Status: **Implementing** · version: `0.1.0` · target: JavaScript/Bun
+Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `finance_http` is an asynchronous, provider-safe transport layer for finance
 adapters. It centralizes retry, pacing, bounded concurrency, cache hooks,
@@ -28,7 +28,7 @@ concurrency, bounded waiting, duplicate IDs, fair first-eligible admission, and
 two-phase active cancellation. An explicit asynchronous `Pool` now owns that
 state and launches admitted client calls without moving scheduling policy into
 the effect layer. Cache interfaces, cassette recorder persistence, jitter, and
-binary bodies remain 0.1 work. Cassette bodies are currently required to be
+binary bodies are a post-foundation transport extension. Cassette bodies are currently required to be
 pre-redacted by the caller.
 
 ## Reuse audit
@@ -99,7 +99,7 @@ queueing, caching, cassettes, and error classification remain typed Gleam.
 - No attempt to make a credential-free public API immune to provider terms or
   operational limits.
 
-## Planned modules
+## Module surface
 
 | Module | Responsibility |
 | --- | --- |
@@ -321,11 +321,7 @@ so old fixtures fail clearly rather than replay incorrectly.
 - Formatting, warnings-as-errors build, unit tests, Bun FFI tests, and Hex
   tarball audit pass.
 
-## Open decisions
+## Post-foundation decisions
 
-- The concrete Gleam HTTP request/response dependency versus a deliberately
-  smaller package-owned transport record.
-- Whether 0.1 includes file-backed cache/cassette helpers or only injected
-  interfaces plus Bun reference implementations.
 - Whether rate-limit state needs an optional cross-process adapter later.
 - Default response-size, retry-attempt, and elapsed-time limits.

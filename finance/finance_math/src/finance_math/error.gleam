@@ -18,6 +18,8 @@ pub type MetricError {
   SingularSystem
   InvalidCompounding
   DomainError
+  NonFiniteInput
+  NonFiniteOutput
   ZeroVariance
   NoSignChange
   RootNotBracketed

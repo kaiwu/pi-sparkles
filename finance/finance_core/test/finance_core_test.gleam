@@ -1,15 +1,21 @@
 import finance_core
+import finance_core/adjustment
 import finance_core/currency
 import finance_core/decimal
 import finance_core/identifier
+import finance_core/market
 import finance_core/money
 import finance_core/observation
+import finance_core/observation_json
 import finance_core/source
 import finance_core/time
+import gleam/dynamic/decode
 import gleam/int
+import gleam/json
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/order
+import gleam/string
 import gleeunit
 import gleeunit/should
 
@@ -17,9 +23,9 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
-pub fn package_is_implementing_test() {
+pub fn package_is_experimental_test() {
   finance_core.status()
-  |> should.equal(finance_core.Implementing)
+  |> should.equal(finance_core.Experimental)
 }
 
 pub fn decimal_normalization_is_exact_test() {
@@ -49,6 +55,8 @@ pub fn decimal_comparison_aligns_scale_without_float_test() {
   |> should.equal(order.Eq)
   decimal.compare(left, right)
   |> should.equal(order.Lt)
+  decimal.compare(parsed_decimal("0.5"), decimal.zero())
+  |> should.equal(order.Gt)
 }
 
 pub fn decimal_rejects_ambiguous_input_test() {
@@ -106,6 +114,15 @@ pub fn decimal_arithmetic_laws_hold_for_canonical_values_test() {
   |> should.equal(decimal.add(decimal.multiply(a, b), decimal.multiply(a, c)))
   decimal.subtract(a, a)
   |> should.equal(decimal.zero())
+}
+
+pub fn decimal_integer_power_is_exact_and_domain_checked_test() {
+  decimal.power(parsed_decimal("1.25"), 3)
+  |> should.equal(Ok(parsed_decimal("1.953125")))
+  decimal.power(parsed_decimal("9"), 0)
+  |> should.equal(Ok(parsed_decimal("1")))
+  decimal.power(parsed_decimal("2"), -1)
+  |> should.equal(Error(decimal.NegativeExponent))
 }
 
 pub fn decimal_quantization_has_explicit_rounding_test() {
@@ -266,6 +283,9 @@ pub fn observation_map_preserves_metadata_test() {
       freshness: observation.Fresh(maximum_age),
       entitlement: observation.Delayed(maximum_age),
       quality: observation.Reported,
+      unit: Some(market.Scalar),
+      adjustment: Some(adjustment.Raw),
+      session: Some(market.Regular),
     )
   let mapped = observation.map(original, fn(value) { value * 2 })
 
@@ -283,6 +303,146 @@ pub fn observation_map_preserves_metadata_test() {
     value + 1
   })
   |> should.equal(observation.map(original, fn(value) { value * 2 + 1 }))
+}
+
+pub fn source_references_reject_common_credential_shapes_test() {
+  source.new(
+    provider: "provider",
+    reference: "quotes?symbol=AAPL&api_key=secret",
+    kind: source.LicensedVendor,
+  )
+  |> should.equal(Error(source.UnsafeReference))
+}
+
+pub fn money_arithmetic_is_currency_safe_test() {
+  let assert Ok(usd) = currency.from_code("USD")
+  let assert Ok(cny) = currency.from_code("CNY")
+  let left = money.new(parsed_decimal("12.25"), usd)
+  let right = money.new(parsed_decimal("0.75"), usd)
+
+  money.add(left, right)
+  |> should.equal(Ok(money.new(parsed_decimal("13"), usd)))
+  money.subtract(left, right)
+  |> should.equal(Ok(money.new(parsed_decimal("11.5"), usd)))
+  money.compare(left, right)
+  |> should.equal(Ok(order.Gt))
+  money.add(left, money.new(parsed_decimal("1"), cny))
+  |> should.equal(Error(money.CurrencyMismatch("USD", "CNY")))
+}
+
+pub fn identity_resolution_never_guesses_ambiguous_symbols_test() {
+  identifier.resolve(["AAPL@XNAS", "AAPL@XMEX"])
+  |> should.equal(identifier.Ambiguous("AAPL@XNAS", "AAPL@XMEX", []))
+  identifier.resolve(["0700@XHKG"])
+  |> should.equal(identifier.Unique("0700@XHKG"))
+  identifier.resolve([])
+  |> should.equal(identifier.NoMatch)
+}
+
+pub fn civil_time_and_timezone_values_are_validated_test() {
+  let assert Ok(noon) = time.time_of_day(12, 30)
+  let assert Ok(zone) = time.timezone("Asia/Shanghai")
+
+  time.time_of_day_parts(noon)
+  |> should.equal(#(12, 30))
+  time.timezone_name(zone)
+  |> should.equal("Asia/Shanghai")
+  time.time_of_day(24, 0)
+  |> should.equal(Error(time.InvalidHour))
+  time.timezone("CST")
+  |> should.equal(Error(time.InvalidTimezone))
+}
+
+pub fn observation_json_is_canonical_versioned_and_round_trips_test() {
+  let assert Ok(as_of) = time.instant(1_700_000_000_000)
+  let assert Ok(retrieved_at) = time.instant(1_700_000_001_000)
+  let assert Ok(age) = time.duration(1000)
+  let assert Ok(maximum_age) = time.duration(500)
+  let assert Ok(source_ref) =
+    source.new(
+      provider: "licensed-provider",
+      reference: "quotes/0700",
+      kind: source.LicensedVendor,
+    )
+  let assert Ok(hkd) = currency.from_code("HKD")
+  let assert Ok(provider_adjustment) =
+    adjustment.provider_adjusted(
+      provider: "licensed-provider",
+      basis: "split-and-cash-dividend-v2",
+    )
+  let assert Ok(session) = market.other_session("midday-reopen-auction")
+  let original =
+    observation.Observation(
+      value: "321.40",
+      as_of: as_of,
+      retrieved_at: retrieved_at,
+      source: source_ref,
+      evidence_id: Some("sha256:evidence"),
+      freshness: observation.Stale(age, maximum_age),
+      entitlement: observation.Delayed(maximum_age),
+      quality: observation.Missing(observation.NotReported),
+      unit: Some(market.CurrencyPerShare(hkd)),
+      adjustment: Some(provider_adjustment),
+      session: Some(session),
+    )
+  let encoded = observation_json.encode(original, json.string)
+  let assert Ok(decoded) = observation_json.decode(encoded, decode.string)
+
+  decoded
+  |> should.equal(original)
+  observation_json.encode(decoded, json.string)
+  |> should.equal(encoded)
+  encoded
+  |> string_starts_with("{\"schemaVersion\":1,\"value\":\"321.40\"")
+}
+
+pub fn observation_json_rejects_unknown_versions_and_enum_values_test() {
+  let valid = canonical_minimal_observation_json()
+  valid
+  |> observation_json.decode(decode.int)
+  |> should.be_ok
+  valid
+  |> replace_once("\"schemaVersion\":1", "\"schemaVersion\":2")
+  |> observation_json.decode(decode.int)
+  |> should.be_error
+  valid
+  |> replace_once("\"tag\":\"reported\"", "\"tag\":\"invented\"")
+  |> observation_json.decode(decode.int)
+  |> should.be_error
+}
+
+fn canonical_minimal_observation_json() -> String {
+  let assert Ok(instant) = time.instant(0)
+  let assert Ok(source_ref) =
+    source.new(
+      provider: "synthetic",
+      reference: "fixture",
+      kind: source.Synthetic,
+    )
+  observation.Observation(
+    value: 1,
+    as_of: instant,
+    retrieved_at: instant,
+    source: source_ref,
+    evidence_id: None,
+    freshness: observation.UnknownFreshness,
+    entitlement: observation.UnknownEntitlement,
+    quality: observation.Reported,
+    unit: None,
+    adjustment: None,
+    session: None,
+  )
+  |> observation_json.encode(json.int)
+}
+
+fn string_starts_with(value: String, prefix: String) -> Nil {
+  value
+  |> string.starts_with(prefix)
+  |> should.be_true
+}
+
+fn replace_once(value: String, pattern: String, replacement: String) -> String {
+  string.replace(value, pattern, replacement)
 }
 
 fn parsed_decimal(value: String) -> decimal.Decimal {

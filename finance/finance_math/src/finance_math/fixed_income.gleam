@@ -1,4 +1,5 @@
 import finance_math/error.{type MetricError}
+import finance_math/finite
 import gleam/float
 import gleam/int
 import gleam/list
@@ -33,6 +34,8 @@ pub fn present_value(
   |> list.map(fn(flow) { discounted(flow, yield, compounding) })
   |> list.try_map(fn(value) { value })
   |> result.map(float.sum)
+  |> result.map(finite.output)
+  |> result.flatten
 }
 
 /// Price sensitivity to a parallel change in the annual yield argument.
@@ -97,6 +100,12 @@ fn validate(
   yield: Float,
   compounding: Compounding,
 ) -> Result(Nil, MetricError) {
+  use yield <- result.try(finite.input(yield))
+  use _ <- result.try(
+    cash_flows
+    |> list.flat_map(fn(flow) { [flow.amount, flow.years] })
+    |> finite.inputs,
+  )
   case cash_flows {
     [] -> Error(error.EmptyInput)
     _ ->

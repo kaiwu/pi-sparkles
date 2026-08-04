@@ -41,6 +41,9 @@ pub type Observation(value) {
     freshness: Freshness,
     entitlement: Entitlement,
     quality: Quality,
+    unit: Option(Unit),
+    adjustment: Option(Adjustment),
+    session: Option(Session),
   )
 }
 
@@ -57,5 +60,11 @@ pub fn map(
     freshness: observation.freshness,
     entitlement: observation.entitlement,
     quality: observation.quality,
+    unit: observation.unit,
+    adjustment: observation.adjustment,
+    session: observation.session,
   )
 }
+
+import finance_core/adjustment.{type Adjustment}
+import finance_core/market.{type Session, type Unit}

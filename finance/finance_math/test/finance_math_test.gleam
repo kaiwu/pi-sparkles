@@ -6,6 +6,7 @@ import finance_math
 import finance_math/cashflow
 import finance_math/error
 import finance_math/exact
+import finance_math/finite
 import finance_math/fixed_income
 import finance_math/formula
 import finance_math/metric
@@ -24,9 +25,9 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
-pub fn package_is_implementing_test() {
+pub fn package_is_experimental_test() {
   finance_math.status()
-  |> should.equal(finance_math.Implementing)
+  |> should.equal(finance_math.Experimental)
 }
 
 pub fn exact_ratios_never_hide_zero_or_rounding_policy_test() {
@@ -293,6 +294,40 @@ pub fn fixed_income_sensitivity_declares_compounding_test() {
   |> should.be_true
   fixed_income.present_value(cash_flows, 0.05, fixed_income.Periodic(0))
   |> should.equal(Error(error.InvalidCompounding))
+}
+
+pub fn exact_formula_supports_power_absolute_and_explicit_quantization_test() {
+  let expression =
+    formula.Quantize(
+      formula.Absolute(formula.Power(formula.Reference("x"), 3)),
+      2,
+      decimal.HalfEven,
+    )
+
+  formula.evaluate(expression, with: [available("x", "-1.255")])
+  |> should.equal(Ok(decimal("1.98")))
+  formula.references(expression)
+  |> should.equal(["x"])
+  formula.evaluate(formula.Power(formula.Reference("x"), -1), with: [
+    available("x", "2"),
+  ])
+  |> should.equal(Error(error.DomainError))
+}
+
+pub fn approximate_analytics_reject_non_finite_boundaries_test() {
+  let overflow = 1.0e308 *. 1.0e308
+  finite.is_finite(overflow)
+  |> should.be_false
+  statistics.mean([overflow])
+  |> should.equal(Error(error.NonFiniteInput))
+  root.bisection(
+    fn(_) { Ok(overflow) },
+    lower: -1.0,
+    upper: 1.0,
+    tolerance: 0.001,
+    maximum_iterations: 10,
+  )
+  |> should.equal(Error(error.NonFiniteOutput))
 }
 
 fn available(name: String, value: String) -> formula.Input {

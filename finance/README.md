@@ -7,8 +7,9 @@ artifacts under `dist/`.
 The first batch was arbitrated on 2026-08-04 from
 `/tmp/pi-sparkles-proposal`. Its five packages and the subsequently graduated
 `finance_math`, `finance_series`, and `finance_calendar` substrates are
-**Implementing**: each has a reviewed design contract, a compiling API slice,
-and deterministic tests, but none claims a complete or stable `0.1` API yet.
+**Experimental**. Their shared `0.1` foundation is complete and suitable for
+developing plugins in this monorepo; public APIs and wire formats may still
+change before the packages are declared stable.
 
 ```text
 finance_core ──> finance_provenance
@@ -55,3 +56,21 @@ Wave B Pi extensions remain proposals in `ROADMAP.md`. They should be selected
 only after these packages meet their README acceptance criteria and the needed
 provider adapters have their own endpoint, authentication, entitlement,
 licence, pacing, and cache designs.
+
+## Completed 0.1 foundation
+
+The base supports provider-neutral exact values and observation envelopes;
+safe cancellable HTTP with retry, rate, queue, cache, and cassette policies;
+arbitrary exact formula trees plus bounded approximate analytics; ordered,
+missing-aware and as-of-aligned series with exact returns, OHLCV, paths, and
+portfolio attribution; market sessions, business days, day counts, joint
+calendars, and coupon schedules; canonical evidence manifests with bounded
+verification; unit-aware bounded Markdown/CSV/JSON tables; and deterministic
+synthetic/conformance test tools.
+
+“Foundation complete” does not mean “every named financial model is built in.”
+Provider adapters, accounting taxonomy mappings, authoritative calendar data,
+curve construction, optimizers, option models, order execution, and live data
+entitlements remain separate packages or plugin work. The generic primitives
+are deliberately sufficient for those layers without putting provider or
+business policy into the foundations.

@@ -1,4 +1,5 @@
 import finance_math/error.{type MetricError}
+import finance_math/finite
 import finance_math/statistics.{type Estimator}
 import gleam/float
 import gleam/int
@@ -12,6 +13,8 @@ pub fn historical_expected_shortfall(
   returns: List(Float),
   confidence: Float,
 ) -> Result(Float, MetricError) {
+  use returns <- result.try(finite.inputs(returns))
+  use confidence <- result.try(finite.input(confidence))
   case returns, confidence >. 0.0 && confidence <. 1.0 {
     [], _ -> Error(error.EmptyInput)
     _, False -> Error(error.InvalidConfidence)
@@ -26,7 +29,7 @@ pub fn historical_expected_shortfall(
         |> list.map(fn(value) { 0.0 -. value })
         |> list.sort(by: order.reverse(float.compare))
         |> list.take(tail_count)
-      Ok(float.sum(tail) /. int.to_float(list.length(tail)))
+      finite.output(float.sum(tail) /. int.to_float(list.length(tail)))
     }
   }
 }
@@ -36,6 +39,10 @@ pub fn downside_deviation(
   minimum_acceptable_return: Float,
   estimator: Estimator,
 ) -> Result(Float, MetricError) {
+  use returns <- result.try(finite.inputs(returns))
+  use minimum_acceptable_return <- result.try(finite.input(
+    minimum_acceptable_return,
+  ))
   use denominator <- result.try(sample_denominator(returns, estimator))
   let downside_squared =
     returns
@@ -47,6 +54,8 @@ pub fn downside_deviation(
   downside_squared /. int.to_float(denominator)
   |> float.square_root
   |> result.map_error(fn(_) { error.DomainError })
+  |> result.map(finite.output)
+  |> result.flatten
 }
 
 pub fn sharpe_ratio(
@@ -55,6 +64,8 @@ pub fn sharpe_ratio(
   periods_per_year: Int,
   estimator: Estimator,
 ) -> Result(Float, MetricError) {
+  use returns <- result.try(finite.inputs(returns))
+  use risk_free_per_period <- result.try(finite.input(risk_free_per_period))
   use excess <- result.try(excess_returns(returns, risk_free_per_period))
   use average <- result.try(statistics.mean(excess))
   use deviation <- result.try(statistics.standard_deviation(excess, estimator))
@@ -67,6 +78,10 @@ pub fn sortino_ratio(
   periods_per_year: Int,
   estimator: Estimator,
 ) -> Result(Float, MetricError) {
+  use returns <- result.try(finite.inputs(returns))
+  use minimum_acceptable_return <- result.try(finite.input(
+    minimum_acceptable_return,
+  ))
   use average <- result.try(statistics.mean(returns))
   use downside <- result.try(downside_deviation(
     returns,
@@ -84,6 +99,8 @@ pub fn omega_ratio(
   returns: List(Float),
   threshold: Float,
 ) -> Result(Float, MetricError) {
+  use returns <- result.try(finite.inputs(returns))
+  use threshold <- result.try(finite.input(threshold))
   case returns {
     [] -> Error(error.EmptyInput)
     _ -> {
@@ -97,7 +114,7 @@ pub fn omega_ratio(
         |> float.sum
       case losses == 0.0 {
         True -> Error(error.DivisionByZero)
-        False -> Ok(gains /. losses)
+        False -> finite.output(gains /. losses)
       }
     }
   }
@@ -124,7 +141,7 @@ fn annualized_ratio(
     False, True -> {
       let assert Ok(root) =
         periods_per_year |> int.to_float |> float.square_root
-      Ok(average /. deviation *. root)
+      finite.output(average /. deviation *. root)
     }
   }
 }

@@ -32,6 +32,30 @@ pub type ExternalIdentifier {
   ExternalIdentifier(scheme: ExternalScheme, value: String)
 }
 
+pub type Resolution(candidate) {
+  NoMatch
+  Unique(candidate)
+  Ambiguous(first: candidate, second: candidate, rest: List(candidate))
+}
+
+pub fn resolve(candidates: List(candidate)) -> Resolution(candidate) {
+  case candidates {
+    [] -> NoMatch
+    [candidate] -> Unique(candidate)
+    [first, second, ..rest] -> Ambiguous(first, second, rest)
+  }
+}
+
+pub fn resolution_candidates(
+  resolution: Resolution(candidate),
+) -> List(candidate) {
+  case resolution {
+    NoMatch -> []
+    Unique(candidate) -> [candidate]
+    Ambiguous(first, second, rest) -> [first, second, ..rest]
+  }
+}
+
 pub fn instrument_id(value: String) -> Result(InstrumentId, IdentifierError) {
   case non_empty(value) {
     True -> Ok(InstrumentId(value))

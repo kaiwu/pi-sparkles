@@ -1,18 +1,18 @@
 # finance_core
 
-Status: **Implementing** · version: `0.1.0` · target: JavaScript/Bun
+Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `finance_core` defines the canonical, provider-neutral values shared by the
 finance packages. It contains no Pi extension code, networking, storage,
 provider authentication, or analytical algorithms.
 
-The implemented slice includes exact decimal parsing, normalization,
-comparison, addition, subtraction, multiplication, and explicit quantization
-and division without JavaScript `Number`; validated instants, durations, dates,
-currencies, MICs, symbols and identifiers; money values; instrument/listing
-records; positive timeframes; safe source references; and metadata-preserving
-`Observation(a).map`. Canonical JSON, timezone conversion, and richer
-adjustment/session types remain 0.1 work.
+The completed foundation includes exact decimal parsing, arithmetic, integer
+powers, quantization and division without JavaScript `Number`; validated civil
+time, timezone identifiers, currencies, MICs, symbols and ambiguity results;
+currency-safe money; adjustment, unit, and market-session values; safe source
+references; metadata-preserving `Observation(a).map`; and canonical versioned
+observation JSON with strict decoders. Timezone-to-instant conversion remains a
+calendar/resolver capability, not a core side effect.
 
 ## User stories
 
@@ -36,7 +36,7 @@ adjustment/session types remain 0.1 work.
 - No FX conversion, valuation, portfolio math, technical indicators, or order
   submission.
 
-## Planned module surface
+## Module surface
 
 | Module | Responsibility |
 | --- | --- |
@@ -44,10 +44,11 @@ adjustment/session types remain 0.1 work.
 | `finance_core/time` | validated civil dates/times, UTC instants, durations, and IANA timezone identifiers |
 | `finance_core/identifier` | permanent identifiers, provider identifiers, symbols, MICs, listings, and ambiguity results |
 | `finance_core/instrument` | instrument class, issuer/security identity, listing and status metadata |
-| `finance_core/money` | ISO currency codes, money values, units, and currency-safe operations |
+| `finance_core/money` | ISO currency money values and currency-safe operations |
 | `finance_core/market` | exchange/session, timeframe, delayed/real-time and market-status labels |
 | `finance_core/adjustment` | raw, split-adjusted, dividend-adjusted, and provider-defined adjustment bases |
 | `finance_core/observation` | the common source/freshness/evidence envelope for a typed value |
+| `finance_core/observation_json` | canonical schema-v1 generic observation encoding and strict decoding |
 
 The root `finance_core` module may re-export only a small ergonomic subset. It
 must not become a catch-all module whose changes force every consumer to
@@ -112,7 +113,7 @@ requires an external observed rate and is not part of core.
 
 ### Observation envelope
 
-The planned `Observation(a)` contains:
+`Observation(a)` contains:
 
 - `value: a`;
 - `as_of` and `retrieved_at` UTC instants;
@@ -143,7 +144,7 @@ in a source reference.
 
 ## Dependencies and boundaries
 
-`finance_core` depends only on Gleam standard libraries. In particular it does
+`finance_core` depends only on Gleam standard libraries and `gleam_json`. It does
 not depend on `finance_provenance` or `finance_testkit`. Provider adapters,
 plugins, and higher-level libraries depend inward on core. JavaScript FFI is
 allowed only where the JavaScript target cannot meet exactness or timezone
@@ -186,11 +187,8 @@ Gleam compatibility policy.
 - No finance-package dependency cycle exists.
 - Formatting, warnings-as-errors build, unit tests, and Hex tarball audit pass.
 
-## Open decisions
+## Post-foundation decisions
 
 - Maximum coefficient digits and scale for denial-of-service resistance.
-- Whether timezone conversion belongs in 0.1 or waits for
-  `finance_calendar`.
-- Exact canonical JSON field names and version marker.
 - Which identifier checksum validations are safe to enforce without rejecting
   legitimate provider-specific values.

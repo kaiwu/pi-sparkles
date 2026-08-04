@@ -2,6 +2,9 @@ import finance_core/decimal
 import finance_core/money
 import finance_table/table.{type Cell}
 import gleam/int
+import gleam/list
+import gleam/option.{None, Some}
+import gleam/string
 
 pub fn cell_text(cell: Cell) -> String {
   case cell {
@@ -15,5 +18,19 @@ pub fn cell_text(cell: Cell) -> String {
     table.MissingCell(table.NotApplicable) -> "N/A"
     table.MissingCell(table.NotReported) -> "not reported"
     table.MissingCell(table.Suppressed) -> "suppressed"
+    table.AnnotatedCell(value, annotations) ->
+      cell_text(value)
+      <> " ["
+      <> {
+        annotations
+        |> list.map(fn(annotation) {
+          case annotation.evidence_id {
+            None -> annotation.label
+            Some(id) -> annotation.label <> ":" <> id
+          }
+        })
+        |> string.join(", ")
+      }
+      <> "]"
   }
 }

@@ -35,6 +35,9 @@ pub type Formula {
     rounding: RoundingMode,
   )
   Negate(value: Formula)
+  Absolute(value: Formula)
+  Power(value: Formula, exponent: Int)
+  Quantize(value: Formula, scale: Int, rounding: RoundingMode)
   Sum(values: List(Formula))
   Mean(values: List(Formula), scale: Int, rounding: RoundingMode)
   Minimum(values: List(Formula))
@@ -84,6 +87,23 @@ fn evaluate_valid(
     Negate(value) -> {
       use value <- result.try(evaluate_valid(value, inputs))
       Ok(decimal.negate(value))
+    }
+    Absolute(value) -> {
+      use value <- result.try(evaluate_valid(value, inputs))
+      case decimal.compare(value, decimal.zero()) {
+        Lt -> Ok(decimal.negate(value))
+        _ -> Ok(value)
+      }
+    }
+    Power(value, exponent) -> {
+      use value <- result.try(evaluate_valid(value, inputs))
+      decimal.power(value, exponent)
+      |> result.map_error(fn(_) { error.DomainError })
+    }
+    Quantize(value, scale, rounding) -> {
+      use value <- result.try(evaluate_valid(value, inputs))
+      decimal.quantize(value, scale, rounding)
+      |> result.map_error(fn(_) { error.InvalidScale })
     }
     Sum(values) ->
       values
@@ -156,7 +176,8 @@ fn collect_references(formula: Formula, found: List(String)) -> List(String) {
     | Multiply(left, right)
     | Divide(left, right, _, _) ->
       collect_references(right, collect_references(left, found))
-    Negate(value) -> collect_references(value, found)
+    Negate(value) | Absolute(value) | Power(value, _) | Quantize(value, _, _) ->
+      collect_references(value, found)
     Sum(values) | Mean(values, _, _) | Minimum(values) | Maximum(values) ->
       list.fold(values, found, fn(found, value) {
         collect_references(value, found)

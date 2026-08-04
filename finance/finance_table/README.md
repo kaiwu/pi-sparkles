@@ -1,6 +1,6 @@
 # finance_table
 
-Status: **Implementing** · version: `0.1.0` · target: JavaScript/Bun
+Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `finance_table` renders compact, deterministic finance tables for agent text,
 files, and structured tool details. It makes units, missing values, precision,
@@ -11,8 +11,10 @@ The implemented slice includes typed columns/cells, exact decimal and money
 cells, explicit missing reasons, duplicate/width/kind/safe-integer validation,
 stable alignment, escaping, captions/notes, deterministic Markdown and CSV,
 versioned semantic JSON, and immutable row truncation with omission counts.
-Formatting policies, annotations, projections, column/cell budgets, and richer
-omission summaries remain 0.1 work.
+The foundation also includes unit/currency validation, evidence annotations,
+compound row/column/cell/text budgets with structured omission summaries, and
+an explicitly named spreadsheet-safe CSV policy. Rich locale formatting and
+grouped headers remain optional presentation extensions.
 
 ## User stories
 
@@ -34,14 +36,12 @@ omission summaries remain 0.1 work.
 - No fetching observations and no ownership of provenance manifests.
 - No ANSI color or width measurement based on a specific terminal.
 
-## Planned modules
+## Module surface
 
 | Module | Responsibility |
 | --- | --- |
 | `finance_table/table` | columns, rows, captions, notes, validation, and stable ordering |
-| `finance_table/cell` | typed text, decimal, integer, money, percent, date/time, boolean, missing, and annotated cells |
-| `finance_table/format` | precision, rounding, sign, alignment, code/symbol, and missing-value policies |
-| `finance_table/truncate` | row/column/cell budgets and structured omission summaries |
+| `finance_table/render` | semantic cell-to-text conversion, including visible annotations |
 | `finance_table/markdown` | escaped compact Markdown rendering |
 | `finance_table/csv` | RFC 4180-compatible data export with documented newline/encoding policy |
 | `finance_table/json` | typed JSON value and canonical string encoding |
@@ -172,10 +172,8 @@ compatibility commitments.
 - JSON retains semantic values rather than formatted strings alone.
 - Formatting, warnings-as-errors build, unit tests, and Hex tarball audit pass.
 
-## Open decisions
+## Post-foundation decisions
 
 - Whether row keys are required for 0.1 or optional until interactive diffing.
-- Exact canonical JSON schema and metadata placement.
-- Which spreadsheet-injection mitigation belongs in the core CSV renderer.
 - Whether tables support grouped/multi-row headers before a real plugin needs
   them.

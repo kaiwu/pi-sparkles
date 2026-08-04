@@ -1,4 +1,5 @@
 import finance_math/error.{type MetricError}
+import finance_math/finite
 import gleam/float
 import gleam/result
 
@@ -10,13 +11,20 @@ pub fn bisection(
   tolerance tolerance: Float,
   maximum_iterations maximum_iterations: Int,
 ) -> Result(Float, MetricError) {
+  use lower <- result.try(finite.input(lower))
+  use upper <- result.try(finite.input(upper))
+  use tolerance <- result.try(finite.input(tolerance))
   case lower <. upper, tolerance >. 0.0, maximum_iterations > 0 {
     False, _, _ -> Error(error.InvalidBounds)
     _, False, _ -> Error(error.InvalidTolerance)
     _, _, False -> Error(error.InvalidIterationLimit)
     True, True, True -> {
-      use lower_value <- result.try(function(lower))
-      use upper_value <- result.try(function(upper))
+      use lower_value <- result.try(
+        function(lower) |> result.map(finite.output) |> result.flatten,
+      )
+      use upper_value <- result.try(
+        function(upper) |> result.map(finite.output) |> result.flatten,
+      )
       case lower_value == 0.0, upper_value == 0.0 {
         True, _ -> Ok(lower)
         _, True -> Ok(upper)
@@ -52,12 +60,14 @@ fn bisect(
     True -> Error(error.DidNotConverge(maximum_iterations))
     False -> {
       let midpoint = lower +. { upper -. lower } /. 2.0
-      use midpoint_value <- result.try(function(midpoint))
+      use midpoint_value <- result.try(
+        function(midpoint) |> result.map(finite.output) |> result.flatten,
+      )
       case
         float.absolute_value(midpoint_value) <=. tolerance
         || { upper -. lower } /. 2.0 <=. tolerance
       {
-        True -> Ok(midpoint)
+        True -> finite.output(midpoint)
         False ->
           case same_sign(lower_value, midpoint_value) {
             True ->

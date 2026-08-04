@@ -22,9 +22,9 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
-pub fn package_is_implementing_test() {
+pub fn package_is_experimental_test() {
   finance_http.status()
-  |> should.equal(finance_http.Implementing)
+  |> should.equal(finance_http.Experimental)
 }
 
 pub fn pool_validates_limits_before_allocating_effect_state_test() {

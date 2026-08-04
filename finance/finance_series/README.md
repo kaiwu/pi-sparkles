@@ -1,12 +1,14 @@
 # finance_series
 
-Status: **Implementing** · version: `0.1.0` · target: JavaScript/Bun
+Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `finance_series` is the temporal substrate for finance metrics. It validates
 ordered timestamped data, preserves missing observations, aligns independent
-timelines, builds rolling windows, delegates resampling buckets to an injected
-calendar rule, calculates exact decimal returns, and runs aligned portfolio and
-factor analytics through `finance_math`.
+timelines with exact or bounded backward-looking joins, builds rolling windows,
+delegates resampling buckets to an injected calendar rule, aggregates exact
+OHLCV bars, calculates exact decimal returns and chain-linked paths, preserves
+observation provenance, and runs aligned portfolio and factor analytics through
+`finance_math`.
 
 The package is pure. It contains no Pi, HTTP, filesystem, clock, randomness, or
 JavaScript FFI. `finance_core` and `finance_math` are local path dependencies in
@@ -178,17 +180,16 @@ makes every sequence reproducible in tests.
   returns, aligned analytics, and portfolio gaps.
 - Formatting and warnings-as-errors builds pass.
 
-## Remaining 0.1 work
+## Post-foundation expansion
 
 - calendar-backed daily/weekly/monthly/session resampling helpers;
-- explicit stock-versus-flow aggregation conventions and OHLCV bars;
-- log returns and exact-decimal chain linking alongside the approximate path;
+- calendar-specific stock-versus-flow convenience aggregators;
+- log returns alongside exact-decimal chain linking and the approximate path;
 - expanding/anchored windows and duration-based windows;
-- as-of joins with maximum staleness rather than exact timestamp equality;
 - transaction-aware holdings, turnover, rebalance events, Brinson attribution,
   and geometric contribution linking;
 - time-aligned multi-factor regression adapters and residual series; and
-- provenance-preserving `Observation` adapters and reusable law/property tests.
+- additional reusable law/property suites.
 
 ## Non-goals
 

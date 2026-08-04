@@ -35,6 +35,35 @@ pub type ArithmeticError {
   NegativeResultScale
 }
 
+pub type PowerError {
+  NegativeExponent
+}
+
+pub fn power(decimal: Decimal, exponent: Int) -> Result(Decimal, PowerError) {
+  case exponent < 0 {
+    True -> Error(NegativeExponent)
+    False -> Ok(power_loop(decimal, exponent, parse_one()))
+  }
+}
+
+fn power_loop(base: Decimal, exponent: Int, result: Decimal) -> Decimal {
+  case exponent {
+    0 -> result
+    _ -> {
+      let next_result = case exponent % 2 == 1 {
+        True -> multiply(result, base)
+        False -> result
+      }
+      power_loop(multiply(base, base), exponent / 2, next_result)
+    }
+  }
+}
+
+fn parse_one() -> Decimal {
+  let assert Ok(one) = parse("1")
+  one
+}
+
 pub fn zero() -> Decimal {
   Decimal(Positive, "0", 0)
 }
@@ -288,9 +317,13 @@ fn compare_magnitude(left: Decimal, right: Decimal) -> Order {
   let Decimal(_, right_digits, right_scale) = right
   let common_scale = int.max(left_scale, right_scale)
   let left_scaled =
-    left_digits <> string.repeat("0", times: common_scale - left_scale)
+    normalize_unsigned(
+      left_digits <> string.repeat("0", times: common_scale - left_scale),
+    )
   let right_scaled =
-    right_digits <> string.repeat("0", times: common_scale - right_scale)
+    normalize_unsigned(
+      right_digits <> string.repeat("0", times: common_scale - right_scale),
+    )
   case int.compare(string.length(left_scaled), string.length(right_scaled)) {
     Eq -> string.compare(left_scaled, right_scaled)
     order -> order

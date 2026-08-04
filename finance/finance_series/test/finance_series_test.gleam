@@ -1,10 +1,17 @@
+import finance_core/adjustment
 import finance_core/decimal
+import finance_core/market
 import finance_core/observation
+import finance_core/source
 import finance_core/time
 import finance_math/statistics
 import finance_series
 import finance_series/alignment
 import finance_series/analytics
+import finance_series/as_of
+import finance_series/bar
+import finance_series/exact_path
+import finance_series/observed
 import finance_series/path
 import finance_series/portfolio
 import finance_series/resample
@@ -21,9 +28,9 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
-pub fn package_is_implementing_test() {
+pub fn package_is_experimental_test() {
   finance_series.status()
-  |> should.equal(finance_series.Implementing)
+  |> should.equal(finance_series.Experimental)
 }
 
 pub fn series_requires_a_strict_timeline_but_allows_empty_test() {
@@ -352,9 +359,134 @@ pub fn dynamic_attribution_renormalization_is_explicit_and_attributed_test() {
   expect_series(b, [None], tolerance: 0.000_001)
 }
 
+pub fn as_of_join_is_backward_looking_and_staleness_bounded_test() {
+  let left = present([#(10, "a"), #(20, "b"), #(40, "c")])
+  let right = present([#(5, 100), #(20, 200), #(30, 300)])
+
+  as_of.join(left, right, maximum_staleness: duration(10))
+  |> should.equal([
+    as_of.Match(
+      at(10),
+      series.Present("a"),
+      Some(series.Present(100)),
+      Some(at(5)),
+    ),
+    as_of.Match(
+      at(20),
+      series.Present("b"),
+      Some(series.Present(200)),
+      Some(at(20)),
+    ),
+    as_of.Match(
+      at(40),
+      series.Present("c"),
+      Some(series.Present(300)),
+      Some(at(30)),
+    ),
+  ])
+  as_of.join(left, right, maximum_staleness: duration(4))
+  |> should.equal([
+    as_of.Match(at(10), series.Present("a"), None, None),
+    as_of.Match(
+      at(20),
+      series.Present("b"),
+      Some(series.Present(200)),
+      Some(at(20)),
+    ),
+    as_of.Match(at(40), series.Present("c"), None, None),
+  ])
+}
+
+pub fn ohlcv_aggregation_preserves_exact_prices_and_missing_policy_test() {
+  let trades = [
+    series.Present(bar.Trade(decimal("10"), decimal("2"))),
+    series.Present(bar.Trade(decimal("12"), decimal("3"))),
+    series.Missing(observation.NotReported),
+    series.Present(bar.Trade(decimal("11"), decimal("4"))),
+  ]
+  bar.aggregate(trades, missing: bar.SkipMissing)
+  |> should.equal(
+    Ok(
+      series.Present(bar.Bar(
+        decimal("10"),
+        decimal("12"),
+        decimal("10"),
+        decimal("11"),
+        decimal("9"),
+        3,
+      )),
+    ),
+  )
+  bar.aggregate(trades, missing: bar.PropagateMissing)
+  |> should.equal(Ok(series.Missing(observation.NotReported)))
+  bar.aggregate(trades, missing: bar.RejectMissing)
+  |> should.equal(Error(bar.MissingTrade(observation.NotReported)))
+}
+
+pub fn exact_chain_linking_never_uses_binary_float_test() {
+  decimal.add(decimal("1"), decimal("-0.5"))
+  |> should.equal(decimal("0.5"))
+  let returns = decimal_present([#(1, "0.1"), #(2, "0.2"), #(3, "-0.5")])
+  let assert Ok(wealth) =
+    exact_path.wealth_index(
+      returns,
+      initial_value: decimal("1"),
+      missing: path.SkipMissingReturn,
+    )
+
+  series.present_values(wealth)
+  |> list.map(fn(pair) { decimal.to_string(pair.1) })
+  |> should.equal(["1.1", "1.32", "0.66"])
+}
+
+pub fn observation_adapter_preserves_envelopes_and_explicit_missing_test() {
+  let present_observation = observed_value(1, observation.Reported, "10")
+  let missing_observation =
+    observed_value(2, observation.Missing(observation.NotReported), "ignored")
+  let assert Ok(timeline) =
+    observed.from_observations([present_observation, missing_observation])
+
+  series.to_list(timeline)
+  |> should.equal([
+    series.Point(at(1), series.Present(present_observation)),
+    series.Point(at(2), series.Missing(observation.NotReported)),
+  ])
+}
+
 fn at(milliseconds: Int) -> time.Instant {
   let assert Ok(value) = time.instant(milliseconds)
   value
+}
+
+fn duration(milliseconds: Int) -> time.Duration {
+  let assert Ok(value) = time.duration(milliseconds)
+  value
+}
+
+fn observed_value(
+  milliseconds: Int,
+  quality: observation.Quality,
+  value: String,
+) -> observation.Observation(String) {
+  let assert Ok(source_ref) =
+    source.new(
+      provider: "synthetic",
+      reference: "series",
+      kind: source.Synthetic,
+    )
+  observation.Observation(
+    value: value,
+    as_of: at(milliseconds),
+    retrieved_at: at(milliseconds),
+    source: source_ref,
+    evidence_id: Some("evidence"),
+    freshness: observation.UnknownFreshness,
+    entitlement: observation.UnknownEntitlement,
+    quality: quality,
+    unit: Some(market.Scalar),
+    adjustment: Some(adjustment.Raw),
+    session: Some(market.Regular),
+  )
 }
 
 fn values(points: List(series.Point(value))) -> series.Series(value) {

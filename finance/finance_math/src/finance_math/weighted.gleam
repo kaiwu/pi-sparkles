@@ -1,4 +1,5 @@
 import finance_math/error.{type MetricError}
+import finance_math/finite
 import finance_math/statistics.{type Estimator}
 import gleam/float
 import gleam/list
@@ -10,7 +11,7 @@ pub fn mean(
   weights: List(Float),
 ) -> Result(Float, MetricError) {
   use total_weight <- result.try(validate(values, weights))
-  Ok(weighted_sum(values, weights, 0.0) /. total_weight)
+  finite.output(weighted_sum(values, weights, 0.0) /. total_weight)
 }
 
 pub fn variance(
@@ -21,7 +22,9 @@ pub fn variance(
   use total_weight <- result.try(validate(values, weights))
   use average <- result.try(mean(values, weights))
   use denominator <- result.try(denominator(weights, total_weight, estimator))
-  Ok(weighted_squared_deviations(values, weights, average, 0.0) /. denominator)
+  finite.output(
+    weighted_squared_deviations(values, weights, average, 0.0) /. denominator,
+  )
 }
 
 pub fn covariance(
@@ -43,7 +46,7 @@ pub fn covariance(
         total_weight,
         estimator,
       ))
-      Ok(
+      finite.output(
         weighted_products(left, right, weights, left_mean, right_mean, 0.0)
         /. denominator,
       )
@@ -66,7 +69,7 @@ pub fn beta(
   use variance <- result.try(variance(benchmark_returns, weights, estimator))
   case variance == 0.0 {
     True -> Error(error.ZeroVariance)
-    False -> Ok(covariance /. variance)
+    False -> finite.output(covariance /. variance)
   }
 }
 
@@ -74,6 +77,8 @@ fn validate(
   values: List(Float),
   weights: List(Float),
 ) -> Result(Float, MetricError) {
+  use values <- result.try(finite.inputs(values))
+  use weights <- result.try(finite.inputs(weights))
   let value_count = list.length(values)
   let weight_count = list.length(weights)
   case

@@ -1,8 +1,8 @@
-/// The first canonical domain slice is under active implementation.
+/// The complete 0.1 foundation is available for plugin development.
 pub type Status {
-  Implementing
+  Experimental
 }
 
 pub fn status() -> Status {
-  Implementing
+  Experimental
 }

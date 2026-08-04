@@ -3,7 +3,9 @@ import finance_calendar/business
 import finance_calendar/calendar
 import finance_calendar/date
 import finance_calendar/day_count
+import finance_calendar/joint
 import finance_calendar/local
+import finance_calendar/schedule
 import finance_core/time
 import gleam/float
 import gleam/option.{None, Some}
@@ -14,9 +16,9 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
-pub fn package_is_implementing_test() {
+pub fn package_is_experimental_test() {
   finance_calendar.status()
-  |> should.equal(finance_calendar.Implementing)
+  |> should.equal(finance_calendar.Experimental)
 }
 
 pub fn gregorian_arithmetic_handles_leap_years_and_month_policy_test() {
@@ -203,6 +205,102 @@ pub fn day_count_conventions_are_named_signed_and_testable_test() {
   )
 }
 
+pub fn coupon_schedules_make_stubs_eom_and_termination_budgets_explicit_test() {
+  let assert Ok(exact) =
+    schedule.generate(
+      start: civil(2024, 1, 31),
+      end: civil(2024, 7, 31),
+      months: 3,
+      stub: schedule.NoStub,
+      preserve_end_of_month: True,
+      maximum_periods: 4,
+    )
+  exact.dates
+  |> should.equal([
+    civil(2024, 1, 31),
+    civil(2024, 4, 30),
+    civil(2024, 7, 31),
+  ])
+
+  let assert Ok(long_last) =
+    schedule.generate(
+      start: civil(2024, 1, 31),
+      end: civil(2024, 8, 15),
+      months: 3,
+      stub: schedule.LongLast,
+      preserve_end_of_month: True,
+      maximum_periods: 4,
+    )
+  long_last.dates
+  |> should.equal([civil(2024, 1, 31), civil(2024, 4, 30), civil(2024, 8, 15)])
+  schedule.generate(
+    start: civil(2024, 1, 31),
+    end: civil(2024, 8, 15),
+    months: 3,
+    stub: schedule.NoStub,
+    preserve_end_of_month: True,
+    maximum_periods: 4,
+  )
+  |> should.equal(Error(schedule.StubRequired))
+  schedule.generate(
+    start: civil(2024, 1, 1),
+    end: civil(2030, 1, 1),
+    months: 1,
+    stub: schedule.ShortLast,
+    preserve_end_of_month: False,
+    maximum_periods: 2,
+  )
+  |> should.equal(Error(schedule.PeriodLimitExceeded))
+}
+
+pub fn joint_calendars_and_extended_day_counts_are_composable_test() {
+  let market = equity_calendar()
+  let assert Ok(thursday_open) =
+    calendar.new(
+      name: "Thursday settlement",
+      zone: zone("America/New_York"),
+      weekly: [
+        #(date.Thursday, calendar.Open([regular_session(close_hour: 16)])),
+      ],
+      overrides: [],
+    )
+  let assert Ok(all_open) =
+    joint.new([market, thursday_open], rule: joint.AllOpen)
+  let assert Ok(any_open) =
+    joint.new([market, thursday_open], rule: joint.AnyOpen)
+
+  joint.is_open_date(all_open, date: civil(2024, 7, 4))
+  |> should.be_false
+  joint.is_open_date(any_open, date: civil(2024, 7, 4))
+  |> should.be_true
+
+  expect_close(
+    day_count.actual_actual_icma(
+      civil(2024, 1, 1),
+      civil(2024, 7, 1),
+      civil(2024, 1, 1),
+      civil(2024, 7, 1),
+      2,
+    )
+      |> result_value,
+    0.5,
+  )
+  day_count.thirty_e_360_isda_days(
+    civil(2024, 2, 29),
+    civil(2024, 3, 31),
+    False,
+  )
+  |> should.equal(30)
+  day_count.business_252(
+    civil(2024, 7, 3),
+    civil(2024, 7, 6),
+    calendar: market,
+    maximum_scan_days: 3,
+  )
+  |> result_value
+  |> expect_close(2.0 /. 252.0)
+}
+
 fn equity_calendar() -> calendar.Calendar {
   let regular = calendar.Open([regular_session(close_hour: 16)])
   let assert Ok(value) =
@@ -281,4 +379,9 @@ fn zone(name: String) -> local.ZoneId {
 fn expect_close(value: Float, expected: Float) -> Nil {
   { float.absolute_value(value -. expected) <=. 0.000_001 }
   |> should.be_true
+}
+
+fn result_value(result: Result(value, error)) -> value {
+  let assert Ok(value) = result
+  value
 }

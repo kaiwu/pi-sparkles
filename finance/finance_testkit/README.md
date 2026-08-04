@@ -1,6 +1,6 @@
 # finance_testkit
 
-Status: **Implementing** · version: `0.1.0` · target: JavaScript/Bun
+Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `finance_testkit` supplies deterministic clocks, seeded synthetic finance data,
 cassette helpers, decoder-conformance harnesses, and reusable edge-case
@@ -15,9 +15,10 @@ and emitted effect. The pure scripted HTTP model consumes typed
 `Response`/`TransportError` outcomes and captures only redacted stable request
 keys; its original value remains unchanged. The cassette helper builds and
 strictly replays complete immutable request/outcome sequences using the single
-`finance_http` cassette format. Synthetic observations, decoder-conformance
-matrices, redaction law harnesses, file helpers, latency/body pause simulation,
-and reviewed fixtures remain 0.1 work.
+`finance_http` cassette format. The base also includes versioned synthetic
+quote/OHLC generators, decoder-conformance matrices, redaction law checks, and
+validated fixture governance metadata. File helpers, latency/body pause
+simulation, and larger reviewed fixture catalogs are optional extensions.
 
 ## User stories
 
@@ -60,7 +61,7 @@ data and can be folded through downstream reducers. This lets one scenario run
 against a pure model, a fake interpreter, and—where appropriate—a Bun boundary
 contract without changing expected domain results.
 
-## Planned modules
+## Module surface
 
 | Module | Responsibility |
 | --- | --- |
@@ -68,7 +69,7 @@ contract without changing expected domain results.
 | `finance_testkit/transport` | pure scripted typed outcomes and redacted request capture; async/latency adapters later |
 | `finance_testkit/cassette` | builders and assertions over `finance_http/cassette` |
 | `finance_testkit/generator` | seeded synthetic instruments, observations, quotes, bars, and actions |
-| `finance_testkit/fixtures` | small named edge cases with explicit provenance/licence metadata |
+| `finance_testkit/fixture` | required provenance/licence/retrieval metadata for reviewed fixtures |
 | `finance_testkit/decoder` | provider-decoder conformance matrix and failure assertions |
 | `finance_testkit/redaction` | reusable mandatory secret corpus and leak assertions |
 
@@ -186,11 +187,10 @@ portable across Gleam JavaScript runtimes.
 - Formatting, warnings-as-errors build, unit tests, FFI tests, and Hex tarball
   audit pass.
 
-## Open decisions
+## Post-foundation decisions
 
 - Whether file cassette helpers belong here or in `finance_http` with only
   builders in testkit.
-- Initial seeded PRNG and versioning scheme.
 - Minimum authoritative calendar fixture set that is useful and redistributable.
 - Whether provider-decoder conformance should be a separate package once the
   adapter catalog grows.

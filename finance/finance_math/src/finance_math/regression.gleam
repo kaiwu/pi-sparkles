@@ -1,4 +1,5 @@
 import finance_math/error.{type MetricError}
+import finance_math/finite
 import finance_math/statistics
 import gleam/float
 import gleam/int
@@ -83,23 +84,36 @@ pub fn ordinary_least_squares(
       *. int.to_float(observations)
       /. int.to_float(observations - width)
   }
-  Ok(Model(
-    intercept,
-    coefficients,
-    fitted,
-    residuals,
-    r_squared,
-    adjusted,
-    observations,
-  ))
+  case
+    finite.is_finite(intercept)
+    && list.all(coefficients, finite.is_finite)
+    && list.all(fitted, finite.is_finite)
+    && list.all(residuals, finite.is_finite)
+    && finite.is_finite(r_squared)
+    && finite.is_finite(adjusted)
+  {
+    False -> Error(error.NonFiniteOutput)
+    True ->
+      Ok(Model(
+        intercept,
+        coefficients,
+        fitted,
+        residuals,
+        r_squared,
+        adjusted,
+        observations,
+      ))
+  }
 }
 
 pub fn predict(
   model: Model,
   predictors: List(Float),
 ) -> Result(Float, MetricError) {
+  use predictors <- result.try(finite.inputs(predictors))
   case list.length(predictors) == list.length(model.coefficients) {
-    True -> Ok(model.intercept +. dot(predictors, model.coefficients))
+    True ->
+      finite.output(model.intercept +. dot(predictors, model.coefficients))
     False ->
       Error(error.LengthMismatch(
         list.length(model.coefficients),
@@ -114,6 +128,9 @@ fn validate(
   include_intercept: Bool,
   tolerance: Float,
 ) -> Result(Int, MetricError) {
+  use dependent <- result.try(finite.inputs(dependent))
+  use _ <- result.try(predictors |> list.flatten |> finite.inputs)
+  use tolerance <- result.try(finite.input(tolerance))
   let observations = list.length(dependent)
   case dependent, observations == list.length(predictors), tolerance >. 0.0 {
     [], _, _ -> Error(error.EmptyInput)

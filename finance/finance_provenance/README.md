@@ -1,6 +1,6 @@
 # finance_provenance
 
-Status: **Implementing** · version: `0.1.0` · target: JavaScript/Bun
+Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `finance_provenance` records where financial facts came from, what content was
 observed, and which assumptions produced a derived result. It turns evidence
@@ -16,8 +16,10 @@ conflicting IDs, add roots idempotently, and merge deterministic evidence
 sequences. Canonical manifest JSON sorts identity-bearing collections and hashes
 through a known-vector-tested SHA-256 FFI. URL redaction removes fragments,
 userinfo, signed parameters, encoded secret keys, and provider-configured keys.
-External dependencies, canonical decoding, and asynchronous verification remain
-0.1 work.
+Bounded asynchronous verification is implemented through an injected fetcher.
+Importing untrusted canonical manifests and external-dependency declarations
+remain post-foundation interoperability work; constructed manifests are fully
+validated and canonically encoded.
 
 ## User stories
 
@@ -62,14 +64,16 @@ duplicate, and out-of-order outcomes without networking. Hashing FFI, if
 required, is a mechanical interpreter for bytes and contains no evidence
 policy.
 
-## Planned modules
+## Module surface
 
 | Module | Responsibility |
 | --- | --- |
-| `finance_provenance/source` | source kind, licence label, safe reference normalization, request fingerprint |
+| `finance_provenance/identity` | distinct SHA-256, source-fingerprint, and evidence-ID values |
+| `finance_provenance/hash` | reviewed SHA-256 interpreter and canonical manifest hashing |
+| `finance_provenance/canonical` | deterministic schema-v1 manifest encoding |
 | `finance_provenance/evidence` | content identity, retrieval metadata, parent inputs, and verification state |
 | `finance_provenance/assumption` | typed user/provider/model assumptions and units |
-| `finance_provenance/manifest` | deterministic evidence graph, roots, metadata, JSON encoding and validation |
+| `finance_provenance/manifest` | deterministic evidence graph, roots, metadata, composition, and validation |
 | `finance_provenance/redact` | structural secret and private-reference redaction |
 | `finance_provenance/verify` | hash verification through a caller-supplied asynchronous fetch function |
 
@@ -183,7 +187,7 @@ versions rather than guess.
 - Core/provenance dependency direction remains one-way.
 - Formatting, warnings-as-errors build, unit tests, and Hex tarball audit pass.
 
-## Open decisions
+## Post-foundation decisions
 
 - Whether retrieval attempts are embedded in an evidence record or stored as a
   separate append-only record.

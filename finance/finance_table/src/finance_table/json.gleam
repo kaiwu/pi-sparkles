@@ -1,5 +1,6 @@
 import finance_core/currency
 import finance_core/decimal
+import finance_core/market
 import finance_table/table.{type Cell, type Column, type Row, type Table}
 import gleam/int
 import gleam/json.{type Json}
@@ -25,6 +26,7 @@ fn column_json(column: Column) -> Json {
     #("heading", json.string(column.heading)),
     #("kind", json.string(column_kind_name(column.kind))),
     #("alignment", json.string(alignment_name(column.alignment))),
+    #("unit", json.nullable(column.unit, unit_json)),
   ])
 }
 
@@ -54,6 +56,37 @@ fn cell_json(cell: Cell) -> Json {
         #("kind", json.string("missing")),
         #("reason", json.string(missing_reason_name(reason))),
       ])
+    table.AnnotatedCell(value, annotations) ->
+      json.object([
+        #("kind", json.string("annotated")),
+        #("value", cell_json(value)),
+        #(
+          "annotations",
+          json.array(annotations, fn(annotation) {
+            json.object([
+              #("label", json.string(annotation.label)),
+              #("evidence_id", optional_string(annotation.evidence_id)),
+            ])
+          }),
+        ),
+      ])
+  }
+}
+
+fn unit_json(unit: market.Unit) -> Json {
+  case unit {
+    market.Scalar -> typed_value("scalar", json.null())
+    market.Currency(value) ->
+      typed_value("currency", json.string(currency.code(value)))
+    market.CurrencyPerShare(value) ->
+      typed_value("currency_per_share", json.string(currency.code(value)))
+    market.Shares -> typed_value("shares", json.null())
+    market.Contracts -> typed_value("contracts", json.null())
+    market.Percent -> typed_value("percent", json.null())
+    market.BasisPoints -> typed_value("basis_points", json.null())
+    market.Ratio -> typed_value("ratio", json.null())
+    market.CustomUnit(value) ->
+      typed_value("custom", json.string(market.label(value)))
   }
 }
 

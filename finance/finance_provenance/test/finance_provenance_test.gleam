@@ -8,6 +8,8 @@ import finance_provenance/hash
 import finance_provenance/identity
 import finance_provenance/manifest
 import finance_provenance/redact
+import finance_provenance/verify
+import gleam/javascript/promise
 import gleam/list
 import gleam/option.{None}
 import gleam/string
@@ -18,9 +20,9 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
-pub fn package_is_implementing_test() {
+pub fn package_is_experimental_test() {
   finance_provenance.status()
-  |> should.equal(finance_provenance.Implementing)
+  |> should.equal(finance_provenance.Experimental)
 }
 
 pub fn hash_identity_is_canonical_test() {
@@ -228,6 +230,59 @@ pub fn canonical_manifest_is_independent_of_insertion_order_test() {
   |> should.equal(hash.manifest(right))
 }
 
+pub fn verification_plan_enforces_finite_budgets_test() {
+  let item = fixture("a", [], 10)
+  let assert Ok(with_evidence) = manifest.new() |> manifest.add_evidence(item)
+
+  verify.plan(with_evidence, maximum_items: 0, maximum_content_bytes: 100)
+  |> should.equal(Error(verify.InvalidMaximumItems))
+  verify.plan(with_evidence, maximum_items: 1, maximum_content_bytes: 0)
+  |> should.equal(Error(verify.InvalidMaximumContentBytes))
+  verify.plan(with_evidence, maximum_items: 1, maximum_content_bytes: 100)
+  |> should.be_ok
+  verify.plan(with_evidence, maximum_items: 1, maximum_content_bytes: 9)
+  |> should.equal(Error(verify.EvidenceContentLimitExceeded(item.id, 10, 9)))
+}
+
+pub fn pure_content_verification_distinguishes_length_and_hash_test() {
+  let content = "synthetic evidence"
+  let assert Ok(content_hash) = hash.text(content)
+  let target =
+    verify.Target(
+      id: id("a"),
+      source: source_ref(),
+      expected_hash: content_hash,
+      expected_bytes: string.byte_size(content),
+    )
+
+  verify.inspect(target, content)
+  |> should.equal(verify.Verified(id("a")))
+  verify.inspect(verify.Target(..target, expected_bytes: 1), content)
+  |> should.equal(verify.LengthMismatch(id("a"), 1, string.byte_size(content)))
+  verify.inspect(verify.Target(..target, expected_hash: hash("f")), content)
+  |> should.equal(verify.ContentMismatch(id("a"), hash("f"), content_hash))
+}
+
+pub fn asynchronous_verification_uses_injected_fetcher_test() {
+  let content = "replayable synthetic evidence"
+  let assert Ok(content_hash) = hash.text(content)
+  let item = fixture_with_content("a", content_hash, string.byte_size(content))
+  let assert Ok(with_evidence) = manifest.new() |> manifest.add_evidence(item)
+  let assert Ok(plan) =
+    verify.plan(with_evidence, maximum_items: 1, maximum_content_bytes: 1024)
+
+  use report <- promise.await(
+    verify.verify(plan, fn(_target, maximum_bytes) {
+      maximum_bytes
+      |> should.equal(1024)
+      promise.resolve(Ok(content))
+    }),
+  )
+  verify.successful(report)
+  |> should.be_true
+  promise.resolve(Nil)
+}
+
 fn fixture(
   identity_character: String,
   parents: List(identity.EvidenceId),
@@ -257,6 +312,30 @@ fn fixture_with_assumptions(
       content_hash: hash(identity_character),
       parents: parents,
       assumptions: assumptions,
+    )
+  item
+}
+
+fn fixture_with_content(
+  identity_character: String,
+  content_hash: identity.Sha256,
+  byte_length: Int,
+) -> evidence.Evidence {
+  let assert Ok(as_of) = time.instant(100)
+  let assert Ok(retrieved_at) = time.instant(200)
+  let assert Ok(item) =
+    evidence.new(
+      id: id(identity_character),
+      source_fingerprint: fingerprint("f"),
+      source: source_ref(),
+      licence: test_licence(),
+      as_of: as_of,
+      retrieved_at: retrieved_at,
+      media_type: "application/json",
+      byte_length: byte_length,
+      content_hash: content_hash,
+      parents: [],
+      assumptions: [],
     )
   item
 }

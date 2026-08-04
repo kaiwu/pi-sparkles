@@ -8,6 +8,7 @@ gleam = ">= 1.18.0"
 
 [dependencies]
 gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+gleam_json = ">= 3.1.0 and < 4.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.9.0 and < 2.0.0"
@@ -16,4 +17,4 @@ gleeunit = ">= 1.9.0 and < 2.0.0"
 runtime = "bun"
 
 [metadata.finance]
-status = "implementing"
+status = "experimental"

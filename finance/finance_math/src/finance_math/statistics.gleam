@@ -1,4 +1,5 @@
 import finance_math/error.{type MetricError}
+import finance_math/finite
 import gleam/float
 import gleam/int
 import gleam/list
@@ -11,9 +12,10 @@ pub type Estimator {
 }
 
 pub fn mean(values: List(Float)) -> Result(Float, MetricError) {
+  use values <- result.try(finite.inputs(values))
   case values {
     [] -> Error(error.EmptyInput)
-    _ -> Ok(float.sum(values) /. int.to_float(list.length(values)))
+    _ -> finite.output(float.sum(values) /. int.to_float(list.length(values)))
   }
 }
 
@@ -31,7 +33,7 @@ pub fn variance(
       deviation *. deviation
     })
     |> float.sum
-  Ok(squared_deviations /. int.to_float(denominator))
+  finite.output(squared_deviations /. int.to_float(denominator))
 }
 
 pub fn standard_deviation(
@@ -58,7 +60,7 @@ pub fn covariance(
       use right_mean <- result.try(mean(right))
       use denominator <- result.try(estimator_denominator(estimator, left_count))
       let products = deviation_products(left, right, left_mean, right_mean, [])
-      Ok(float.sum(products) /. int.to_float(denominator))
+      finite.output(float.sum(products) /. int.to_float(denominator))
     }
   }
 }
@@ -73,7 +75,7 @@ pub fn correlation(
   use right_deviation <- result.try(standard_deviation(right, estimator))
   case left_deviation == 0.0 || right_deviation == 0.0 {
     True -> Error(error.ZeroVariance)
-    False -> Ok(covariance /. { left_deviation *. right_deviation })
+    False -> finite.output(covariance /. { left_deviation *. right_deviation })
   }
 }
 
@@ -90,11 +92,12 @@ pub fn beta(
   use benchmark_variance <- result.try(variance(benchmark_returns, estimator))
   case benchmark_variance == 0.0 {
     True -> Error(error.ZeroVariance)
-    False -> Ok(covariance /. benchmark_variance)
+    False -> finite.output(covariance /. benchmark_variance)
   }
 }
 
 pub fn simple_returns(prices: List(Float)) -> Result(List(Float), MetricError) {
+  use prices <- result.try(finite.inputs(prices))
   case prices {
     [] -> Error(error.EmptyInput)
     [_] -> Error(error.InsufficientData(required: 2, actual: 1))
@@ -113,7 +116,7 @@ pub fn annualized_volatility(
       use deviation <- result.try(standard_deviation(returns, estimator))
       let assert Ok(root) =
         periods_per_year |> int.to_float |> float.square_root
-      Ok(deviation *. root)
+      finite.output(deviation *. root)
     }
   }
 }
@@ -123,6 +126,8 @@ pub fn historical_value_at_risk(
   returns: List(Float),
   confidence: Float,
 ) -> Result(Float, MetricError) {
+  use returns <- result.try(finite.inputs(returns))
+  use confidence <- result.try(finite.input(confidence))
   case returns, confidence >. 0.0 && confidence <. 1.0 {
     [], _ -> Error(error.EmptyInput)
     _, False -> Error(error.InvalidConfidence)
@@ -136,7 +141,7 @@ pub fn historical_value_at_risk(
         |> float.ceiling
         |> float.round
       case list.drop(losses, rank - 1) {
-        [loss, ..] -> Ok(loss)
+        [loss, ..] -> finite.output(loss)
         [] -> Error(error.DomainError)
       }
     }
@@ -145,6 +150,7 @@ pub fn historical_value_at_risk(
 
 /// Maximum peak-to-trough decline, returned as a non-negative fraction.
 pub fn maximum_drawdown(prices: List(Float)) -> Result(Float, MetricError) {
+  use prices <- result.try(finite.inputs(prices))
   case prices {
     [] -> Error(error.EmptyInput)
     [first, ..] if first <=. 0.0 -> Error(error.DomainError)
@@ -158,14 +164,17 @@ pub fn compound_growth_rate(
   ending: Float,
   periods: Float,
 ) -> Result(Float, MetricError) {
+  use beginning <- result.try(finite.input(beginning))
+  use ending <- result.try(finite.input(ending))
+  use periods <- result.try(finite.input(periods))
   case beginning >. 0.0 && ending >=. 0.0, periods >. 0.0 {
     False, _ -> Error(error.DomainError)
     _, False -> Error(error.InvalidPeriod)
     True, True ->
-      ending /. beginning
-      |> float.power(of: 1.0 /. periods)
-      |> result.map(fn(value) { value -. 1.0 })
-      |> result.map_error(fn(_) { error.DomainError })
+      case float.power(ending /. beginning, of: 1.0 /. periods) {
+        Error(_) -> Error(error.DomainError)
+        Ok(value) -> finite.output(value -. 1.0)
+      }
   }
 }
 
@@ -224,7 +233,7 @@ fn maximum_drawdown_loop(
   maximum: Float,
 ) -> Result(Float, MetricError) {
   case prices {
-    [] -> Ok(maximum)
+    [] -> finite.output(maximum)
     [price, ..rest] ->
       case price <=. 0.0 {
         True -> Error(error.DomainError)

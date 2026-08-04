@@ -1,6 +1,6 @@
 # finance_math
 
-Status: **Implementing** · version: `0.1.0` · target: JavaScript/Bun
+Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `finance_math` is the provider-neutral calculation substrate for finance
 adapters and plugins. It supports open-ended metric composition instead of
@@ -33,8 +33,9 @@ user-defined metric. The extensibility guarantee is that new scalar metrics do
 not require changes to this package when they can be expressed from:
 
 - literals and named inputs;
-- addition, subtraction, multiplication, negation, division, sum, mean,
-  minimum, and maximum;
+- addition, subtraction, multiplication, negation, absolute value,
+  non-negative integer powers, quantization, division, sum, mean, minimum, and
+  maximum;
 - injected lists for descriptive/relative statistics; or
 - a bounded scalar function solved through bisection.
 
@@ -165,9 +166,8 @@ visible as data and can be property-tested independently.
 - Formatting, warnings-as-errors build, deterministic tests, and Hex tarball
   audit pass.
 
-## Remaining 0.1 work
+## Post-foundation expansion
 
-- finite-value validation for every `Float` input and output;
 - quantile interpolation alternatives, higher moments, robust estimators, and
   parametric/Monte-Carlo tail models;
 - regression standard errors, confidence intervals, heteroskedasticity/HAC
@@ -176,9 +176,8 @@ visible as data and can be property-tested independently.
   spread measures, and curve interpolation;
 - portfolio optimization, constrained solvers, and option-pricing primitives;
 - Newton/secant alternatives with explicit derivative/convergence contracts;
-- reusable property/law suites and package tarball audit; and
-- integration contracts with `finance_series`, `finance_calendar`, and
-  provenance-backed analytical results.
+- expanded reusable property/law suites and package publication audit; and
+- provenance-backed analytical-result convenience adapters.
 
 ## Non-goals
 

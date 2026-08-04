@@ -1,3 +1,4 @@
+import gleam/list
 import gleam/string
 
 pub type SourceKind {
@@ -17,6 +18,7 @@ pub opaque type SourceRef {
 pub type SourceError {
   InvalidProvider
   InvalidReference
+  UnsafeReference
 }
 
 pub fn new(
@@ -27,7 +29,11 @@ pub fn new(
   case valid(provider), valid(reference) {
     False, _ -> Error(InvalidProvider)
     _, False -> Error(InvalidReference)
-    True, True -> Ok(SourceRef(provider, reference, kind))
+    True, True ->
+      case contains_secret(reference) {
+        True -> Error(UnsafeReference)
+        False -> Ok(SourceRef(provider, reference, kind))
+      }
   }
 }
 
@@ -48,4 +54,19 @@ pub fn kind(source: SourceRef) -> SourceKind {
 
 fn valid(value: String) -> Bool {
   value != "" && string.trim(value) == value
+}
+
+fn contains_secret(value: String) -> Bool {
+  let lowered = string.lowercase(value)
+  [
+    "authorization=",
+    "api_key=",
+    "apikey=",
+    "access_token=",
+    "private_token=",
+    "signature=",
+    "x-amz-signature=",
+    "cookie=",
+  ]
+  |> list.any(fn(marker) { string.contains(lowered, marker) })
 }
