@@ -107,12 +107,12 @@ prevents every plugin from inventing incompatible finance types.
 | Package | State | Purpose | First types/capabilities |
 | --- | --- | --- | --- |
 | `finance_core` | Implementing | Canonical domain model | `Instrument`, `Listing`, `Money`, `Decimal`, `Currency`, `Exchange`, `Timeframe`, `Observation(a)`, freshness and adjustment metadata |
-| `finance_series` | Draft | Time-series operations | dated observations, alignment, resampling, returns, drawdown, rolling windows, missing-value policy |
-| `finance_calendar` | Draft | Trading-time rules | sessions, holidays, early closes, timezone-safe date ranges; provider data remains pluggable |
+| `finance_series` | Implementing | Time-series operations | ordered observations, explicit missing policy, alignment, injected-bucket resampling, exact returns, rolling windows, cumulative/drawdown paths, dynamic weights, contribution and factor analytics |
+| `finance_calendar` | Implementing | Trading-time rules | Gregorian dates, local zones/offsets, same-day and overnight sessions, holidays, early closes, bounded business-day rules, named day counts; provider data remains pluggable |
 | `finance_provenance` | Implementing | Reproducible evidence | source URLs/identifiers, retrieved/as-of timestamps, licence tags, input fingerprints, assumption records |
 | `finance_http` | Implementing | Provider-safe transport | retry/backoff, rate-limit headers, bounded concurrency, cache hooks, user-agent policy, redacted errors |
 | `finance_table` | Implementing | Agent-friendly output | compact Markdown/CSV/JSON tables, units, significant digits, missing-value markers, truncation summaries |
-| `finance_math` | Draft | Deterministic analytics | descriptive statistics, covariance, beta, CAGR, IRR/XIRR, volatility, VaR helpers, numerical error types |
+| `finance_math` | Implementing | Deterministic analytics | composable exact formulas, weighted statistics, covariance/beta, tail/downside risk, Sharpe/Sortino, multi-factor OLS, CAGR/IRR/XIRR, fixed-income sensitivity, bounded solvers |
 | `finance_testkit` | Implementing | Provider fixtures | frozen clocks, cassette responses, market calendars, split/dividend fixtures, decoder conformance tests |
 
 Provider adapters should also be ordinary packages when possible—for example,
@@ -159,6 +159,57 @@ history, and report orchestration remain Draft until the substrate acceptance
 tests pass and their provider-adapter packages, credentials, entitlements, and
 licence policies have individual designs. This is a sequencing decision, not a
 rejection of those proposals.
+
+### Metrics substrate expansion — 2026-08-04
+
+`finance_math` has graduated from Draft to **Implementing**. Finance metrics are
+an open algebra rather than a closed registry: exact formula trees compose named
+inputs, preserve explicit missing-data failures, require division precision,
+and return declared units, assumptions, and input names. Approximate analytical
+primitives are isolated behind an explicit binary-float contract with estimator,
+day-count, bracket, tolerance, and iteration policies supplied by callers.
+
+This makes new scalar accounting, valuation, performance, risk, and cash-flow
+metrics ordinary pure compositions. Time-dependent metrics additionally need
+`finance_series` alignment/rolling semantics and `finance_calendar` market-time
+rules; the series layer is implemented below while calendar work remains.
+
+### Time-series substrate expansion — 2026-08-04
+
+`finance_series` has graduated from Draft to **Implementing** using local path
+dependencies on `finance_core` and `finance_math`. It validates strictly ordered
+timelines, preserves missing values, performs explicit join policies, exposes
+rolling warm-up behavior, delegates resampling buckets to injected calendar
+rules, calculates exact decimal returns, and aligns portfolio/factor samples
+before approximate analytics.
+
+This closes the positional-list hazard for beta, correlation, tracking error,
+and related metrics. `finance_calendar` remains necessary for authoritative
+session, holiday, timezone, and day-count behavior; series code intentionally
+does not guess those rules.
+
+### Calendar substrate expansion — 2026-08-04
+
+`finance_calendar` has graduated from Draft to **Implementing** with a local
+path dependency on `finance_core`. It owns pure Gregorian arithmetic, explicit
+local zone/offset values, weekly and dated market rules, overnight trading-date
+classification, finite business-day searches, and named financial day-count
+conventions.
+
+The base package intentionally ships no authoritative holiday dataset and no
+timezone FFI. Maintained calendar adapters must provide effective-dated,
+licence-reviewed closures and convert instants through a real IANA timezone
+resolver before applying these pure rules.
+
+### Analytics enrichment — 2026-08-04
+
+The math and series substrates now cover reliability-weighted estimators,
+expected shortfall, downside deviation, Sharpe/Sortino/Omega, bounded
+multi-factor OLS, fixed-income duration/convexity/DV01, cumulative wealth and
+drawdown paths, time-varying portfolio weights, and component contribution
+series. Numerical tolerance, estimator, annualization, compounding, missing-path,
+and renormalization choices remain explicit inputs rather than defaults hidden
+inside named metrics.
 
 ## Plugin proposals
 

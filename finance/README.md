@@ -5,9 +5,10 @@ applications. They do not import `pi_gleam`, export Pi extensions, or produce
 artifacts under `dist/`.
 
 The first batch was arbitrated on 2026-08-04 from
-`/tmp/pi-sparkles-proposal`. All five packages are in **Implementing**: each has
-a reviewed design contract, a compiling pure API slice, and deterministic unit
-tests, but none claims a complete or stable `0.1` API yet.
+`/tmp/pi-sparkles-proposal`. Its five packages and the subsequently graduated
+`finance_math`, `finance_series`, and `finance_calendar` substrates are
+**Implementing**: each has a reviewed design contract, a compiling API slice,
+and deterministic tests, but none claims a complete or stable `0.1` API yet.
 
 ```text
 finance_core ──> finance_provenance
@@ -15,13 +16,17 @@ finance_core ──> finance_provenance
       ├────────> finance_http ──┐
       │                         │
       ├────────> finance_table  │
+      ├────────> finance_math   │
+      ├────────> finance_series─┤
+      ├────────> finance_calendar
       │                         v
       └────────────────> finance_testkit
 ```
 
 The diagram shows dependency direction from foundation to consumer.
-`finance_testkit` depends on both core and HTTP. No core package or core test
-may depend on testkit.
+`finance_series` depends on core and math; calendar depends only on core.
+`finance_testkit` depends on core and HTTP. No core package or core test may
+depend on testkit.
 
 ## Functional architecture
 

@@ -64,7 +64,13 @@ describe("functional architecture", () => {
   });
 
   test("pure finance foundations contain no Promise or FFI boundary", () => {
-    for (const name of ["finance_core", "finance_table"]) {
+    for (const name of [
+      "finance_core",
+      "finance_calendar",
+      "finance_math",
+      "finance_series",
+      "finance_table",
+    ]) {
       const directory = join(FINANCE_DIR, name, "src");
       for (const path of filesBelow(directory, ".gleam")) {
         const gleam = source(path);

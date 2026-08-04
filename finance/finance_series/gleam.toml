@@ -1,0 +1,21 @@
+name = "finance_series"
+version = "0.1.0"
+target = "javascript"
+description = "Deterministic time-series alignment and transformation for finance"
+
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+finance_core = { path = "../finance_core" }
+finance_math = { path = "../finance_math" }
+
+[dev-dependencies]
+gleeunit = ">= 1.9.0 and < 2.0.0"
+
+[javascript]
+runtime = "bun"
+
+[metadata.finance]
+status = "implementing"
