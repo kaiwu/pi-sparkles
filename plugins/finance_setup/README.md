@@ -1,0 +1,61 @@
+# pi_sparkles_finance_setup
+
+Experimental F0 Pi extension for finance capability discovery and safe
+configuration diagnostics. It registers `/finance-setup`,
+`finance_capabilities`, and `finance_provider_health`.
+
+## Why this plugin exists
+
+Finance answers fail deceptively when a provider is absent, a default currency
+is malformed, or an agent assumes that an installed package implies live data.
+This plugin gives every later finance workflow a small preflight contract. It
+reports only states it can prove and never prints or returns provider secrets.
+
+The current vertical slice validates currency/timezone defaults, lists the
+installed functional foundations, detects companion tools through Pi's active
+tool registry, and distinguishes an absent provider adapter from a checked
+network connection. It deliberately does **not** call a provider endpoint yet;
+connectivity, credentials, and entitlement become `ready` only when a
+provider-specific adapter implements a typed health probe.
+
+## Functional design
+
+`capability.gleam` is a pure function:
+
+```text
+defaults + active tool names -> immutable capability report
+```
+
+It depends on `finance_core` smart constructors for currency and timezone
+validation. The root module is the effect shell: it reads Pi flags and active
+tool names, passes ordinary values into the core, and renders the result. Equal
+inputs produce equal reports, so setup behavior is unit-testable without Pi or
+ambient environment variables.
+
+## Interface
+
+- `/finance-setup` uses `--finance-currency` (default `USD`) and
+  `--finance-timezone` (default `UTC`).
+- `finance_capabilities` accepts optional `currency` and `timezone` overrides.
+- `finance_provider_health` accepts a provider name. OpenFIGI and SEC EDGAR have
+  reserved adapter tool contracts; unknown providers remain explicitly
+  `unknown`.
+
+Tool results include structured `details` with state names. `experimental`
+means a companion tool is active, not that credentials, connectivity, data
+freshness, or entitlement were verified.
+
+## Safety and permissions
+
+The plugin performs no network, filesystem, subprocess, storage, or environment
+effects. It reads only Pi flags and Pi's active tool-name list. It cannot reveal
+secrets because it never reads them. Future provider probes must return
+redacted diagnostics and keep configured, authenticated, reachable, entitled,
+and fresh as separate states.
+
+## Dependencies and status
+
+Local development uses path dependencies on `../../pi_gleam` and
+`../../finance/finance_core`. Replace them with released Hex constraints before
+publishing. Tested against Pi `0.83.0`. This is an Experimental interface, not
+yet a stable provider-health protocol.

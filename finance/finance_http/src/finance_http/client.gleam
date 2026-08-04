@@ -187,11 +187,31 @@ fn default_clock() -> time.Instant {
   now
 }
 
+/// The production wall clock used by `default`.
+///
+/// Provider runtimes may reuse this capability when composing admission and
+/// pacing around the same HTTP client rather than introducing another clock
+/// FFI.
+pub fn system_clock() -> time.Instant {
+  default_clock()
+}
+
 fn default_sleep(
   duration: time.Duration,
   cancellation: Cancellation,
 ) -> Promise(Bool) {
   sleep_milliseconds(time.duration_milliseconds(duration), cancellation)
+}
+
+/// The production cancellation-aware sleeper used by `default`.
+///
+/// Exposing the capability lets provider runtimes pace requests without real
+/// sleeps appearing in their pure policy modules.
+pub fn cancellable_sleep(
+  duration: time.Duration,
+  cancellation: Cancellation,
+) -> Promise(Bool) {
+  default_sleep(duration, cancellation)
 }
 
 @external(javascript, "./client_ffi.mjs", "now_milliseconds")

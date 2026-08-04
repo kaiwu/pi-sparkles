@@ -114,6 +114,8 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_table` | Experimental | Agent-friendly output | unit-aware annotated Markdown/CSV/JSON with compound budgets and omission summaries |
 | `finance_math` | Experimental | Deterministic analytics | arbitrary exact formulas, finite approximate statistics/risk/regression, cash flows, fixed income, and bounded solvers |
 | `finance_testkit` | Experimental | Provider fixtures | frozen clocks, shared cassettes, synthetic quotes/bars, decoder conformance, redaction laws, and fixture governance |
+| `finance_openfigi` | Experimental | Instrument identity provider | OpenFIGI v3 mapping/filter plans, opaque optional authentication, pagination, fixtures, separate rate buckets, and bounded shared execution |
+| `finance_sec` | Experimental | Primary filing-data provider | identified public access, normalized CIKs, bounded ticker/submissions/company-facts plans, typed recent filings, conservative pacing, and cancellation |
 
 Provider adapters should also be ordinary packages when possible—for example,
 `finance_sec`, `finance_fred`, `finance_openfigi`, and
@@ -154,11 +156,62 @@ The proposal is accepted with these binding decisions:
   provenance-labelled. Synthetic market data is seeded and unmistakably fake;
   personal database exports are never package fixtures.
 
-No Wave B Pi plugin is confirmed yet. Setup, guardrails, symbols, SEC, quote,
-history, and report orchestration remain Draft until the substrate acceptance
-tests pass and their provider-adapter packages, credentials, entitlements, and
-licence policies have individual designs. This is a sequencing decision, not a
-rejection of those proposals.
+The substrate acceptance suite now passes. The F0 batch—`pi_finance_setup`,
+`pi_finance_guardrails`, and `pi_finance_symbols`—is confirmed and
+**Experimental** as of 2026-08-04. Setup and guardrails are provider-neutral;
+symbols now consumes the reusable read-only `finance_openfigi` adapter, which
+uses `finance_http` and explicit public-domain/freshness limitations. SEC has
+since graduated as the first F1 slice below; quote, history, broader taxonomy, and
+report orchestration remain Draft until their provider, credential,
+entitlement, and licence designs are accepted.
+
+### SEC EDGAR vertical slice — 2026-08-04
+
+`finance_sec`, `pi_sec_edgar`, and the first `pi_sec_xbrl` slice have graduated
+to **Experimental**. The provider package owns caller identity, CIK validation,
+official request plans, response
+bounds, typed company/submissions decoding, cancellation, retries, and a
+conservative eight-request-per-second shared runtime. The plugin exposes
+`/sec-company`, `sec_company_search`, and `sec_company_submissions`, with pure
+deterministic ranking and exact form filtering outside its Pi effect shell.
+
+The XBRL slice adds `sec_xbrl_concepts` and `sec_xbrl_facts`. It preserves
+numeric JSON source lexemes, taxonomy/tag, unit, period, accession, fiscal
+metadata, form/amendment, filed date, frame, and duplicates. Concept discovery
+uses company-facts; exact fact lookup uses the smaller company-concept endpoint.
+
+`pi_stock_fundamentals` has also graduated to an **Experimental fundamental
+slice**. Its executable registry covers seven US-GAAP metrics and requires exact
+units. It supports exact dates plus calendar-classified instant, quarter,
+half-year YTD, nine-month YTD, and annual shapes at an exact end date. Explicit
+filing policies preserve all, select original/amended forms, select the latest
+validated filing date, or select an accession. It returns no-match, unique, or
+ambiguous; accepted alternative tags and repeated facts have no hidden precedence.
+Its strict derived layer can subtract a unique nine-month YTD source from a
+compatible unique annual source for additive Q4 metrics, retaining both facts,
+and can construct chronological direct-fact trends only after every point proves
+the same metric, unit, taxonomy/tag, and period class. A pure `finance_math`
+composition layer now calculates free cash flow, net margin, and diluted EPS
+from unique facts only after proving the same exact period and filing context;
+outputs expose formula trees, policies, assumptions, and complete input sources.
+Exact growth now validates every adjacent quarter-over-quarter or year-over-year
+calendar gap, while direct TTM accepts only four contiguous additive quarter
+facts. An annual-plus-YTD bridge now calculates `annual + current YTD - prior
+comparable YTD` under independent source policies and strict fiscal-window
+proofs. A typed direct/derived-quarter constructor now supports mixed TTM while
+expanding derived Q4 into annual-minus-YTD formula leaves. Debt, broader
+profitability/return metrics, scale/currency conversion, and statement
+reconstruction remain outside this slice.
+The general multi-input metric boundary also supports independent named
+accession overrides while retaining a strict same-filing calculation law.
+
+This arbitration accepts read-only company discovery, recent filing metadata,
+raw standard/entity-wide XBRL fact evidence, and the documented seven direct
+fundamentals. Broader normalized accounting metrics,
+company extensions, dimensional/segment facts, filing document retrieval/search,
+and EDGAR Next submission APIs remain out of scope. The plugins require an
+identifiable SEC user-agent contact, stay below the published access ceiling,
+and label both ticker and XBRL coverage limitations explicitly.
 
 ### Metrics substrate expansion — 2026-08-04
 
@@ -330,9 +383,9 @@ public contract.
 
 | Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
 | --- | --- | --- | --- |
-| `pi_sec_edgar` | P0 | Company identity, filing history, filing retrieval, and links to primary SEC documents. | `/filings`, `sec_company`, `sec_filings`, `sec_filing`, `sec_search_filing` |
-| `pi_sec_xbrl` | P0 | Typed company facts and frames from SEC XBRL, retaining taxonomy, units, period, accession, form, and filed date. | `/facts`, `sec_company_facts`, `sec_concept`, `sec_compare_fact` |
-| `pi_stock_fundamentals` | P0 | Normalized income statement, balance sheet, cash flow, per-share, and segment series derived with traceable mappings. | `/fundamentals`, `company_financials`, `fundamental_trends`, `segment_history` |
+| `pi_sec_edgar` (**Experimental first slice**) | P0 | Company candidate identity and recent filing metadata now; document retrieval/search remains planned. | `/sec-company`, `sec_company_search`, `sec_company_submissions`; later `sec_filing`, `sec_search_filing` |
+| `pi_sec_xbrl` (**Experimental raw-fact slice**) | P0 | Exact company concepts/facts retaining taxonomy, units, period, accession, form/amendment, filed date, frame, and duplicates; normalized metrics remain planned. | `sec_xbrl_concepts`, `sec_xbrl_facts`; later `/facts`, `sec_compare_fact` |
+| `pi_stock_fundamentals` (**Experimental fundamental slice**) | P0 | Seven US-GAAP direct facts with inspectable mappings, exact/classified periods, explicit filing precedence and ambiguity, strict Q4/trends, exact source-graph formulas, calendar-validated growth, direct/bridged/composed TTM, explicit direct-versus-derived quarter provenance, and a concise network-free workflow guide; debt, broader metrics, and segments remain planned. | `/fundamentals`, `stock_fundamental_definitions`, `stock_fundamental`, `stock_fundamental_period`, `stock_fundamental_q4`, `stock_fundamental_trend`, `stock_fundamental_growth`, `stock_fundamental_ttm`, `stock_fundamental_ttm_bridge`, `stock_fundamental_ttm_composed`, `stock_fundamental_metric`; later `company_financials`, `segment_history` |
 | `pi_filing_diff` | P1 | Section-aware comparison of successive filings, highlighting changed risks, accounting policy, guidance, and exhibits. | `/filing-diff`, `filing_diff`, `filing_changes` |
 | `pi_filing_monitor` | P1 | Watches configured companies/forms and injects a sourced summary when new filings arrive. | `/filing-watch`, `filing_watch_add`, `filing_watch_list`, `filing_watch_poll` |
 | `pi_sec_insiders` | P1 | Form 3/4/5 transactions with role, ownership type, transaction code, price, and post-transaction holdings. | `/insiders`, `insider_transactions`, `insider_summary` |
@@ -534,9 +587,9 @@ a finance agent:
 2. `finance_http`: redaction, retry/backoff, rate limits, fixtures.
 3. `finance_openfigi` + `pi_finance_symbols`: unambiguous instrument identity.
 4. `finance_sec` + `pi_sec_edgar`: company and filing lookup.
-5. `pi_sec_xbrl`: a deliberately small fact set—revenue, net income, assets,
-   debt, cash, operating cash flow, capex, and diluted shares—with raw facts
-   preserved.
+5. `pi_sec_xbrl` + `pi_stock_fundamentals`: preserve raw facts, then expose the
+   initial revenue, net income, assets, cash, operating cash flow, reported PP&E
+   purchases, and diluted-share mappings. Debt waits for a component graph.
 6. `pi_stock_quote`: one configurable market-data backend, delayed/real-time
    status always visible.
 7. `pi_stock_research_report`: one concise, cited company brief.

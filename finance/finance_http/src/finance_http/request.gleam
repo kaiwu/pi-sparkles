@@ -15,6 +15,7 @@ pub type Method {
 
 pub type Idempotency {
   NaturallyIdempotent
+  RepeatableRead
   IdempotencyKey(String)
   NonIdempotent
 }
@@ -61,6 +62,7 @@ pub type RequestError {
   InvalidContentType
   InvalidSafeVariant
   BodyNotAllowed
+  RepeatableReadRequiresPost
   NonPositiveResponseLimit
 }
 
@@ -220,6 +222,44 @@ pub fn with_text_body(
   }
 }
 
+/// Mark a read-only POST query as safe to repeat without sending an
+/// `Idempotency-Key` header.
+///
+/// Use this only for provider query endpoints whose POST body describes a
+/// read operation. Mutations should use a provider-supported idempotency key or
+/// remain non-idempotent.
+pub fn as_repeatable_read(request: Request) -> Result(Request, RequestError) {
+  case method(request) {
+    Post -> {
+      let Request(
+        method,
+        origin,
+        path,
+        _,
+        headers,
+        query,
+        body,
+        timeout,
+        maximum_response_bytes,
+        safe_variant,
+      ) = request
+      Ok(Request(
+        method,
+        origin,
+        path,
+        RepeatableRead,
+        headers,
+        query,
+        body,
+        timeout,
+        maximum_response_bytes,
+        safe_variant,
+      ))
+    }
+    _ -> Error(RepeatableReadRequiresPost)
+  }
+}
+
 pub fn with_limits(
   request: Request,
   timeout timeout: Duration,
@@ -279,7 +319,7 @@ pub fn idempotency(request: Request) -> Idempotency {
 pub fn idempotency_key(request: Request) -> Option(String) {
   case idempotency(request) {
     IdempotencyKey(key) -> Some(key)
-    NaturallyIdempotent | NonIdempotent -> None
+    NaturallyIdempotent | RepeatableRead | NonIdempotent -> None
   }
 }
 
@@ -310,7 +350,7 @@ pub fn maximum_response_bytes(request: Request) -> Int {
 
 pub fn can_retry(request: Request) -> Bool {
   case idempotency(request) {
-    NaturallyIdempotent | IdempotencyKey(_) -> True
+    NaturallyIdempotent | RepeatableRead | IdempotencyKey(_) -> True
     NonIdempotent -> False
   }
 }

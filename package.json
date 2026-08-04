@@ -12,6 +12,7 @@
     "test:ffi": "bun scripts/build.js && bun test test/binding",
     "test:artifacts": "bun scripts/build.js && bun test test/artifacts",
     "test:pi": "bun scripts/test-pi.js",
+    "test:live:sec": "bun scripts/test-live-sec.js",
     "test": "bun scripts/test.js",
     "clean": "bun scripts/clean.js"
   }

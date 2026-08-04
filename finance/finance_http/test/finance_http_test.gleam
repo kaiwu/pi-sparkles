@@ -284,6 +284,14 @@ pub fn keyed_post_can_retry_test() {
   |> should.equal(retry.RetryAfter(duration(100), 2))
 }
 
+pub fn read_only_post_retries_without_inventing_an_idempotency_header_test() {
+  let assert Ok(post) = request.as_repeatable_read(post_request(None))
+  request.can_retry(post) |> should.be_true
+  request.idempotency_key(post) |> should.equal(None)
+  request.as_repeatable_read(get_request())
+  |> should.equal(Error(request.RepeatableReadRequiresPost))
+}
+
 pub fn retry_after_is_respected_and_bounded_test() {
   retry.decide(
     retry_policy(),

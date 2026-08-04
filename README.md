@@ -13,15 +13,33 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- five implementing-stage finance substrate packages under `finance/`;
+- eight Experimental finance foundations and two provider adapters under
+  `finance/`;
+- the first F0 finance plugins: `finance_setup`, `finance_guardrails`, and
+  `finance_symbols`;
+- the first F1 research slices: `sec_edgar`, `sec_xbrl`, and
+  `stock_fundamentals`, backed by the read-only `finance_sec` adapter;
 - `hello`, a reference command and typed tool;
 - `safety_gate`, a reference result-bearing event handler with asynchronous UI;
 - `lifecycle`, a reference for typed state restoration and safe cleanup;
 - Bun-driven checking, testing, bundling, artifact tests, and Pi load tests.
 
 The implementation was developed against Pi `0.83.0` at commit `305c014dc`,
-Gleam `1.18.0`, and Bun `1.3.14`. All three reference plugins build to standalone
-ESM artifacts and load with Pi `0.83.0` without model credentials.
+Gleam `1.18.0`, and Bun `1.3.14`. The reference and F0 plugins build to
+standalone ESM artifacts and load with Pi `0.83.0` without model credentials.
+`finance_symbols` uses OpenFIGI v3 only when one of its tools is executed.
+`sec_edgar` likewise performs no request until invoked and requires an SEC
+fair-access contact in `SEC_USER_AGENT_CONTACT`; `sec_xbrl` shares that contract
+and preserves SEC numeric source lexemes rather than converting through binary
+floats. `stock_fundamentals` adds inspectable exact-period mappings, explicit
+filing policies, strict source-retaining Q4 derivation, and comparable direct-fact
+trends while keeping alternate/amended facts ambiguous. Its first exact
+`finance_math` compositions add free cash flow, net margin, and diluted EPS only
+after proving all inputs share one period and filing context. Exact growth and
+direct-quarter TTM additionally prove explicit calendar gaps and contiguous
+coverage; an independently sourced annual-plus-YTD bridge covers TTM when four
+direct quarters are unavailable. A typed `DirectQuarter | DerivedQuarter`
+composition expands every derived Q4 back to its annual/YTD source leaves.
 
 The binding is an initial `0.1.0` implementation, not a published Hex package.
 Its typed surface covers normal plugin authoring, while `pi/raw` makes the
@@ -78,6 +96,18 @@ bun run test:pi -- pi_sparkles_hello
 defaults to `/home/kaiwu/Documents/github/pi-mono` in this workspace and falls
 back to the installed Pi when the source checkout is not hydrated.
 
+Live SEC compatibility is an explicit, non-CI lane. It builds and invokes the
+real `sec_edgar`, `sec_xbrl`, and `stock_fundamentals` bundles without an LLM,
+allows only bounded HTTPS GETs to SEC hosts, and requires a real caller contact:
+
+```sh
+SEC_USER_AGENT_CONTACT="you@your-real-domain.com" bun run test:live:sec
+```
+
+The runner makes at most ten sequential attempts, refuses redirects, and emits
+a JSON compatibility report. It is intentionally excluded from `bun run test`;
+deterministic unit and binding tests never contact public providers.
+
 ## Pi extension contract
 
 Pi expects the default export of an extension module to be a factory receiving
@@ -123,12 +153,23 @@ pi-sparkles/
 │   │   └── ui.gleam
 │   └── test/
 ├── finance/                      reusable non-Pi Gleam libraries
+│   ├── finance_calendar/
 │   ├── finance_core/
 │   ├── finance_http/
+│   ├── finance_math/
+│   ├── finance_openfigi/
 │   ├── finance_provenance/
+│   ├── finance_sec/
+│   ├── finance_series/
 │   ├── finance_table/
 │   └── finance_testkit/
 ├── plugins/
+│   ├── finance_setup/            capability/configuration preflight
+│   ├── finance_guardrails/       evidence and freshness policy
+│   ├── finance_symbols/          OpenFIGI v3 identity resolution
+│   ├── sec_edgar/                SEC company and recent filing metadata
+│   ├── sec_xbrl/                 exact SEC XBRL concept and fact evidence
+│   ├── stock_fundamentals/       audited direct-fact normalization
 │   ├── hello/                    command and typed-tool example
 │   ├── lifecycle/                state restoration/lifecycle example
 │   └── safety_gate/              typed event/async-UI example
@@ -144,6 +185,65 @@ The root is not a Gleam package. The root-level `pi_gleam/` binding and every
 package below `finance/` and `plugins/` own a `gleam.toml`, version, README,
 source, and tests, so each can be versioned and released independently. Finance
 libraries are checked and unit-tested by the root tasks but are not Pi bundles.
+
+## Finance foundations
+
+The finance directory is a reusable Gleam substrate, not a collection of Pi
+extensions. Plugins compose these packages behind typed Pi boundaries:
+
+| Package | Role |
+| --- | --- |
+| `finance_core` | Exact decimals, money, identifiers, instruments, sources, time, and the canonical `Observation(a)` envelope. |
+| `finance_provenance` | Evidence identities, assumptions, licences, manifests, canonical encoding, hashing, redaction, and verification plans. |
+| `finance_http` | Safe requests, bounded fetch transport, cancellation, retry/`Retry-After`, rate limits, pooling, scheduling, caching, and cassettes. |
+| `finance_math` | Composable exact formula trees plus explicit approximate statistics, regression, risk, cash-flow, and fixed-income policies. |
+| `finance_openfigi` | OpenFIGI v3 access, mapping/search plans, pagination, decoding, authenticated/anonymous rate profiles, and a bounded shared runtime. |
+| `finance_sec` | Identified read-only SEC access, normalized CIKs, bounded EDGAR request plans, typed submissions/XBRL facts, lossless numeric lexemes, explicit filing/period resolution, strict Q4/trend derivation, and conservative shared pacing. |
+| `finance_series` | Ordered observations, alignment, as-of joins, returns, windows, resampling, portfolio paths, and analytics. |
+| `finance_calendar` | Dates, market calendars, business-day rules, schedules, joint calendars, and day-count conventions. |
+| `finance_table` | Typed tables with validated cells and deterministic Markdown, CSV, and JSON rendering. |
+| `finance_testkit` | Seeded fixtures, scripted clocks/transports, cassette helpers, generators, scenarios, and redaction assertions. |
+
+Dependencies point inward: core imports no finance package; provider-neutral
+packages build on core where needed; series composes core and math;
+testkit supports core and HTTP; OpenFIGI and SEC compose core/HTTP as needed.
+None imports Pi.
+Pure calculation and policy can therefore run in any Gleam program and in tests
+without Pi, networking, filesystem access, ambient time, or secrets.
+
+Finance plugins preserve source, as-of/retrieval time when known, freshness,
+units, adjustment basis, quality, and entitlement through to tool results.
+Unknown metadata stays unknown. Provider adapters interpret `finance_http`
+instead of adding another fetch/retry/cache stack, and metrics compose
+`finance_math` and `finance_series` instead of hiding arithmetic in an effect
+shell.
+
+The first F0 plugin batch demonstrates this direction:
+
+- `finance_setup` validates defaults and reports only capabilities it can prove;
+- `finance_guardrails` composes evidence checks and accumulates typed issues;
+- `finance_symbols` consumes `finance_openfigi`, then applies a small pure policy
+  returning `NoMatch`, `Unique`, or `Ambiguous` instead of guessing.
+- `sec_edgar` consumes `finance_sec`, then applies pure deterministic company
+  ranking and filing selection before its Pi shell renders source-labelled
+  results.
+- `sec_xbrl` composes the same adapter with pure concept discovery and explicit
+  unit/form fact selection; it preserves raw periods, accessions, amendments,
+  frames, and duplicates instead of prematurely naming metrics.
+- `stock_fundamentals` exposes a seven-metric executable registry and resolves
+  exact or calendar-classified statement periods under explicit filing policies
+  to `NoMatch`, `Unique`, or `Ambiguous`; its Q4 and trend tools then consume
+  only unique, proven-compatible sources and retain every accession. Its metric
+  tool exposes exact formula trees and source graphs for free cash flow, net
+  margin, diluted EPS, growth, and direct-quarter TTM.
+  The TTM bridge retains its annual, current-YTD, and prior-YTD source graph and
+  permits independent exact-accession selection.
+  General multi-input metrics likewise accept a named accession per input, but
+  still reject combinations whose resolved facts do not share one filing context.
+
+All foundation interfaces are Experimental. Local path dependencies are
+intentional during monorepo development; published packages must use Hex
+version constraints.
 
 ## Common binding
 
@@ -244,6 +344,7 @@ Commands implemented now:
 | `bun run test:ffi` | build and run JavaScript binding contracts |
 | `bun run test:artifacts` | build and inspect the generated extension modules |
 | `bun run test:pi [-- name]` | load artifacts in Pi without invoking a model |
+| `bun run test:live:sec` | run opt-in bounded compatibility checks against live read-only SEC APIs |
 | `bun run test` | complete repository verification |
 | `bun run clean` | remove generated build, work, and distribution output |
 
