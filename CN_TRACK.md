@@ -14,8 +14,10 @@ disclosures, language, data rights, and provider contracts remain China-owned.
 
 ## Status at this snapshot
 
-- CN0-CN4 are **Draft**. Pure CN/HK identity and bounded-calendar packages now
-  exist, but there are no provider-backed `cn_*` or `hk_*` market plugins yet.
+- CN0-CN4 provider-backed capabilities are **Draft/Waiting**. Pure CN/HK
+  identity, bounded-calendar, effective-rules, document, and accounting
+  packages now exist, and isolated `cn_setup`/`hk_setup` preflights are
+  Experimental. There are no provider-backed market-data plugins yet.
 - The repository will expose exactly three market tracks: `cn` (mainland
   China), `hk` (Hong Kong), and `us` (United States). Provider-neutral and
   cross-market capabilities are not additional tracks.
@@ -24,8 +26,11 @@ disclosures, language, data rights, and provider contracts remain China-owned.
   cross-track legs. Current SEC and US-fundamental results emit `track: "us"`.
   Its profile contract also supplies visible CN/CNY/Shanghai,
   HK/HKD/Hong-Kong, and US/USD/New-York interaction defaults.
-- The reusable foundations are Experimental, including the new
-  `finance_evidence`, `finance_listing`, and `finance_market_calendar` seams.
+- The reusable foundations are Experimental, including `finance_evidence`,
+  `finance_listing`, `finance_market_calendar`, `finance_market_rules`,
+  `finance_market_authorities`, `finance_market_documents`,
+  `finance_market_accounting`, and
+  `finance_track_capabilities`.
 - `finance_openfigi` and `finance_sec` are useful architectural references, but
   their source contracts and domain laws are not China contracts.
 - The first licensed quote/history provider, authoritative security-master
@@ -82,6 +87,49 @@ Ledger states used below:
   restores branch-scoped choice, exposes headless status/switch tools, and emits
   a strict track-change event. Switching navigation never relabels evidence,
   swaps providers/calendars, or merges market-owned state.
+- **2026-08-05 — effective market rules:** added shared
+  `finance_market_rules` plus isolated `finance_cn_rules` and
+  `finance_hk_rules`. Exact listing, board, share class, security type, status,
+  and effective date are selection dimensions; missing and overlapping rules
+  fail closed. Only synthetic records are bundled while rule sources wait on
+  the provider/licence matrix.
+- **2026-08-05 — disclosure/accounting domains:** added shared document lineage
+  and lossless reported-fact packages plus isolated CN/HK vocabularies. Exact
+  Unicode originals, corrections/translations, attachment hashes, numeric
+  lexemes, reported scales, statement scope, audit/restatement state, executable
+  mappings, issuer coherence, and duplicates are preserved. Provider decoders,
+  real fixtures, and audited mappings remain blocked.
+- **2026-08-05 — lossless disclosure wire:** added strict schema-v1 JSON codecs
+  for shared market documents and accounting facts. Round trips retain track/MIC
+  listing identity, exact Chinese text and numeric lexemes, original scale,
+  normalized unit, period/scope, source, and evidence; unknown schema versions
+  and numeric JSON tokens fail closed.
+- **2026-08-05 — verified CN/HK authority map:** confirmed from primary official
+  sources that CSRC/SFC are the statutory regulators, exchange operators own
+  frontline listing and issuer-disclosure surfaces, and MOF/HKICPA own the
+  accounting standards. The accepted adapter boundaries are now clear; public
+  API support, fixture rights, and redistribution terms remain decisions.
+- **2026-08-05 — isolated seeded market scenarios:** added
+  `finance_cn_testkit` and `finance_hk_testkit` over the shared seed engine and
+  each track's own domain packages. Deterministic catalogues cover leading
+  zeroes, venue/board classes, B-share currency, listing-specific HK lots,
+  suspension, split sessions, Unicode/parallel-language/correction documents,
+  exact large lexemes, reported scales, and CAS/HKFRS/IFRS distinctions.
+- **2026-08-05 — user-visible official source registries:** added the pure
+  `finance_market_authorities` contract plus isolated CN/HK registries in the
+  existing setup shells. `/cn-sources`/`cn_authorities` and
+  `/hk-sources`/`hk_authorities` expose official links, roles, scope, access,
+  redistribution, and limitations while keeping sibling sources isolated and
+  verified ownership distinct from approved automation.
+- **2026-08-05 — bounded attachments:** added
+  `finance_document_attachment`. Pure acceptance enforces exact media
+  allowlists, byte/page/redirect budgets, cross-host redirect policy,
+  cancellation, and SHA-256 identity; archives and OCR explicitly fail closed.
+  Accepted metadata constructs the shared evidence-backed attachment identity.
+- **2026-08-05 — isolated setup surfaces:** added `cn_setup` and `hk_setup`
+  with `/cn-setup`/`/hk-setup`, track-prefixed capabilities/provider-health
+  tools, exact contexts/defaults, and honest blocked decisions. Architecture and
+  binding tests prove sibling and SEC tools cannot satisfy their readiness.
 
 ## Binding decisions
 
@@ -200,6 +248,32 @@ request budgets, cancellation, retries only where safe, provider-specific rate
 state, redacted failures, fixture-tested decoders, and written entitlement,
 licence, cache, outage, and redistribution policy.
 
+### Verified authority and source map
+
+There is no one-to-one EDGAR or SEC replacement. Regulation, frontline listing
+supervision, issuer dissemination, accounting standards, and licensed market
+data are separate source contracts. This map records official ownership; it is
+not approval to automate or redistribute an undocumented endpoint.
+
+| Responsibility | Mainland `cn` authority/source | Hong Kong `hk` authority/source | Adapter boundary and current decision |
+| --- | --- | --- | --- |
+| Statutory securities regulation and enforcement | [CSRC](https://www.csrc.gov.cn/csrc_en/c102023/common_zcnr.shtml?channelid=e9958c689bef4d468d81dc93c8d3479f) performs unified securities-market regulation. | [SFC](https://www.sfc.hk/EN/about-the-sfc/our-role/) is the independent statutory securities and futures regulator. | Separate `finance_csrc` and `finance_sfc` document/rule/enforcement adapters; never use either as a quote feed. |
+| Frontline listing supervision and issuer disclosure | [SSE announcements](https://www.sse.com.cn/disclosure/listedinfo/announcement/?PC=PC), [SZSE listed-company notices](https://www.szse.cn/disclosure/notice/company/index.html), and [BSE announcements](https://www.bse.cn/disclosure/announcement.html) are venue-owned surfaces. [CNINFO](https://www.cninfo.com.cn/?lang=zh) identifies itself as SZSE's statutory disclosure platform and also presents multi-venue material. | SFC states that [SEHK is the frontline regulator](https://www.sfc.hk/en/Regulatory-functions/Corporates), and [HKEXnews](https://www2.hkexnews.hk/Global/Exchange/About-Us?sc_lang=en) is the centralized issuer filing/disclosure site. | Venue-specific issuer adapters preserve the publication host and document identity. CNINFO aggregation cannot erase SSE/BSE provenance. Public search pages still need supported-access and fixture-rights review. |
+| Accounting standards and electronic taxonomy | The Ministry of Finance publishes [CAS standards](https://kjs.mof.gov.cn/zt/kjzzss/kuaijizhunzeshishi/) and the [CAS XBRL general taxonomy](https://kjs.mof.gov.cn/zhengcefabu/201010/t20101020_343461.htm). CSRC separately owns public-company disclosure requirements. | [HKICPA issues HKFRS](https://www.hkicpa.org.hk/en/Standards-setting/Standards/Members-Handbook-and-Due-Process/Due-Process/Financial-reporting); HKEX [Appendix D2](https://en-rules.hkex.com.hk/rulebook/disclosure-financial-information-0) also permits specified issuers to report under IFRS or CASBE. | Separate standard/taxonomy registries from document retrieval. Every HK fact retains its actual standard; no global HKFRS default. Taxonomy copyright and redistribution require review. |
+| Trading calendars and effective rules | SSE/SZSE/BSE publish their own rules and dated notices; for example, the [SSE trading rules](https://www.sse.com.cn/lawandrules/sselawsrules2025/stocks/exchange/c/c_20260424_10816482.shtml) define sessions while reserving exchange ownership/licensing of market data. | HKEX publishes calendars/rules and separates Hong Kong securities, derivatives, and Stock Connect schedules; the [Stock Connect calendar](https://www.hkex.com.hk/mutual-market/stock-connect/reference-materials/trading-hour%2C-trading-and-settlement-calendar?sc_lang=en) is a distinct product. | Versioned venue/security datasets with exact effective dates. Do not derive holiday sets from civil calendars or substitute Stock Connect days for local HK days. |
+| Production dissemination and market-data feeds | Public issuer pages are distinct from any accepted machine feed; quote/history remains a named licensed-vendor decision. | HKEX offers a versioned [Issuer Information Feed](https://www.hkex.com.hk/Services/Market-Data-Services/Infrastructure/Issuer-Information-feed-Service-%28IIS%29?sc_lang=en) and separately documents [market-data licensing](https://www.hkex.com.hk/Services/Market-Data-Services/Real-Time-Data-Services/Data-Licensing?sc_lang=en). | Public filing retrieval, production issuer feed, and quote/history feed are three capabilities with separate licence, pacing, cache, and redistribution policy. |
+
+The first provider-backed vertical slice should therefore start with official
+issuer documents, not pretend that a Company Facts equivalent exists. A later
+structured-financial adapter may consume an accepted XBRL instance/taxonomy or
+decode source reports losslessly, but must expose its actual coverage rather
+than claim SEC-style whole-entity facts.
+
+Plugin users can inspect the same binding map without reading this ledger:
+`/cn-sources` or `cn_authorities` for mainland sources, and `/hk-sources` or
+`hk_authorities` for Hong Kong. These views are configuration-only and perform
+no network access.
+
 ### 4. Promote only genuinely global concepts
 
 China-specific concepts stay in the China packages until another track proves
@@ -241,7 +315,7 @@ Provider-neutral deficiencies should be fixed once:
 | `finance_table` | Typed cells/units, annotations, omission budgets, and deterministic Markdown/CSV/JSON. | Test Chinese headings/content and original-unit annotations. Add terminal display-width policy only if a real TUI surface proves grapheme count insufficient; do not hide units behind locale formatting. |
 | `finance_math` | Exact formula trees, explicit scale/rounding, finite analytics, cash-flow/fixed-income primitives, and zero/missing errors. | China domain constructors must resolve inputs and prove entity, period, statement scope, filing context, unit/scale, and source coherence before evaluation. |
 | `finance_series` | Ordered/missing-aware series, exact/as-of alignment, resampling, returns, windows, paths, and analytics. | Use China calendar bucketing and explicit suspension gaps. Wrap the generic OHLCV `Bar` when amount, turnover, previous close, limit state, and adjustment-factor evidence are required. |
-| `finance_testkit` | Frozen clocks, scripted transports, cassette helpers, decoder conformance, seeded data, fixture metadata, and secret-leak assertions. | Add CN synthetic generators and licence-reviewed provider fixtures covering Unicode, scale, venue ambiguity, rule regimes, suspensions, corrections, and source schema drift. |
+| `finance_testkit` | Frozen clocks, scripted transports, cassette helpers, decoder conformance, seeded data, fixture metadata, and secret-leak assertions. | `finance_cn_testkit` and `finance_hk_testkit` now provide isolated seed-stable market catalogues; add licence-reviewed provider fixtures and source schema-drift cases without merging the two tracks. |
 | `finance_openfigi` | Optional FIGI/ISIN corroboration and an example of bounded identity execution. | Never make it the mainland security master, infer MIC/board from its exchange label, or invent an as-of date that OpenFIGI did not provide. |
 | `finance_sec` | Architectural pattern: source adapter below Pi, raw evidence before named metrics, preserve-all resolution, pure derivation proofs, and conservative bounded runtime. | Reuse no SEC endpoints, pacing, CIK identity, taxonomies/tags, filing classes, company-facts coverage claims, or statement-period bands. China mappings and report laws require their own evidence. |
 | Existing F0/F1 plugins | Thin shell, deterministic search, setup capability, guardrail, raw-fact, and normalized-metric patterns. | Assign SEC and current US-fundamental results to `us`; register separate `cn_*` and `hk_*` surfaces; extract generic pure policy only when two consumers need it; never import or wrap another plugin's Pi shell. |
@@ -257,15 +331,15 @@ Provider-neutral deficiencies should be fixed once:
 | CN-F04 | Done | `finance_listing` plus `finance_cn_identity` own track/MIC keys, board, exact code-with-venue, effective aliases, A/B/H/CDR relationships, explicit currency/status, and ambiguity. OpenFIGI is not imported or treated as authoritative. | Synthetic ambiguous `000001`, historical Chinese name intervals, typed relationship reconstruction/accessors, A/H track preservation, and no first-candidate selection. |
 | CN-F05 | Decision | Approve authoritative identity datasets and their access/redistribution terms for SSE, SZSE, and BSE. Record update cadence, effective dates, and historical coverage. | Signed-off provider matrix and redistributable deterministic fixtures. |
 | CN-F06 | Waiting | `finance_market_calendar` and `finance_cn_calendar` implement the pure source/licence/version/coverage contract over injected sessions and overrides. Synthetic tests cover auctions, midday closure, exceptional days, SSE/SZSE/BSE scope, and coverage edges. Authoritative fixtures wait on CN-F07. | Add licence-reviewed Shanghai/Shenzhen/Beijing calendar fixtures and holiday/exception tests; outside coverage already fails closed. |
-| CN-F07 | Decision | Approve calendar/exceptional-session sources and fixture licence. Unknown dates outside coverage must stay unknown, not be inferred from weekdays. | Source review and a coverage policy in the package README. |
-| CN-F08 | Open | Implement `finance_cn_rules` as effective-dated pure rules selected by listing, board, security type, status, and date. Unknown or conflicting rules fail closed. | Rule-table fixtures across regime changes; price-limit, tick, lot, suspension, settlement, and eligibility invariants. |
-| CN-F09 | Open | Implement Chinese document and accounting domain types. Preserve original text/title, translation lineage, attachment/version identity, exact numeric lexeme, reported scale, normalized unit, consolidated/parent scope, standard, report class, audit state, restatement, and duplicates. | Lossless decoder round trips and ambiguity-preserving mapping tests. |
-| CN-F10 | Decision | Complete a provider/licence matrix per data family: identity, calendar/rules, quote/history, disclosures/attachments, structured financials, corporate data, indices/classifications, regulatory data, macro, and HK/Connect. Public visibility is not API or redistribution permission. | Accepted endpoints/products, auth, terms, bounds, pacing, cache, outage, and fixture policy. |
+| CN-F07 | Decision | Official venue ownership is verified: SSE/SZSE/BSE publish their own calendars, trading rules, and exceptional notices, while HKEX owns distinct HK and Stock Connect schedules. Approve supported retrieval, version capture, update cadence, and fixture/redistribution rights. Unknown dates outside coverage stay unknown. | Access/licence review plus a coverage and update policy in each package README. |
+| CN-F08 | Waiting | `finance_market_rules`, `finance_cn_rules`, and sibling `finance_hk_rules` implement source/evidence-labelled effective rules selected by exact listing, board, share class, security type, status, and date. Unknown and conflicting records fail closed; no authoritative constants are invented. | Remaining exit: licence-reviewed dated rule tables across real regime changes, with price-limit, tick, lot, suspension, settlement, and eligibility invariants. |
+| CN-F09 | Open | `finance_market_documents`/`finance_market_accounting` plus isolated CN/HK packages preserve original text/title, correction/translation and attachment identity, exact numeric lexeme, reported scale, normalized unit, consolidated/parent scope, standard, report class, audit state, restatement, and duplicates. Strict schema-v1 wire round trips now preserve those values and reject future versions or numeric JSON coercion. Issuer/document mismatch fails. | Remaining exit: source-specific decoder round trips against accepted payload contracts, real fixtures, and audited ambiguity-preserving mapping registries. |
+| CN-F10 | Decision | Authority ownership is verified in the source map and encoded in typed, user-visible isolated registries. Complete the operational provider/licence matrix per data family: supported access/product, identity, calendar/rules, quote/history, disclosures/attachments, structured financials, corporate data, indices/classifications, regulatory data, macro, and HK/Connect. Public visibility is not API or redistribution permission. | Accepted endpoints/products, auth, terms, bounds, pacing, cache, outage, and fixture policy; runtime source views must then advance only the matching access records. |
 | CN-F11 | Decision | Select the first named licensed quote/history provider covering Shanghai, Shenzhen, and Beijing, including B-share currencies and entitlement metadata. No implementation starts on an undocumented fallback. | Provider decision record and adapter README design. |
-| CN-F12 | Open | Extend testkit usage with unmistakable CN synthetic data: code/venue ambiguity, Unicode names, B-share currency, board regimes, ST/suspension, limit states, `万元`/`万股`, disclosure corrections, and midday sessions. | Seed-stable generators plus licence-labelled real contract fixtures. |
-| CN-F13 | Open | Architecture now gates all new pure packages against Pi/Promise/FFI and forbids future `cn_*`/`hk_*` shells from importing SEC domain packages. US and statusline binding results carry exact tracks; cross-track laws retain legs. Extend result checks as real CN/HK shells arrive. | Remaining exit: binding assertions for every market-specific CN/HK result and deliberate hidden-fallback failures once those shells exist. |
-| CN-F14 | Open | Add a `cn` setup/policy surface (`pi_cn_setup`, and `pi_cn_guardrails` if a user-callable policy tool is useful) while extracting shared pure policy for the sibling `hk` and `us` setup contracts. Use `/cn-setup`, `cn_capabilities`, and provider health by named mainland source. | Headless and UI results visibly say `cn`/mainland China; absent providers remain absent; installed `hk` or `us` tools cannot satisfy a `cn` capability. |
-| CN-F15 | Open | Define bounded attachment handling before announcement work: media allowlist, byte/page limits, redirects, content hash, cancellation, archive safety, and explicit unsupported OCR behavior. | Malformed, oversized, redirected, cancelled, and hash-identity contract tests. |
+| CN-F12 | Waiting | Synthetic laws and isolated `finance_cn_testkit`/`finance_hk_testkit` seed-stable catalogues cover code/venue and board ambiguity, leading zeroes, Unicode names/titles/text, CN special-treatment/suspension, B-share currency, HK listing-specific lots, `万元`/`万股`/`港幣千元`, correction/parallel-language lineage, CAS/HKFRS/IFRS distinctions, accounting duplicates, and midday sessions. | Remaining exit is provider-dependent: licence-labelled real contract fixtures and source schema-drift cases for each accepted adapter. |
+| CN-F13 | Open | Architecture gates all new pure packages against Pi/Promise/FFI, forbids CN/HK shells from importing SEC or one another's market packages, and binding-tests exact setup/status tracks and hidden sibling-tool substitution. | Remaining exit: binding assertions for every future market-specific CN/HK result and deliberate provider/calendar/rules fallback failures as those shells arrive. |
+| CN-F14 | Done | `finance_track_capabilities` and `finance_market_authorities` power isolated `cn_setup` and `hk_setup` shells. Setup, source, capabilities, authorities, and provider-health commands/tools expose exact track contexts/defaults, verified official links, and honest access/provider blocks. | Headless/UI results visibly say CN/HK; authority IDs are track-prefixed; unknown providers remain unknown; public search never becomes provider health; sibling and SEC tools cannot satisfy state; unit, binding, artifact, and Pi-load gates cover both. |
+| CN-F15 | Done | `finance_document_attachment` defines pure fail-closed acceptance for exact media allowlists, byte/page limits, redirect/cross-host policy, content hash, cancellation, archives, and OCR. Accepted metadata composes the shared document attachment identity. | Malformed, oversized, missing-page, redirected, cross-host, cancelled, archive, OCR, unsupported-media, missing-hash, and distinct-hash tests pass; no effect or unsafe unpacking is hidden in the package. |
 | CN-F16 | Waiting | Design track-scoped persistence only when watch/broker work begins. Reuse typed lifecycle reducers, but choose storage ownership, migration, fork/new behavior, compaction, reload cleanup, and corruption recovery first. | Deterministic lifecycle sequences and no cross-track state-key collision. |
 | CN-F17 | Done | Make the active `cn`/`hk`/`us` navigation track continuously visible and explicitly switchable. Show typed currency/timezone defaults and a non-secret agent contact without changing source-evidence semantics. | TUI statusline, strict slash/tool switching, active-branch restore, malformed-state fallback, headless structured status, track-change events, and all-three-track binding tests. |
 
@@ -287,11 +361,12 @@ provider assumptions.
 | Plugin | State | Reuse | China-owned work and exit proof |
 | --- | --- | --- | --- |
 | `pi_finance_track_status` (shared navigation prerequisite) | Done | `finance_track` profile/context, Pi statusline, typed lifecycle restoration, event bus. | `/finance-track`, `/cn-track`, `/hk-track`, `/us-track`, `finance_track_status`, and `finance_track_switch`; branch-scoped choice and visible currency/timezone/contact; switching never changes market evidence. |
-| `pi_cn_setup` (track prerequisite) | Waiting on CN-F01/F10 | `pi_gleam`; validated currency/timezone types; extracted generic capability policy if justified. | `/cn-setup`, `cn_capabilities`, and `cn_provider_health`; default `Asia/Shanghai`; report mainland identity/calendar/rules/market/disclosure capabilities separately; never claim health from tool presence alone. |
+| `pi_cn_setup` (track prerequisite) | Done | `pi_gleam`, `finance_track`, shared pure capability/authority contracts, and a CN-owned registry. | `/cn-setup`, `/cn-sources`, `cn_capabilities`, `cn_authorities`, and `cn_provider_health`; CNY/`Asia/Shanghai`/`zh-CN`; official owners visible, operational families blocked; unknown providers stay unknown and sibling/SEC tools cannot satisfy CN. |
+| `pi_hk_setup` (isolated sibling prerequisite) | Done | The same pure contracts with an independent HK registry, Pi shell, and context. | `/hk-setup`, `/hk-sources`, `hk_capabilities`, `hk_authorities`, and `hk_provider_health`; HKD/`Asia/Hong_Kong`/`zh-HK`; public HKEXnews and contracted IIS/market data remain distinct; no CN/SEC substitution. |
 | `pi_cn_guardrails` (conditional track prerequisite) | Open | `finance_evidence`, canonical observations, provenance policies, and future CN rules/accounting scale checks. | Create a user-facing `cn_*` policy only if China-specific checks merit a tool. Otherwise keep the stricter policy internal and do not create an empty shell. |
 | `pi_cn_stock_symbols` | Waiting on CN-F05 | `finance_cn_identity`, `finance_listing`, canonical resolution, HTTP/testkit patterns; OpenFIGI only as corroboration. | Search Chinese full/short names and exact codes; require venue/board for resolution; retain effective historical names and A/B/H/CDR links; deterministic `NoMatch/Unique/Ambiguous`; official source version/as-of visible. |
 | `pi_cn_market_calendar` | Waiting on CN-F07 | `finance_cn_calendar`, bounded dataset queries, generic sessions/business days/overrides/joint calendars. | Add authoritative SSE/SZSE/BSE fixtures and security-type settlement policy; `Asia/Shanghai`, midday gaps, overrides, and outside-coverage errors already have synthetic laws. |
-| `pi_cn_stock_rules` | Waiting on CN-F08 | Exact decimals, calendar dates, identity, provenance, pure reducer/lookup patterns. | Date-effective board/security/status rules for tick size, lots, price limits, ST/delisting risk, suspension, eligibility, settlement, and order constraints. Return rule source and effective interval; reject universal 10% logic. |
+| `pi_cn_stock_rules` | Waiting on authoritative rule sources | `finance_market_rules`, `finance_cn_rules`, exact decimals, identity, provenance, and strict effective selection. | Inject licence-reviewed dated board/security/status tables for tick size, lots, price limits, ST/delisting risk, suspension, eligibility, settlement, and order constraints. Return source/effective interval; reject universal 10% logic. |
 
 CN0 graduates only when the same `000001` input can remain ambiguous, an
 explicit venue resolves deterministically, a midday timestamp is not reported
@@ -303,7 +378,7 @@ as continuous trading, and a rule lookup proves the exact dated rule source.
 | --- | --- | --- | --- |
 | `pi_cn_stock_quote` | Decision: CN-F11, then Waiting on CN0 | `Observation`, money/currency, market session, `finance_http`, calendar/rules, table/testkit. | Named-provider quote schema for A/B/Beijing listings. Preserve CNY, USD, or HKD as the listing dictates; bid/ask/last/previous close, provider-published vs calculated limits, suspension, session, timestamp, delay, entitlement, and stale state. A calculated limit requires an exact previous close and effective rule. |
 | `pi_cn_stock_history` | Decision: CN-F11, then Waiting on CN0 | `finance_series`, exact returns, calendar injection, canonical adjustment summary. | Daily/intraday OHLCV plus amount/turnover where defined; explicit suspension/missing gaps; raw, forward, and backward adjustment methods retain factors, corporate-action inputs, base date, formula, and rounding. Never equate provider methods by label alone. |
-| `pi_cn_stock_announcements` | Waiting on CN-F09/F10/F15 | `finance_http`, provenance evidence/manifests, bounded tables, cancellation. | Documented CNInfo/exchange access; Chinese title and original link; venue, issuer/listing, announcement class, publish time, report period, document/version/correction relationship, attachment identity, and bounded retrieval/search. Translation is optional derived evidence. |
+| `pi_cn_stock_announcements` | Waiting on CN-F09/F10 | `finance_http`, `finance_document_attachment`, provenance evidence/manifests, bounded tables, cancellation. | Documented CNInfo/exchange access; Chinese title and original link; venue, issuer/listing, announcement class, publish time, report period, document/version/correction relationship, attachment identity, and bounded retrieval/search. Translation is optional derived evidence. |
 | `pi_cn_stock_financials` | Waiting on announcements/accounting source | Exact decimals, observations, calendar arithmetic, `finance_math`, provenance, table; reuse SEC's raw-then-normalized architecture only. | First expose lossless raw statement lines, then an executable audited registry. Preserve Chinese line label/code, exact token, reported unit/scale, normalized unit, standard, consolidated/parent scope, report type, audit/restatement state, filing identity, and duplicates. Resolve each metric independently; no SEC tags, SEC duration bands, or hidden restatement priority. |
 | `pi_cn_stock_research_report` | Waiting on all CN1 inputs | Provenance manifests, tables, exact formulas, the named China adapters/domain packages. | Bounded company brief with visible mainland track, identity and source dates; primary disclosures separated from licensed/vendor metrics and model interpretation; original Chinese titles retained; bilingual mode labelled; every missing capability stated; reproducible evidence roots exported. |
 
@@ -366,17 +441,20 @@ track claims Shanghai/Shenzhen/Beijing coverage.
 1. **Provider and UX arbitration.** Use the completed CN-F01 contract; complete
    CN-F05, CN-F07, CN-F10, and CN-F11. Record source rights before checking
    provider payloads into the repository.
-2. **Canonical gaps.** CN-F02 and CN-F03 are complete. Finish CN-F12 and
-   CN-F13 without adding China policy to provider-neutral packages.
-3. **CN0 domain.** Identity is implemented; calendar contracts wait for
-   authoritative fixtures. Build effective-dated rules, then the thin `cn_*`
-   shells and China setup surface.
+2. **Canonical gaps.** CN-F02/CN-F03 and the local generator portion of CN-F12
+   are complete. Extend CN-F13 as real shells arrive; add the remaining CN-F12
+   provider fixtures only after the matching source contract is accepted.
+3. **CN0 domain.** Identity, bounded calendar contracts, effective-rule laws,
+   and isolated CN/HK setup are implemented. Approve authoritative identity,
+   calendar, and rule inputs, then build the thin symbol/calendar/rule shells.
 4. **Market adapter.** Build the single named licensed quote/history provider
    package above `finance_http`, then quote and raw-history tools.
-5. **Disclosure adapter.** Build bounded official document metadata/retrieval,
-   attachment safety, and announcement tools with original Chinese preserved.
-6. **Raw accounting before named metrics.** Decode exact statement evidence,
-   expose source lines, then add a small executable mapping registry and strict
+5. **Disclosure adapter.** Reuse the completed attachment acceptance policy;
+   build bounded official document metadata/retrieval and announcement tools
+   with original Chinese preserved.
+6. **Raw accounting before named metrics.** Reuse the implemented lossless
+   document/fact domains; add source-specific exact decoders and expose raw
+   lines, then populate a small audited executable mapping registry and strict
    resolution/derivation laws. Do not begin with a wide normalized schema.
 7. **First report.** Compose only proven CN1 capabilities and export a
    reproducibility manifest. Missing sources remain visible.

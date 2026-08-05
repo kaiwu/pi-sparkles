@@ -26,15 +26,19 @@ effects. Pass clocks, transport, storage, randomness, and entitlements as
 explicit capabilities. Keep unavoidable mutable cells generic and put no
 business logic in JavaScript.
 
-The finance foundations are `finance_core`, `finance_track`, `finance_evidence`,
-`finance_listing`, `finance_provenance`, `finance_http`, `finance_math`,
-`finance_series`, `finance_calendar`, `finance_market_calendar`,
-`finance_table`, and `finance_testkit`. They are Experimental independent Gleam
-packages, not Pi plugins. Keep their dependency graph acyclic: core imports no
-finance package; track and other provider-neutral packages may build inward on
-core; evidence composes canonical observations, provenance, and track contexts;
-series may compose core, math, and calendar; testkit may support core and HTTP.
-Finance packages must never import `pi_gleam`.
+The finance foundations include `finance_core`, `finance_track`,
+`finance_evidence`, `finance_listing`, `finance_market_calendar`,
+`finance_market_authorities`, `finance_market_rules`, `finance_market_documents`,
+`finance_document_attachment`, `finance_market_accounting`,
+`finance_track_capabilities`,
+`finance_provenance`, `finance_http`, `finance_math`, `finance_series`,
+`finance_calendar`, `finance_table`, and `finance_testkit`. They are
+Experimental independent Gleam packages, not Pi plugins. Keep their dependency
+graph acyclic: core imports no finance package; track and other provider-neutral
+packages may build inward on core; evidence composes canonical observations,
+provenance, and track contexts; series may compose core, math, and calendar;
+testkit may support core and HTTP. Finance packages must never import
+`pi_gleam`.
 
 The only user-visible market track identifiers are `cn` (mainland China), `hk`
 (Hong Kong), and `us` (United States). Use `finance_track` for the shared
@@ -48,6 +52,19 @@ Switching among `cn`, `hk`, and `us` updates status and emits the shared track
 event, but must never relabel observations, substitute a provider/calendar, or
 share market-owned persisted state. Currency and timezone in the statusline are
 interaction defaults; source observations remain controlling.
+
+Market-owned CN/HK packages compose the shared engines but remain isolated:
+identity selects exact track/MIC/board scope; calendars are source/version/
+licence/coverage bounded; rules select exact listing, board, share class,
+security/status, and effective date; documents retain original language plus
+correction/translation lineage; accounting retains exact numeric lexemes,
+reported scale, statement scope, audit/restatement state, and duplicates.
+Attachment retrieval must pass exact media allowlists, byte/page/redirect
+budgets, cancellation, and content-hash checks; archives and OCR fail closed
+until explicitly supported by a later reviewed effect contract.
+Unknown or conflicting rules and mappings fail closed. A `cn_*` plugin must not
+import `finance_hk_*` or SEC market domains, and an `hk_*` plugin must not import
+`finance_cn_*` or SEC market domains.
 
 Provider adapters such as `finance_openfigi` and `finance_sec` are also independent finance
 packages but sit outside the provider-neutral foundation. They may compose core
@@ -64,7 +81,8 @@ deterministic interpreters. Provider adapters use `finance_http`; do not add
 plugin-local fetch, retry, rate-limit, cache, or redaction stacks.
 
 The initial real-plugin batch is `plugins/finance_setup/`,
-`plugins/finance_guardrails/`, and `plugins/finance_symbols/`; the first F1
+`plugins/cn_setup/`, `plugins/hk_setup/`, `plugins/finance_guardrails/`, and
+`plugins/finance_symbols/`; the first F1
 slices are `plugins/sec_edgar/` and `plugins/sec_xbrl/`, and the first normalized
 SEC consumer is `plugins/stock_fundamentals/`. Treat these root
 modules as Pi/Promise effect shells and keep configuration, policy, decoding,

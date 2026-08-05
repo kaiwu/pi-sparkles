@@ -67,14 +67,28 @@ describe("functional architecture", () => {
     for (const name of [
       "finance_core",
       "finance_track",
+      "finance_track_capabilities",
       "finance_evidence",
       "finance_listing",
+      "finance_market_authorities",
+      "finance_market_rules",
+      "finance_market_documents",
+      "finance_document_attachment",
+      "finance_market_accounting",
       "finance_calendar",
       "finance_market_calendar",
       "finance_cn_identity",
       "finance_cn_calendar",
+      "finance_cn_rules",
+      "finance_cn_documents",
+      "finance_cn_accounting",
+      "finance_cn_testkit",
       "finance_hk_identity",
       "finance_hk_calendar",
+      "finance_hk_rules",
+      "finance_hk_documents",
+      "finance_hk_accounting",
+      "finance_hk_testkit",
       "finance_math",
       "finance_series",
       "finance_table",
@@ -94,6 +108,31 @@ describe("functional architecture", () => {
     for (const pkg of discoverPackages(PLUGINS_DIR)) {
       if (!/pi_sparkles_(cn|hk)_/.test(pkg.name)) continue;
       for (const path of filesBelow(join(pkg.directory, "src"), ".gleam")) {
+        expect(forbidden.test(source(path)), display(path)).toBeFalse();
+      }
+    }
+  });
+
+  test("cn and hk plugin shells cannot import each other's market packages", () => {
+    for (const pkg of discoverPackages(PLUGINS_DIR)) {
+      const forbidden = pkg.name.startsWith("pi_sparkles_cn_")
+        ? /^import finance_hk_(?:\w+)(?:\s|\/|\.|$)/m
+        : pkg.name.startsWith("pi_sparkles_hk_")
+          ? /^import finance_cn_(?:\w+)(?:\s|\/|\.|$)/m
+          : null;
+      if (!forbidden) continue;
+      for (const path of filesBelow(join(pkg.directory, "src"), ".gleam")) {
+        expect(forbidden.test(source(path)), display(path)).toBeFalse();
+      }
+    }
+  });
+
+  test("cn and hk testkits cannot import each other's market packages", () => {
+    for (const track of ["cn", "hk"]) {
+      const other = track === "cn" ? "hk" : "cn";
+      const directory = join(FINANCE_DIR, `finance_${track}_testkit`, "src");
+      const forbidden = new RegExp(`^import finance_${other}_(?:\\w+)(?:\\s|/|\\.|$)`, "m");
+      for (const path of filesBelow(directory, ".gleam")) {
         expect(forbidden.test(source(path)), display(path)).toBeFalse();
       }
     }

@@ -1,0 +1,21 @@
+name = "finance_document_attachment"
+version = "0.1.0"
+target = "javascript"
+description = "Fail-closed bounded market-document attachment policy"
+
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+finance_market_documents = { path = "../finance_market_documents" }
+finance_provenance = { path = "../finance_provenance" }
+
+[dev-dependencies]
+gleeunit = ">= 1.9.0 and < 2.0.0"
+
+[javascript]
+runtime = "bun"
+
+[metadata.finance]
+status = "experimental"

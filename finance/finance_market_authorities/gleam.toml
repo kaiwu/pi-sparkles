@@ -1,0 +1,20 @@
+name = "finance_market_authorities"
+version = "0.1.0"
+target = "javascript"
+description = "Track-scoped official authority and source registry contracts"
+
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+finance_track = { path = "../finance_track" }
+
+[dev-dependencies]
+gleeunit = ">= 1.9.0 and < 2.0.0"
+
+[javascript]
+runtime = "bun"
+
+[metadata.finance]
+status = "experimental"

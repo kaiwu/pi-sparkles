@@ -70,6 +70,8 @@ New tracks should compose the existing foundations rather than clone them:
 | `finance_http` request bounds, cancellation, pacing, retry and cassettes | Named provider request plans, decoders, limits and licence policy |
 | `finance_math`, `finance_series`, `finance_provenance`, `finance_table` and `finance_testkit` | Effective-dated rules, documents, accounting mappings and plugin policy |
 | `pi_gleam` and thin Pi effect-shell patterns | Track-named commands, tools, setup, status copy and persisted namespaces |
+| `finance_market_rules`, `finance_market_documents`, `finance_document_attachment`, `finance_market_accounting` and `finance_track_capabilities` | Effective market rules, disclosure/attachment policy, accounting standards/report classes, and isolated capability specs |
+| `finance_market_authorities` | A validated source registry shape; each track owns its authority records, access review, and redistribution state |
 
 Market packages must not import `pi_gleam`. Plugins may compose independent
 finance packages, but one plugin must not use another plugin as its domain
@@ -82,6 +84,9 @@ Use these naming conventions for a track whose ID is `<id>`:
 finance/finance_<id>_identity/
 finance/finance_<id>_calendar/
 finance/finance_<id>_rules/          when implementation starts
+finance/finance_<id>_documents/
+finance/finance_<id>_accounting/
+finance/finance_<id>_testkit/        seeded market-owned scenarios
 finance/finance_<provider>/          for a reusable provider boundary
 plugins/<id>_<capability>/
 pi_sparkles_<id>_<capability>        Gleam plugin package
@@ -92,6 +97,20 @@ pi_sparkles_<id>_<capability>        Gleam plugin package
 Provider packages follow source boundaries. Do not hide several unrelated
 official sources or vendors behind a generic `finance_<id>` client, and do not
 build a separate HTTP stack inside every plugin.
+
+Before a provider adapter starts, create a track-owned authority registry using
+`finance_market_authorities`. Record the statutory regulator, frontline listing
+regulator, issuer repository, standards/taxonomy owners, calendar/rule
+publisher, and contracted feeds as separate records where their products or
+terms differ. Expose the registry through the track setup surface. Advancing an
+access state requires the accepted product/endpoint and rights review; official
+ownership alone never marks a provider ready.
+
+A market testkit composes `finance_testkit` plus only its own market packages.
+It must label all generated data synthetic, expose an algorithm version and
+explicit seed, preserve market edge cases, and never import a sibling track's
+testkit or constants. Provider fixtures remain separate, licence-labelled
+contract data rather than being copied into the synthetic generator.
 
 ## Expand the closed track contract
 

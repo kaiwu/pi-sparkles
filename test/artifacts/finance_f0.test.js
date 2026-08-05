@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 for (const name of [
   "finance_setup",
   "finance_track_status",
+  "cn_setup",
+  "hk_setup",
   "finance_guardrails",
   "finance_symbols",
   "sec_edgar",

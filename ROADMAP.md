@@ -8,8 +8,9 @@ built into a Pi-loadable JavaScript artifact with Gleam and Bun.
 The catalog is intentionally broad. It is a menu and dependency map, not a
 promise to build every package at once.
 
-Every plugin listed here is currently a **draft**. Later, we will implement the
-drafts one at a time. Each implementation gets its own `plugins/<name>/`
+Catalog entries without an implementation directory are **Draft**. Implemented
+entries use the lifecycle state recorded in their package README and the status
+sections below. Each implementation gets its own `plugins/<name>/`
 directory and is an independent Gleam project. Its local `README.md` becomes the
 detailed design document; this roadmap retains only the proposal, priority,
 dependencies, and delivery status.
@@ -113,13 +114,23 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_series` | Experimental | Time-series operations | ordered observations, missing policy, exact/as-of alignment, resampling, OHLCV, exact returns/paths, and attribution |
 | `finance_calendar` | Experimental | Trading-time rules | sessions, holidays, business days, joint calendars, coupon schedules, and named day counts; provider data remains pluggable |
 | `finance_market_calendar` | Experimental | Bounded calendar data | track/source/licence/version/coverage wrapper that rejects dates outside reviewed datasets |
+| `finance_market_authorities` | Experimental | Official source ownership | track-prefixed roles and HTTPS links with explicit access, redistribution, scope, and limitations |
 | `finance_cn_identity` / `finance_hk_identity` | Experimental | Isolated market identity laws | explicit code/venue/board/currency, ambiguity preservation, historical aliases, and A/H legs over synthetic tests |
 | `finance_cn_calendar` / `finance_hk_calendar` | Experimental | Isolated market-time contracts | market-specific contexts over injected sessions/overrides; no unreviewed exchange dataset bundled |
+| `finance_market_rules` | Experimental | Effective market-rule engine | source/evidence-labelled ticks, lots, limits, settlement and eligibility with strict dated unknown/conflict behavior |
+| `finance_cn_rules` / `finance_hk_rules` | Experimental | Isolated rule vocabulary | exact listing/board/share-class/security/status selection over injected source-reviewed tables |
+| `finance_market_documents` | Experimental | Disclosure identity and lineage | exact originals, reporting periods, corrections, replacements, translations, parallel languages, and attachment hashes |
+| `finance_document_attachment` | Experimental | Bounded attachment acceptance | media allowlist, byte/page/redirect limits, cancellation and content hash; archive/OCR fail closed |
+| `finance_cn_documents` / `finance_hk_documents` | Experimental | Isolated disclosure vocabulary | track-owned document classes and source-language policy without cross-track imports |
+| `finance_market_accounting` | Experimental | Lossless reported facts | exact lexemes/scales, standard/scope/period/audit/restatement context, executable mappings, and ambiguity preservation |
+| `finance_cn_accounting` / `finance_hk_accounting` | Experimental | Isolated accounting vocabulary | source-document issuer coherence and track-owned standard/report classes |
+| `finance_track_capabilities` | Experimental | Track setup policy | exact tool-prefix isolation, honest blocked decisions, and typed provider-health contracts |
 | `finance_provenance` | Experimental | Reproducible evidence | canonical manifests, redaction, identities, assumptions, and bounded injected verification |
 | `finance_http` | Experimental | Provider-safe transport | retry/backoff, rate limits, bounded concurrency, cache/cassette policy, cancellation, and redacted errors |
 | `finance_table` | Experimental | Agent-friendly output | unit-aware annotated Markdown/CSV/JSON with compound budgets and omission summaries |
 | `finance_math` | Experimental | Deterministic analytics | arbitrary exact formulas, finite approximate statistics/risk/regression, cash flows, fixed income, and bounded solvers |
 | `finance_testkit` | Experimental | Provider fixtures | frozen clocks, shared cassettes, synthetic quotes/bars, decoder conformance, redaction laws, and fixture governance |
+| `finance_cn_testkit` / `finance_hk_testkit` | Experimental | Isolated market scenarios | seed-stable identity, session, rule, Unicode document, correction, scale, and exact-lexeme cases without authoritative-data claims |
 | `finance_openfigi` | Experimental | Instrument identity provider | OpenFIGI v3 mapping/filter plans, opaque optional authentication, pagination, fixtures, separate rate buckets, and bounded shared execution |
 | `finance_sec` | Experimental | Primary filing-data provider | identified public access, normalized CIKs, bounded ticker/submissions/company-facts plans, typed recent filings, conservative pacing, and cancellation |
 
@@ -163,9 +174,12 @@ The proposal is accepted with these binding decisions:
   personal database exports are never package fixtures.
 
 The substrate acceptance suite now passes. The F0 batch—`pi_finance_setup`,
-`pi_finance_guardrails`, and `pi_finance_symbols`—is confirmed and
-**Experimental** as of 2026-08-04. Setup and guardrails are provider-neutral;
-symbols now consumes the reusable read-only `finance_openfigi` adapter, which
+`pi_cn_setup`, `pi_hk_setup`, `pi_finance_guardrails`, and
+`pi_finance_symbols`—is confirmed and Experimental; the original F0 batch
+graduated on 2026-08-04 and the isolated setup shells on 2026-08-05.
+`finance_setup` and guardrails are provider-neutral; CN/HK setup composes shared
+policy behind isolated track contracts. Symbols consumes the reusable read-only
+`finance_openfigi` adapter, which
 uses `finance_http` and explicit public-domain/freshness limitations. SEC has
 since graduated as the first F1 slice below; quote, history, broader taxonomy, and
 report orchestration remain Draft until their provider, credential,
@@ -502,8 +516,9 @@ must not be presented as live-performance estimates.
 ### F0 — trustworthy substrate
 
 Build `finance_core`, `finance_provenance`, `finance_http`, `finance_table`, and
-`finance_testkit`, then the `pi_finance_setup`, `pi_finance_guardrails`, and
-`pi_finance_symbols` plugins.
+`finance_testkit`, then the shared track/status/capability foundations and the
+`pi_finance_setup`, `pi_finance_track_status`, `pi_cn_setup`, `pi_hk_setup`,
+`pi_finance_guardrails`, and `pi_finance_symbols` plugins.
 
 Acceptance:
 
@@ -578,6 +593,14 @@ The China track can begin alongside F1 without waiting for US feature breadth:
    filing diff, watches, regulatory events, and macro/policy context.
 5. **CN4 breadth:** Beijing-specific edge cases, convertibles, funds/ETFs, IPOs,
    Hong Kong/A-H comparison, and only then read-only/paper broker work.
+
+As of 2026-08-05, the provider-independent CN/HK substrate is Experimental:
+isolated identity and bounded-calendar packages now compose shared effective
+rules, document lineage, lossless accounting, evidence, and capability policy.
+`cn_setup` and `hk_setup` are loadable, track-labelled preflights. They keep all
+provider-backed identity, authoritative calendar/rules, market data,
+disclosures, and accounting capabilities visibly blocked until the source and
+licence decisions in `CN_TRACK.md` are approved.
 
 CN1 acceptance: Pi can take an unambiguous Shanghai, Shenzhen, or Beijing
 listing, show a source/freshness-labelled quote, retrieve original disclosures,

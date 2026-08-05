@@ -1,0 +1,33 @@
+name = "finance_hk_testkit"
+version = "0.1.0"
+target = "javascript"
+description = "Seed-stable synthetic Hong Kong market scenarios"
+
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+finance_calendar = { path = "../finance_calendar" }
+finance_core = { path = "../finance_core" }
+finance_hk_accounting = { path = "../finance_hk_accounting" }
+finance_hk_calendar = { path = "../finance_hk_calendar" }
+finance_hk_documents = { path = "../finance_hk_documents" }
+finance_hk_identity = { path = "../finance_hk_identity" }
+finance_hk_rules = { path = "../finance_hk_rules" }
+finance_listing = { path = "../finance_listing" }
+finance_market_accounting = { path = "../finance_market_accounting" }
+finance_market_calendar = { path = "../finance_market_calendar" }
+finance_market_documents = { path = "../finance_market_documents" }
+finance_market_rules = { path = "../finance_market_rules" }
+finance_provenance = { path = "../finance_provenance" }
+finance_testkit = { path = "../finance_testkit" }
+
+[dev-dependencies]
+gleeunit = ">= 1.9.0 and < 2.0.0"
+
+[javascript]
+runtime = "bun"
+
+[metadata.finance]
+status = "experimental"

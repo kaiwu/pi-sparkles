@@ -26,6 +26,13 @@ finance_core ─┬─> finance_provenance
 finance_listing ───────> finance_cn_identity ───────> finance_cn_calendar
                    └───> finance_hk_identity ───────> finance_hk_calendar
 finance_market_calendar ────────────────────────────> both calendar packages
+finance_market_rules ─────> finance_cn_rules / finance_hk_rules
+finance_market_authorities ─> isolated CN/HK setup registries
+finance_market_documents ─> finance_cn_documents / finance_hk_documents
+                         └─> finance_document_attachment
+finance_market_accounting ─> finance_cn_accounting / finance_hk_accounting
+finance_testkit ────────────> finance_cn_testkit / finance_hk_testkit
+finance_track_capabilities ─> isolated CN/HK setup shells
 ```
 
 The diagram shows dependency direction from foundation to consumer.
@@ -33,13 +40,23 @@ The diagram shows dependency direction from foundation to consumer.
 track, and provenance; `finance_listing` owns only reusable effective-dated
 identity primitives. `finance_series` depends on core and math; calendar depends
 only on core, while the bounded market-calendar wrapper adds source, licence,
-track, version, and coverage metadata.
+track, version, and coverage metadata. Shared market-rule, document, accounting,
+and capability packages provide validation and selection laws; their CN/HK
+consumers own market vocabulary and never import one another.
+The authority contract validates track-scoped source ownership, official links,
+operational access, redistribution, and limitations without embedding any
+market's registry in the shared package.
 `finance_testkit` depends on core and HTTP. `finance_openfigi` and `finance_sec`
 remain reusable outside Pi and share the HTTP policies rather than implementing
 plugin-local fetch stacks. The SEC adapter also owns lossless XBRL source-number
 decoding and composes calendar arithmetic for explicit statement-period shapes,
 so every consumer sees the same exact facts and period rules. No core package or core
 test may depend on testkit or a provider adapter.
+
+`finance_cn_testkit` and `finance_hk_testkit` are outward market-owned test
+packages, not provider-neutral foundations. Each composes the base seeded
+testkit and its own identity/calendar/rules/documents/accounting packages; an
+architecture gate prevents either from importing the sibling market package.
 
 ## Functional architecture
 
@@ -90,6 +107,10 @@ The base supports provider-neutral exact values and observation envelopes;
 closed `cn`/`hk`/`us` market-track identity and versioned result context;
 typed evidence compatibility and explicit cross-track validation;
 track/MIC-scoped listings with effective aliases and relationships;
+source-labelled effective rules that fail on missing or conflicting regimes;
+original-document/version/translation identity, strict versioned lossless wire
+codecs, bounded attachment acceptance, and lossless accounting values with
+executable ambiguity-preserving mappings;
 safe cancellable HTTP with retry, rate, queue, cache, and cassette policies;
 arbitrary exact formula trees plus bounded approximate analytics; ordered,
 missing-aware and as-of-aligned series with exact returns, OHLCV, paths, and
@@ -98,10 +119,13 @@ calendars, and coupon schedules; canonical evidence manifests with bounded
 verification; unit-aware bounded Markdown/CSV/JSON tables; and deterministic
 synthetic/conformance test tools.
 
-The first market-owned layers add separate CN and HK identity/calendar
-constructors over those primitives. They contain synthetic law tests but no
-unreviewed exchange datasets; authoritative security-master and exceptional-day
-fixtures remain blocked on documented access and redistribution rights.
+The first market-owned layers add separate CN and HK identity, calendar, rules,
+document, accounting, and seeded scenario packages over those primitives. They
+contain synthetic law tests but no unreviewed exchange/provider datasets; authoritative
+security-master, exceptional-day, dated-rule, disclosure, and accounting
+fixtures remain blocked on documented access and redistribution rights. The
+shared capability policy powers isolated `cn_setup`/`hk_setup` Pi shells and
+prevents sibling or SEC tools from satisfying a track requirement.
 
 “Foundation complete” does not mean “every named financial model is built in.”
 Provider adapters, accounting taxonomy mappings, authoritative calendar data,

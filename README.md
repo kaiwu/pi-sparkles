@@ -14,10 +14,11 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- eighteen Experimental finance packages, including two provider adapters and
-  the first isolated CN/HK identity and calendar domain layers;
+- twenty-nine Experimental finance packages, including two provider adapters,
+  shared track/evidence/rules/document/accounting policy, and isolated CN/HK
+  identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,
-  `finance_guardrails`, and `finance_symbols`;
+  `cn_setup`, `hk_setup`, `finance_guardrails`, and `finance_symbols`;
 - the first F1 research slices: `sec_edgar`, `sec_xbrl`, and
   `stock_fundamentals`, backed by the read-only `finance_sec` adapter;
 - `hello`, a reference command and typed tool;
@@ -32,6 +33,11 @@ standalone ESM artifacts and load with Pi `0.83.0` without model credentials.
 `finance_track_status` keeps the active `cn`/`hk`/`us` navigation context visible
 with currency, timezone, and an explicit non-secret agent contact, and restores
 track choices from the active session branch.
+`cn_setup` and `hk_setup` expose separately named capability/provider-health
+surfaces with exact track contexts. They report the new pure market foundations
+as Experimental while keeping identity data, authoritative calendars/rules,
+quotes, disclosures, and accounting providers visibly blocked on source and
+licence decisions; sibling or SEC tools cannot satisfy those capabilities.
 `sec_edgar` likewise performs no request until invoked and requires an SEC
 fair-access contact in `SEC_USER_AGENT_CONTACT`; `sec_xbrl` shares that contract
 and preserves SEC numeric source lexemes rather than converting through binary
@@ -159,22 +165,39 @@ pi-sparkles/
 ├── finance/                      reusable non-Pi Gleam libraries
 │   ├── finance_calendar/
 │   ├── finance_cn_calendar/
+│   ├── finance_cn_accounting/
+│   ├── finance_cn_documents/
 │   ├── finance_cn_identity/
+│   ├── finance_cn_rules/
+│   ├── finance_cn_testkit/
 │   ├── finance_core/
+│   ├── finance_document_attachment/
 │   ├── finance_evidence/
+│   ├── finance_hk_accounting/
 │   ├── finance_hk_calendar/
+│   ├── finance_hk_documents/
 │   ├── finance_hk_identity/
+│   ├── finance_hk_rules/
+│   ├── finance_hk_testkit/
 │   ├── finance_http/
 │   ├── finance_listing/
+│   ├── finance_market_accounting/
+│   ├── finance_market_authorities/
 │   ├── finance_market_calendar/
+│   ├── finance_market_documents/
+│   ├── finance_market_rules/
 │   ├── finance_math/
 │   ├── finance_openfigi/
 │   ├── finance_provenance/
 │   ├── finance_sec/
 │   ├── finance_series/
 │   ├── finance_table/
-│   └── finance_testkit/
+│   ├── finance_testkit/
+│   ├── finance_track/
+│   └── finance_track_capabilities/
 ├── plugins/
+│   ├── cn_setup/                 isolated mainland capability preflight
+│   ├── hk_setup/                 isolated Hong Kong capability preflight
 │   ├── finance_setup/            capability/configuration preflight
 │   ├── finance_track_status/     visible cn/hk/us state and switching
 │   ├── finance_guardrails/       evidence and freshness policy
@@ -211,7 +234,16 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_listing` | Track/MIC-scoped listing keys plus effective aliases and evidence-backed relationships. |
 | `finance_cn_identity` / `finance_hk_identity` | Isolated code, venue, board, ambiguity, alias, and A/H identity laws without provider fallback. |
 | `finance_market_calendar` | Source/licence/version-labelled calendar datasets that fail outside declared coverage. |
+| `finance_market_authorities` | Track-scoped official roles and links with access and redistribution kept separate from ownership. |
 | `finance_cn_calendar` / `finance_hk_calendar` | Track-specific calendar constructors over the shared engine; authoritative data remains injected. |
+| `finance_market_rules` | Source-labelled effective rule validation and strict unknown/conflict selection without market constants. |
+| `finance_cn_rules` / `finance_hk_rules` | Track-owned security/status/board/share-class rule vocabulary over injected source-reviewed tables. |
+| `finance_market_documents` | Track/issuer-scoped original documents, correction/version/translation lineage, attachment identities, and strict versioned lossless JSON. |
+| `finance_document_attachment` | Fail-closed media/size/page/redirect/hash/cancellation acceptance with archives and OCR explicitly unsupported. |
+| `finance_cn_documents` / `finance_hk_documents` | Isolated disclosure classes and source-language policy retaining exact Unicode originals. |
+| `finance_market_accounting` | Exact reported lexemes/scales, statement context, executable mappings, duplicate-preserving resolution, and strict string-numeric JSON. |
+| `finance_cn_accounting` / `finance_hk_accounting` | Track-owned standard/report vocabularies with strict source-document issuer coherence. |
+| `finance_track_capabilities` | Pure track-prefixed setup and provider-health policy that rejects sibling-tool substitution. |
 | `finance_provenance` | Evidence identities, assumptions, licences, manifests, canonical encoding, hashing, redaction, and verification plans. |
 | `finance_http` | Safe requests, bounded fetch transport, cancellation, retry/`Retry-After`, rate limits, pooling, scheduling, caching, and cassettes. |
 | `finance_math` | Composable exact formula trees plus explicit approximate statistics, regression, risk, cash-flow, and fixed-income policies. |
@@ -221,6 +253,7 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_calendar` | Dates, market calendars, business-day rules, schedules, joint calendars, and day-count conventions. |
 | `finance_table` | Typed tables with validated cells and deterministic Markdown, CSV, and JSON rendering. |
 | `finance_testkit` | Seeded fixtures, scripted clocks/transports, cassette helpers, generators, scenarios, and redaction assertions. |
+| `finance_cn_testkit` / `finance_hk_testkit` | Isolated seed-stable market scenarios composing each track's identity, calendar, rules, documents, and accounting laws. |
 
 Dependencies point inward: core imports no finance package; track and other
 provider-neutral packages build on core where needed; series composes core and math;
@@ -241,6 +274,8 @@ The first F0 plugin batch demonstrates this direction:
 - `finance_setup` validates defaults and reports only capabilities it can prove;
 - `finance_track_status` visibly marks and explicitly switches the active
   `cn`/`hk`/`us` navigation context without relabelling market evidence;
+- `cn_setup` and `hk_setup` provide isolated readiness reports and refuse to
+  treat sibling/SEC tools or unapproved providers as available;
 - `finance_guardrails` composes evidence checks and accumulates typed issues;
 - `finance_symbols` consumes `finance_openfigi`, then applies a small pure policy
   returning `NoMatch`, `Unique`, or `Ambiguous` instead of guessing.
