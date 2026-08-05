@@ -17,6 +17,7 @@ pub type Role {
 /// An official public page does not imply a supported machine contract.
 pub type Access {
   VerifiedReference
+  PublicReadOnlySnapshot
   PublicSearchAccessUnreviewed
   LicenceReviewRequired
   ProductionContractRequired
@@ -24,6 +25,7 @@ pub type Access {
 
 pub type Redistribution {
   ReferenceLinkOnly
+  NoRedistribution
   UnreviewedRedistribution
   ContractControlled
 }
@@ -186,6 +188,7 @@ pub fn role_name(value: Role) -> String {
 pub fn access_name(value: Access) -> String {
   case value {
     VerifiedReference -> "verified_reference"
+    PublicReadOnlySnapshot -> "public_read_only_snapshot"
     PublicSearchAccessUnreviewed -> "public_search_access_unreviewed"
     LicenceReviewRequired -> "licence_review_required"
     ProductionContractRequired -> "production_contract_required"
@@ -195,6 +198,7 @@ pub fn access_name(value: Access) -> String {
 pub fn redistribution_name(value: Redistribution) -> String {
   case value {
     ReferenceLinkOnly -> "reference_link_only"
+    NoRedistribution -> "no_redistribution"
     UnreviewedRedistribution -> "unreviewed"
     ContractControlled -> "contract_controlled"
   }
@@ -222,7 +226,7 @@ pub fn render(registry value: Registry) -> String {
     |> string.join("\n")
   prefix
   <> " track official authorities and sources\n"
-  <> "Official ownership does not imply approved automation or redistribution.\n"
+  <> "Official ownership does not imply unrestricted automation or redistribution.\n"
   <> lines
 }
 

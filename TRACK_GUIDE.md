@@ -67,7 +67,10 @@ New tracks should compose the existing foundations rather than clone them:
 | `finance_evidence` compatibility, as-of, licence and redistribution gates | Market-specific evidence sources and entitlement decisions |
 | `finance_listing` track/MIC keys, effective aliases and relationships | `finance_<id>_identity` constructors and resolution policies |
 | `finance_calendar` and `finance_market_calendar` engines | `finance_<id>_calendar` datasets and venue-specific semantics |
-| `finance_http` request bounds, cancellation, pacing, retry and cassettes | Named provider request plans, decoders, limits and licence policy |
+| `finance_http` UTF-8 and byte-preserving response boundaries, request bounds, cancellation, pacing, retry, pooling and cassettes | Named provider request plans, decoders, media/signature/size limits and licence policy |
+| `finance_provider_strategy` cache policy, ordered fallback, attempt traces, semantic compatibility and origin/route separation | Track-owned approved channels, priority, source contracts, underlying origin, access/rights state and outage policy |
+| `finance_authority_snapshot` bounded raw UTF-8 or binary/base64 capture, status/media/length/signature checks, hashes, local-only evidence, allowlisted pacing/retry/pooling and cancellation | Exact authority/repository ID, track, host/path/media contract, retrieval route, caller identity, publication-time rules, semantic decoder, terms and fixture rights |
+| `finance_pdf` bounded real-parser structure/page walk and `finance_authority_pdf` same-response evidence binding, with byte, page, time, cancellation and parser-version receipts | Track/provider page ceiling, text-layer/OCR policy, semantic extraction and accepted fixture rights |
 | `finance_math`, `finance_series`, `finance_provenance`, `finance_table` and `finance_testkit` | Effective-dated rules, documents, accounting mappings and plugin policy |
 | `pi_gleam` and thin Pi effect-shell patterns | Track-named commands, tools, setup, status copy and persisted namespaces |
 | `finance_market_rules`, `finance_market_documents`, `finance_document_attachment`, `finance_market_accounting` and `finance_track_capabilities` | Effective market rules, disclosure/attachment policy, accounting standards/report classes, and isolated capability specs |
@@ -227,11 +230,42 @@ Every provider adapter must be an independent finance package with:
 - documented outage behavior and no invisible fallback to another provider or
   track.
 
+Use `finance_provider_strategy` when a track has more than one route. The plan
+belongs to the market package, not to a global provider singleton. Each channel
+must retain the underlying source separately from the retrieval adapter (for
+example `Eastmoney via AKShare`), have a track-prefixed ID, and be operationally
+approved before it enters a plan. Order channels explicitly and compose the
+plan's cache policy with `finance_http/cache`.
+
+First-success fallback is valid only when the observed family, exact identity,
+freshness, unit basis, and adjustment basis equal the plan contract. A mismatch
+is an error, not a reason to relabel stale daily data as realtime or one
+provider's adjustment formula as another's. Keep the full attempt trace and
+selected channel in the result. Official-artifact workflows keep the issuing
+authority as origin only when discovery metadata or decoded document identity
+proves it. Otherwise record the repository as source and keep venue unknown; a
+caller hint is not proof. Public read-only/local-analysis approval is not
+redistribution approval.
+
 Provider values enter plugins as `finance_core.Observation(a)`. Keep source,
 as-of/retrieval time, timezone, freshness, unit, adjustment, quality and
 entitlement intact. Use `finance_evidence` with same-track composition by
 default. Cross-track work must opt into a named policy and retain every
 independently labelled leg.
+
+For public authority HTML/XML, capture and hash the raw UTF-8 artifact before a
+semantic decoder runs. For PDFs and other approved binary media, use
+`finance_http`'s separate bounded binary response and
+`finance_authority_snapshot/artifact`: retain original bytes as base64, hash
+the original bytes, and validate the expected signature before semantic work.
+Use `finance_authority_pdf` with `finance_pdf` to bind a real parser's complete
+page walk and parser version to that same response and hash;
+never count page-shaped tokens. The source adapter still owns the exact
+host/path allowlist, media contract, and page ceiling. Treat a layout, media,
+signature, malformed page tree, timeout, or cancellation as a failed contract,
+not an empty result. Archive expansion budgets and text-layer/image/OCR policy
+remain additional typed stages; raw byte or structural capture alone does not
+satisfy them.
 
 ## Expose isolated plugins
 

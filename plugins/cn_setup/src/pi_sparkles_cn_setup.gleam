@@ -152,7 +152,7 @@ fn specs() -> List(capability.Spec) {
     ),
     capability.Blocked(
       "disclosures and accounting",
-      "official disclosure and accounting owners are listed in cn_authorities, but machine access, fixtures, and audited mappings remain unapproved",
+      "exact known CNINFO PDFs can be captured and structurally page-inspected as byte-preserving local evidence, but public search, venue attribution proof, text/semantic decoding, OCR policy, approved fixtures, and audited accounting mappings remain unapproved",
     ),
   ]
 }

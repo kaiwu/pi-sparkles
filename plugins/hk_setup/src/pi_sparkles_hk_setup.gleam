@@ -152,7 +152,7 @@ fn specs() -> List(capability.Spec) {
     ),
     capability.Blocked(
       "disclosures and accounting",
-      "HKEXnews, HKEX IIS, and HKICPA roles are listed in hk_authorities, but the selected access contract, fixtures, and audited mappings remain unapproved",
+      "exact known HKEXnews PDFs can be captured and structurally page-inspected as byte-preserving local evidence, but public search, text/semantic decoding, OCR policy, approved fixtures, production IIS access, and audited accounting mappings remain unapproved",
     ),
   ]
 }

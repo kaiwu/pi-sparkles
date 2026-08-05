@@ -40,6 +40,18 @@ describe("functional architecture", () => {
     }
   });
 
+  test("text authority adapters remain independent of the PDF parser", () => {
+    for (const name of [
+      "finance_authority_snapshot",
+      "finance_csrc",
+      "finance_sfc",
+    ]) {
+      const manifest = source(join(FINANCE_DIR, name, "gleam.toml"));
+      expect(manifest.includes("finance_pdf"), name).toBeFalse();
+      expect(manifest.includes("finance_authority_pdf"), name).toBeFalse();
+    }
+  });
+
   test("plugin domain modules do not perform Pi or Promise effects", () => {
     for (const pkg of discoverPackages(PLUGINS_DIR)) {
       const domainDirectory = join(pkg.directory, "src", pkg.name);
@@ -68,6 +80,7 @@ describe("functional architecture", () => {
       "finance_core",
       "finance_track",
       "finance_track_capabilities",
+      "finance_provider_strategy",
       "finance_evidence",
       "finance_listing",
       "finance_market_authorities",

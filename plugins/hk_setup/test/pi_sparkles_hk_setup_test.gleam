@@ -33,7 +33,16 @@ pub fn official_authority_registry_is_hk_scoped_and_separates_feeds_test() {
   authority.roles(hkexnews)
   |> should.equal([authority.IssuerDisclosureRepository])
   authority.access(hkexnews)
-  |> should.equal(authority.PublicSearchAccessUnreviewed)
+  |> should.equal(authority.PublicReadOnlySnapshot)
+  authority.redistribution(hkexnews)
+  |> should.equal(authority.NoRedistribution)
+
+  let assert Ok(sfc) =
+    list.find(values, fn(value) { authority.id(value) == "hk_sfc" })
+  authority.access(sfc)
+  |> should.equal(authority.PublicReadOnlySnapshot)
+  authority.redistribution(sfc)
+  |> should.equal(authority.NoRedistribution)
 
   let assert Ok(iis) =
     list.find(values, fn(value) { authority.id(value) == "hk_hkex_iis" })

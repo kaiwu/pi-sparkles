@@ -5,9 +5,12 @@ import finance_core/source
 import finance_core/time
 import finance_hk_documents
 import finance_hk_documents/document as hk_document
+import finance_hk_documents/source_strategy
 import finance_hk_identity/identity
 import finance_market_documents/document
 import finance_provenance/identity as provenance_identity
+import finance_provider_strategy/strategy
+import finance_track
 import gleam/option.{None, Some}
 import gleam/string
 import gleeunit
@@ -20,6 +23,19 @@ pub fn main() -> Nil {
 pub fn package_is_experimental_test() {
   finance_hk_documents.status()
   |> should.equal(finance_hk_documents.Experimental)
+}
+
+pub fn disclosure_strategy_is_hkexnews_only_and_track_isolated_test() {
+  let assert Ok(plan) = source_strategy.disclosure_plan("2026033103673")
+  strategy.track(plan) |> should.equal(finance_track.Hk)
+  let assert [channel] = strategy.channels(plan)
+  strategy.channel_id(channel) |> should.equal("hk_hkexnews_direct")
+  strategy.channel_origin(channel)
+  |> source.provider
+  |> should.equal("HKEXnews")
+  strategy.channel_route(channel) |> should.equal(strategy.Direct)
+  strategy.channel_use_policy(channel)
+  |> should.equal(strategy.LocalAnalysisOnly)
 }
 
 pub fn parallel_language_publications_keep_both_identities_test() {

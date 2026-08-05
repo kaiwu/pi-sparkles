@@ -1,8 +1,10 @@
 import { afterEach, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import {
   cancel,
   from_abort_signal,
   new_cancellation,
+  send_binary_request,
   send_request,
 } from "../../finance/finance_http/src/finance_http/transport_ffi.mjs";
 
@@ -59,6 +61,49 @@ test("fetch interpreter cancels streaming once the byte limit is crossed", async
   globalThis.fetch = async () => new Response("12345");
 
   const result = await send_request(
+    payload({ method: "GET", body: null, maximumResponseBytes: 4 }),
+    new_cancellation(),
+  );
+
+  expect(result).toEqual({
+    ok: false,
+    kind: "response_too_large",
+    limit: 4,
+  });
+});
+
+test("binary fetch preserves non-UTF-8 bytes and hashes the original payload", async () => {
+  const bytes = Uint8Array.from([
+    0x25, 0x50, 0x44, 0x46, 0x2d, 0xff, 0x00, 0x0a, 0x31, 0x20, 0x30,
+    0x20, 0x6f, 0x62, 0x6a,
+  ]);
+  globalThis.fetch = async () =>
+    new Response(bytes, {
+      status: 200,
+      headers: { "content-type": "application/pdf" },
+    });
+
+  const result = await send_binary_request(
+    payload({ method: "GET", body: null }),
+    new_cancellation(),
+  );
+
+  expect(result).toMatchObject({
+    ok: true,
+    status: 200,
+    bodyBase64: Buffer.from(bytes).toString("base64"),
+    byteLength: bytes.byteLength,
+    contentSha256: createHash("sha256").update(bytes).digest("hex"),
+    prefixHex: Buffer.from(bytes).toString("hex"),
+  });
+  expect(result).not.toHaveProperty("body");
+});
+
+test("binary fetch enforces the same streaming byte bound", async () => {
+  globalThis.fetch = async () =>
+    new Response(Uint8Array.from([0, 1, 2, 3, 4]));
+
+  const result = await send_binary_request(
     payload({ method: "GET", body: null, maximumResponseBytes: 4 }),
     new_cancellation(),
   );

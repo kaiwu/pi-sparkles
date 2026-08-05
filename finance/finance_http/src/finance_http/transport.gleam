@@ -1,4 +1,5 @@
 import finance_core/time
+import finance_http/binary_response
 import finance_http/request.{type Request}
 import finance_http/response.{type Response}
 import gleam/dynamic.{type Dynamic}
@@ -17,6 +18,7 @@ pub type TransportError {
   NetworkFailure
   InvalidTransportResult
   InvalidResponse(response.ResponseError)
+  InvalidBinaryResponse(binary_response.ResponseError)
 }
 
 type RawResult {
@@ -28,6 +30,19 @@ type RawResult {
     elapsed_milliseconds: Int,
   )
   RawFailure(kind: String, limit: Option(Int))
+}
+
+type RawBinaryResult {
+  RawBinarySuccess(
+    status: Int,
+    headers: List(response.Header),
+    body_base64: String,
+    byte_length: Int,
+    content_sha256: String,
+    prefix_hex: String,
+    elapsed_milliseconds: Int,
+  )
+  RawBinaryFailure(kind: String, limit: Option(Int))
 }
 
 @external(javascript, "./transport_ffi.mjs", "new_cancellation")
@@ -54,6 +69,12 @@ pub fn is_cancelled(cancellation: Cancellation) -> Bool
 @external(javascript, "./transport_ffi.mjs", "send_request")
 fn send_request(payload: String, cancellation: Cancellation) -> Promise(Dynamic)
 
+@external(javascript, "./transport_ffi.mjs", "send_binary_request")
+fn send_binary_request(
+  payload: String,
+  cancellation: Cancellation,
+) -> Promise(Dynamic)
+
 pub fn send(
   request request_value: Request,
   cancellation cancellation: Cancellation,
@@ -65,6 +86,22 @@ pub fn send(
     case decode.run(dynamic, raw_result_decoder()) {
       Error(_) -> Error(InvalidTransportResult)
       Ok(raw) -> normalize(raw)
+    }
+  })
+  |> promise.rescue(fn(_) { Error(NetworkFailure) })
+}
+
+pub fn send_binary(
+  request request_value: Request,
+  cancellation cancellation: Cancellation,
+) -> Promise(Result(binary_response.Response, TransportError)) {
+  request_value
+  |> encode_request
+  |> send_binary_request(cancellation)
+  |> promise.map(fn(dynamic) {
+    case decode.run(dynamic, raw_binary_result_decoder()) {
+      Error(_) -> Error(InvalidTransportResult)
+      Ok(raw) -> normalize_binary(raw)
     }
   })
   |> promise.rescue(fn(_) { Error(NetworkFailure) })
@@ -86,6 +123,42 @@ fn normalize(raw: RawResult) -> Result(Response, TransportError) {
           |> result.map_error(InvalidResponse)
       }
     }
+  }
+}
+
+fn normalize_binary(
+  raw: RawBinaryResult,
+) -> Result(binary_response.Response, TransportError) {
+  case raw {
+    RawBinaryFailure("timeout", _) -> Error(Timeout)
+    RawBinaryFailure("cancelled", _) -> Error(Cancelled)
+    RawBinaryFailure("response_too_large", Some(limit)) ->
+      Error(ResponseTooLarge(limit))
+    RawBinaryFailure("network", _) -> Error(NetworkFailure)
+    RawBinaryFailure(_, _) -> Error(InvalidTransportResult)
+    RawBinarySuccess(
+      status,
+      headers,
+      body_base64,
+      byte_length,
+      content_sha256,
+      prefix_hex,
+      elapsed_milliseconds,
+    ) ->
+      case time.duration(elapsed_milliseconds) {
+        Error(_) -> Error(InvalidTransportResult)
+        Ok(elapsed) ->
+          binary_response.new(
+            status,
+            headers,
+            body_base64,
+            byte_length,
+            content_sha256,
+            prefix_hex,
+            elapsed,
+          )
+          |> result.map_error(InvalidBinaryResponse)
+      }
   }
 }
 
@@ -178,6 +251,39 @@ fn raw_result_decoder() -> decode.Decoder(RawResult) {
         decode.map(decode.int, Some),
       )
       decode.success(RawFailure(kind, limit))
+    }
+  }
+}
+
+fn raw_binary_result_decoder() -> decode.Decoder(RawBinaryResult) {
+  use ok <- decode.field("ok", decode.bool)
+  case ok {
+    True -> {
+      use status <- decode.field("status", decode.int)
+      use headers <- decode.field("headers", decode.list(of: header_decoder()))
+      use body_base64 <- decode.field("bodyBase64", decode.string)
+      use byte_length <- decode.field("byteLength", decode.int)
+      use content_sha256 <- decode.field("contentSha256", decode.string)
+      use prefix_hex <- decode.field("prefixHex", decode.string)
+      use elapsed_milliseconds <- decode.field("elapsedMs", decode.int)
+      decode.success(RawBinarySuccess(
+        status,
+        headers,
+        body_base64,
+        byte_length,
+        content_sha256,
+        prefix_hex,
+        elapsed_milliseconds,
+      ))
+    }
+    False -> {
+      use kind <- decode.field("kind", decode.string)
+      use limit <- decode.optional_field(
+        "limit",
+        None,
+        decode.map(decode.int, Some),
+      )
+      decode.success(RawBinaryFailure(kind, limit))
     }
   }
 }

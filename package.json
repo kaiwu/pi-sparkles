@@ -15,5 +15,8 @@
     "test:live:sec": "bun scripts/test-live-sec.js",
     "test": "bun scripts/test.js",
     "clean": "bun scripts/clean.js"
+  },
+  "dependencies": {
+    "pdfjs-dist": "6.2.108"
   }
 }

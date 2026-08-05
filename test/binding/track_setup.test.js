@@ -149,7 +149,7 @@ describe("isolated CN/HK setup bindings", () => {
         .handler("", commandContext(notifications));
       expect(notifications).toHaveLength(1);
       expect(notifications[0].message.startsWith(track.toUpperCase())).toBeTrue();
-      expect(notifications[0].message).toContain("does not imply approved automation");
+      expect(notifications[0].message).toContain("does not imply unrestricted automation");
     }
   });
 });

@@ -157,7 +157,8 @@ fn retry_transport_failure(error: TransportError) -> retry.TransportFailure {
     transport.NetworkFailure -> retry.NetworkUnavailable
     transport.ResponseTooLarge(_)
     | transport.InvalidTransportResult
-    | transport.InvalidResponse(_) -> retry.InvalidResponse
+    | transport.InvalidResponse(_)
+    | transport.InvalidBinaryResponse(_) -> retry.InvalidResponse
     transport.Cancelled -> retry.NetworkUnavailable
   }
 }

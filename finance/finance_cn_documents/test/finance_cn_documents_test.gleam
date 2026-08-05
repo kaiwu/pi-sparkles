@@ -1,5 +1,6 @@
 import finance_cn_documents
 import finance_cn_documents/document as cn_document
+import finance_cn_documents/source_strategy
 import finance_cn_identity/identity
 import finance_core/currency
 import finance_core/identifier
@@ -8,6 +9,8 @@ import finance_core/source
 import finance_core/time
 import finance_market_documents/document
 import finance_provenance/identity as provenance_identity
+import finance_provider_strategy/strategy
+import finance_track
 import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
@@ -21,6 +24,29 @@ pub fn main() -> Nil {
 pub fn package_is_experimental_test() {
   finance_cn_documents.status()
   |> should.equal(finance_cn_documents.Experimental)
+}
+
+pub fn disclosure_strategy_preserves_venue_origin_via_cninfo_test() {
+  let assert Ok(plan) =
+    source_strategy.disclosure_plan(source_strategy.Sse, "2026-001")
+  strategy.track(plan) |> should.equal(finance_track.Cn)
+  let assert [direct, mirrored] = strategy.channels(plan)
+  strategy.channel_id(direct) |> should.equal("cn_sse_direct")
+  strategy.channel_route(mirrored)
+  |> should.equal(strategy.Via("CNINFO"))
+  strategy.channel_origin(mirrored)
+  |> source.provider
+  |> should.equal("SSE")
+  strategy.channel_use_policy(mirrored)
+  |> should.equal(strategy.LocalAnalysisOnly)
+}
+
+pub fn disclosure_strategy_rejects_unsafe_identity_test() {
+  source_strategy.disclosure_plan(
+    source_strategy.Sse,
+    "2026-001?access_token=secret",
+  )
+  |> should.equal(Error(source_strategy.InvalidDocumentIdentity))
 }
 
 pub fn chinese_original_is_controlling_and_translation_is_a_distinct_document_test() {

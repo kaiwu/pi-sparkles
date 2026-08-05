@@ -11,6 +11,7 @@ gleam_stdlib = ">= 0.69.0 and < 2.0.0"
 finance_core = { path = "../finance_core" }
 finance_hk_identity = { path = "../finance_hk_identity" }
 finance_market_documents = { path = "../finance_market_documents" }
+finance_provider_strategy = { path = "../finance_provider_strategy" }
 finance_provenance = { path = "../finance_provenance" }
 finance_track = { path = "../finance_track" }
 

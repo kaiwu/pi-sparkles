@@ -12,7 +12,13 @@ approved.
 The source view identifies CSRC, SSE, SZSE, BSE, CNINFO, and the Ministry of
 Finance CAS/XBRL surfaces with official HTTPS links, exact roles, operational
 access state, redistribution state, and limitations. A verified authority is
-not reported as an approved machine provider.
+not reported as an unrestricted machine provider. The three exact
+`finance_csrc` raw-HTML paths and exact, already-known `finance_cninfo` PDF paths
+are marked `public_read_only_snapshot`; both remain no-redistribution and have
+no semantic decoder. Exact PDFs receive bounded real-parser structural page
+inspection, but no text-layer or OCR claim. CNINFO public search and all other
+public/search surfaces remain unreviewed. A CNINFO repository artifact does not
+prove an SSE/SZSE/BSE origin without separate official metadata.
 
 No HK, SEC, OpenFIGI, or generic tool can satisfy a CN capability. The plugin
 performs no network, environment, filesystem, or secret access, and unknown

@@ -12,7 +12,13 @@ approved.
 The source view identifies SFC, SEHK, HKEXnews, HKICPA, HKEX calendars, the IIS
 production issuer feed, and HKEX market-data licensing with official HTTPS
 links and separate access/redistribution state. Public issuer search and
-licensed production feeds are never presented as interchangeable.
+licensed production feeds are never presented as interchangeable. The exact
+`finance_sfc` press-release RSS route and exact, already-known `finance_hkex`
+PDF paths are marked `public_read_only_snapshot`; both remain
+no-redistribution and semantically undecoded. Exact PDFs receive bounded
+real-parser structural page inspection, but no text-layer or OCR claim.
+HKEXnews public search remains unreviewed, and neither artifact path is an HKEX
+market-data capability.
 
 No CN, SEC, OpenFIGI, or generic tool can satisfy an HK capability. The plugin
 performs no network, environment, filesystem, or secret access, and unknown

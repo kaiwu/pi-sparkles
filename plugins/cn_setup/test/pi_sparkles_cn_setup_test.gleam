@@ -30,12 +30,15 @@ pub fn official_authority_registry_is_cn_scoped_and_operationally_honest_test() 
   let assert Ok(csrc) =
     list.find(values, fn(value) { authority.id(value) == "cn_csrc" })
   authority.roles(csrc) |> should.equal([authority.SecuritiesRegulator])
-  authority.access(csrc) |> should.equal(authority.VerifiedReference)
+  authority.access(csrc)
+  |> should.equal(authority.PublicReadOnlySnapshot)
+  authority.redistribution(csrc)
+  |> should.equal(authority.NoRedistribution)
 
   let assert Ok(cninfo) =
     list.find(values, fn(value) { authority.id(value) == "cn_cninfo" })
   authority.access(cninfo)
-  |> should.equal(authority.PublicSearchAccessUnreviewed)
+  |> should.equal(authority.PublicReadOnlySnapshot)
   authority.redistribution(cninfo)
-  |> should.equal(authority.UnreviewedRedistribution)
+  |> should.equal(authority.NoRedistribution)
 }

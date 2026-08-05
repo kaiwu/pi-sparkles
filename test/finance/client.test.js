@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import * as time from "../../finance/finance_http/build/dev/javascript/finance_core/finance_core/time.mjs";
+import * as binaryClient from "../../finance/finance_http/build/dev/javascript/finance_http/finance_http/binary_client.mjs";
+import * as binaryResponse from "../../finance/finance_http/build/dev/javascript/finance_http/finance_http/binary_response.mjs";
 import * as client from "../../finance/finance_http/build/dev/javascript/finance_http/finance_http/client.mjs";
 import * as request from "../../finance/finance_http/build/dev/javascript/finance_http/finance_http/request.mjs";
 import * as response from "../../finance/finance_http/build/dev/javascript/finance_http/finance_http/response.mjs";
@@ -61,6 +63,20 @@ function httpResponse(status, body, headers = []) {
   );
 }
 
+function binaryPdfResponse(status, headers = []) {
+  return unwrap(
+    binaryResponse.new$(
+      status,
+      toList(headers),
+      "JVBERi0=",
+      5,
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "255044462d",
+      duration(1),
+    ),
+  );
+}
+
 test("policy client retries an idempotent transient status through injected effects", async () => {
   let calls = 0;
   const sleeps = [];
@@ -97,6 +113,36 @@ test("policy client retries an idempotent transient status through injected effe
   expect(response.body(result[0])).toBe("quote");
   expect(calls).toBe(2);
   expect(sleeps).toEqual([0]);
+});
+
+test("binary policy client reuses retry laws without decoding the body as text", async () => {
+  let calls = 0;
+  const sender = async () => {
+    calls += 1;
+    if (calls === 1) {
+      return new Ok(
+        binaryPdfResponse(503, [response.Header$Header("Retry-After", "0")]),
+      );
+    }
+    return new Ok(binaryPdfResponse(200));
+  };
+  const policyClient = binaryClient.new$(
+    retryPolicy(),
+    sender,
+    async () => true,
+    () => instant(1_700_000_000_000),
+  );
+
+  const result = await binaryClient.send(
+    policyClient,
+    getRequest(),
+    transport.new_cancellation(),
+  );
+
+  expect(result).toBeInstanceOf(Ok);
+  expect(binaryResponse.status(result[0])).toBe(200);
+  expect(binaryResponse.body_base64(result[0])).toBe("JVBERi0=");
+  expect(calls).toBe(2);
 });
 
 test("policy client does not retry an unkeyed non-idempotent request", async () => {

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export function new_cancellation() {
   const controller = new AbortController();
   return {
@@ -28,6 +30,14 @@ export function is_cancelled(cancellation) {
 }
 
 export async function send_request(payload, cancellation) {
+  return send(payload, cancellation, "text");
+}
+
+export async function send_binary_request(payload, cancellation) {
+  return send(payload, cancellation, "binary");
+}
+
+async function send(payload, cancellation, responseKind) {
   const request = JSON.parse(payload);
   const controller = new AbortController();
   let abortKind = null;
@@ -86,7 +96,9 @@ export async function send_request(payload, cancellation) {
       };
     }
 
-    const read = await readBoundedBody(response.body, request.maximumResponseBytes);
+    const read = responseKind === "binary"
+      ? await readBoundedBinaryBody(response.body, request.maximumResponseBytes)
+      : await readBoundedBody(response.body, request.maximumResponseBytes);
     if (!read.ok) {
       return read;
     }
@@ -95,8 +107,7 @@ export async function send_request(payload, cancellation) {
       ok: true,
       status: response.status,
       headers: Array.from(response.headers.entries(), ([name, value]) => ({ name, value })),
-      body: read.body,
-      byteLength: read.byteLength,
+      ...read,
       elapsedMs: Math.max(0, Math.round(performance.now() - started)),
     };
   } catch (_) {
@@ -110,6 +121,61 @@ export async function send_request(payload, cancellation) {
   } finally {
     clearTimeout(timer);
     cancellation.signal.removeEventListener("abort", forwardCancellation);
+  }
+}
+
+async function readBoundedBinaryBody(stream, limit) {
+  const hash = createHash("sha256");
+  if (stream === null) {
+    return {
+      ok: true,
+      bodyBase64: "",
+      byteLength: 0,
+      contentSha256: hash.digest("hex"),
+      prefixHex: "",
+    };
+  }
+
+  const reader = stream.getReader();
+  const chunks = [];
+  let byteLength = 0;
+  let prefix = new Uint8Array(0);
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      byteLength += value.byteLength;
+      if (byteLength > limit) {
+        await reader.cancel();
+        return { ok: false, kind: "response_too_large", limit };
+      }
+      if (prefix.byteLength < 16) {
+        const needed = 16 - prefix.byteLength;
+        const addition = value.subarray(0, needed);
+        const combined = new Uint8Array(prefix.byteLength + addition.byteLength);
+        combined.set(prefix);
+        combined.set(addition, prefix.byteLength);
+        prefix = combined;
+      }
+      hash.update(value);
+      chunks.push(value);
+    }
+
+    const bytes = Buffer.concat(
+      chunks.map((chunk) => Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)),
+      byteLength,
+    );
+    return {
+      ok: true,
+      bodyBase64: bytes.toString("base64"),
+      byteLength,
+      contentSha256: hash.digest("hex"),
+      prefixHex: Buffer.from(prefix).toString("hex"),
+    };
+  } finally {
+    reader.releaseLock();
   }
 }
 

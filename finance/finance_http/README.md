@@ -17,7 +17,7 @@ and the event/effect workflow reducer are deterministic transformations.
 
 The Bun interpreter is the deliberate effect boundary. It performs encoded URL
 construction, timeout and caller cancellation, redirect refusal, bounded stream
-reading, UTF-8 decoding, and typed result conversion. Provider exception text
+reading, strict UTF-8 decoding or original-byte base64/SHA-256 capture, and typed result conversion. Provider exception text
 does not cross that boundary. Direct Bun contracts cover outgoing request
 shape, limits, cancellation, timeout, and non-leaking failures. Policy
 composition now executes through injected transport, clock, sleeper, and status
@@ -27,9 +27,10 @@ bodies out of errors. A pure scheduler enforces global and per-origin
 concurrency, bounded waiting, duplicate IDs, fair first-eligible admission, and
 two-phase active cancellation. An explicit asynchronous `Pool` now owns that
 state and launches admitted client calls without moving scheduling policy into
-the effect layer. Cache interfaces, cassette recorder persistence, jitter, and
-binary bodies are a post-foundation transport extension. Cassette bodies are currently required to be
-pre-redacted by the caller.
+the effect layer. A separate binary client/pool reuses the same retry and
+scheduler laws without weakening the UTF-8 response contract. Cache interfaces,
+cassette recorder persistence, and jitter remain post-foundation extensions.
+Cassette bodies are currently required to be pre-redacted by the caller.
 
 ## Reuse audit
 
@@ -105,11 +106,14 @@ queueing, caching, cassettes, and error classification remain typed Gleam.
 | --- | --- |
 | `finance_http/request` | safe method, URL, headers, body, idempotency, and normalized key types |
 | `finance_http/response` | bounded bytes/text, status, safe headers, timings, and cache metadata |
+| `finance_http/binary_response` | bounded base64 body, original byte length/SHA-256/prefix, status, safe headers, and timings |
 | `finance_http/transport` | cancellable Bun fetch interpreter with timeout, redirect, and body limits |
 | `finance_http/queue` | pure persistent bounded FIFO with first-match extraction |
 | `finance_http/scheduler` | pure global/per-origin admission, completion, overflow, and cancellation transitions |
 | `finance_http/pool` | explicit async owner that interprets scheduler transitions and launches clients |
 | `finance_http/client` | policy composition and promise-returning request execution |
+| `finance_http/binary_client` | the same retry/status laws over byte-preserving responses |
+| `finance_http/binary_pool` | the same scheduler interpreter over byte-preserving responses |
 | `finance_http/retry` | retry classification, backoff, jitter, attempt budget, and `Retry-After` |
 | `finance_http/rate_limit` | per-origin/token-bucket state and provider header observations |
 | `finance_http/cache` | injected async cache interface and explicit hit/miss/stale records |

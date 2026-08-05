@@ -1,5 +1,6 @@
 import finance_core/time
 import finance_http
+import finance_http/binary_response
 import finance_http/cache
 import finance_http/cassette
 import finance_http/client
@@ -118,6 +119,65 @@ pub fn response_redacts_sensitive_headers_from_its_typed_boundary_test() {
   ])
   response.safe_summary(value)
   |> should.equal(response.SafeSummary(200, 21, duration(12)))
+}
+
+pub fn binary_response_validates_integrity_metadata_and_redacts_headers_test() {
+  let assert Ok(value) =
+    binary_response.new(
+      status: 200,
+      headers: [
+        response.Header("Content-Type", "application/pdf"),
+        response.Header("Set-Cookie", "session=secret"),
+      ],
+      body_base64: "JVBERi0=",
+      byte_length: 5,
+      content_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      prefix_hex: "255044462d",
+      elapsed: duration(12),
+    )
+
+  binary_response.headers(value)
+  |> should.equal([
+    response.Header("content-type", "application/pdf"),
+    response.Header("set-cookie", "[REDACTED]"),
+  ])
+  binary_response.safe_summary(value)
+  |> should.equal(response.SafeSummary(200, 5, duration(12)))
+}
+
+pub fn binary_response_rejects_malformed_base64_hash_and_prefix_test() {
+  binary_response.new(
+    200,
+    [],
+    "not base64",
+    5,
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "255044462d",
+    duration(1),
+  )
+  |> should.equal(Error(binary_response.InvalidBase64))
+
+  binary_response.new(
+    200,
+    [],
+    "JVBERi0=",
+    5,
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "255044462d",
+    duration(1),
+  )
+  |> should.equal(Error(binary_response.InvalidSha256))
+
+  binary_response.new(
+    200,
+    [],
+    "JVBERi0=",
+    5,
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "25504446",
+    duration(1),
+  )
+  |> should.equal(Error(binary_response.InvalidPrefixHex))
 }
 
 pub fn retry_after_parsing_is_pure_bounded_and_clock_explicit_test() {
