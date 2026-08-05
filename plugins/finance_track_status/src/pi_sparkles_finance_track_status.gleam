@@ -1,10 +1,13 @@
 import finance_core/currency
 import finance_core/time
+import finance_provider_strategy/coverage
+import finance_provider_strategy/credibility
 import finance_track
 import finance_track/context as track_context
 import finance_track/json as track_json
 import finance_track/profile
 import gleam/dynamic/decode
+import gleam/int
 import gleam/javascript/promise.{type Promise}
 import gleam/json
 import gleam/list
@@ -20,6 +23,7 @@ import pi/session
 import pi/tool
 import pi/ui
 import pi_sparkles_finance_track_status/effect/store
+import pi_sparkles_finance_track_status/readiness
 import pi_sparkles_finance_track_status/state
 
 const state_entry_type = "pi_sparkles_finance_track_status.active_track"
@@ -91,14 +95,18 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "finance_track_status",
     "Finance track status",
-    "Read the active cn, hk, or us navigation track with currency, timezone, and non-secret agent contact",
+    "Read the active cn, hk, or us navigation track with currency, timezone, source credibility, installed feature coverage, and non-secret agent contact",
     "Check the active finance track before choosing a market-specific tool",
     tool.parameters(schema.object([]), decode.success(StatusInput)),
     tool.Parallel,
     fn(_id, _input, _signal, _updates, ctx) {
       let value = current_profile(api, runtime)
-      refresh_status(ctx, value.0)
-      tool.text_result(profile.describe(value.0), details(value.0, value.1))
+      let receipt = current_receipt(api, value.0)
+      refresh_status(ctx, value.0, receipt)
+      tool.text_result(
+        describe(value.0, receipt),
+        details(value.0, value.1, receipt),
+      )
       |> promise.resolve
     },
   )
@@ -119,7 +127,11 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     fn(_id, input, _signal, _updates, ctx) {
       switch_track(api, runtime, input.track, ctx, persist: True)
       let value = current_profile(api, runtime)
-      tool.text_result(profile.describe(value.0), details(value.0, value.1))
+      let receipt = current_receipt(api, value.0)
+      tool.text_result(
+        describe(value.0, receipt),
+        details(value.0, value.1, receipt),
+      )
       |> promise.resolve
     },
   )
@@ -150,8 +162,9 @@ fn show_command(
   ctx: pi.CommandContext,
 ) -> Nil {
   let value = current_profile(api, runtime)
-  refresh_status(ctx, value.0)
-  notify(ctx, profile.describe(value.0), notification(value.1))
+  let receipt = current_receipt(api, value.0)
+  refresh_status(ctx, value.0, receipt)
+  notify(ctx, describe(value.0, receipt), notification(value.1))
 }
 
 fn switch_command(
@@ -162,7 +175,11 @@ fn switch_command(
 ) -> Nil {
   switch_track(api, runtime, track, ctx, persist: True)
   let value = current_profile(api, runtime)
-  notify(ctx, profile.describe(value.0), notification(value.1))
+  notify(
+    ctx,
+    describe(value.0, current_receipt(api, value.0)),
+    notification(value.1),
+  )
 }
 
 fn switch_track(
@@ -188,7 +205,7 @@ fn switch_track(
     _, _ -> Nil
   }
   let value = current_profile(api, runtime)
-  refresh_status(ctx, value.0)
+  refresh_status(ctx, value.0, current_receipt(api, value.0))
 }
 
 fn publish(api: pi.ExtensionApi, track: finance_track.Track) -> Nil {
@@ -276,12 +293,46 @@ fn configured_contact(api: pi.ExtensionApi) -> String {
   }
 }
 
-fn refresh_status(ctx: pi.Context, value: profile.Profile) -> Nil {
+fn current_receipt(
+  api: pi.ExtensionApi,
+  value: profile.Profile,
+) -> readiness.Receipt {
+  readiness.inspect(profile.track(value), pi.get_active_tools(api))
+}
+
+fn refresh_status(
+  ctx: pi.Context,
+  value: profile.Profile,
+  receipt: readiness.Receipt,
+) -> Nil {
   case context.has_ui(ctx) {
     True ->
-      ui.set_status(context.ui(ctx), status_key, profile.status_line(value))
+      ui.set_status(context.ui(ctx), status_key, status_line(value, receipt))
     False -> Nil
   }
+}
+
+fn status_line(value: profile.Profile, receipt: readiness.Receipt) -> String {
+  string.uppercase(finance_track.name(profile.track(value)))
+  <> " · "
+  <> currency.code(profile.currency(value))
+  <> " · "
+  <> time.timezone_name(profile.timezone(value))
+  <> " · src:"
+  <> int.to_string(readiness.source_percentage(receipt))
+  <> "% · feat:"
+  <> int.to_string(readiness.feature_percentage(receipt))
+  <> "% · agent:"
+  <> profile.agent_contact(value)
+}
+
+fn describe(value: profile.Profile, receipt: readiness.Receipt) -> String {
+  profile.describe(value)
+  <> " sourceCredibility="
+  <> int.to_string(readiness.source_percentage(receipt))
+  <> "% featureCoverage="
+  <> int.to_string(readiness.feature_percentage(receipt))
+  <> "% sourceCredibilityMeaning=evidence_maturity_not_truth_probability"
 }
 
 fn notify(ctx: pi.Context, message: String, kind: ui.Notification) -> Nil {
@@ -298,18 +349,154 @@ fn notification(configuration_valid: Bool) -> ui.Notification {
   }
 }
 
-fn details(value: profile.Profile, configuration_valid: Bool) -> json.Json {
+fn details(
+  value: profile.Profile,
+  configuration_valid: Bool,
+  receipt: readiness.Receipt,
+) -> json.Json {
   let context = result_context(value)
   json.object(
     list.append(track_json.result_fields(context), [
       #("currency", json.string(currency.code(profile.currency(value)))),
       #("timezone", json.string(time.timezone_name(profile.timezone(value)))),
       #("agentContact", json.string(profile.agent_contact(value))),
-      #("statusLine", json.string(profile.status_line(value))),
+      #("statusLine", json.string(status_line(value, receipt))),
+      #(
+        "sourceCredibilityPercentage",
+        json.int(readiness.source_percentage(receipt)),
+      ),
+      #(
+        "featureCoveragePercentage",
+        json.int(readiness.feature_percentage(receipt)),
+      ),
+      #(
+        "sourceCredibility",
+        credibility_json(readiness.source_credibility(receipt)),
+      ),
+      #("featureCoverage", coverage_json(readiness.feature_coverage(receipt))),
       #("configurationValid", json.bool(configuration_valid)),
       #("persistence", json.string("session_branch")),
     ]),
   )
+}
+
+fn credibility_json(value: credibility.Assessment) -> json.Json {
+  json.object([
+    #("meaning", json.string("evidence_maturity_not_truth_probability")),
+    #(
+      "calculation",
+      json.string("equal_weight_mean_verified_10000_partial_5000_missing_0"),
+    ),
+    #("criticalRule", json.string("all_critical_criteria_must_be_verified")),
+    #("sourceSet", json.string(credibility.source_set(value))),
+    #("criterionCount", json.int(list.length(credibility.criteria(value)))),
+    #("scoreBasisPoints", json.int(credibility.score_basis_points(value))),
+    #("percentage", json.int(credibility.score_percentage(value))),
+    #("minimumBasisPoints", json.int(credibility.minimum_basis_points(value))),
+    #("readiness", json.string(credibility_readiness_name(value))),
+    #("criticalGaps", json.array(credibility.critical_gaps(value), json.string)),
+    #("criteria", json.array(credibility.criteria(value), criterion_json)),
+  ])
+}
+
+fn criterion_json(value: credibility.Criterion) -> json.Json {
+  json.object([
+    #("id", json.string(credibility.criterion_id(value))),
+    #("importance", json.string(credibility_importance_name(value))),
+    #("level", json.string(credibility_level_name(value))),
+    #("evidence", json.string(credibility.criterion_evidence(value))),
+  ])
+}
+
+fn credibility_readiness_name(value: credibility.Assessment) -> String {
+  case credibility.readiness(value) {
+    credibility.OperationallyCredible -> "operationally_credible"
+    credibility.LimitedCredibility -> "limited_credibility"
+  }
+}
+
+fn credibility_importance_name(value: credibility.Criterion) -> String {
+  case credibility.criterion_importance(value) {
+    credibility.Critical -> "critical"
+    credibility.Standard -> "standard"
+  }
+}
+
+fn credibility_level_name(value: credibility.Criterion) -> String {
+  case credibility.criterion_level(value) {
+    credibility.Verified -> "verified"
+    credibility.Partial -> "partial"
+    credibility.Missing -> "missing"
+  }
+}
+
+fn coverage_json(value: coverage.Assessment) -> json.Json {
+  json.object([
+    #(
+      "meaning",
+      json.string("installed_end_user_feature_coverage_not_data_completeness"),
+    ),
+    #(
+      "calculation",
+      json.string("set_union_covered_requirements_over_declared_requirements"),
+    ),
+    #("criticalRule", json.string("all_critical_requirements_must_be_covered")),
+    #("family", json.string(coverage.assessment_family(value))),
+    #("requirementCount", json.int(coverage.requirement_count(value))),
+    #("coveredCount", json.int(coverage.covered_count(value))),
+    #("scoreBasisPoints", json.int(coverage.coverage_basis_points(value))),
+    #("percentage", json.int(coverage_percentage(value))),
+    #(
+      "minimumBasisPoints",
+      json.int(coverage.assessment_minimum_basis_points(value)),
+    ),
+    #(
+      "minimumSourceGroups",
+      json.int(coverage.assessment_minimum_source_groups(value)),
+    ),
+    #("readiness", json.string(coverage_readiness_name(value))),
+    #(
+      "coveredRequirements",
+      json.array(coverage.covered_requirements(value), json.string),
+    ),
+    #(
+      "missingRequirements",
+      json.array(coverage.missing_requirements(value), json.string),
+    ),
+    #(
+      "criticalGaps",
+      json.array(coverage.missing_critical_requirements(value), json.string),
+    ),
+    #("sourceGroups", json.array(coverage.source_groups(value), json.string)),
+    #(
+      "contributions",
+      json.array(coverage.assessment_contributions(value), contribution_json),
+    ),
+  ])
+}
+
+fn contribution_json(value: coverage.Contribution) -> json.Json {
+  json.object([
+    #("channelId", json.string(coverage.contribution_channel_id(value))),
+    #("sourceGroup", json.string(coverage.contribution_source_group(value))),
+    #(
+      "coveredRequirements",
+      json.array(coverage.contribution_covered_requirements(value), json.string),
+    ),
+  ])
+}
+
+fn coverage_percentage(value: coverage.Assessment) -> Int {
+  let assert Ok(percentage) =
+    int.divide(coverage.coverage_basis_points(value), by: 100)
+  percentage
+}
+
+fn coverage_readiness_name(value: coverage.Assessment) -> String {
+  case coverage.assessment_readiness(value) {
+    coverage.OperationallyReady -> "operationally_ready"
+    coverage.BelowThreshold -> "below_threshold"
+  }
 }
 
 fn result_context(value: profile.Profile) -> track_context.Context {

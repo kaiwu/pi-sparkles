@@ -6,8 +6,38 @@ statusline and explicit switching among exactly `cn`, `hk`, and `us`.
 The TUI statusline renders:
 
 ```text
-CN · CNY · Asia/Shanghai · agent:research@example.test
+CN · CNY · Asia/Shanghai · src:65% · feat:100% · agent:research@example.test
 ```
+
+`src` and `feat` are deliberately separate:
+
+- `src` is the equal-weight evidence-maturity score for the track's versioned
+  canonical source stack. A verified criterion contributes 100%, a partial
+  criterion 50%, and a missing criterion 0%. It is **not** the probability that
+  a source statement is true, and a critical criterion must be fully verified
+  before the source stack is operationally credible.
+- `feat` is the installed end-user feature coverage reported by
+  `finance_provider_strategy/coverage`. It is computed from active tools for
+  the selected track only. A US tool can never increase CN or HK coverage.
+
+The compact percentage is only navigation telemetry. `finance_track_status`
+returns the denominator, basis-point score, readiness state, every source
+criterion and evidence note, contributing source groups, covered requirements,
+missing requirements, and critical gaps. Consumers should use those structured
+receipts—not the display number—for decisions.
+
+The version-1 feature denominator has ten equally weighted requirements:
+navigation context, source registry, security identity, market calendar,
+effective rules, quotes/history, disclosure discovery, raw fundamentals,
+normalized fundamentals, and reproducible derivations. Navigation is supplied
+by this plugin; all other credit requires a matching installed track surface.
+The operational target is 85%, with source registry and security identity
+remaining critical. With the matching setup, identity, calendar, effective
+rules, quote/history, disclosure, raw-fundamental, normalized-fundamental, and
+derived-metric tools installed, CN and HK each report 100%; current US reports
+70% from its independently installed category set. This is workflow breadth,
+not data completeness or source-credibility parity. Removing any required
+track-owned tool immediately reopens the corresponding structured gap.
 
 The interaction defaults are CN/CNY/`Asia/Shanghai`,
 HK/HKD/`Asia/Hong_Kong`, and US/USD/`America/New_York`. They are navigation and
@@ -35,5 +65,6 @@ so sibling plugins can refresh without sharing a mutable store.
 
 The status tool returns the standard top-level `track` and versioned
 `trackContext` plus currency, timezone, agent contact, configuration validity,
-and persistence scope. Headless mode has no UI statusline but remains fully
-operable through tools.
+and persistence scope. It also returns `sourceCredibility` and
+`featureCoverage` receipts plus their display percentages. Headless mode has no
+UI statusline but remains fully operable through tools.

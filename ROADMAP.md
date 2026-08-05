@@ -116,9 +116,9 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_market_calendar` | Experimental | Bounded calendar data | track/source/licence/version/coverage wrapper that rejects dates outside reviewed datasets |
 | `finance_market_authorities` | Experimental | Official source ownership | track-prefixed roles and HTTPS links with explicit access, redistribution, scope, and limitations |
 | `finance_cn_identity` / `finance_hk_identity` | Experimental | Isolated market identity laws | explicit code/venue/board/currency, ambiguity preservation, historical aliases, and A/H legs over synthetic tests |
-| `finance_cn_calendar` / `finance_hk_calendar` | Experimental | Isolated market-time contracts | market-specific contexts over injected sessions/overrides; no unreviewed exchange dataset bundled |
+| `finance_cn_calendar` / `finance_hk_calendar` | Experimental | Isolated market-time contracts | source-reviewed, coverage-bounded 2026 SSE/SZSE/BSE and HKEX schedules with venue/half-day semantics and no extrapolation |
 | `finance_market_rules` | Experimental | Effective market-rule engine | source/evidence-labelled ticks, lots, limits, settlement and eligibility with strict dated unknown/conflict behavior |
-| `finance_cn_rules` / `finance_hk_rules` | Experimental | Isolated rule vocabulary | exact listing/board/share-class/security/status selection over injected source-reviewed tables |
+| `finance_cn_rules` / `finance_hk_rules` | Experimental | Isolated rule vocabulary | strict exact-listing selection plus narrow dated official profiles for established normal mainland CNY equities and applicable HKD equity spread bands |
 | `finance_market_documents` | Experimental | Disclosure identity and lineage | exact originals, reporting periods, corrections, replacements, translations, parallel languages, and attachment hashes |
 | `finance_document_attachment` | Experimental | Bounded attachment acceptance | media allowlist, byte/page/redirect limits, cancellation and content hash; archive/OCR fail closed |
 | `finance_cn_documents` / `finance_hk_documents` | Experimental | Isolated disclosure vocabulary | track-owned document classes and source-language policy without cross-track imports |
@@ -132,6 +132,7 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_testkit` | Experimental | Provider fixtures | frozen clocks, shared cassettes, synthetic quotes/bars, decoder conformance, redaction laws, and fixture governance |
 | `finance_cn_testkit` / `finance_hk_testkit` | Experimental | Isolated market scenarios | seed-stable identity, session, rule, Unicode document, correction, scale, and exact-lexeme cases without authoritative-data claims |
 | `finance_openfigi` | Experimental | Instrument identity provider | OpenFIGI v3 mapping/filter plans, opaque optional authentication, pagination, fixtures, separate rate buckets, and bounded shared execution |
+| `finance_eastmoney` | Experimental | CN/HK public-web market data | bounded caller-identified SSE/SZSE/BSE/HK quote and raw unadjusted daily-history plans/decoders with exact lexemes and unknown latency/rights |
 | `finance_sec` | Experimental | Primary filing-data provider | identified public access, normalized CIKs, bounded ticker/submissions/company-facts plans, typed recent filings, conservative pacing, and cancellation |
 
 Provider adapters should also be ordinary packages when possible—for example,
@@ -298,7 +299,15 @@ Priorities mean:
 | Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
 | --- | --- | --- | --- |
 | `pi_finance_setup` | P0 | Checks provider keys, connectivity, entitlements, currency/timezone defaults, and installed companion plugins without revealing secrets. | `/finance-setup`, `finance_capabilities`, `finance_provider_health` |
-| `pi_finance_track_status` | P0 | Keeps the active `cn`/`hk`/`us` navigation track visible with currency, timezone, and agent contact; restores and switches it without relabelling data. | `/finance-track`, `/cn-track`, `/hk-track`, `/us-track`, `finance_track_status`, `finance_track_switch` |
+| `pi_finance_track_status` | P0 | Keeps the active `cn`/`hk`/`us` navigation track visible with currency, timezone, auditable source maturity, installed feature coverage, and agent contact; restores and switches it without relabelling data. | `/finance-track`, `/cn-track`, `/hk-track`, `/us-track`, `finance_track_status`, `finance_track_switch` |
+| `pi_cn_disclosures` (**Experimental discovery slice**) | P0 | CNINFO exact-code organization candidates plus catalogue-bound paged announcement metadata for read-only local analysis. | `cn_security_search`, `cn_disclosure_search` |
+| `pi_hk_disclosures` (**Experimental discovery slice**) | P0 | HKEXnews exact stock-ID candidates plus bounded initial-page issuer titles with visible truncation. | `hk_security_search`, `hk_disclosure_search` |
+| `pi_cn_market_calendar` (**Experimental 2026 slice**) | P0 | Source-reviewed SSE/SZSE/BSE planned sessions and closures with explicit venue, source, coverage, entitlement, and exceptional-notice limits. | `cn_market_calendar` |
+| `pi_hk_market_calendar` (**Experimental 2026 slice**) | P0 | HKEX circular CT/075/25 full closures and half-days with bounded coverage and explicit market/rights limits. | `hk_market_calendar` |
+| `pi_cn_market_data` (**Experimental public-web slice**) | P0 | Explicit SSE/SZSE/BSE Eastmoney quote and raw unadjusted daily history with bounded requests, exact provider scaling/lexemes, and visible unknown latency/rights. | `cn_stock_quote`, `cn_stock_history` |
+| `pi_hk_market_data` (**Experimental public-web slice**) | P0 | HK Eastmoney quote and raw unadjusted daily history with mandatory caller-declared listing currency and visible unknown latency/rights. | `hk_stock_quote`, `hk_stock_history` |
+| `pi_cn_market_rules` (**Experimental dated slice**) | P0 | Official 2026-07-06 established normal CNY A-share tick, quantity, odd-lot exit, and standard price-limit profiles for exact SSE/SZSE/BSE boards. | `cn_trading_rules` |
+| `pi_hk_market_rules` (**Experimental dated slice**) | P0 | Official HKEX 2026-08-03 HKD applicable-equity minimum spreads with issuer-specific caller-evidenced board lots. | `hk_trading_rules` |
 | `pi_finance_guardrails` | P0 | Shared freshness, provenance, disclaimer, and action policy. Rejects answers that mix incompatible currencies, periods, or adjustment bases. | `/finance-policy`, `finance_validate_evidence`, `finance_check_freshness` |
 | `pi_finance_symbols` | P0 | Resolves company names, tickers, FIGIs, CIKs, MICs, share classes, and historical symbols; returns ambiguity instead of guessing. | `/symbol`, `security_search`, `security_resolve`, `security_identifiers` |
 | `pi_finance_calendar` | P0 | Answers exchange session/holiday questions and normalizes market timestamps. | `/market-hours`, `market_session`, `market_days`, `next_market_open` |
@@ -335,12 +344,12 @@ provider contracts for Shanghai, Shenzhen, Beijing, and—where stated—Hong Ko
 | Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
 | --- | --- | --- | --- |
 | `pi_cn_stock_symbols` | P0 | Resolves Chinese names, short names, six-digit codes, exchange/MIC, board, A/B/H relationships, CDRs, share classes, and historical names without guessing from code alone. | `/cn-symbol`, `cn_security_search`, `cn_security_resolve`, `cn_security_identifiers` |
-| `pi_cn_market_calendar` | P0 | Shanghai/Shenzhen/Beijing sessions, holidays, exceptional closures, auctions, midday breaks, and settlement-date calculations by security type. | `/cn-hours`, `cn_market_session`, `cn_market_days`, `cn_settlement_date` |
-| `pi_cn_stock_rules` | P0 | Date-effective trading status, board/security-specific price limits, ST/delisting-risk status, lot rules, suspensions, and order constraints. | `/cn-rules`, `cn_trading_rules`, `cn_price_limit`, `cn_order_constraints` |
-| `pi_cn_stock_quote` | P0 | Entitlement-labelled A/B-share and Beijing quotes with CNY/USD denomination, session, limit prices, suspension, and freshness. | `/cn-quote`, `cn_stock_quote`, `cn_stock_quotes` |
-| `pi_cn_stock_history` | P0 | Daily/intraday OHLCV and turnover with suspension gaps, corporate actions, and explicit raw/forward/backward-adjustment formulas. | `/cn-history`, `cn_stock_bars`, `cn_stock_returns`, `cn_adjustment_factors` |
+| `pi_cn_market_calendar` | P0 | Current Experimental slice answers exact 2026 SSE/SZSE/BSE planned sessions and holidays; later versions add exceptional-notice refresh and settlement-date calculations by security type. | `cn_market_calendar`; proposed `/cn-hours`, `cn_market_session`, `cn_market_days`, `cn_settlement_date` |
+| `pi_cn_stock_rules` | P0 | Current Experimental slice exposes dated standard CNY A-share tick/lot/limit facts; later work adds exceptional ST/delisting/IPO/suspension/settlement/order regimes. | `cn_trading_rules`; proposed `/cn-rules`, `cn_price_limit`, `cn_order_constraints` |
+| `pi_cn_stock_quote` | P0 | Current Experimental Eastmoney slice exposes bounded explicit-venue vendor quotes with unknown latency/rights; later work adds licensed A/B-share semantics, suspension, session and calculated limits. | `cn_stock_quote`; proposed `/cn-quote`, `cn_stock_quotes` |
+| `pi_cn_stock_history` | P0 | Current Experimental Eastmoney slice preserves bounded raw unadjusted daily lexemes; later work adds intraday, suspension completeness, actions and audited adjustment formulas. | `cn_stock_history`; proposed `/cn-history`, `cn_stock_bars`, `cn_stock_returns`, `cn_adjustment_factors` |
 | `pi_cn_stock_announcements` | P0 | Searches and retrieves original exchange/CNInfo announcements, periodic reports, ad-hoc disclosures, and attachments with Chinese titles preserved. | `/cn-announcements`, `cn_announcements`, `cn_announcement`, `cn_announcement_search` |
-| `pi_cn_stock_financials` | P0 | Normalizes Chinese financial statements while retaining original line labels, accounting standard, units, consolidated/parent scope, restatements, report type, and audit status. | `/cn-financials`, `cn_company_financials`, `cn_financial_line`, `cn_financial_trends` |
+| `pi_cn_stock_financials` | P0 | Current Experimental vendor slice preserves exact revenue/parent-profit tokens, labels, visible mappings, unknown filing context, and source-retaining net margin; later work links official documents and broadens statements, scope, standards, corrections, audit/restatement, metrics and trends. | `cn_financial_statement`, `cn_stock_fundamental`, `cn_stock_fundamental_metric`; proposed `/cn-financials`, `cn_company_financials`, `cn_financial_trends` |
 | `pi_cn_stock_research_report` | P0 | Orchestrates China sources into a bilingual-capable, cited company brief that separates primary disclosures from vendor-derived metrics. | `/cn-research`, `cn_company_brief`, `cn_compare_companies` |
 | `pi_cn_market_snapshot` | P1 | Shanghai/Shenzhen/Beijing index, board, breadth, turnover, limit-up/down, suspension, and liquidity summaries. | `/cn-market`, `cn_market_snapshot`, `cn_market_breadth`, `cn_market_movers` |
 | `pi_cn_stock_screener` | P1 | A-share/Beijing filters for board, ST state, liquidity, market cap, financials, valuation, growth, dividends, and trading constraints. | `/cn-screen`, `cn_stock_screen`, `cn_screen_explain` |
@@ -367,7 +376,7 @@ provider contracts for Shanghai, Shenzhen, Beijing, and—where stated—Hong Ko
 | `pi_cn_mutual_funds` | P2 | Public-fund profiles, managers, portfolios, periodic reports, fees, benchmarks, and performance with survivorship warnings. | `/cn-mutual-fund`, `cn_fund_search`, `cn_fund_portfolio`, `cn_fund_performance` |
 | `pi_cn_macro` | P1 | NBS/PBOC/SAFE and other official macro series with original release, frequency, units, revisions, and publication calendar. | `/cn-macro`, `cn_macro_search`, `cn_macro_series`, `cn_macro_calendar` |
 | `pi_cn_policy_monitor` | P2 | A dated, sourced monitor for monetary, securities, industrial, trade, and company-relevant policy documents; translation is always labelled. | `/cn-policy`, `cn_policy_search`, `cn_policy_timeline`, `cn_policy_watch` |
-| `pi_hk_stock` | P2 | HKEX-listed security identity, HKD market data, disclosures, corporate actions, board lots, sessions, and A/H relationships. | `/hk-stock`, `hk_stock_quote`, `hk_announcements`, `ah_compare` |
+| `pi_hk_stock` | P2 | Current isolated slices cover HKEXnews identity/disclosures, 2026 sessions, dated spreads, vendor quote/history, and an exact two-field vendor fundamental workflow; later work adds official filing-linked statements, actions, authoritative board lots, and A/H relationships. | `hk_stock_quote`, `hk_financial_statement`, `hk_stock_fundamental`, `hk_stock_fundamental_metric`; proposed `/hk-stock`, `hk_announcements`, `ah_compare` |
 | `pi_cn_broker_readonly` | P3 | A broker-specific, read-only view of Chinese accounts, positions, orders, cash, settlement, and entitlements. | `/cn-broker`, `cn_broker_positions`, `cn_broker_orders`, `cn_broker_cash` |
 | `pi_cn_broker_paper` | P3 | Provider-specific simulation that enforces China instrument/session/lot/limit rules and clearly states simulation limitations. | `/cn-paper-trade`, `cn_paper_order_draft`, `cn_paper_order_submit` |
 
@@ -594,13 +603,15 @@ The China track can begin alongside F1 without waiting for US feature breadth:
 5. **CN4 breadth:** Beijing-specific edge cases, convertibles, funds/ETFs, IPOs,
    Hong Kong/A-H comparison, and only then read-only/paper broker work.
 
-As of 2026-08-05, the provider-independent CN/HK substrate is Experimental:
-isolated identity and bounded-calendar packages now compose shared effective
-rules, document lineage, lossless accounting, evidence, and capability policy.
-`cn_setup` and `hk_setup` are loadable, track-labelled preflights. They keep all
-provider-backed identity, authoritative calendar/rules, market data,
-disclosures, and accounting capabilities visibly blocked until the source and
-licence decisions in `CN_TRACK.md` are approved.
+As of 2026-08-05, the CN/HK substrate is Experimental. Isolated identity,
+official 2026 calendar, public-web quote/history and narrow exact fundamental
+workflows, official dated rule, and official disclosure-discovery shells compose
+shared evidence, HTTP, math, coverage, and capability policy. `cn_setup` and
+`hk_setup` are loadable track-labelled preflights; with all matching tools each
+covers the ten current feature families. Authoritative venue identity,
+production data rights, exceptional rule/calendar state, official filing-linked
+statement depth, broader accounting, and redistribution remain visibly
+incomplete under `CN_TRACK.md` and the structured status receipt.
 
 CN1 acceptance: Pi can take an unambiguous Shanghai, Shenzhen, or Beijing
 listing, show a source/freshness-labelled quote, retrieve original disclosures,

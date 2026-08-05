@@ -1,4 +1,5 @@
 import finance_core/source
+import finance_provider_strategy/coverage
 import finance_provider_strategy/strategy
 import finance_track
 import gleam/list
@@ -12,6 +13,17 @@ pub type Venue {
 
 pub type StrategyError {
   InvalidDocumentIdentity
+}
+
+/// Operational breadth for the issuer-disclosure family is measured at 85%.
+///
+/// Direct venue retrieval and a CNINFO mirror of the same proven venue artifact
+/// remain one underlying source group, so this family requires one group rather
+/// than inventing corroboration from two routes.
+pub fn disclosure_coverage_policy() -> coverage.Policy {
+  let assert Ok(value) =
+    coverage.operational_policy(finance_track.Cn, "issuer_disclosures", 1)
+  value
 }
 
 /// Authority-first local retrieval for one exact venue-issued document.

@@ -9,6 +9,7 @@ import finance_core/source
 import finance_core/time
 import finance_market_documents/document
 import finance_provenance/identity as provenance_identity
+import finance_provider_strategy/coverage
 import finance_provider_strategy/strategy
 import finance_track
 import gleam/option.{None, Some}
@@ -47,6 +48,14 @@ pub fn disclosure_strategy_rejects_unsafe_identity_test() {
     "2026-001?access_token=secret",
   )
   |> should.equal(Error(source_strategy.InvalidDocumentIdentity))
+}
+
+pub fn disclosure_coverage_policy_is_cn_scoped_and_operational_test() {
+  let policy = source_strategy.disclosure_coverage_policy()
+  coverage.policy_track(policy) |> should.equal(finance_track.Cn)
+  coverage.policy_family(policy) |> should.equal("issuer_disclosures")
+  coverage.minimum_basis_points(policy) |> should.equal(8500)
+  coverage.minimum_source_groups(policy) |> should.equal(1)
 }
 
 pub fn chinese_original_is_controlling_and_translation_is_a_distinct_document_test() {

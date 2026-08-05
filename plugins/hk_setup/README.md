@@ -5,9 +5,37 @@ Experimental isolated Hong Kong preflight. It registers `/hk-setup`,
 
 Results visibly carry `track: "hk"`, HKD, `Asia/Hong_Kong`, `zh-HK`, and a
 versioned `trackContext`. The plugin reports the installed pure identity,
-calendar, rules, document/attachment, and accounting foundations while keeping
-every provider-backed capability blocked until its source and rights are
-approved.
+calendar, rules, document/attachment, accounting, and per-family 85%
+multi-channel coverage foundations while keeping every provider-backed
+capability blocked until its source and rights are approved or its exact
+track-owned tool is installed. The threshold does not make an unapproved
+provider count toward readiness.
+
+The optional `hk_disclosures` companion advances two surfaces to Experimental
+when its tools are active: `hk_security_search` preserves exact HKEXnews stock
+IDs, and `hk_disclosure_search` preserves bounded title results and canonical
+PDF identities. Historical completeness, redistribution, and accounting remain
+blocked.
+
+The optional `hk_market_calendar` companion advances the authoritative-calendar
+surface when `hk_market_calendar` is active. It exposes HKEX circular
+CT/075/25's 2026 full closures and half-days with bounded coverage and explicit
+limitations. It does not satisfy settlement, Stock Connect, derivatives,
+severe-weather state, or a later-year calendar.
+
+The optional `hk_market_data` companion advances quote and raw-history surfaces
+only when both `hk_stock_quote` and `hk_stock_history` are active. It uses the
+shared bounded Eastmoney public-web adapter and requires the caller to declare
+the independently proven listing currency. It does not convert an HK code into
+an HKD fact, and latency, production service level, adjustment factors,
+suspension completeness, and redistribution remain unknown.
+
+The optional `hk_market_rules` companion advances the effective-rules surface
+when `hk_trading_rules` is active. Its source-reviewed slice begins 2026-08-03
+and covers HKEX applicable HKD equities with nominal prices from 0.50 inclusive
+to 50.00 exclusive. Board lots remain issuer-specific: the caller supplies the
+value and its evidence reference, both retained as unverified. VCM/CAS,
+settlement, non-HKD counters, and excluded products remain outside the profile.
 
 The source view identifies SFC, SEHK, HKEXnews, HKICPA, HKEX calendars, the IIS
 production issuer feed, and HKEX market-data licensing with official HTTPS

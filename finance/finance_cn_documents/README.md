@@ -17,3 +17,10 @@ repository evidence and cannot manufacture the venue relationship. Both routes
 are local-analysis-only until source-specific redistribution and fixture rights
 are approved. A route may not return a merely similar or latest document as
 fallback.
+
+The module also exposes the track-scoped 85% operational coverage policy for
+the `issuer_disclosures` family. Direct venue retrieval and CNINFO retrieval of
+the same venue artifact share one underlying source group; two routes do not
+manufacture independent corroboration. Critical document identity, source,
+version, language, time, and entitlement requirements remain mandatory when the
+family denominator is defined.

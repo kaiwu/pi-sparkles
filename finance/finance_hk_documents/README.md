@@ -15,3 +15,9 @@ exact HKEXnews document identity. HKEXnews is currently the only canonical
 channel. AKShare/Eastmoney, Yahoo, Finnhub, and other vendor observations are
 not filing fallback. The route remains local-analysis-only until redistribution
 and fixture rights are approved.
+
+The module also exposes the track-scoped 85% operational coverage policy for
+the `issuer_disclosures` family. HKEXnews is currently one canonical source
+group; the policy does not require a second copy of an official artifact merely
+to inflate a channel count. Critical identity, version, language, time, source,
+and entitlement requirements remain mandatory when the denominator is defined.

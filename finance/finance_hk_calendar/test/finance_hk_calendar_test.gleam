@@ -9,6 +9,7 @@ import finance_market_calendar/dataset
 import finance_provenance/evidence
 import finance_track
 import finance_track/context
+import gleam/list
 import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
@@ -42,6 +43,22 @@ pub fn hk_coverage_does_not_fall_back_to_mainland_or_weekdays_test() {
       civil(2024, 1, 8),
     )),
   )
+}
+
+pub fn official_2026_preserves_full_closures_and_half_days_test() {
+  let assert Ok(value) = hk_calendar.official_2026()
+  source.provider(dataset.source(value)) |> should.equal("hkex")
+  dataset.version(value) |> should.equal("official-2026-ct-075-25-v1")
+
+  dataset.trading_day(value, on: civil(2026, 7, 1))
+  |> should.equal(Ok(calendar.Closed("hksar_establishment_day")))
+  let assert Ok(calendar.Open(half_day)) =
+    dataset.trading_day(value, on: civil(2026, 12, 24))
+  list.length(half_day) |> should.equal(2)
+  dataset.session_at(value, zoned(2026, 12, 24, 11, 0))
+  |> should.be_ok
+  dataset.session_at(value, zoned(2026, 12, 24, 13, 0))
+  |> should.equal(Ok(None))
 }
 
 fn synthetic_dataset() -> dataset.Dataset {

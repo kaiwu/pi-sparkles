@@ -14,11 +14,24 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- twenty-nine Experimental finance packages, including two provider adapters,
+- forty-one Experimental finance packages, including provider adapters,
   shared track/evidence/rules/document/accounting policy, and isolated CN/HK
   identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,
   `cn_setup`, `hk_setup`, `finance_guardrails`, and `finance_symbols`;
+- the first isolated CN/HK provider slices: `cn_disclosures` over CNINFO and
+  `hk_disclosures` over HKEXnews, each with security and disclosure discovery;
+- isolated `cn_market_calendar` and `hk_market_calendar` plugins over
+  venue-owned, coverage-bounded 2026 schedules;
+- isolated `cn_market_data` and `hk_market_data` plugins over the shared
+  bounded `finance_eastmoney` adapter, with raw lexemes, explicit market and
+  currency evidence, and unknown latency/redistribution kept visible;
+- isolated `cn_market_rules` and `hk_market_rules` plugins over dated official
+  rule profiles, with unsupported regimes rejected and issuer-specific HK board
+  lots kept caller-evidenced;
+- isolated `cn_fundamentals` and `hk_fundamentals` vendor slices over shared
+  exact Eastmoney decoding and `finance_math`, with raw facts, visible mappings,
+  source-retaining net margin, and unknown official-filing context preserved;
 - the first F1 research slices: `sec_edgar`, `sec_xbrl`, and
   `stock_fundamentals`, backed by the read-only `finance_sec` adapter;
 - `hello`, a reference command and typed tool;
@@ -31,13 +44,23 @@ Gleam `1.18.0`, and Bun `1.3.14`. The reference and F0 plugins build to
 standalone ESM artifacts and load with Pi `0.83.0` without model credentials.
 `finance_symbols` uses OpenFIGI v3 only when one of its tools is executed.
 `finance_track_status` keeps the active `cn`/`hk`/`us` navigation context visible
-with currency, timezone, and an explicit non-secret agent contact, and restores
-track choices from the active session branch.
+with currency, timezone, auditable source maturity, installed feature coverage,
+and an explicit non-secret agent contact, and restores track choices from the
+active session branch.
 `cn_setup` and `hk_setup` expose separately named capability/provider-health
 surfaces with exact track contexts. They report the new pure market foundations
-as Experimental while keeping identity data, authoritative calendars/rules,
-quotes, disclosures, and accounting providers visibly blocked on source and
-licence decisions; sibling or SEC tools cannot satisfy those capabilities.
+as Experimental. Their matching discovery, calendar, market-data, rules, and
+fundamental tools advance only their own installed surfaces. CN/HK cover all
+ten current feature families when those tools are loaded; US remains
+independently measured at 70%. Their depth and source-maturity receipts remain
+different and auditable. Authoritative venue
+identity, production market-data entitlement, exceptional rule regimes, PDF
+semantics, official filing-linked accounting depth, later-year calendars, and
+redistribution remain visibly incomplete. Sibling or SEC tools cannot satisfy
+those capabilities.
+`cn_disclosures` binds CNINFO code/organization identity before paged
+announcement search. `hk_disclosures` binds HKEXnews stock identity before
+returning the bounded initial title page with explicit truncation.
 `sec_edgar` likewise performs no request until invoked and requires an SEC
 fair-access contact in `SEC_USER_AGENT_CONTACT`; `sec_xbrl` shares that contract
 and preserves SEC numeric source lexemes rather than converting through binary
@@ -172,6 +195,7 @@ pi-sparkles/
 │   ├── finance_cn_testkit/
 │   ├── finance_core/
 │   ├── finance_document_attachment/
+│   ├── finance_eastmoney/
 │   ├── finance_evidence/
 │   ├── finance_hk_accounting/
 │   ├── finance_hk_calendar/
@@ -196,10 +220,20 @@ pi-sparkles/
 │   ├── finance_track/
 │   └── finance_track_capabilities/
 ├── plugins/
+│   ├── cn_disclosures/           CNINFO security and announcement discovery
+│   ├── cn_market_calendar/       official bounded SSE/SZSE/BSE 2026 calendar
+│   ├── cn_market_data/           bounded Eastmoney CN quote/raw history
+│   ├── cn_market_rules/          dated official mainland rule profile
 │   ├── cn_setup/                 isolated mainland capability preflight
+│   ├── hk_disclosures/           HKEXnews security and title discovery
+│   ├── hk_market_calendar/       official bounded HKEX 2026 calendar
+│   ├── hk_market_data/           bounded Eastmoney HK quote/raw history
+│   ├── hk_market_rules/          dated official HKEX rule profile
 │   ├── hk_setup/                 isolated Hong Kong capability preflight
 │   ├── finance_setup/            capability/configuration preflight
 │   ├── finance_track_status/     visible cn/hk/us state and switching
+│   ├── cn_fundamentals/          exact mainland vendor fundamental slice
+│   ├── hk_fundamentals/          exact Hong Kong vendor fundamental slice
 │   ├── finance_guardrails/       evidence and freshness policy
 │   ├── finance_symbols/          OpenFIGI v3 identity resolution
 │   ├── sec_edgar/                SEC company and recent filing metadata
@@ -237,7 +271,7 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_market_authorities` | Track-scoped official roles and links with access and redistribution kept separate from ownership. |
 | `finance_cn_calendar` / `finance_hk_calendar` | Track-specific calendar constructors over the shared engine; authoritative data remains injected. |
 | `finance_market_rules` | Source-labelled effective rule validation and strict unknown/conflict selection without market constants. |
-| `finance_cn_rules` / `finance_hk_rules` | Track-owned security/status/board/share-class rule vocabulary over injected source-reviewed tables. |
+| `finance_cn_rules` / `finance_hk_rules` | Track-owned rule vocabulary plus narrow dated official profiles: 2026-07-06 mainland established normal CNY equities and 2026-08-03 HKEX applicable HKD equity spread bands. |
 | `finance_market_documents` | Track/issuer-scoped original documents, correction/version/translation lineage, attachment identities, and strict versioned lossless JSON. |
 | `finance_document_attachment` | Fail-closed media/size/page/redirect/hash/cancellation acceptance with archives and OCR explicitly unsupported. |
 | `finance_cn_documents` / `finance_hk_documents` | Isolated disclosure classes and source-language policy retaining exact Unicode originals. |
@@ -248,6 +282,7 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_http` | Safe requests, bounded fetch transport, cancellation, retry/`Retry-After`, rate limits, pooling, scheduling, caching, and cassettes. |
 | `finance_math` | Composable exact formula trees plus explicit approximate statistics, regression, risk, cash-flow, and fixed-income policies. |
 | `finance_openfigi` | OpenFIGI v3 access, mapping/search plans, pagination, decoding, authenticated/anonymous rate profiles, and a bounded shared runtime. |
+| `finance_eastmoney` | Bounded public-web SSE/SZSE/BSE/HK quote and raw daily-history plans/decoders with exact source lexemes, explicit caller identity, unknown service level, and unknown redistribution. |
 | `finance_sec` | Identified read-only SEC access, normalized CIKs, bounded EDGAR request plans, typed submissions/XBRL facts, lossless numeric lexemes, explicit filing/period resolution, strict Q4/trend derivation, and conservative shared pacing. |
 | `finance_series` | Ordered observations, alignment, as-of joins, returns, windows, resampling, portfolio paths, and analytics. |
 | `finance_calendar` | Dates, market calendars, business-day rules, schedules, joint calendars, and day-count conventions. |

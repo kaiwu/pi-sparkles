@@ -6,6 +6,7 @@ import finance_core/source
 import finance_core/time
 import finance_hk_identity/identity
 import finance_hk_rules
+import finance_hk_rules/official
 import finance_hk_rules/rule
 import finance_listing/effective
 import finance_market_rules/rule as market_rule
@@ -53,6 +54,45 @@ pub fn board_lot_is_listing_specific_and_status_is_explicit_test() {
     from: [first_rule],
   )
   |> should.equal(Error(rule.UnknownRule))
+}
+
+pub fn current_official_spread_profile_requires_listing_evidence_test() {
+  let assert Ok(profile) =
+    official.applicable_hkd_equity(
+      on: civil(2026, 8, 5),
+      nominal_price: exact("9.99"),
+      board_lot: 500,
+      board_lot_source: "HKEX issuer profile for 00001 retrieved 2026-08-05",
+    )
+  profile
+  |> official.tick_size
+  |> decimal.to_string
+  |> should.equal("0.005")
+  profile |> official.board_lot |> should.equal(500)
+
+  let assert Ok(at_ten) =
+    official.applicable_hkd_equity(
+      on: civil(2026, 8, 5),
+      nominal_price: exact("10.00"),
+      board_lot: 500,
+      board_lot_source: "HKEX issuer profile",
+    )
+  at_ten |> official.tick_size |> decimal.to_string |> should.equal("0.01")
+
+  official.applicable_hkd_equity(
+    on: civil(2026, 8, 2),
+    nominal_price: exact("9.99"),
+    board_lot: 500,
+    board_lot_source: "HKEX issuer profile",
+  )
+  |> should.equal(Error(official.OutsideReviewedInterval))
+  official.applicable_hkd_equity(
+    on: civil(2026, 8, 5),
+    nominal_price: exact("50.00"),
+    board_lot: 500,
+    board_lot_source: "HKEX issuer profile",
+  )
+  |> should.equal(Error(official.UnsupportedPriceBand))
 }
 
 fn rule_record(

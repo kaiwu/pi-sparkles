@@ -10,6 +10,7 @@ import finance_market_calendar/dataset
 import finance_provenance/evidence
 import finance_track
 import finance_track/context
+import gleam/list
 import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
@@ -51,6 +52,31 @@ pub fn closure_override_and_coverage_edges_fail_closed_test() {
       civil(2024, 1, 1),
       civil(2024, 1, 5),
       civil(2024, 1, 6),
+    )),
+  )
+}
+
+pub fn official_2026_calendars_are_venue_owned_and_bounded_test() {
+  let assert Ok(sse) = cn_calendar.official_2026(identity.Sse)
+  let assert Ok(szse) = cn_calendar.official_2026(identity.Szse)
+  let assert Ok(bse) = cn_calendar.official_2026(identity.Bse)
+
+  source.provider(dataset.source(sse)) |> should.equal("sse")
+  source.provider(dataset.source(szse)) |> should.equal("szse")
+  source.provider(dataset.source(bse)) |> should.equal("bse")
+  dataset.version(sse) |> should.equal("official-2026-v1")
+
+  dataset.trading_day(sse, on: civil(2026, 2, 20))
+  |> should.equal(Ok(calendar.Closed("spring_festival")))
+  let assert Ok(calendar.Open(sessions)) =
+    dataset.trading_day(sse, on: civil(2026, 2, 24))
+  list.length(sessions) |> should.equal(4)
+  dataset.trading_day(sse, on: civil(2027, 1, 4))
+  |> should.equal(
+    Error(dataset.OutsideCoverage(
+      civil(2026, 1, 1),
+      civil(2026, 12, 31),
+      civil(2027, 1, 4),
     )),
   )
 }

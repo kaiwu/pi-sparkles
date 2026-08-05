@@ -132,27 +132,56 @@ fn specs() -> List(capability.Spec) {
   [
     capability.Foundation(
       "pure market foundations",
-      "track, evidence, listing, identity, bounded calendar, effective rules, documents/attachments, and lossless accounting packages are installed",
+      "track, evidence, listing, identity, bounded calendar, effective rules, documents/attachments, lossless accounting, and per-family 85% multi-channel coverage policy are installed",
     ),
-    capability.Blocked(
+    capability.RequiresTool(
       "provider-backed identity",
-      "SSE, SZSE, and BSE authority ownership is verified in cn_authorities, but an accepted security-master product and redistribution terms are not approved",
+      "cn_security_search",
+      "CNINFO public catalogue lookup is approved for bounded read-only local analysis; it preserves organization candidates but does not prove venue, board, share class, currency, status, or redistribution rights",
     ),
-    capability.Blocked(
+    capability.RequiresTool(
       "authoritative calendar",
-      "official exchange ownership is verified in cn_authorities, but supported calendar capture, update cadence, and fixture rights are not approved",
+      "cn_market_calendar",
+      "venue-owned 2026 SSE/SZSE/BSE schedules are source-reviewed, coverage-bounded, and explicit about exceptional-notice, settlement, Connect, and redistribution limits",
+    ),
+    capability.RequiresTool(
+      "effective rule profile",
+      "cn_trading_rules",
+      "the dated 2026-07-06 SSE/SZSE/BSE standard CNY A-share slice exposes exact board, tick, quantity, odd-lot exit, price-limit ratio, sources, clauses, and exclusions; exceptional regimes fail closed",
+    ),
+    capability.RequiresTool(
+      "vendor quote",
+      "cn_stock_quote",
+      "Eastmoney public-web quotes are approved only as bounded local-analysis vendor observations with explicit SSE/SZSE/BSE identity, unknown latency/rights, and independently proven A-share/CNY scope",
+    ),
+    capability.RequiresTool(
+      "raw daily history",
+      "cn_stock_history",
+      "Eastmoney raw unadjusted daily bars preserve numeric lexemes and bounds; adjustment factors, suspension completeness, production service level, and redistribution remain unknown",
+    ),
+    capability.RequiresTool(
+      "disclosure discovery",
+      "cn_disclosure_search",
+      "CNINFO catalogue-bound announcement discovery is approved for bounded read-only local analysis with exact PDF identities; venue attribution and redistribution remain unproved",
+    ),
+    capability.RequiresTool(
+      "raw vendor fundamentals",
+      "cn_financial_statement",
+      "the bounded Eastmoney income-row slice preserves exact tokens, source codes/Chinese labels, report codes, notice date, declared currency evidence, and unknown filing context; it is not official filing evidence",
+    ),
+    capability.RequiresTool(
+      "normalized vendor fundamentals",
+      "cn_stock_fundamental",
+      "the visible single-code registry covers revenue and parent-attributable net income only, preserves ambiguity, and performs no hidden restatement selection",
+    ),
+    capability.RequiresTool(
+      "reproducible vendor derivation",
+      "cn_stock_fundamental_metric",
+      "net margin retains exact same-row leaves, mappings, formula, scale, half-even rounding, period, currency evidence, assumptions, and unknown source context",
     ),
     capability.Blocked(
-      "effective rule tables",
-      "the pure selector and official exchange owners exist, but source-reviewed dated mainland rule tables are not approved",
-    ),
-    capability.Blocked(
-      "quote and history",
-      "no named licensed mainland quote/history provider is selected",
-    ),
-    capability.Blocked(
-      "disclosures and accounting",
-      "exact known CNINFO PDFs can be captured and structurally page-inspected as byte-preserving local evidence, but public search, venue attribution proof, text/semantic decoding, OCR policy, approved fixtures, and audited accounting mappings remain unapproved",
+      "official filing statement depth",
+      "PDF text/OCR, filing-linked line decoding, document/version identity, full statements, audit/restatement state, broader mappings, corrections, and trends remain unapproved",
     ),
   ]
 }

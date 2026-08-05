@@ -132,27 +132,56 @@ fn specs() -> List(capability.Spec) {
   [
     capability.Foundation(
       "pure market foundations",
-      "track, evidence, listing, identity, bounded calendar, effective rules, documents/attachments, and lossless accounting packages are installed",
+      "track, evidence, listing, identity, bounded calendar, effective rules, documents/attachments, lossless accounting, and per-family 85% multi-channel coverage policy are installed",
     ),
-    capability.Blocked(
+    capability.RequiresTool(
       "provider-backed identity",
-      "SFC, SEHK, and HKEX authority ownership is verified in hk_authorities, but an accepted security-master product and redistribution terms are not approved",
+      "hk_security_search",
+      "HKEXnews current-security lookup is approved for bounded read-only local analysis and preserves exact stock IDs; redistribution and historical security-master completeness remain unapproved",
     ),
-    capability.Blocked(
+    capability.RequiresTool(
       "authoritative calendar",
-      "HKEX calendar ownership is verified in hk_authorities, but supported capture, update cadence, and fixture rights are not approved",
+      "hk_market_calendar",
+      "HKEX circular CT/075/25 supplies a source-reviewed, coverage-bounded 2026 securities schedule with explicit half-days and exceptional-notice, settlement, Connect, and redistribution limits",
+    ),
+    capability.RequiresTool(
+      "effective rule profile",
+      "hk_trading_rules",
+      "the dated 2026-08-03 HKEX applicable-HKD-equity spread slice preserves price band, tick, issuer-specific caller-evidenced board lot, official sources, and explicit exclusions without inventing a universal lot size",
+    ),
+    capability.RequiresTool(
+      "vendor quote",
+      "hk_stock_quote",
+      "Eastmoney public-web HK quotes are approved only as bounded local-analysis vendor observations with mandatory independently proven currency and unknown latency/rights",
+    ),
+    capability.RequiresTool(
+      "raw daily history",
+      "hk_stock_history",
+      "Eastmoney raw unadjusted HK daily bars preserve numeric lexemes and bounds; currency stays caller-declared, while adjustment factors, suspension completeness, production service level, and redistribution remain unknown",
+    ),
+    capability.RequiresTool(
+      "disclosure discovery",
+      "hk_disclosure_search",
+      "HKEXnews title discovery is approved for bounded read-only local analysis with exact PDF identities and visible initial-page truncation",
+    ),
+    capability.RequiresTool(
+      "raw vendor fundamentals",
+      "hk_financial_statement",
+      "the bounded Eastmoney context-plus-income-line slice preserves exact tokens, standardized codes/Chinese labels, exact duration, reported currency/standard/type, and unknown filing context; it is not HKEX filing evidence",
+    ),
+    capability.RequiresTool(
+      "normalized vendor fundamentals",
+      "hk_stock_fundamental",
+      "the visible single-code registry covers revenue and shareholder-attributable profit only, preserves ambiguity, and performs no hidden restatement selection",
+    ),
+    capability.RequiresTool(
+      "reproducible vendor derivation",
+      "hk_stock_fundamental_metric",
+      "net margin retains exact same-context leaves, mappings, formula, scale, half-even rounding, duration, currency/standard, assumptions, and unknown source context",
     ),
     capability.Blocked(
-      "effective rule tables",
-      "the pure selector and official HKEX owner exist, but source-reviewed dated Hong Kong rule tables are not approved",
-    ),
-    capability.Blocked(
-      "quote and history",
-      "no named licensed Hong Kong quote/history provider is selected",
-    ),
-    capability.Blocked(
-      "disclosures and accounting",
-      "exact known HKEXnews PDFs can be captured and structurally page-inspected as byte-preserving local evidence, but public search, text/semantic decoding, OCR policy, approved fixtures, production IIS access, and audited accounting mappings remain unapproved",
+      "official filing statement depth",
+      "PDF text/OCR, HKEX filing-linked line decoding, document/version/notice identity, full statements, audit/restatement state, broader mappings, corrections, and trends remain unapproved",
     ),
   ]
 }

@@ -1,0 +1,169 @@
+import finance_authority_snapshot/runtime as bounded_runtime
+import finance_core/time
+import finance_eastmoney.{type Access}
+import finance_eastmoney/request as provider_request
+import finance_http/client
+import finance_http/pool
+import finance_http/request
+import finance_http/response.{type Response}
+import finance_http/transport.{type Cancellation}
+import gleam/javascript/promise.{type Promise}
+import gleam/result
+
+pub opaque type Runtime {
+  Runtime(
+    quote: bounded_runtime.Runtime,
+    history: bounded_runtime.Runtime,
+    cn_fundamentals: bounded_runtime.Runtime,
+    hk_fundamentals: bounded_runtime.Runtime,
+  )
+}
+
+pub type InitError {
+  InvalidQuoteRuntime(bounded_runtime.InitError)
+  InvalidHistoryRuntime(bounded_runtime.InitError)
+  InvalidCnFundamentalsRuntime(bounded_runtime.InitError)
+  InvalidHkFundamentalsRuntime(bounded_runtime.InitError)
+}
+
+pub type SendError {
+  UnexpectedOrigin
+  RequestFailed(pool.PoolError)
+}
+
+pub fn new(_access: Access) -> Result(Runtime, InitError) {
+  use quote <- result.try(
+    bounded_runtime.new(policy(
+      provider_request.quote_origin,
+      provider_request.quote_path,
+    ))
+    |> result.map_error(InvalidQuoteRuntime),
+  )
+  use history <- result.try(
+    bounded_runtime.new(policy(
+      provider_request.history_origin,
+      provider_request.history_path,
+    ))
+    |> result.map_error(InvalidHistoryRuntime),
+  )
+  use cn_fundamentals <- result.try(
+    bounded_runtime.new(policy(
+      provider_request.cn_fundamentals_origin,
+      provider_request.cn_fundamentals_path,
+    ))
+    |> result.map_error(InvalidCnFundamentalsRuntime),
+  )
+  use hk_fundamentals <- result.try(
+    bounded_runtime.new(policy(
+      provider_request.hk_fundamentals_origin,
+      provider_request.hk_fundamentals_path,
+    ))
+    |> result.map_error(InvalidHkFundamentalsRuntime),
+  )
+  Ok(Runtime(quote, history, cn_fundamentals, hk_fundamentals))
+}
+
+pub fn new_with(
+  _access: Access,
+  sender: client.Sender,
+  sleeper: client.Sleeper,
+  clock: client.Clock,
+) -> Result(Runtime, InitError) {
+  use quote <- result.try(
+    bounded_runtime.new_with(
+      policy(provider_request.quote_origin, provider_request.quote_path),
+      sender,
+      sleeper,
+      clock,
+    )
+    |> result.map_error(InvalidQuoteRuntime),
+  )
+  use history <- result.try(
+    bounded_runtime.new_with(
+      policy(provider_request.history_origin, provider_request.history_path),
+      sender,
+      sleeper,
+      clock,
+    )
+    |> result.map_error(InvalidHistoryRuntime),
+  )
+  use cn_fundamentals <- result.try(
+    bounded_runtime.new_with(
+      policy(
+        provider_request.cn_fundamentals_origin,
+        provider_request.cn_fundamentals_path,
+      ),
+      sender,
+      sleeper,
+      clock,
+    )
+    |> result.map_error(InvalidCnFundamentalsRuntime),
+  )
+  use hk_fundamentals <- result.try(
+    bounded_runtime.new_with(
+      policy(
+        provider_request.hk_fundamentals_origin,
+        provider_request.hk_fundamentals_path,
+      ),
+      sender,
+      sleeper,
+      clock,
+    )
+    |> result.map_error(InvalidHkFundamentalsRuntime),
+  )
+  Ok(Runtime(quote, history, cn_fundamentals, hk_fundamentals))
+}
+
+pub fn send(
+  runtime: Runtime,
+  id id: String,
+  request request_value: request.Request,
+  cancellation cancellation: Cancellation,
+) -> Promise(Result(Response, SendError)) {
+  let selected = case request.origin(request_value) {
+    origin if origin == provider_request.quote_origin -> Ok(runtime.quote)
+    origin if origin == provider_request.history_origin -> Ok(runtime.history)
+    origin if origin == provider_request.cn_fundamentals_origin ->
+      Ok(runtime.cn_fundamentals)
+    origin if origin == provider_request.hk_fundamentals_origin ->
+      Ok(runtime.hk_fundamentals)
+    _ -> Error(UnexpectedOrigin)
+  }
+  case selected {
+    Error(error) -> promise.resolve(Error(error))
+    Ok(inner) -> {
+      use outcome <- promise.await(bounded_runtime.send(
+        inner,
+        id,
+        request_value,
+        cancellation,
+      ))
+      promise.resolve(outcome |> result.map_error(RequestFailed))
+    }
+  }
+}
+
+fn policy(origin: String, path: String) -> bounded_runtime.Policy {
+  let assert Ok(window) = time.duration(1000)
+  let assert Ok(maximum_elapsed) = time.duration(15_000)
+  let assert Ok(base_delay) = time.duration(500)
+  let assert Ok(maximum_delay) = time.duration(2000)
+  let admissions = case origin == provider_request.hk_fundamentals_origin {
+    True -> 2
+    False -> 1
+  }
+  let assert Ok(value) =
+    bounded_runtime.policy(
+      origin: origin,
+      allowed_paths: [path],
+      admissions_per_window: admissions,
+      window: window,
+      maximum_in_flight: 1,
+      maximum_waiting: 20,
+      maximum_attempts: 2,
+      maximum_elapsed: maximum_elapsed,
+      base_delay: base_delay,
+      maximum_delay: maximum_delay,
+    )
+  value
+}

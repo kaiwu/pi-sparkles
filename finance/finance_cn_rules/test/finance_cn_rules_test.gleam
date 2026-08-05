@@ -1,5 +1,6 @@
 import finance_cn_identity/identity
 import finance_cn_rules
+import finance_cn_rules/official
 import finance_cn_rules/rule
 import finance_core/currency
 import finance_core/decimal
@@ -67,6 +68,43 @@ pub fn suspension_is_not_silently_treated_as_normal_test() {
     from: [normal],
   )
   |> should.equal(Error(rule.UnknownRule))
+}
+
+pub fn official_profiles_are_dated_and_board_exact_test() {
+  let assert Ok(main) =
+    official.established_equity(
+      venue: official.Sse,
+      board: official.MainBoard,
+      on: civil(2026, 8, 5),
+    )
+  main
+  |> official.daily_price_limit
+  |> decimal.to_string
+  |> should.equal("0.1")
+  main |> official.minimum_buy_quantity |> should.equal(100)
+  main |> official.buy_quantity_increment |> should.equal(Some(100))
+
+  let assert Ok(star) =
+    official.established_equity(
+      venue: official.Sse,
+      board: official.StarMarket,
+      on: civil(2026, 8, 5),
+    )
+  star |> official.minimum_buy_quantity |> should.equal(200)
+  star |> official.buy_quantity_increment |> should.equal(None)
+
+  official.established_equity(
+    venue: official.Bse,
+    board: official.MainBoard,
+    on: civil(2026, 8, 5),
+  )
+  |> should.equal(Error(official.InvalidVenueBoard))
+  official.established_equity(
+    venue: official.Szse,
+    board: official.ChiNext,
+    on: civil(2026, 7, 5),
+  )
+  |> should.equal(Error(official.OutsideReviewedInterval))
 }
 
 fn rule_record(

@@ -39,6 +39,35 @@ async function harness({
   initial = "us",
   contact = "agent@example.test",
   entries = [],
+  activeTools = [
+    "finance_track_status",
+    "finance_capabilities",
+    "security_resolve",
+    "sec_company_submissions",
+    "sec_xbrl_facts",
+    "stock_fundamental",
+    "stock_fundamental_metric",
+    "cn_authorities",
+    "cn_security_search",
+    "cn_market_calendar",
+    "cn_trading_rules",
+    "cn_disclosure_search",
+    "cn_stock_quote",
+    "cn_stock_history",
+    "cn_financial_statement",
+    "cn_stock_fundamental",
+    "cn_stock_fundamental_metric",
+    "hk_authorities",
+    "hk_security_search",
+    "hk_market_calendar",
+    "hk_trading_rules",
+    "hk_disclosure_search",
+    "hk_stock_quote",
+    "hk_stock_history",
+    "hk_financial_statement",
+    "hk_stock_fundamental",
+    "hk_stock_fundamental_metric",
+  ],
 } = {}) {
   const commands = new Map();
   const tools = new Map();
@@ -60,6 +89,9 @@ async function harness({
     },
     getFlag(name) {
       return flags.get(name);
+    },
+    getActiveTools() {
+      return activeTools;
     },
     registerCommand(name, options) {
       commands.set(name, options);
@@ -94,13 +126,22 @@ describe("finance track status binding", () => {
       ctx,
     );
     expect(statuses.at(-1).text).toBe(
-      "US · USD · America/New_York · agent:agent@example.test",
+      "US · USD · America/New_York · src:80% · feat:70% · agent:agent@example.test",
     );
 
     for (const [command, expected] of [
-      ["cn-track", "CN · CNY · Asia/Shanghai · agent:agent@example.test"],
-      ["hk-track", "HK · HKD · Asia/Hong_Kong · agent:agent@example.test"],
-      ["us-track", "US · USD · America/New_York · agent:agent@example.test"],
+      [
+        "cn-track",
+        "CN · CNY · Asia/Shanghai · src:65% · feat:100% · agent:agent@example.test",
+      ],
+      [
+        "hk-track",
+        "HK · HKD · Asia/Hong_Kong · src:70% · feat:100% · agent:agent@example.test",
+      ],
+      [
+        "us-track",
+        "US · USD · America/New_York · src:80% · feat:70% · agent:agent@example.test",
+      ],
     ]) {
       await instance.commands.get(command).handler("", ctx);
       expect(statuses.at(-1).text).toBe(expected);
@@ -140,6 +181,39 @@ describe("finance track status binding", () => {
     expect(result.details.timezone).toBe("Asia/Hong_Kong");
     expect(result.details.agentContact).toBe("agent@example.test");
     expect(result.details.trackContext.track).toBe("hk");
+    expect(result.details.sourceCredibilityPercentage).toBe(70);
+    expect(result.details.featureCoveragePercentage).toBe(100);
+    expect(result.details.sourceCredibility.meaning).toBe(
+      "evidence_maturity_not_truth_probability",
+    );
+    expect(result.details.sourceCredibility.scoreBasisPoints).toBe(7000);
+    expect(result.details.sourceCredibility.criterionCount).toBe(10);
+    expect(result.details.sourceCredibility.calculation).toBe(
+      "equal_weight_mean_verified_10000_partial_5000_missing_0",
+    );
+    expect(result.details.sourceCredibility.readiness).toBe(
+      "limited_credibility",
+    );
+    expect(result.details.sourceCredibility.criticalGaps).toEqual([
+      "freshness_receipt",
+      "semantic_decoder",
+      "entitlement_and_licence",
+    ]);
+    expect(result.details.featureCoverage.meaning).toBe(
+      "installed_end_user_feature_coverage_not_data_completeness",
+    );
+    expect(result.details.featureCoverage.requirementCount).toBe(10);
+    expect(result.details.featureCoverage.coveredCount).toBe(10);
+    expect(result.details.featureCoverage.calculation).toBe(
+      "set_union_covered_requirements_over_declared_requirements",
+    );
+    expect(result.details.featureCoverage.missingRequirements).not.toContain(
+      "market_calendar",
+    );
+    expect(result.details.featureCoverage.missingRequirements).not.toContain(
+      "effective_rules",
+    );
+    expect(result.details.featureCoverage.missingRequirements).toEqual([]);
   });
 
   test("typed tool switching persists and invalid slash input is rejected visibly", async () => {
@@ -190,7 +264,7 @@ describe("finance track status binding", () => {
       ctx,
     );
     expect(statuses.at(-1).text).toBe(
-      "CN · CNY · Asia/Shanghai · agent:invalid-contact",
+      "CN · CNY · Asia/Shanghai · src:65% · feat:100% · agent:invalid-contact",
     );
     expect(notifications.at(-1)).toEqual({
       kind: "warning",
@@ -206,5 +280,45 @@ describe("finance track status binding", () => {
       { hasUI: false, ui: {} },
     );
     expect(result.details.configurationValid).toBeFalse();
+  });
+
+  test("tools from sibling tracks cannot inflate active-track coverage", async () => {
+    const instance = await harness({
+      initial: "cn",
+      activeTools: [
+        "finance_track_status",
+        "finance_capabilities",
+        "security_resolve",
+        "sec_company_submissions",
+        "sec_xbrl_facts",
+        "stock_fundamental",
+        "stock_fundamental_metric",
+      ],
+    });
+    const statuses = [];
+    const ctx = context(instance.entries, statuses);
+
+    await instance.handlers.get("session_start")(
+      { type: "session_start", reason: "startup" },
+      ctx,
+    );
+
+    expect(statuses.at(-1).text).toBe(
+      "CN · CNY · Asia/Shanghai · src:65% · feat:10% · agent:agent@example.test",
+    );
+    const result = await instance.tools.get("finance_track_status").execute(
+      "status-isolated",
+      {},
+      new AbortController().signal,
+      undefined,
+      { hasUI: false, ui: {} },
+    );
+    expect(result.details.featureCoverage.coveredRequirements).toEqual([
+      "navigation_context",
+    ]);
+    expect(result.details.featureCoverage.criticalGaps).toEqual([
+      "source_registry",
+      "security_identity",
+    ]);
   });
 });

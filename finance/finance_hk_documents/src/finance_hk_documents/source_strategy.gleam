@@ -1,4 +1,5 @@
 import finance_core/source
+import finance_provider_strategy/coverage
 import finance_provider_strategy/strategy
 import finance_track
 import gleam/list
@@ -6,6 +7,14 @@ import gleam/string
 
 pub type StrategyError {
   InvalidDocumentIdentity
+}
+
+/// Operational breadth for the issuer-disclosure family is measured at 85%.
+/// HKEXnews is the sole approved canonical source group for this family today.
+pub fn disclosure_coverage_policy() -> coverage.Policy {
+  let assert Ok(value) =
+    coverage.operational_policy(finance_track.Hk, "issuer_disclosures", 1)
+  value
 }
 
 /// HKEXnews remains the sole canonical route until another exact-artifact

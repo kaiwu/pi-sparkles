@@ -16,6 +16,7 @@ finance_core ─┬─> finance_provenance
               ├─> finance_listing  <─ finance_provenance + finance_track
               ├─> finance_http ─┬─> finance_openfigi
               │                 ├─> finance_sec
+              │                 ├─> finance_eastmoney
               │                 └─> finance_testkit
               ├─> finance_table
               ├─> finance_math ────> finance_series
@@ -30,6 +31,9 @@ finance_market_rules ─────> finance_cn_rules / finance_hk_rules
 finance_market_authorities ─> isolated CN/HK setup registries
 finance_market_documents ─> finance_cn_documents / finance_hk_documents
                          └─> finance_document_attachment
+finance_provider_strategy ─> isolated fallback, 85% coverage, and credibility receipts
+finance_authority_snapshot ─> CSRC/SFC text and CNINFO/HKEXnews discovery/binary adapters
+finance_authority_pdf ──────> same-artifact finance_pdf inspection composition
 finance_market_accounting ─> finance_cn_accounting / finance_hk_accounting
 finance_testkit ────────────> finance_cn_testkit / finance_hk_testkit
 finance_track_capabilities ─> isolated CN/HK setup shells
@@ -46,9 +50,13 @@ consumers own market vocabulary and never import one another.
 The authority contract validates track-scoped source ownership, official links,
 operational access, redistribution, and limitations without embedding any
 market's registry in the shared package.
-`finance_testkit` depends on core and HTTP. `finance_openfigi` and `finance_sec`
-remain reusable outside Pi and share the HTTP policies rather than implementing
-plugin-local fetch stacks. The SEC adapter also owns lossless XBRL source-number
+`finance_testkit` depends on core and HTTP. `finance_openfigi`, `finance_sec`,
+and `finance_eastmoney` remain reusable outside Pi and share the HTTP policies
+rather than implementing plugin-local fetch stacks. Eastmoney's public-web
+adapter is local-analysis-only with unknown latency, service level, and
+redistribution; it preserves exact quote scaling and raw daily-bar lexemes
+instead of presenting itself as an official or licensed feed. The SEC adapter
+also owns lossless XBRL source-number
 decoding and composes calendar arithmetic for explicit statement-period shapes,
 so every consumer sees the same exact facts and period rules. No core package or core
 test may depend on testkit or a provider adapter.
@@ -112,6 +120,10 @@ original-document/version/translation identity, strict versioned lossless wire
 codecs, bounded attachment acceptance, and lossless accounting values with
 executable ambiguity-preserving mappings;
 safe cancellable HTTP with retry, rate, queue, cache, and cassette policies;
+track-isolated provider priority with exact semantic fallback and per-family
+85% union-coverage assessments that retain critical gaps and source groups;
+separate equal-weight source-control credibility receipts whose percentage is
+evidence maturity rather than truth probability;
 arbitrary exact formula trees plus bounded approximate analytics; ordered,
 missing-aware and as-of-aligned series with exact returns, OHLCV, paths, and
 portfolio attribution; market sessions, business days, day counts, joint
@@ -120,15 +132,26 @@ verification; unit-aware bounded Markdown/CSV/JSON tables; and deterministic
 synthetic/conformance test tools.
 
 The first market-owned layers add separate CN and HK identity, calendar, rules,
-document, accounting, and seeded scenario packages over those primitives. They
-contain synthetic law tests but no unreviewed exchange/provider datasets; authoritative
-security-master, exceptional-day, dated-rule, disclosure, and accounting
-fixtures remain blocked on documented access and redistribution rights. The
-shared capability policy powers isolated `cn_setup`/`hk_setup` Pi shells and
-prevents sibling or SEC tools from satisfying a track requirement.
+document, accounting, and seeded scenario packages over those primitives.
+CNINFO and HKEXnews now have bounded public local-analysis security/disclosure
+discovery contracts and isolated Pi shells; they preserve candidate identity,
+exact document paths, truncation, and rights limitations. Isolated calendar
+shells compose source-reviewed, coverage-bounded 2026 SSE/SZSE/BSE and HKEX
+schedules, including HK half-days. Authoritative venue security masters,
+later-year/exceptional calendar refresh, broader rule regimes, production
+market-data rights, PDF statement decoding, and accounting mappings remain open
+source-evidence and rights work. Narrow official profiles cover established
+normal mainland CNY equities from 2026-07-06 and applicable HKD equity spread
+bands from 2026-08-03; HK board lots remain issuer-specific caller evidence.
+Shared Eastmoney quote/history and exact vendor income-statement decoding backs
+isolated CN/HK shells with bounded mocked contracts. The statement slice keeps
+raw tokens and labels, visible track-owned mappings, and exact net-margin source
+leaves; it remains distinct from official filing/document semantics.
+The shared capability policy powers isolated `cn_setup`/`hk_setup` Pi shells
+and prevents sibling or SEC tools from satisfying a track requirement.
 
 “Foundation complete” does not mean “every named financial model is built in.”
-Provider adapters, accounting taxonomy mappings, authoritative calendar data,
+Provider adapters, accounting taxonomy mappings, maintained calendar data,
 curve construction, optimizers, option models, order execution, and live data
 entitlements remain separate packages or plugin work. The generic primitives
 are deliberately sufficient for those layers without putting provider or

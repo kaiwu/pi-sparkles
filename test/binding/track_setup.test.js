@@ -64,8 +64,13 @@ describe("isolated CN/HK setup bindings", () => {
       expect(result.details.timezone).toBe(timezone);
       expect(result.details.capabilities[0].state).toBe("experimental");
       expect(
-        result.details.capabilities.slice(1).every(({ state }) =>
-          state === "blocked_decision"
+        result.details.capabilities.some(
+          ({ state }) => state === "missing_dependency",
+        ),
+      ).toBeTrue();
+      expect(
+        result.details.capabilities.some(
+          ({ state }) => state === "blocked_decision",
         ),
       ).toBeTrue();
       expect([...instance.tools.keys()].sort()).toEqual([
@@ -73,6 +78,71 @@ describe("isolated CN/HK setup bindings", () => {
         `${track}_capabilities`,
         `${track}_provider_health`,
       ]);
+    }
+  });
+
+  test("track-owned discovery tools advance only matching setup capabilities", async () => {
+    for (const track of ["cn", "hk"]) {
+      const ownTools = [
+        `${track}_security_search`,
+        `${track}_market_calendar`,
+        `${track}_trading_rules`,
+        `${track}_disclosure_search`,
+        `${track}_stock_quote`,
+        `${track}_stock_history`,
+        `${track}_financial_statement`,
+        `${track}_stock_fundamental`,
+        `${track}_stock_fundamental_metric`,
+      ];
+      const sibling = track === "cn" ? "hk" : "cn";
+      const instance = await harness(track, [
+        ...ownTools,
+        `${sibling}_security_search`,
+        `${sibling}_market_calendar`,
+        `${sibling}_trading_rules`,
+        `${sibling}_disclosure_search`,
+        `${sibling}_stock_quote`,
+        `${sibling}_stock_history`,
+        `${sibling}_financial_statement`,
+        `${sibling}_stock_fundamental`,
+        `${sibling}_stock_fundamental_metric`,
+      ]);
+      const result = await instance.tools.get(`${track}_capabilities`).execute(
+        `${track}-capabilities-discovery`,
+        {},
+        new AbortController().signal,
+        undefined,
+        { hasUI: false, ui: {} },
+      );
+      const byTool = new Map(
+        result.details.capabilities.map((value) => [value.requiredTool, value]),
+      );
+      expect(byTool.get(`${track}_security_search`).state).toBe("experimental");
+      expect(byTool.get(`${track}_market_calendar`).state).toBe("experimental");
+      expect(byTool.get(`${track}_trading_rules`).state).toBe("experimental");
+      expect(byTool.get(`${track}_stock_quote`).state).toBe("experimental");
+      expect(byTool.get(`${track}_stock_history`).state).toBe("experimental");
+      expect(byTool.get(`${track}_disclosure_search`).state).toBe(
+        "experimental",
+      );
+      expect(byTool.get(`${track}_financial_statement`).state).toBe(
+        "experimental",
+      );
+      expect(byTool.get(`${track}_stock_fundamental`).state).toBe(
+        "experimental",
+      );
+      expect(byTool.get(`${track}_stock_fundamental_metric`).state).toBe(
+        "experimental",
+      );
+      expect(byTool.has(`${sibling}_security_search`)).toBeFalse();
+      expect(byTool.has(`${sibling}_market_calendar`)).toBeFalse();
+      expect(byTool.has(`${sibling}_trading_rules`)).toBeFalse();
+      expect(byTool.has(`${sibling}_stock_quote`)).toBeFalse();
+      expect(byTool.has(`${sibling}_stock_history`)).toBeFalse();
+      expect(byTool.has(`${sibling}_disclosure_search`)).toBeFalse();
+      expect(byTool.has(`${sibling}_financial_statement`)).toBeFalse();
+      expect(byTool.has(`${sibling}_stock_fundamental`)).toBeFalse();
+      expect(byTool.has(`${sibling}_stock_fundamental_metric`)).toBeFalse();
     }
   });
 

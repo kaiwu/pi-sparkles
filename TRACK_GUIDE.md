@@ -69,6 +69,7 @@ New tracks should compose the existing foundations rather than clone them:
 | `finance_calendar` and `finance_market_calendar` engines | `finance_<id>_calendar` datasets and venue-specific semantics |
 | `finance_http` UTF-8 and byte-preserving response boundaries, request bounds, cancellation, pacing, retry, pooling and cassettes | Named provider request plans, decoders, media/signature/size limits and licence policy |
 | `finance_provider_strategy` cache policy, ordered fallback, attempt traces, semantic compatibility and origin/route separation | Track-owned approved channels, priority, source contracts, underlying origin, access/rights state and outage policy |
+| `finance_provider_strategy/coverage` per-family union coverage, critical-requirement checks, source-group independence and non-blended picture readiness | Versioned family denominators, the standard 85% operational threshold, critical fields and minimum independent groups |
 | `finance_authority_snapshot` bounded raw UTF-8 or binary/base64 capture, status/media/length/signature checks, hashes, local-only evidence, allowlisted pacing/retry/pooling and cancellation | Exact authority/repository ID, track, host/path/media contract, retrieval route, caller identity, publication-time rules, semantic decoder, terms and fixture rights |
 | `finance_pdf` bounded real-parser structure/page walk and `finance_authority_pdf` same-response evidence binding, with byte, page, time, cancellation and parser-version receipts | Track/provider page ceiling, text-layer/OCR policy, semantic extraction and accepted fixture rights |
 | `finance_math`, `finance_series`, `finance_provenance`, `finance_table` and `finance_testkit` | Effective-dated rules, documents, accounting mappings and plugin policy |
@@ -153,7 +154,8 @@ see or leave it.
 
 The status plugin must provide all of the following for the new ID:
 
-- a statusline such as `JP · JPY · Asia/Tokyo · agent:<contact>`;
+- a statusline such as
+  `JP · JPY · Asia/Tokyo · src:<percent>% · feat:<percent>% · agent:<contact>`;
 - `/finance-track <id>` plus a direct `/<id>-track` command;
 - the new value in `--finance-track`, `finance_track_switch`, and their schemas;
 - strict parsing, help and error copy listing the complete supported set;
@@ -162,6 +164,17 @@ The status plugin must provide all of the following for the new ID:
   `pi-sparkles.finance.track.changed`;
 - status, switching, restoration, malformed-state, unit, binding, and README
   coverage.
+
+Add a new versioned source-control criterion set and map the new track's active
+tools to the shared versioned end-user feature denominator. `src` is an
+equal-weight evidence-maturity receipt (`Verified=100%`, `Partial=50%`,
+`Missing=0%`), never a probability that a provider value is true. Every
+critical source criterion must be verified even if the numeric score reaches
+85%. `feat` is installation-aware coverage, not dataset completeness: only
+tools for the active track contribute, and the structured status must expose
+all criteria/evidence, contributions, missing requirements, and critical gaps.
+Changing either denominator requires a new version rather than silently moving
+the percentage.
 
 Track switching is an event for cooperating UI and setup views. It is not a
 global mutable provider configuration. Market plugins retain market-prefixed
@@ -212,11 +225,31 @@ effect boundary and retain the timezone in canonical observations. If the track
 contains venues with different sessions or timezones, keep separate datasets
 instead of inventing one national session.
 
+A reviewed annual schedule may be bundled as executable facts only when its
+exact venue document, capture/version label, supported market, coverage year,
+licence/redistribution state, and update boundary are recorded. Keep a planned
+annual schedule separate from live exceptional-closure or severe-weather state.
+If the source publishes shortened days, encode them as dated session overrides,
+not prose or a generic holiday flag. A later notice creates a new reviewed
+dataset version; it never mutates historical evidence silently. Settlement,
+cross-border access, derivatives, and security-specific suspension calendars
+remain separate unless the source contract explicitly covers them.
+
 ## Add rules and providers behind evidence gates
 
 Market rules must be effective-dated pure data with their source and scope.
 Avoid timeless constants for lot sizes, settlement, price limits, eligibility,
 board treatment, or document requirements.
+
+Do not force unlike markets into one complete record. A mainland profile may
+publish board-wide quantity and price-limit rules, while an HK profile must keep
+issuer-specific board lots separate from price-dependent minimum spreads. A
+tool may require caller-supplied evidence for a listing-specific field, but it
+must retain that reference, label it unverified, and reject a missing value; it
+must never substitute another market's convenient constant. Publish the exact
+supported effective interval, product/currency/price window, official clauses,
+and excluded regimes. Installation credit means the audited surface exists—it
+does not turn a partial rule universe into complete data.
 
 Every provider adapter must be an independent finance package with:
 
@@ -247,6 +280,38 @@ proves it. Otherwise record the repository as source and keep venue unknown; a
 caller hint is not proof. Public read-only/local-analysis approval is not
 redistribution approval.
 
+### Use an operational coverage budget, not a perfection gate
+
+Before implementing a family, declare a versioned denominator of requirements
+for the supported universe and window. The standard exit threshold is **85%
+(8,500 basis points) in each applicable family**. Use
+`finance_provider_strategy/coverage`; do not invent a plugin-local percentage.
+
+The threshold has these laws:
+
+1. Compute the set union of accepted channel contributions. Overlap counts
+   once; it cannot inflate coverage.
+2. Assess identity, calendar/rules, quotes/history, disclosures, fundamentals,
+   corporate actions, news/context, and other applicable families separately.
+   A strong family cannot average away a weak one.
+3. Mark family-owned critical anchors—normally exact identity/track/venue,
+   source, as-of time, currency/unit, adjustment or period, entitlement, and
+   document/version context—as mandatory. They do not fit inside the allowed
+   15% gap.
+4. Group channels by underlying origin. A direct artifact and a mirror of that
+   artifact are one source group. Set the required group count per family: one
+   canonical authority may be sufficient, while a composite research view can
+   require two or more independent groups.
+5. Retain the uncovered requirement IDs as explicit unknowns. Never impute them
+   or call the resulting dataset exhaustive.
+6. Coverage is evaluated only after semantic compatibility, freshness,
+   provenance, entitlement, and conflict checks. Two conflicting values do not
+   combine into one covered fact.
+
+This makes an 85% result operationally useful without claiming mathematical
+completeness. A track picture advances only when every applicable family passes
+its own gate.
+
 Provider values enter plugins as `finance_core.Observation(a)`. Keep source,
 as-of/retrieval time, timezone, freshness, unit, adjustment, quality and
 entitlement intact. Use `finance_evidence` with same-track composition by
@@ -266,6 +331,42 @@ signature, malformed page tree, timeout, or cancellation as a failed contract,
 not an empty result. Archive expansion budgets and text-layer/image/OCR policy
 remain additional typed stages; raw byte or structural capture alone does not
 satisfy them.
+
+A public end-user search page may support an Experimental local-analysis slice
+without becoming a production or bulk API contract. Pin the official
+host/path, request shape, caller identity, pacing, response budget, semantic
+markers, source disclaimer, and initial-page/pagination behavior. Fixture-test
+wrapper, identity, path, layout, and truncation failures. Preserve the raw
+source fields and mark redistribution unapproved unless separate terms permit
+it. A provider-owned internal ID may resolve that repository's search identity,
+but it does not prove another venue, board, or security-master fact.
+
+The same discipline applies to public-web market data. A bounded, identified,
+fixture-tested adapter can support an Experimental local-analysis slice when it
+preserves exact provider values and clearly reports unknown latency, service
+level, entitlement, and redistribution. It is not an official feed, a licensed
+production SLA, or permission for bulk redistribution. Keep its reusable
+transport/decoder in `finance_<provider>` and expose independent track-prefixed
+Pi shells; never hide live probes in the normal test suite.
+
+For a fundamental family, keep three separately auditable end-user surfaces:
+
+1. `<id>_financial_statement` exposes lossless provider facts and every known or
+   unknown period, unit, scope, standard, document/version, audit, restatement,
+   entitlement, and source field.
+2. `<id>_stock_fundamental` resolves one named metric through executable,
+   caller-visible accepted codes/labels, unit kind, period kind, and method. It
+   preserves missing and ambiguous candidates instead of choosing by order.
+3. `<id>_stock_fundamental_metric` consumes only unique coherent normalized
+   inputs and returns the exact formula tree, ordered names, scale, rounding,
+   assumptions, output unit, and every raw source leaf.
+
+These names are a convention, not permission to share a Pi shell. Put provider
+transport and exact token decoding below Pi; share provider-neutral decimal and
+formula machinery; keep each market's mappings, reporting shapes, currency and
+scope laws, tool names, contexts, setup requirements, and status contributions
+isolated. A vendor slice may satisfy installed workflow breadth while official
+document linkage and statement depth remain explicit source-maturity gaps.
 
 ## Expose isolated plugins
 
@@ -364,7 +465,9 @@ The pull request should state:
 
 ## Definition of done
 
-A new track is supported only when all of these are true:
+A new track is supported only when all of these are true. “Supported” means its
+declared families meet the operational breadth budget; it does not mean every
+possible market record is implemented:
 
 - its stable ID, label and market boundary are documented and unambiguous;
 - the closed track type, JSON contract, profiles and exhaustive tests include
@@ -376,6 +479,9 @@ A new track is supported only when all of these are true:
 - same-track composition is the default and cross-track work is explicit;
 - provider adapters meet the repository's bounds, cancellation, fixture,
   licensing and redaction requirements;
+- every applicable family publishes its versioned denominator and reaches at
+  least 85% union coverage with all critical anchors, the required underlying
+  source groups, and an explicit list of uncovered requirements;
 - architecture, binding, artifact, Pi-load and full repository tests pass;
 - all supported-track documentation has been migrated together.
 

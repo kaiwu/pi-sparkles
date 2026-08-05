@@ -9,6 +9,7 @@ import finance_hk_documents/source_strategy
 import finance_hk_identity/identity
 import finance_market_documents/document
 import finance_provenance/identity as provenance_identity
+import finance_provider_strategy/coverage
 import finance_provider_strategy/strategy
 import finance_track
 import gleam/option.{None, Some}
@@ -36,6 +37,14 @@ pub fn disclosure_strategy_is_hkexnews_only_and_track_isolated_test() {
   strategy.channel_route(channel) |> should.equal(strategy.Direct)
   strategy.channel_use_policy(channel)
   |> should.equal(strategy.LocalAnalysisOnly)
+}
+
+pub fn disclosure_coverage_policy_is_hk_scoped_and_operational_test() {
+  let policy = source_strategy.disclosure_coverage_policy()
+  coverage.policy_track(policy) |> should.equal(finance_track.Hk)
+  coverage.policy_family(policy) |> should.equal("issuer_disclosures")
+  coverage.minimum_basis_points(policy) |> should.equal(8500)
+  coverage.minimum_source_groups(policy) |> should.equal(1)
 }
 
 pub fn parallel_language_publications_keep_both_identities_test() {
