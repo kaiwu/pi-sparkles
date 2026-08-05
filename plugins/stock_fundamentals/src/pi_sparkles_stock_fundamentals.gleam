@@ -11,6 +11,9 @@ import finance_sec/periods
 import finance_sec/request
 import finance_sec/runtime
 import finance_sec/xbrl
+import finance_track
+import finance_track/context as track_context
+import finance_track/json as track_json
 import gleam/dict.{type Dict}
 import gleam/dynamic/decode
 import gleam/int
@@ -170,7 +173,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     "fundamentals",
     "Show the stock fundamentals workflow and supported metrics",
     fn(_args, ctx) {
-      ui.notify(context.ui(ctx), guide.text(), ui.Info)
+      ui.notify(context.ui(ctx), us_text(guide.text()), ui.Info)
       promise.resolve(Nil)
     },
   )
@@ -187,7 +190,11 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
       let definitions = supported_definitions()
       tool.text_result(
         render_definitions(definitions),
-        json.object([#("definitions", json.array(definitions, definition_json))]),
+        json.object(
+          list.append(us_track_fields(), [
+            #("definitions", json.array(definitions, definition_json)),
+          ]),
+        ),
       )
       |> promise.resolve
     },
@@ -439,8 +446,10 @@ fn execute_q4(
                   }
                 _, _ ->
                   tool.text_result(
-                    company.entity_name
+                    us_text(
+                      company.entity_name
                       <> ": Q4 derivation blocked until both annual and nine-month sources are unique",
+                    ),
                     unresolved_q4_json(company, input, annual, nine_month),
                   )
                   |> promise.resolve
@@ -480,8 +489,10 @@ fn execute_trend(
               case unique_points(resolutions, []) {
                 Error(_) ->
                   tool.text_result(
-                    company.entity_name
+                    us_text(
+                      company.entity_name
                       <> ": trend blocked because every requested period must resolve uniquely",
+                    ),
                     unresolved_trend_json(company, input, resolutions),
                   )
                   |> promise.resolve
@@ -535,8 +546,10 @@ fn execute_growth(
               case unique_points(resolutions, []) {
                 Error(_) ->
                   tool.text_result(
-                    company.entity_name
+                    us_text(
+                      company.entity_name
                       <> ": growth blocked because every requested period must resolve uniquely",
+                    ),
                     unresolved_growth_json(company, input, resolutions),
                   )
                   |> promise.resolve
@@ -604,8 +617,10 @@ fn execute_ttm(
               case unique_points(resolutions, []) {
                 Error(_) ->
                   tool.text_result(
-                    company.entity_name
+                    us_text(
+                      company.entity_name
                       <> ": TTM blocked because all four quarters must resolve uniquely",
+                    ),
                     unresolved_ttm_json(company, input, resolutions),
                   )
                   |> promise.resolve
@@ -706,8 +721,10 @@ fn execute_ttm_bridge(
                   }
                 _, _, _ ->
                   tool.text_result(
-                    company.entity_name
+                    us_text(
+                      company.entity_name
                       <> ": TTM bridge blocked until annual, current YTD, and prior YTD sources are unique",
+                    ),
                     unresolved_ttm_bridge_json(
                       company,
                       input,
@@ -814,8 +831,10 @@ fn execute_composed_ttm(
                       }
                     _, _, _ ->
                       tool.text_result(
-                        company.entity_name
+                        us_text(
+                          company.entity_name
                           <> ": composed TTM blocked until all direct and Q4 source facts are unique",
+                        ),
                         unresolved_composed_ttm_json(
                           company,
                           input,
@@ -895,8 +914,10 @@ fn execute_calculated_metric(
               case unique_metric_candidates(resolutions, []) {
                 Error(_) ->
                   tool.text_result(
-                    company.entity_name
+                    us_text(
+                      company.entity_name
                       <> ": calculation blocked because every required source must resolve uniquely",
+                    ),
                     unresolved_metric_json(company, input, resolutions),
                   )
                   |> promise.resolve
@@ -2348,28 +2369,30 @@ fn metric_names() -> List(String) {
 }
 
 fn render_definitions(values: List(fundamentals.Definition)) -> String {
-  "Supported direct SEC fundamentals:\n"
-  <> {
-    values
-    |> list.map(fn(value) {
-      "- "
-      <> fundamentals.metric_name(value.metric)
-      <> " | "
-      <> period_kind_name(value.period_kind)
-      <> " | "
-      <> unit_kind_name(value.unit_kind)
-      <> " | tags "
-      <> string.join(value.tags, ", ")
-    })
-    |> string.join("\n")
-  }
+  us_text(
+    "Supported direct SEC fundamentals:\n"
+    <> {
+      values
+      |> list.map(fn(value) {
+        "- "
+        <> fundamentals.metric_name(value.metric)
+        <> " | "
+        <> period_kind_name(value.period_kind)
+        <> " | "
+        <> unit_kind_name(value.unit_kind)
+        <> " | tags "
+        <> string.join(value.tags, ", ")
+      })
+      |> string.join("\n")
+    },
+  )
 }
 
 fn render_resolution(
   company: String,
   value: identifier.Resolution(fundamentals.Candidate),
 ) -> String {
-  case value {
+  us_text(case value {
     identifier.NoMatch ->
       company <> ": no fact matched the exact metric, unit, period, and form"
     identifier.Unique(candidate) ->
@@ -2384,117 +2407,129 @@ fn render_resolution(
         |> list.map(fn(candidate) { "- " <> candidate_label(candidate) })
         |> string.join("\n")
       }
-  }
+  })
 }
 
 fn render_q4(company: String, value: derivation.DerivedQ4) -> String {
-  company
-  <> " derived fourth quarter: "
-  <> decimal.to_string(value.value)
-  <> " "
-  <> value.unit
-  <> " ("
-  <> value.start
-  <> " through "
-  <> value.end
-  <> "); annual accession "
-  <> value.annual.fact.accession
-  <> " minus nine-month accession "
-  <> value.nine_month_ytd.fact.accession
+  us_text(
+    company
+    <> " derived fourth quarter: "
+    <> decimal.to_string(value.value)
+    <> " "
+    <> value.unit
+    <> " ("
+    <> value.start
+    <> " through "
+    <> value.end
+    <> "); annual accession "
+    <> value.annual.fact.accession
+    <> " minus nine-month accession "
+    <> value.nine_month_ytd.fact.accession,
+  )
 }
 
 fn render_trend(company: String, value: derivation.Trend) -> String {
-  company
-  <> " comparable "
-  <> periods.class_name(value.period_class)
-  <> " trend:\n"
-  <> {
-    value.points
-    |> list.map(fn(candidate) {
-      "- "
-      <> candidate.fact.end
-      <> ": "
-      <> candidate.raw_value
-      <> " "
-      <> candidate.unit
-      <> " | accession "
-      <> candidate.fact.accession
-    })
-    |> string.join("\n")
-  }
+  us_text(
+    company
+    <> " comparable "
+    <> periods.class_name(value.period_class)
+    <> " trend:\n"
+    <> {
+      value.points
+      |> list.map(fn(candidate) {
+        "- "
+        <> candidate.fact.end
+        <> ": "
+        <> candidate.raw_value
+        <> " "
+        <> candidate.unit
+        <> " | accession "
+        <> candidate.fact.accession
+      })
+      |> string.join("\n")
+    },
+  )
 }
 
 fn render_calculated_metric(
   company: String,
   value: stock_metrics.Derived,
 ) -> String {
-  company
-  <> " calculated "
-  <> value.calculation.name
-  <> ": "
-  <> decimal.to_string(value.calculation.value)
-  <> " "
-  <> value.output_unit
-  <> " from "
-  <> {
-    value.sources
-    |> list.map(fn(source) {
-      source.name <> "@" <> source.candidate.fact.accession
-    })
-    |> string.join(", ")
-  }
+  us_text(
+    company
+    <> " calculated "
+    <> value.calculation.name
+    <> ": "
+    <> decimal.to_string(value.calculation.value)
+    <> " "
+    <> value.output_unit
+    <> " from "
+    <> {
+      value.sources
+      |> list.map(fn(source) {
+        source.name <> "@" <> source.candidate.fact.accession
+      })
+      |> string.join(", ")
+    },
+  )
 }
 
 fn render_growth(company: String, value: stock_metrics.GrowthSeries) -> String {
-  company
-  <> " "
-  <> stock_metrics.growth_gap_name(value.gap)
-  <> " growth:\n"
-  <> {
-    value.points
-    |> list.map(fn(point) {
-      "- "
-      <> point.previous.fact.end
-      <> " to "
-      <> point.current.fact.end
-      <> ": "
-      <> decimal.to_string(point.calculation.value)
-      <> " percentage points"
-    })
-    |> string.join("\n")
-  }
+  us_text(
+    company
+    <> " "
+    <> stock_metrics.growth_gap_name(value.gap)
+    <> " growth:\n"
+    <> {
+      value.points
+      |> list.map(fn(point) {
+        "- "
+        <> point.previous.fact.end
+        <> " to "
+        <> point.current.fact.end
+        <> ": "
+        <> decimal.to_string(point.calculation.value)
+        <> " percentage points"
+      })
+      |> string.join("\n")
+    },
+  )
 }
 
 fn render_ttm(
   company: String,
   value: stock_metrics.TrailingTwelveMonths,
 ) -> String {
-  company
-  <> " trailing twelve months: "
-  <> decimal.to_string(value.calculation.value)
-  <> " "
-  <> value.output_unit
-  <> " ("
-  <> value.start
-  <> " through "
-  <> value.end
-  <> ")"
+  us_text(
+    company
+    <> " trailing twelve months: "
+    <> decimal.to_string(value.calculation.value)
+    <> " "
+    <> value.output_unit
+    <> " ("
+    <> value.start
+    <> " through "
+    <> value.end
+    <> ")",
+  )
 }
 
 fn render_composed_ttm(
   company: String,
   value: stock_metrics.ComposedTrailingTwelveMonths,
 ) -> String {
-  company
-  <> " composed trailing twelve months: "
-  <> decimal.to_string(value.calculation.value)
-  <> " "
-  <> value.output_unit
-  <> " ("
-  <> value.start
-  <> " through "
-  <> value.end
-  <> "; direct and derived quarter identities retained)"
+  us_text(
+    company
+    <> " composed trailing twelve months: "
+    <> decimal.to_string(value.calculation.value)
+    <> " "
+    <> value.output_unit
+    <> " ("
+    <> value.start
+    <> " through "
+    <> value.end
+    <> "; direct and derived quarter identities retained)",
+  )
 }
 
 fn q4_json(
@@ -3164,7 +3199,7 @@ fn resolved_period_json(value: ResolvedPeriod) -> json.Json {
 }
 
 fn sec_metadata(company: xbrl.CompanyFacts) -> List(#(String, json.Json)) {
-  [
+  list.append(us_track_fields(), [
     #("provider", json.string("SEC EDGAR XBRL")),
     #(
       "source",
@@ -3183,7 +3218,31 @@ fn sec_metadata(company: xbrl.CompanyFacts) -> List(#(String, json.Json)) {
     #("coverage", json.string("us_gaap_non_custom_entity_wide_direct_facts")),
     #("cik", json.string(finance_sec.cik_value(company.cik))),
     #("company", json.string(company.entity_name)),
-  ]
+  ])
+}
+
+fn us_track_fields() -> List(#(String, json.Json)) {
+  let assert Ok(value) =
+    track_context.new(
+      track: finance_track.Us,
+      market_scope: "us_sec_normalized_fundamentals",
+      venue_mic: None,
+      board: None,
+      timezone: None,
+      source_language: "en-US",
+      providers: ["SEC EDGAR XBRL"],
+      entitlement: "sec_public_data_fair_access_terms_apply",
+      limitations: [
+        "non_custom_taxonomies_only",
+        "entity_wide_facts_only",
+        "audited_direct_metric_registry_only",
+      ],
+    )
+  track_json.result_fields(value)
+}
+
+fn us_text(value: String) -> String {
+  "US track | SEC EDGAR XBRL fundamentals\n" <> value
 }
 
 fn candidate_label(value: fundamentals.Candidate) -> String {
@@ -3207,44 +3266,28 @@ fn resolution_json(
   filing_policy: String,
 ) -> json.Json {
   let definition = fundamentals.query_definition(query)
-  json.object([
-    #("provider", json.string("SEC EDGAR XBRL")),
-    #(
-      "source",
-      json.string(
-        "https://data.sec.gov/api/xbrl/companyfacts/CIK"
-        <> finance_sec.cik_value(company.cik)
-        <> ".json",
+  json.object(
+    list.append(sec_metadata(company), [
+      #("metric", json.string(fundamentals.metric_name(definition.metric))),
+      #("resolution", json.string(resolution_name(resolution))),
+      #("filingPolicy", json.string(filing_policy)),
+      #("periodClass", case fundamentals.query_period_class(query) {
+        Some(class) -> json.string(periods.class_name(class))
+        None -> json.string("exact_duration")
+      }),
+      #("definition", definition_json(definition)),
+      #(
+        "candidates",
+        json.array(identifier.resolution_candidates(resolution), candidate_json),
       ),
-    ),
-    #("access", json.string("read_only_public_data")),
-    #("entitlement", json.string("sec_public_data_fair_access_terms_apply")),
-    #(
-      "freshness",
-      json.string("sec_xbrl_real_time_typical_delay_under_one_minute"),
-    ),
-    #("coverage", json.string("us_gaap_non_custom_entity_wide_direct_facts")),
-    #("cik", json.string(finance_sec.cik_value(company.cik))),
-    #("company", json.string(company.entity_name)),
-    #("metric", json.string(fundamentals.metric_name(definition.metric))),
-    #("resolution", json.string(resolution_name(resolution))),
-    #("filingPolicy", json.string(filing_policy)),
-    #("periodClass", case fundamentals.query_period_class(query) {
-      Some(class) -> json.string(periods.class_name(class))
-      None -> json.string("exact_duration")
-    }),
-    #("definition", definition_json(definition)),
-    #(
-      "candidates",
-      json.array(identifier.resolution_candidates(resolution), candidate_json),
-    ),
-    #(
-      "warning",
-      json.string(
-        "A normalized name is valid only under the disclosed direct-tag, exact-period policy; ambiguity is not resolved automatically",
+      #(
+        "warning",
+        json.string(
+          "A normalized name is valid only under the disclosed direct-tag, exact-period policy; ambiguity is not resolved automatically",
+        ),
       ),
-    ),
-  ])
+    ]),
+  )
 }
 
 fn definition_json(value: fundamentals.Definition) -> json.Json {

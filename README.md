@@ -4,7 +4,8 @@ Gleam plugins for the Pi coding agent, compiled with Gleam and bundled for Pi
 with Bun.
 
 See [ROADMAP.md](ROADMAP.md) for the proposed finance and stock-market plugin
-family and [FUNCTIONAL_DESIGN.md](FUNCTIONAL_DESIGN.md) for the mandatory
+family, [TRACK_GUIDE.md](TRACK_GUIDE.md) for adding another isolated market
+track, and [FUNCTIONAL_DESIGN.md](FUNCTIONAL_DESIGN.md) for the mandatory
 functional-core/effect-shell architecture.
 
 ## Status
@@ -13,10 +14,10 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- eight Experimental finance foundations and two provider adapters under
-  `finance/`;
-- the first F0 finance plugins: `finance_setup`, `finance_guardrails`, and
-  `finance_symbols`;
+- eighteen Experimental finance packages, including two provider adapters and
+  the first isolated CN/HK identity and calendar domain layers;
+- the first F0 finance plugins: `finance_setup`, `finance_track_status`,
+  `finance_guardrails`, and `finance_symbols`;
 - the first F1 research slices: `sec_edgar`, `sec_xbrl`, and
   `stock_fundamentals`, backed by the read-only `finance_sec` adapter;
 - `hello`, a reference command and typed tool;
@@ -28,6 +29,9 @@ The implementation was developed against Pi `0.83.0` at commit `305c014dc`,
 Gleam `1.18.0`, and Bun `1.3.14`. The reference and F0 plugins build to
 standalone ESM artifacts and load with Pi `0.83.0` without model credentials.
 `finance_symbols` uses OpenFIGI v3 only when one of its tools is executed.
+`finance_track_status` keeps the active `cn`/`hk`/`us` navigation context visible
+with currency, timezone, and an explicit non-secret agent contact, and restores
+track choices from the active session branch.
 `sec_edgar` likewise performs no request until invoked and requires an SEC
 fair-access contact in `SEC_USER_AGENT_CONTACT`; `sec_xbrl` shares that contract
 and preserves SEC numeric source lexemes rather than converting through binary
@@ -154,8 +158,15 @@ pi-sparkles/
 │   └── test/
 ├── finance/                      reusable non-Pi Gleam libraries
 │   ├── finance_calendar/
+│   ├── finance_cn_calendar/
+│   ├── finance_cn_identity/
 │   ├── finance_core/
+│   ├── finance_evidence/
+│   ├── finance_hk_calendar/
+│   ├── finance_hk_identity/
 │   ├── finance_http/
+│   ├── finance_listing/
+│   ├── finance_market_calendar/
 │   ├── finance_math/
 │   ├── finance_openfigi/
 │   ├── finance_provenance/
@@ -165,6 +176,7 @@ pi-sparkles/
 │   └── finance_testkit/
 ├── plugins/
 │   ├── finance_setup/            capability/configuration preflight
+│   ├── finance_track_status/     visible cn/hk/us state and switching
 │   ├── finance_guardrails/       evidence and freshness policy
 │   ├── finance_symbols/          OpenFIGI v3 identity resolution
 │   ├── sec_edgar/                SEC company and recent filing metadata
@@ -194,6 +206,12 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | Package | Role |
 | --- | --- |
 | `finance_core` | Exact decimals, money, identifiers, instruments, sources, time, and the canonical `Observation(a)` envelope. |
+| `finance_track` | Closed `cn`/`hk`/`us` market identity plus validated, versioned result context and explicit cross-track legs. |
+| `finance_evidence` | Typed observation/evidence compatibility for units, quality, time ordering, licences, and same/cross-track composition. |
+| `finance_listing` | Track/MIC-scoped listing keys plus effective aliases and evidence-backed relationships. |
+| `finance_cn_identity` / `finance_hk_identity` | Isolated code, venue, board, ambiguity, alias, and A/H identity laws without provider fallback. |
+| `finance_market_calendar` | Source/licence/version-labelled calendar datasets that fail outside declared coverage. |
+| `finance_cn_calendar` / `finance_hk_calendar` | Track-specific calendar constructors over the shared engine; authoritative data remains injected. |
 | `finance_provenance` | Evidence identities, assumptions, licences, manifests, canonical encoding, hashing, redaction, and verification plans. |
 | `finance_http` | Safe requests, bounded fetch transport, cancellation, retry/`Retry-After`, rate limits, pooling, scheduling, caching, and cassettes. |
 | `finance_math` | Composable exact formula trees plus explicit approximate statistics, regression, risk, cash-flow, and fixed-income policies. |
@@ -204,8 +222,8 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_table` | Typed tables with validated cells and deterministic Markdown, CSV, and JSON rendering. |
 | `finance_testkit` | Seeded fixtures, scripted clocks/transports, cassette helpers, generators, scenarios, and redaction assertions. |
 
-Dependencies point inward: core imports no finance package; provider-neutral
-packages build on core where needed; series composes core and math;
+Dependencies point inward: core imports no finance package; track and other
+provider-neutral packages build on core where needed; series composes core and math;
 testkit supports core and HTTP; OpenFIGI and SEC compose core/HTTP as needed.
 None imports Pi.
 Pure calculation and policy can therefore run in any Gleam program and in tests
@@ -221,6 +239,8 @@ shell.
 The first F0 plugin batch demonstrates this direction:
 
 - `finance_setup` validates defaults and reports only capabilities it can prove;
+- `finance_track_status` visibly marks and explicitly switches the active
+  `cn`/`hk`/`us` navigation context without relabelling market evidence;
 - `finance_guardrails` composes evidence checks and accumulates typed issues;
 - `finance_symbols` consumes `finance_openfigi`, then applies a small pure policy
   returning `NoMatch`, `Unique`, or `Ambiguous` instead of guessing.

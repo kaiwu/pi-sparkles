@@ -26,13 +26,28 @@ effects. Pass clocks, transport, storage, randomness, and entitlements as
 explicit capabilities. Keep unavoidable mutable cells generic and put no
 business logic in JavaScript.
 
-The finance foundations are `finance_core`, `finance_provenance`,
-`finance_http`, `finance_math`, `finance_series`, `finance_calendar`,
+The finance foundations are `finance_core`, `finance_track`, `finance_evidence`,
+`finance_listing`, `finance_provenance`, `finance_http`, `finance_math`,
+`finance_series`, `finance_calendar`, `finance_market_calendar`,
 `finance_table`, and `finance_testkit`. They are Experimental independent Gleam
 packages, not Pi plugins. Keep their dependency graph acyclic: core imports no
-finance package; provider-neutral packages may build inward on core; series may
-compose core, math, and calendar; testkit may support core and HTTP. Finance
-packages must never import `pi_gleam`.
+finance package; track and other provider-neutral packages may build inward on
+core; evidence composes canonical observations, provenance, and track contexts;
+series may compose core, math, and calendar; testkit may support core and HTTP.
+Finance packages must never import `pi_gleam`.
+
+The only user-visible market track identifiers are `cn` (mainland China), `hk`
+(Hong Kong), and `us` (United States). Use `finance_track` for the shared
+validated result context. Global and cross-market workflows retain separately
+labelled track legs; they are not additional tracks. Market-specific tool
+results must expose their track, and no provider or identity resolver may
+silently move a request between tracks.
+
+`finance_track_status` owns the session's visible active navigation track.
+Switching among `cn`, `hk`, and `us` updates status and emits the shared track
+event, but must never relabel observations, substitute a provider/calendar, or
+share market-owned persisted state. Currency and timezone in the statusline are
+interaction defaults; source observations remain controlling.
 
 Provider adapters such as `finance_openfigi` and `finance_sec` are also independent finance
 packages but sit outside the provider-neutral foundation. They may compose core

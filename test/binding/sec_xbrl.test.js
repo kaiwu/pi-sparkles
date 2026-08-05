@@ -56,6 +56,10 @@ describe("sec_xbrl provider boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(concepts.details);
+    expect(
+      concepts.content[0].text.startsWith("US track | SEC EDGAR XBRL\n"),
+    ).toBeTrue();
     expect(concepts.details.candidates[0]).toMatchObject({
       taxonomy: "us-gaap",
       tag: "Assets",
@@ -69,6 +73,10 @@ describe("sec_xbrl provider boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(facts.details);
+    expect(
+      facts.content[0].text.startsWith("US track | SEC EDGAR XBRL\n"),
+    ).toBeTrue();
     expect(facts.details.facts).toHaveLength(2);
     expect(facts.details.facts[0]).toMatchObject({
       value: "9007199254740994.200",
@@ -92,6 +100,24 @@ describe("sec_xbrl provider boundary", () => {
     }
   });
 });
+
+function expectUsTrack(details) {
+  expect(details).toMatchObject({
+    track: "us",
+    trackContext: {
+      schemaVersion: 1,
+      track: "us",
+      marketScope: "us_sec_xbrl_company_facts",
+      venueMic: null,
+      board: null,
+      timezone: null,
+      sourceLanguage: "en-US",
+      providers: ["SEC EDGAR XBRL"],
+      entitlement: "sec_public_data_fair_access_terms_apply",
+      limitations: ["non_custom_taxonomies_only", "entity_wide_facts_only"],
+    },
+  });
+}
 
 function restore(name, value) {
   if (value === undefined) delete process.env[name];

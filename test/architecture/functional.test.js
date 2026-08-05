@@ -66,7 +66,15 @@ describe("functional architecture", () => {
   test("pure finance foundations contain no Promise or FFI boundary", () => {
     for (const name of [
       "finance_core",
+      "finance_track",
+      "finance_evidence",
+      "finance_listing",
       "finance_calendar",
+      "finance_market_calendar",
+      "finance_cn_identity",
+      "finance_cn_calendar",
+      "finance_hk_identity",
+      "finance_hk_calendar",
       "finance_math",
       "finance_series",
       "finance_table",
@@ -78,6 +86,16 @@ describe("functional architecture", () => {
         expect(gleam.includes("@external"), display(path)).toBeFalse();
       }
       expect(filesBelow(directory, ".mjs"), name).toEqual([]);
+    }
+  });
+
+  test("cn and hk plugins cannot import SEC market-domain packages", () => {
+    const forbidden = /^import finance_sec(?:\s|\/|\.|$)/m;
+    for (const pkg of discoverPackages(PLUGINS_DIR)) {
+      if (!/pi_sparkles_(cn|hk)_/.test(pkg.name)) continue;
+      for (const path of filesBelow(join(pkg.directory, "src"), ".gleam")) {
+        expect(forbidden.test(source(path)), display(path)).toBeFalse();
+      }
     }
   });
 });

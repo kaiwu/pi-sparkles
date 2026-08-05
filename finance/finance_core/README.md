@@ -48,7 +48,7 @@ calendar/resolver capability, not a core side effect.
 | `finance_core/market` | exchange/session, timeframe, delayed/real-time and market-status labels |
 | `finance_core/adjustment` | raw, split-adjusted, dividend-adjusted, and provider-defined adjustment bases |
 | `finance_core/observation` | the common source/freshness/evidence envelope for a typed value |
-| `finance_core/observation_json` | canonical schema-v1 generic observation encoding and strict decoding |
+| `finance_core/observation_json` | canonical schema-v2 generic observation encoding plus backward v1 decoding |
 
 The root `finance_core` module may re-export only a small ergonomic subset. It
 must not become a catch-all module whose changes force every consumer to
@@ -116,7 +116,8 @@ requires an external observed rate and is not part of core.
 `Observation(a)` contains:
 
 - `value: a`;
-- `as_of` and `retrieved_at` UTC instants;
+- `as_of` and `retrieved_at` UTC instants plus an optional named local
+  timezone; unknown zones remain absent rather than inferred;
 - source kind and a minimal `SourceRef` containing provider and safe reference;
 - `evidence_id: Option(String)` for a richer provenance record;
 - freshness state (`Fresh`, `Stale`, `UnknownFreshness`) and optional maximum
@@ -183,7 +184,9 @@ Gleam compatibility policy.
 - At least US, mainland China, and Hong Kong listings fit without market-specific
   escape hatches.
 - Ambiguous symbols remain ambiguous in tests.
-- Observation JSON round-trips all provenance and freshness labels.
+- Observation JSON schema v2 round-trips timezone and all provenance/freshness
+  labels; the decoder accepts schema v1 as an absent timezone and rejects
+  unknown versions.
 - No finance-package dependency cycle exists.
 - Formatting, warnings-as-errors build, unit tests, and Hex tarball audit pass.
 

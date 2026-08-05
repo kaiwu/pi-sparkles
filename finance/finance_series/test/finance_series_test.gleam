@@ -478,6 +478,7 @@ fn observed_value(
     value: value,
     as_of: at(milliseconds),
     retrieved_at: at(milliseconds),
+    timezone: None,
     source: source_ref,
     evidence_id: Some("evidence"),
     freshness: observation.UnknownFreshness,

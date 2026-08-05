@@ -6,8 +6,9 @@ import finance_core/source
 import finance_core/time
 import gleam/dynamic/decode
 import gleam/json.{type Json}
+import gleam/option.{None}
 
-pub const schema_version = 1
+pub const schema_version = 2
 
 pub fn encode(
   value: observation.Observation(value),
@@ -27,6 +28,12 @@ pub fn to_json(
     #("value", encode_value(value.value)),
     #("asOfUnixMs", json.int(time.unix_milliseconds(value.as_of))),
     #("retrievedAtUnixMs", json.int(time.unix_milliseconds(value.retrieved_at))),
+    #(
+      "timezone",
+      json.nullable(value.timezone, fn(zone) {
+        json.string(time.timezone_name(zone))
+      }),
+    ),
     #("source", source_json(value.source)),
     #("evidenceId", json.nullable(value.evidence_id, json.string)),
     #("freshness", freshness_json(value.freshness)),
@@ -48,7 +55,16 @@ pub fn decode(
 pub fn observation_decoder(
   value_decoder: decode.Decoder(value),
 ) -> decode.Decoder(observation.Observation(value)) {
-  use _version <- decode.field("schemaVersion", version_decoder())
+  use version <- decode.field("schemaVersion", version_decoder())
+  case version {
+    1 -> observation_v1_decoder(value_decoder)
+    _ -> observation_v2_decoder(value_decoder)
+  }
+}
+
+fn observation_v1_decoder(
+  value_decoder: decode.Decoder(value),
+) -> decode.Decoder(observation.Observation(value)) {
   use value <- decode.field("value", value_decoder)
   use as_of <- decode.field("asOfUnixMs", instant_decoder())
   use retrieved_at <- decode.field("retrievedAtUnixMs", instant_decoder())
@@ -67,6 +83,41 @@ pub fn observation_decoder(
     value: value,
     as_of: as_of,
     retrieved_at: retrieved_at,
+    timezone: None,
+    source: source,
+    evidence_id: evidence_id,
+    freshness: freshness,
+    entitlement: entitlement,
+    quality: quality,
+    unit: unit,
+    adjustment: adjustment,
+    session: session,
+  ))
+}
+
+fn observation_v2_decoder(
+  value_decoder: decode.Decoder(value),
+) -> decode.Decoder(observation.Observation(value)) {
+  use value <- decode.field("value", value_decoder)
+  use as_of <- decode.field("asOfUnixMs", instant_decoder())
+  use retrieved_at <- decode.field("retrievedAtUnixMs", instant_decoder())
+  use timezone <- decode.field("timezone", decode.optional(timezone_decoder()))
+  use source <- decode.field("source", source_decoder())
+  use evidence_id <- decode.field("evidenceId", decode.optional(decode.string))
+  use freshness <- decode.field("freshness", freshness_decoder())
+  use entitlement <- decode.field("entitlement", entitlement_decoder())
+  use quality <- decode.field("quality", quality_decoder())
+  use unit <- decode.field("unit", decode.optional(unit_decoder()))
+  use adjustment <- decode.field(
+    "adjustment",
+    decode.optional(adjustment_decoder()),
+  )
+  use session <- decode.field("session", decode.optional(session_decoder()))
+  decode.success(observation.Observation(
+    value: value,
+    as_of: as_of,
+    retrieved_at: retrieved_at,
+    timezone: timezone,
     source: source,
     evidence_id: evidence_id,
     freshness: freshness,
@@ -81,9 +132,21 @@ pub fn observation_decoder(
 fn version_decoder() -> decode.Decoder(Int) {
   decode.int
   |> decode.then(fn(version) {
-    case version == schema_version {
+    case version == 1 || version == schema_version {
       True -> decode.success(version)
-      False -> decode.failure(schema_version, "finance observation schema v1")
+      False ->
+        decode.failure(schema_version, "finance observation schema v1 or v2")
+    }
+  })
+}
+
+fn timezone_decoder() -> decode.Decoder(time.Timezone) {
+  let assert Ok(placeholder) = time.timezone("UTC")
+  decode.string
+  |> decode.then(fn(value) {
+    case time.timezone(value) {
+      Ok(value) -> decode.success(value)
+      Error(_) -> decode.failure(placeholder, "valid IANA timezone")
     }
   })
 }

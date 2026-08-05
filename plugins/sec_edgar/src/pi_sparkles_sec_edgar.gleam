@@ -5,6 +5,9 @@ import finance_sec
 import finance_sec/request
 import finance_sec/response.{type Filing, type Submissions}
 import finance_sec/runtime
+import finance_track
+import finance_track/context as track_context
+import finance_track/json as track_json
 import gleam/dynamic/decode
 import gleam/int
 import gleam/javascript/promise.{type Promise}
@@ -325,7 +328,8 @@ fn optional_string_field(
 }
 
 fn render_company_matches(matches: List(company_search.Match)) -> String {
-  case matches {
+  "US track | SEC EDGAR\n"
+  <> case matches {
     [] -> "SEC company ticker file found no candidates; do not infer a CIK"
     matches ->
       "SEC company candidates ("
@@ -349,7 +353,8 @@ fn render_company_matches(matches: List(company_search.Match)) -> String {
 }
 
 fn render_filings(value: Submissions, filings: List(Filing)) -> String {
-  case filings {
+  "US track | SEC EDGAR\n"
+  <> case filings {
     [] -> value.name <> ": no recent filings matched the requested form"
     filings ->
       value.name
@@ -376,21 +381,31 @@ fn render_filings(value: Submissions, filings: List(Filing)) -> String {
 }
 
 fn company_matches_json(matches: List(company_search.Match)) -> json.Json {
-  json.object([
-    #("provider", json.string("SEC EDGAR")),
-    #("source", json.string("https://www.sec.gov/files/company_tickers.json")),
-    #("access", json.string("read_only_public_data")),
-    #("entitlement", json.string("sec_public_data_fair_access_terms_apply")),
-    #("freshness", json.string("file_timestamp_not_supplied")),
-    #("unit", json.string("not_applicable")),
-    #(
-      "warning",
-      json.string(
-        "SEC does not guarantee the ticker association file is accurate or current; use results as candidates",
-      ),
+  json.object(
+    list.append(
+      us_track_fields("us_sec_company_reference", [
+        "ticker_association_not_guaranteed_current_or_complete",
+      ]),
+      [
+        #("provider", json.string("SEC EDGAR")),
+        #(
+          "source",
+          json.string("https://www.sec.gov/files/company_tickers.json"),
+        ),
+        #("access", json.string("read_only_public_data")),
+        #("entitlement", json.string("sec_public_data_fair_access_terms_apply")),
+        #("freshness", json.string("file_timestamp_not_supplied")),
+        #("unit", json.string("not_applicable")),
+        #(
+          "warning",
+          json.string(
+            "SEC does not guarantee the ticker association file is accurate or current; use results as candidates",
+          ),
+        ),
+        #("candidates", json.array(matches, company_match_json)),
+      ],
     ),
-    #("candidates", json.array(matches, company_match_json)),
-  ])
+  )
 }
 
 fn company_match_json(value: company_search.Match) -> json.Json {
@@ -403,26 +418,50 @@ fn company_match_json(value: company_search.Match) -> json.Json {
 }
 
 fn submissions_json(value: Submissions, filings: List(Filing)) -> json.Json {
-  json.object([
-    #("provider", json.string("SEC EDGAR")),
-    #(
-      "source",
-      json.string(
-        "https://data.sec.gov/submissions/CIK"
-        <> finance_sec.cik_value(value.cik)
-        <> ".json",
-      ),
+  json.object(
+    list.append(
+      us_track_fields("us_sec_recent_submissions", ["recent_filings_only"]),
+      [
+        #("provider", json.string("SEC EDGAR")),
+        #(
+          "source",
+          json.string(
+            "https://data.sec.gov/submissions/CIK"
+            <> finance_sec.cik_value(value.cik)
+            <> ".json",
+          ),
+        ),
+        #("access", json.string("read_only_public_data")),
+        #("entitlement", json.string("sec_public_data_fair_access_terms_apply")),
+        #("freshness", json.string("sec_submissions_updated_in_real_time")),
+        #("unit", json.string("not_applicable")),
+        #("cik", json.string(finance_sec.cik_value(value.cik))),
+        #("company", json.string(value.name)),
+        #("tickers", json.array(value.tickers, json.string)),
+        #("exchanges", json.array(value.exchanges, json.string)),
+        #("filings", json.array(filings, filing_json)),
+      ],
     ),
-    #("access", json.string("read_only_public_data")),
-    #("entitlement", json.string("sec_public_data_fair_access_terms_apply")),
-    #("freshness", json.string("sec_submissions_updated_in_real_time")),
-    #("unit", json.string("not_applicable")),
-    #("cik", json.string(finance_sec.cik_value(value.cik))),
-    #("company", json.string(value.name)),
-    #("tickers", json.array(value.tickers, json.string)),
-    #("exchanges", json.array(value.exchanges, json.string)),
-    #("filings", json.array(filings, filing_json)),
-  ])
+  )
+}
+
+fn us_track_fields(
+  market_scope: String,
+  limitations: List(String),
+) -> List(#(String, json.Json)) {
+  let assert Ok(value) =
+    track_context.new(
+      track: finance_track.Us,
+      market_scope: market_scope,
+      venue_mic: None,
+      board: None,
+      timezone: None,
+      source_language: "en-US",
+      providers: ["SEC EDGAR"],
+      entitlement: "sec_public_data_fair_access_terms_apply",
+      limitations: limitations,
+    )
+  track_json.result_fields(value)
 }
 
 fn filing_json(value: Filing) -> json.Json {

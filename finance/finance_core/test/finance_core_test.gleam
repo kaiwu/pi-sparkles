@@ -267,6 +267,7 @@ pub fn observation_map_preserves_metadata_test() {
   let assert Ok(as_of) = time.instant(1_700_000_000_000)
   let assert Ok(retrieved_at) = time.instant(1_700_000_001_000)
   let assert Ok(maximum_age) = time.duration(5000)
+  let assert Ok(timezone) = time.timezone("America/New_York")
   let assert Ok(source) =
     source.new(
       provider: "test-provider",
@@ -278,6 +279,7 @@ pub fn observation_map_preserves_metadata_test() {
       value: 21,
       as_of: as_of,
       retrieved_at: retrieved_at,
+      timezone: Some(timezone),
       source: source,
       evidence_id: Some("evidence-1"),
       freshness: observation.Fresh(maximum_age),
@@ -295,6 +297,8 @@ pub fn observation_map_preserves_metadata_test() {
   |> should.equal(source)
   mapped.evidence_id
   |> should.equal(Some("evidence-1"))
+  mapped.timezone
+  |> should.equal(Some(timezone))
   original.evidence_id
   |> should.not_equal(None)
   observation.map(original, fn(value) { value })
@@ -371,11 +375,13 @@ pub fn observation_json_is_canonical_versioned_and_round_trips_test() {
       basis: "split-and-cash-dividend-v2",
     )
   let assert Ok(session) = market.other_session("midday-reopen-auction")
+  let assert Ok(timezone) = time.timezone("Asia/Hong_Kong")
   let original =
     observation.Observation(
       value: "321.40",
       as_of: as_of,
       retrieved_at: retrieved_at,
+      timezone: Some(timezone),
       source: source_ref,
       evidence_id: Some("sha256:evidence"),
       freshness: observation.Stale(age, maximum_age),
@@ -393,7 +399,18 @@ pub fn observation_json_is_canonical_versioned_and_round_trips_test() {
   observation_json.encode(decoded, json.string)
   |> should.equal(encoded)
   encoded
-  |> string_starts_with("{\"schemaVersion\":1,\"value\":\"321.40\"")
+  |> string_starts_with("{\"schemaVersion\":2,\"value\":\"321.40\"")
+}
+
+pub fn observation_json_decodes_v1_without_inventing_timezone_test() {
+  let version_one =
+    canonical_minimal_observation_json()
+    |> replace_once("\"schemaVersion\":2", "\"schemaVersion\":1")
+    |> replace_once(",\"timezone\":null", "")
+  let assert Ok(decoded) = observation_json.decode(version_one, decode.int)
+
+  decoded.timezone
+  |> should.equal(None)
 }
 
 pub fn observation_json_rejects_unknown_versions_and_enum_values_test() {
@@ -402,7 +419,7 @@ pub fn observation_json_rejects_unknown_versions_and_enum_values_test() {
   |> observation_json.decode(decode.int)
   |> should.be_ok
   valid
-  |> replace_once("\"schemaVersion\":1", "\"schemaVersion\":2")
+  |> replace_once("\"schemaVersion\":2", "\"schemaVersion\":3")
   |> observation_json.decode(decode.int)
   |> should.be_error
   valid
@@ -423,6 +440,7 @@ fn canonical_minimal_observation_json() -> String {
     value: 1,
     as_of: instant,
     retrieved_at: instant,
+    timezone: None,
     source: source_ref,
     evidence_id: None,
     freshness: observation.UnknownFreshness,

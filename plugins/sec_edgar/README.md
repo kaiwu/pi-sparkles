@@ -4,6 +4,11 @@
 recent filing metadata from the SEC's primary EDGAR data APIs. It is the first
 vertical slice above the reusable `finance_sec` provider package.
 
+This is a `us` market-track plugin. Human results begin with `US track`, and
+structured details include top-level `track: "us"` plus a versioned
+`finance_track` context. SEC identity must never become a global default or a
+fallback for `cn` or `hk`.
+
 ## User stories
 
 - Find candidate CIKs from a ticker or company name without guessing among

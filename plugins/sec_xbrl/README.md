@@ -4,6 +4,11 @@
 concepts and retrieving exact raw company facts. It composes `finance_sec` and
 keeps accounting selection policy outside the HTTP and Pi shells.
 
+This is a `us` market-track plugin. Human results begin with `US track`, and
+structured details include top-level `track: "us"` plus a versioned
+`finance_track` context. Its SEC taxonomies, filing classes, periods, and
+coverage are not reused as `cn` or `hk` accounting laws.
+
 ## User stories
 
 - Discover the exact SEC taxonomy/tag used for a company concept instead of

@@ -7,6 +7,9 @@ import finance_sec/runtime
 import finance_sec/xbrl.{
   type CompanyConcept, type CompanyFacts, type Concept, type FactValue,
 }
+import finance_track
+import finance_track/context as track_context
+import finance_track/json as track_json
 import gleam/dynamic/decode
 import gleam/int
 import gleam/javascript/promise.{type Promise}
@@ -346,7 +349,8 @@ fn render_concepts(
   company: CompanyFacts,
   matches: List(concept_search.Match),
 ) -> String {
-  case matches {
+  "US track | SEC EDGAR XBRL\n"
+  <> case matches {
     [] ->
       company.entity_name <> ": no standard entity-wide XBRL concepts matched"
     matches ->
@@ -378,7 +382,8 @@ fn render_facts(
   selection: fact_selection.Selection,
 ) -> String {
   let concept = company.concept
-  case selection.facts {
+  "US track | SEC EDGAR XBRL\n"
+  <> case selection.facts {
     [] ->
       company.entity_name
       <> " "
@@ -471,7 +476,7 @@ fn facts_json(
 }
 
 fn provider_fields(source: String) -> List(#(String, json.Json)) {
-  [
+  list.append(us_track_fields(), [
     #("provider", json.string("SEC EDGAR XBRL")),
     #("source", json.string(source)),
     #("access", json.string("read_only_public_data")),
@@ -490,7 +495,23 @@ fn provider_fields(source: String) -> List(#(String, json.Json)) {
         "Raw reported facts are not normalized metrics; units, periods, forms, amendments, frames, and duplicates must be interpreted explicitly",
       ),
     ),
-  ]
+  ])
+}
+
+fn us_track_fields() -> List(#(String, json.Json)) {
+  let assert Ok(value) =
+    track_context.new(
+      track: finance_track.Us,
+      market_scope: "us_sec_xbrl_company_facts",
+      venue_mic: None,
+      board: None,
+      timezone: None,
+      source_language: "en-US",
+      providers: ["SEC EDGAR XBRL"],
+      entitlement: "sec_public_data_fair_access_terms_apply",
+      limitations: ["non_custom_taxonomies_only", "entity_wide_facts_only"],
+    )
+  track_json.result_fields(value)
 }
 
 fn concept_match_json(value: concept_search.Match) -> json.Json {

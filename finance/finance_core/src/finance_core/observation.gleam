@@ -1,5 +1,5 @@
 import finance_core/source.{type SourceRef}
-import finance_core/time.{type Duration, type Instant}
+import finance_core/time.{type Duration, type Instant, type Timezone}
 import gleam/option.{type Option}
 
 pub type Freshness {
@@ -36,6 +36,7 @@ pub type Observation(value) {
     value: value,
     as_of: Instant,
     retrieved_at: Instant,
+    timezone: Option(Timezone),
     source: SourceRef,
     evidence_id: Option(String),
     freshness: Freshness,
@@ -55,6 +56,7 @@ pub fn map(
     value: transform(observation.value),
     as_of: observation.as_of,
     retrieved_at: observation.retrieved_at,
+    timezone: observation.timezone,
     source: observation.source,
     evidence_id: observation.evidence_id,
     freshness: observation.freshness,

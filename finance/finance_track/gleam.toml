@@ -1,0 +1,22 @@
+name = "finance_track"
+version = "0.1.0"
+target = "javascript"
+description = "Explicit cn, hk, and us market-track context for finance results"
+
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+gleam_json = ">= 3.1.0 and < 4.0.0"
+finance_core = { path = "../finance_core" }
+
+[dev-dependencies]
+gleeunit = ">= 1.9.0 and < 2.0.0"
+
+[javascript]
+runtime = "bun"
+
+[metadata.finance]
+status = "experimental"
+

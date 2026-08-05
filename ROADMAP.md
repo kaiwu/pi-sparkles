@@ -107,8 +107,14 @@ prevents every plugin from inventing incompatible finance types.
 | Package | State | Purpose | First types/capabilities |
 | --- | --- | --- | --- |
 | `finance_core` | Experimental | Canonical domain model | exact values, identity ambiguity, units/adjustments/sessions, and versioned `Observation(a)` JSON |
+| `finance_track` | Experimental | User-visible market scope | closed `cn`/`hk`/`us` identity, validated result context, versioned JSON, and explicit cross-track legs |
+| `finance_evidence` | Experimental | Cross-input evidence policy | typed unit, quality/restatement, time-order, licence/redistribution, and same/cross-track compatibility |
+| `finance_listing` | Experimental | Effective listing identity | track/MIC-scoped keys, effective aliases, and evidence-backed relationships without market-owned code or board rules |
 | `finance_series` | Experimental | Time-series operations | ordered observations, missing policy, exact/as-of alignment, resampling, OHLCV, exact returns/paths, and attribution |
 | `finance_calendar` | Experimental | Trading-time rules | sessions, holidays, business days, joint calendars, coupon schedules, and named day counts; provider data remains pluggable |
+| `finance_market_calendar` | Experimental | Bounded calendar data | track/source/licence/version/coverage wrapper that rejects dates outside reviewed datasets |
+| `finance_cn_identity` / `finance_hk_identity` | Experimental | Isolated market identity laws | explicit code/venue/board/currency, ambiguity preservation, historical aliases, and A/H legs over synthetic tests |
+| `finance_cn_calendar` / `finance_hk_calendar` | Experimental | Isolated market-time contracts | market-specific contexts over injected sessions/overrides; no unreviewed exchange dataset bundled |
 | `finance_provenance` | Experimental | Reproducible evidence | canonical manifests, redaction, identities, assumptions, and bounded injected verification |
 | `finance_http` | Experimental | Provider-safe transport | retry/backoff, rate limits, bounded concurrency, cache/cassette policy, cancellation, and redacted errors |
 | `finance_table` | Experimental | Agent-friendly output | unit-aware annotated Markdown/CSV/JSON with compound budgets and omission summaries |
@@ -278,6 +284,7 @@ Priorities mean:
 | Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
 | --- | --- | --- | --- |
 | `pi_finance_setup` | P0 | Checks provider keys, connectivity, entitlements, currency/timezone defaults, and installed companion plugins without revealing secrets. | `/finance-setup`, `finance_capabilities`, `finance_provider_health` |
+| `pi_finance_track_status` | P0 | Keeps the active `cn`/`hk`/`us` navigation track visible with currency, timezone, and agent contact; restores and switches it without relabelling data. | `/finance-track`, `/cn-track`, `/hk-track`, `/us-track`, `finance_track_status`, `finance_track_switch` |
 | `pi_finance_guardrails` | P0 | Shared freshness, provenance, disclaimer, and action policy. Rejects answers that mix incompatible currencies, periods, or adjustment bases. | `/finance-policy`, `finance_validate_evidence`, `finance_check_freshness` |
 | `pi_finance_symbols` | P0 | Resolves company names, tickers, FIGIs, CIKs, MICs, share classes, and historical symbols; returns ambiguity instead of guessing. | `/symbol`, `security_search`, `security_resolve`, `security_identifiers` |
 | `pi_finance_calendar` | P0 | Answers exchange session/holiday questions and normalizes market timestamps. | `/market-hours`, `market_session`, `market_days`, `next_market_open` |

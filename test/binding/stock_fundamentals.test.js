@@ -130,6 +130,12 @@ describe("stock_fundamentals normalization boundary", () => {
         undefined,
         {},
       );
+    expectUsTrack(definitions.details);
+    expect(
+      definitions.content[0].text.startsWith(
+        "US track | SEC EDGAR XBRL fundamentals\n",
+      ),
+    ).toBeTrue();
     expect(definitions.details.definitions).toHaveLength(7);
     expect(
       definitions.details.definitions.find((item) => item.metric === "revenue"),
@@ -148,6 +154,7 @@ describe("stock_fundamentals normalization boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(result.details);
     expect(result.details.resolution).toBe("ambiguous");
     expect(result.details.candidates.map((candidate) => candidate.value)).toEqual([
       "9007199254740994.200",
@@ -172,6 +179,7 @@ describe("stock_fundamentals normalization boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(classified.details);
     expect(classified.details.resolution).toBe("unique");
     expect(classified.details.periodClass).toBe("annual");
     expect(classified.details.filingPolicy).toBe("latest_filed");
@@ -192,6 +200,12 @@ describe("stock_fundamentals normalization boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(q4.details);
+    expect(
+      q4.content[0].text.startsWith(
+        "US track | SEC EDGAR XBRL fundamentals\n",
+      ),
+    ).toBeTrue();
     expect(q4.details).toMatchObject({
       status: "derived",
       metric: "revenue",
@@ -219,6 +233,7 @@ describe("stock_fundamentals normalization boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(trend.details);
     expect(trend.details).toMatchObject({
       status: "comparable",
       metric: "revenue",
@@ -249,6 +264,7 @@ describe("stock_fundamentals normalization boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(growth.details);
     expect(growth.details).toMatchObject({
       status: "calculated",
       metric: "revenue",
@@ -280,6 +296,7 @@ describe("stock_fundamentals normalization boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(ttm.details);
     expect(ttm.details).toMatchObject({
       status: "calculated",
       metric: "revenue",
@@ -316,6 +333,7 @@ describe("stock_fundamentals normalization boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(ttmBridge.details);
     expect(ttmBridge.details).toMatchObject({
       status: "calculated",
       metric: "operating_cash_flow",
@@ -358,6 +376,7 @@ describe("stock_fundamentals normalization boundary", () => {
         undefined,
         {},
       );
+    expectUsTrack(composedTtm.details);
     expect(composedTtm.details).toMatchObject({
       status: "calculated",
       metric: "revenue",
@@ -399,6 +418,7 @@ describe("stock_fundamentals normalization boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(freeCashFlow.details);
     expect(freeCashFlow.details).toMatchObject({
       status: "calculated",
       metric: "free_cash_flow",
@@ -431,6 +451,7 @@ describe("stock_fundamentals normalization boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(netMargin.details);
     expect(netMargin.details).toMatchObject({
       status: "calculated",
       metric: "net_margin",
@@ -486,6 +507,7 @@ describe("stock_fundamentals normalization boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(dilutedEps.details);
     expect(dilutedEps.details).toMatchObject({
       status: "calculated",
       metric: "diluted_eps",
@@ -507,6 +529,28 @@ describe("stock_fundamentals normalization boundary", () => {
     );
   });
 });
+
+function expectUsTrack(details) {
+  expect(details).toMatchObject({
+    track: "us",
+    trackContext: {
+      schemaVersion: 1,
+      track: "us",
+      marketScope: "us_sec_normalized_fundamentals",
+      venueMic: null,
+      board: null,
+      timezone: null,
+      sourceLanguage: "en-US",
+      providers: ["SEC EDGAR XBRL"],
+      entitlement: "sec_public_data_fair_access_terms_apply",
+      limitations: [
+        "non_custom_taxonomies_only",
+        "entity_wide_facts_only",
+        "audited_direct_metric_registry_only",
+      ],
+    },
+  });
+}
 
 function restore(name, value) {
   if (value === undefined) delete process.env[name];

@@ -58,11 +58,12 @@ The boundary is inclusive: age equal to maximum age remains fresh.
 ## Next design increments
 
 Provider adapters should emit the canonical `finance_core.Observation(a)`
-envelope so this plugin can accept complete observation JSON directly. Later
-policy values will add unit compatibility, as-of ordering, quality/restatement,
-licence redistribution, evidence-manifest availability, and separate research,
-paper-trading, and live-action policies. No live action will be authorized by
-this read-only plugin.
+envelope. The provider-neutral `finance_evidence` package now owns the typed
+unit, as-of order, quality/restatement, licence/redistribution, availability,
+and track-compatibility gate for calculations. This plugin's existing
+string-summary tool remains an Experimental compatibility surface until it
+accepts those complete typed inputs. No live action is authorized by this
+read-only plugin.
 
 Local development uses path dependencies on `../../pi_gleam` and
 `../../finance/finance_core`. Tested against Pi `0.83.0`.

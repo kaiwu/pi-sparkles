@@ -74,6 +74,10 @@ describe("sec_edgar provider boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(companyResult.details, "us_sec_company_reference");
+    expect(
+      companyResult.content[0].text.startsWith("US track | SEC EDGAR\n"),
+    ).toBeTrue();
     expect(companyResult.details.candidates).toEqual([
       {
         cik: "0000320193",
@@ -90,6 +94,10 @@ describe("sec_edgar provider boundary", () => {
       undefined,
       {},
     );
+    expectUsTrack(filingResult.details, "us_sec_recent_submissions");
+    expect(
+      filingResult.content[0].text.startsWith("US track | SEC EDGAR\n"),
+    ).toBeTrue();
     expect(filingResult.details.cik).toBe("0000320193");
     expect(filingResult.details.filings).toHaveLength(1);
     expect(filingResult.details.filings[0].form).toBe("10-Q");
@@ -105,6 +113,23 @@ describe("sec_edgar provider boundary", () => {
     }
   });
 });
+
+function expectUsTrack(details, marketScope) {
+  expect(details).toMatchObject({
+    track: "us",
+    trackContext: {
+      schemaVersion: 1,
+      track: "us",
+      marketScope,
+      venueMic: null,
+      board: null,
+      timezone: null,
+      sourceLanguage: "en-US",
+      providers: ["SEC EDGAR"],
+      entitlement: "sec_public_data_fair_access_terms_apply",
+    },
+  });
+}
 
 function restore(name, value) {
   if (value === undefined) delete process.env[name];

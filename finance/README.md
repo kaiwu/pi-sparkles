@@ -4,26 +4,36 @@ This directory contains reusable Gleam libraries for finance plugins and other
 applications. They do not import `pi_gleam`, export Pi extensions, or produce
 artifacts under `dist/`.
 
-The first batch was arbitrated on 2026-08-04 from
-`/tmp/pi-sparkles-proposal`. Its five packages and the subsequently graduated
-`finance_math`, `finance_series`, and `finance_calendar` substrates are
-**Experimental**. `finance_openfigi` and `finance_sec` are provider adapters
-built above them. Their shared `0.1` layer is suitable for developing plugins in this
-monorepo; public APIs and wire formats may still change before stability.
+The initial foundations, provider adapters, and early three-track domain
+packages are **Experimental**. Their shared `0.1` layer is suitable for
+developing plugins in this monorepo; public APIs and wire formats may still
+change before stability.
 
 ```text
 finance_core ─┬─> finance_provenance
+              ├─> finance_track
+              ├─> finance_evidence <─ finance_provenance + finance_track
+              ├─> finance_listing  <─ finance_provenance + finance_track
               ├─> finance_http ─┬─> finance_openfigi
               │                 ├─> finance_sec
               │                 └─> finance_testkit
               ├─> finance_table
               ├─> finance_math ────> finance_series
               ├────────────────────> finance_series
-              └─> finance_calendar ─> finance_sec
+              └─> finance_calendar ─┬─> finance_sec
+                                    └─> finance_market_calendar
+
+finance_listing ───────> finance_cn_identity ───────> finance_cn_calendar
+                   └───> finance_hk_identity ───────> finance_hk_calendar
+finance_market_calendar ────────────────────────────> both calendar packages
 ```
 
 The diagram shows dependency direction from foundation to consumer.
-`finance_series` depends on core and math; calendar depends only on core.
+`finance_track` depends only on core and JSON; `finance_evidence` composes core,
+track, and provenance; `finance_listing` owns only reusable effective-dated
+identity primitives. `finance_series` depends on core and math; calendar depends
+only on core, while the bounded market-calendar wrapper adds source, licence,
+track, version, and coverage metadata.
 `finance_testkit` depends on core and HTTP. `finance_openfigi` and `finance_sec`
 remain reusable outside Pi and share the HTTP policies rather than implementing
 plugin-local fetch stacks. The SEC adapter also owns lossless XBRL source-number
@@ -77,6 +87,9 @@ licence, pacing, pagination, and cache designs comparable to
 ## Completed 0.1 foundation
 
 The base supports provider-neutral exact values and observation envelopes;
+closed `cn`/`hk`/`us` market-track identity and versioned result context;
+typed evidence compatibility and explicit cross-track validation;
+track/MIC-scoped listings with effective aliases and relationships;
 safe cancellable HTTP with retry, rate, queue, cache, and cassette policies;
 arbitrary exact formula trees plus bounded approximate analytics; ordered,
 missing-aware and as-of-aligned series with exact returns, OHLCV, paths, and
@@ -84,6 +97,11 @@ portfolio attribution; market sessions, business days, day counts, joint
 calendars, and coupon schedules; canonical evidence manifests with bounded
 verification; unit-aware bounded Markdown/CSV/JSON tables; and deterministic
 synthetic/conformance test tools.
+
+The first market-owned layers add separate CN and HK identity/calendar
+constructors over those primitives. They contain synthetic law tests but no
+unreviewed exchange datasets; authoritative security-master and exceptional-day
+fixtures remain blocked on documented access and redistribution rights.
 
 “Foundation complete” does not mean “every named financial model is built in.”
 Provider adapters, accounting taxonomy mappings, authoritative calendar data,

@@ -5,6 +5,12 @@ small set of raw SEC XBRL facts into named fundamentals under inspectable,
 exact-period rules. It never resolves amendments, duplicate contexts, or
 alternative tags by guessing.
 
+This is a `us` market-track plugin. Human results begin with `US track`, and
+every structured result—including the network-free registry—contains top-level
+`track: "us"` plus a versioned `finance_track` context. Generic-looking
+`stock_fundamental*` names are Experimental compatibility surfaces; a `us_*`
+migration or alias policy is required before stability.
+
 ## User stories
 
 - Ask for one directly reported fundamental for an exact instant or duration.

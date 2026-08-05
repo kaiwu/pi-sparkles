@@ -60,6 +60,7 @@ pub fn quote(
       value: price,
       as_of: as_of,
       retrieved_at: as_of,
+      timezone: None,
       source: source_ref,
       evidence_id: None,
       freshness: observation.UnknownFreshness,
