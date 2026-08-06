@@ -106,6 +106,17 @@ reinterpret source evidence.
 
 The following decisions bind later proposals:
 
+- Professional workflow fit is a release criterion, not presentation polish.
+  Each workbench starts from the persona's recurring day-to-day loop, preserves
+  context across interruptions, makes the routine path short, groups exceptions
+  for triage, and progressively reveals evidence when the trader drills in. A
+  package that exposes every concept but forces the trader to manually assemble
+  the normal workflow does not meet the trader requirement.
+- Workbenches should feel like one coherent professional instrument rather than
+  a bag of tools: one exact working set, stable vocabulary, sensible versioned
+  defaults, batch actions where safe, and a clear “what changed / what needs my
+  attention / what is next” view. Natural interaction must not hide assumptions,
+  cross tracks, weaken a gate, or turn a plan into an order.
 - Start acceptance from a trader task and decision loop, not from an indicator
   checklist. RSI, MACD, KD9, Bollinger Bands, ATR, VWAP, support/resistance, and
   patterns are parameterized evidence transformations, never standalone buy or
@@ -136,7 +147,8 @@ The following decisions bind later proposals:
 The canonical local course TOC is
 [`../trading-course/ROADMAP.md`](../trading-course/ROADMAP.md). These references
 name the curriculum topic to deepen; they do not copy its illustrative rules
-into production policy. Every gate is currently **Open**.
+into production policy. `CG-SWING` is resolved for the bounded completed-daily-
+bar workflow recorded below; every other gate remains **Open**.
 
 | Gate | Trading-course TOC cross-reference | Finance-advisor deep dive required before design | Applies first to |
 | --- | --- | --- | --- |
@@ -145,11 +157,51 @@ into production policy. Every gate is currently **Open**.
 | `CG-PSYCHOLOGY` | Phase 1, Week 4 “Market Psychology” and Phase 5, Week 20 “Trading Psychology Mastery” | Specify user-declared bias/emotion/checklist vocabulary, pre-trade and post-trade review, process-adherence scoring, losing/winning-streak review, and boundaries against inferred diagnosis or automatic risk changes. | `pi_trade_journal` and every persona review loop |
 | `CG-TECH` | Phase 2, Weeks 5–8 “Technical Analysis” | Provide exact formulas, seeds, parameters, warm-up, missing-session and corporate-action treatment for SMA/EMA, RSI, MACD, KD9, Bollinger, ATR and VWAP; operational definitions and counterexamples for support/resistance, trend, breakout, gaps, divergence, volume confirmation, patterns and multi-timeframe use. | `finance_indicators`, `pi_stock_technicals`, screeners, charts and alerts |
 | `CG-FUNDAMENTAL` | Phase 3, Weeks 9–12 “Fundamental Analysis” | Define a minimum complete investor dossier, statement/period/segment/debt and cash-flow checks, sector-specific metrics, business quality, governance/management evidence, industry/macro context, valuation methods, sensitivity, and “insufficient evidence” cases. | governance/industry, quality/growth/valuation, fundamentals, and `pi_investor_workbench` |
-| `CG-SWING` | Phase 4, Week 13 “Swing Trading System” and Week 16 “Strategy Integration” | Walk one complete weekly-to-daily workflow: universe, sector/regime/catalyst context, setup and confirmation, entry/stop/target/expiry, sizing/scaling, monitoring, exits, invalidation and journal review; distinguish required evidence from preferences. | `finance_strategy`, `pi_swing_workbench`, the next sprint |
+| `CG-SWING` **(Resolved — 2026-08-06)** | Phase 4, Week 13 “Swing Trading System” and Week 16 “Strategy Integration” | Walk one complete weekly-to-daily workflow: universe, sector/regime/catalyst context, setup and confirmation, entry/stop/target/expiry, sizing/scaling, monitoring, exits, invalidation and journal review; distinguish required evidence from preferences. | `finance_strategy` completed-daily-bar slice, `pi_swing_workbench`, the next sprint |
 | `CG-DAY` | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Define pre-market, auction, opening-range, intraday and close workflows; permissible data latency; spread/depth/tape use; overtrading controls; order choice; partial/non-fill, gap, latency, impact and queue uncertainty; and track-specific stop/order availability. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench` |
 | `CG-QUANT` | Phase 4, Week 15 “Quantitative Approaches” | Specify the research protocol: falsifiable hypothesis, point-in-time universe/data availability, adjustments, feature/signal versioning, fill/cost model, train/validation/test and walk-forward design, multiple testing, uncertainty/significance, robustness, benchmarks and reproducible run acceptance. | `pi_quant_research`, `pi_backtest`, factor lab and event study |
 | `CG-PORTFOLIO` | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | Define position/portfolio sizing, diversification versus hidden concentration, correlation regimes, rebalance and cash-flow rules, leverage/liquidity/currency exposure, VaR/CVaR limits, stress tests and drawdown response without false precision. | portfolio, risk, scenarios, attribution and rebalance proposals |
 | `CG-LIVE` | Phase 6, Weeks 21–24+ “Live Trading” | Define readiness evidence for paper-to-micro-live transition, broker/account criteria, size-increase and stop conditions, execution and emotion review, incident handling and rollback; this augments rather than weakens the separate security review. | paper-broker acceptance and any live-broker design |
+
+#### CG-SWING resolution — 2026-08-06
+
+- **Evidence:** trading-course
+  [Session 10 with the 10A and final 10B corrective addenda](../trading-course/sessions/10_cg_swing_daily_workflow_20260425.md).
+- **Reviewed scope:** long-only cash equities on a completed-daily-bar cadence,
+  normally held for several sessions, with a point-in-time universe, an
+  inspectable RSI-reversal strategy example, plan-before-order, monitoring,
+  explicit exit ambiguity, expiry, and planned-versus-observed review. It is a
+  workflow contract and test hypothesis, not evidence of positive expectancy.
+- **Normative design:** [`finance_strategy`](finance/finance_strategy/README.md)
+  owns pure strategy definitions, evidence guards, evaluation, and lifecycle
+  transitions. [`pi_swing_workbench`](plugins/swing_workbench/README.md) is the
+  thin Pi compositor. Neither owns indicator arithmetic, sizing, provider
+  access, market rules, fill simulation, or journal storage.
+- **Accepted corrections:** planned closures are absent from ordered trading-
+  session series; no synthetic prices or volume are inserted; price-dependent
+  features require an adjustment-consistent series and provenance; row presence
+  is not an observation receipt; false predicates are distinct from missing or
+  late evidence; close-known decisions cannot become earlier intraday facts;
+  and a daily bar touching stop and target without sequence evidence yields
+  `UnknownOrdering`.
+- **Repository boundary:** course market, fee, tax, lot, tick, account, broker,
+  and calendar facts are requirements examples. Production evaluation consumes
+  exact track/listing/effective-date receipts from the existing market-owned
+  packages and caller capabilities; it does not embed those tables as timeless
+  constants. The addendum's `CG-JOURNAL` label maps to the existing
+  `CG-PSYCHOLOGY` gate plus the ordinary `journal_schema` dependency because
+  `CG-JOURNAL` is not registered here. Provider omission and incomplete
+  evidence return `NotReady`, never a semantic rejection of the security.
+- **Adjacent gates remain open and blocking where applicable:** minimum daily
+  observation, freshness, volume/turnover, source-rights, and import semantics
+  belong to `CG-MARKET-DATA`; indicator formulas, warm-up, and adjustment
+  production to `CG-TECH`; position sizing, gap stress, account constraints,
+  and portfolio heat to `CG-RISK`;
+  executable order support and fill/cost policy to `CG-DAY` and the named
+  execution dependency; journal schema and psychology review to
+  `CG-PSYCHOLOGY`; and expectancy/backtest claims to `CG-QUANT`. A missing
+  dependency that can change a predicate, size, or executable order returns
+  `NotReady`; optional confirmation/ranking omissions may be labelled warnings.
 
 For a useful answer, ask the advisor to return: persona and holding horizon;
 track/instrument scope; required inputs and permissible freshness; exact formulas
@@ -200,11 +252,13 @@ finance-plugin rules above apply to every phase file.
 | --- | --- | --- | --- |
 | **R0 — Trustworthy substrate and implemented baseline** | [`R0.md`](R0.md) | Shared finance packages, dependency laws, completed arbitrations, Experimental vertical slices, and the current depth gaps. | Establish what is real and reusable before counting trader-facing breadth. |
 | **R1 — Finance capability catalog** | [`R1.md`](R1.md) | Foundation/trust, market data, CN/HK/US research, fundamentals, valuation, trader workbenches, events, macro, portfolio, backtest, and execution proposals. | Keep the complete capability map while thin workbenches compose shared engines instead of cloning them. |
-| **R2 — Delivery and trader-workflow convergence** | [`R2.md`](R2.md) | F0–F6 delivery, T0–T4 four-trader acceptance, CN0–CN4, and the next swing-trader sprint. | Choose implementation order from trader decision loops; stop at every open course gate before design. |
+| **R2 — Delivery and trader-workflow convergence** | [`R2.md`](R2.md) | Active delivery ledger, F0–F6 delivery, T0–T4 four-trader acceptance, CN0–CN4, and the next swing-trader sprint. | Keep state, blockers, next artifacts and forbidden claims explicit; choose implementation order from trader decision loops and stop at every open course gate before design. |
 | **R3 — Provider policy and open decisions** | [`R3.md`](R3.md) | Candidate/accepted providers, entitlement and source cautions, and unresolved product/data decisions. | Resolve provider and policy choices without creating invisible fallback chains. |
 
 Read phases in order for a full audit. They are categories, not permission to
 skip dependencies: an item in a later file still depends on all applicable R0
 contracts, track-specific evidence gates, and course-demand stops. New detailed
 proposals go in the appropriate phase file and must be linked from this index if
-they change a phase's scope.
+they change a phase's scope. [`R2.md`](R2.md#active-delivery-ledger--2026-08-06)
+is the active work ledger; the other files should not grow duplicate status
+lists.

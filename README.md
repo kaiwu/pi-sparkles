@@ -393,6 +393,7 @@ pi-sparkles/
 │   ├── finance_provenance/
 │   ├── finance_sec/
 │   ├── finance_series/
+│   ├── finance_strategy/         design-only CG-SWING functional core
 │   ├── finance_table/
 │   ├── finance_testkit/
 │   ├── finance_track/
@@ -425,6 +426,7 @@ pi-sparkles/
 │   ├── sec_xbrl/                 exact SEC XBRL concept and fact evidence
 │   ├── stock_fundamentals/       audited direct-fact normalization
 │   ├── stock_research_report/    deterministic cited US receipt composition
+│   ├── swing_workbench/          design-only professional swing daily loop
 │   ├── watchlist/                track-safe branch-persistent workflow state
 │   ├── us_market_calendar/       official bounded NYSE/Nasdaq 2026 calendar
 │   ├── us_market_rules/          current venue-explicit US quote increments
@@ -443,9 +445,12 @@ pi-sparkles/
 ```
 
 The root is not a Gleam package. The root-level `pi_gleam/` binding and every
-package below `finance/` and `plugins/` own a `gleam.toml`, version, README,
-source, and tests, so each can be versioned and released independently. Finance
-libraries are checked and unit-tested by the root tasks but are not Pi bundles.
+implemented package below `finance/` and `plugins/` own a `gleam.toml`, version,
+README, source, and tests, so each can be versioned and released independently.
+A proposal in **Designing** may contain only its reviewed `README.md`; root tasks
+discover packages by `gleam.toml` and ignore these design-only directories until
+implementation starts. Finance libraries are checked and unit-tested by the
+root tasks but are not Pi bundles.
 
 ## Finance foundations
 

@@ -40,6 +40,10 @@ finance_authority_pdf ──────> same-artifact finance_pdf inspection c
 finance_market_accounting ─> finance_cn_accounting / finance_hk_accounting
 finance_testkit ────────────> finance_cn_testkit / finance_hk_testkit
 finance_track_capabilities ─> isolated CN/HK setup shells
+
+finance_core + evidence + listing + series + provenance
+              └────────────> finance_strategy (Designing; consumes feature,
+                              risk, rule, and execution receipts)
 ```
 
 The diagram shows dependency direction from foundation to consumer.
@@ -63,6 +67,13 @@ also owns lossless XBRL source-number
 decoding and composes calendar arithmetic for explicit statement-period shapes,
 so every consumer sees the same exact facts and period rules. No core package or core
 test may depend on testkit or a provider adapter.
+
+`finance_strategy` is currently a design-only provider-neutral functional core
+for the resolved completed-daily-bar `CG-SWING` workflow. It evaluates
+versioned hypotheses and folds planned-versus-observed transitions over exact
+receipts; it does not own feature arithmetic, sizing, market rules, execution,
+providers, or Pi. Its directory intentionally has no `gleam.toml` until the
+reviewed first implementation slice begins.
 
 `finance_ohlcv` composes core, calendar arithmetic, exact series/math, and
 canonical observations. It retains source lexemes beside normalized decimals,
