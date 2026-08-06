@@ -34,6 +34,21 @@ Draft -> Selected -> Designing -> Implementing -> Experimental -> Stable
 - **Stable** requires documented compatibility, release, migration, and
   operational policies.
 
+A proposal or build step marked **Course gate `CG-*` (Open)** has an additional
+stop between **Selected** and **Designing**. When that work reaches the front of
+the queue, pause, tell the user which gate was reached, and ask them to obtain
+the referenced finance-advisor deep dive. Do not create the package directory,
+finalize formulas/policy, or start implementation by filling the gap with model
+knowledge. Record the advisor's requirements and counterexamples in the
+cross-referenced trading-course repository, link that deep-dive note from the
+gate row here, record its
+reviewed scope, and change the gate to **Resolved — YYYY-MM-DD**; then let the
+package README become the detailed design. The registry's “Applies first to”
+column and downstream consumption of a gated contract are binding even if a
+proposal row does not repeat the marker. A resolved gate may be reopened when a
+new track, timeframe, instrument class, or materially different workflow
+exceeds the advisor's reviewed scope.
+
 Each plugin README should cover:
 
 1. user stories and explicit non-goals;
@@ -68,6 +83,80 @@ It should not begin with autonomous live trading. Read-only research, provenance
 portfolio analytics, and paper execution give us the highest usefulness with a
 much smaller failure cost.
 
+## Trader-requirement steering audit — 2026-08-06
+
+The ultimate product goal is to meet trader requirements. Packages, bindings,
+providers, and feature counts are enabling machinery; they are not success by
+themselves. An audit against the trading curriculum's four working personas
+finds strong trust and research foundations, but only partial end-to-end trader
+workflows.
+
+The personas are acceptance lenses, not permanent user identities and not new
+market tracks. One user may use several workflows. A workflow selection may
+change defaults, information density, and review cadence, but it must never
+change an observation's `cn`, `hk`, or `us` track, substitute a provider, or
+reinterpret source evidence.
+
+| Trader workflow | Required decision loop | Current roadmap coverage | Steering gap |
+| --- | --- | --- | --- |
+| Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Quote, calendar/rules, order-book, tape, alerts, paper brokers, and compliance are proposed or narrow slices. | **Weakest.** No licensed, freshness-bounded intraday stream, shared order/fill model, fast trade-plan tool, or latency/execution-quality acceptance gate. Daily bars must not be presented as a day-trading surface. |
+| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Daily OHLCV, series/math, screener, technicals, catalysts, alerts, watchlist, and journal exist as separate proposals. | **Best next workflow.** The pieces lack one inspectable signal definition, risk/reward plan, saved workflow state, and end-to-end acceptance test. |
+| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | US primary-source and exact-fact slices are strongest; valuation, quality, actions, portfolio, thesis, news, and reports are proposed. | Statement breadth, segments, debt, governance/capital allocation, dividend history, peer/industry context, and CN/HK primary-document depth are incomplete. Narrow vendor facts are not an investor dossier. |
+| Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | Math, series, calendars, OHLCV receipts, factor lab, event study, and a thin backtest proposal exist. | Point-in-time universe membership, corporate-action truth, shared strategy/execution semantics, parameter-trial accounting, statistical tests, walk-forward validation, and reproducible dataset manifests are incomplete. |
+
+The following decisions bind later proposals:
+
+- Start acceptance from a trader task and decision loop, not from an indicator
+  checklist. RSI, MACD, KD9, Bollinger Bands, ATR, VWAP, support/resistance, and
+  patterns are parameterized evidence transformations, never standalone buy or
+  sell claims.
+- A computed feature or signal retains its exact input series, track/listing
+  identity, source/as-of boundary, parameters, lookback and warm-up state,
+  missing-data policy, formula version, and any confirmation rule.
+- Trade planning is read-only analysis. Entry, stop, target, scaling, risk
+  budget, order choice, and invalidation conditions remain a proposed plan until
+  a separately authorized paper or live plugin acts on an exact draft.
+- Alerts, screeners, backtests, paper simulations, and journals consume the same
+  versioned strategy and execution definitions. They must not each invent
+  incompatible signal, fee, slippage, or fill semantics.
+- Trader-facing charts are views of typed evidence, not a second analytics
+  engine. Axes, units, timezone, session gaps, adjustment basis, warm-up, source
+  cut-off, and omitted points remain visible; every chart has a structured-data
+  fallback outside the TUI.
+- Psychology support is a user-declared checklist and review loop. The system
+  may record FOMO, confirmation-bias, loss-aversion, discipline, and confidence
+  labels supplied by the user; it must not infer a diagnosis or silently alter
+  risk limits from prose sentiment.
+- Readiness is track-specific. A workflow is not supported on a track until its
+  identity, calendar/rules, source rights, time resolution, and required data
+  quality pass that workflow's acceptance gate.
+
+### Course-demand gates
+
+The canonical local course TOC is
+[`../trading-course/ROADMAP.md`](../trading-course/ROADMAP.md). These references
+name the curriculum topic to deepen; they do not copy its illustrative rules
+into production policy. Every gate is currently **Open**.
+
+| Gate | Trading-course TOC cross-reference | Finance-advisor deep dive required before design | Applies first to |
+| --- | --- | --- | --- |
+| `CG-MARKET-DATA` | Phase 1, Week 1 “Market Literacy” and Week 2 “Data & Tools” | Define the minimum trustworthy quote/bar/depth fields for each persona; source-time, session, auction, spread, volume and market-depth interpretation; trader-facing data-quality failures; and safe CSV/JSON/XLSX/SQL import expectations. | `pi_finance_dataset`, charts, snapshots, screeners, and later intraday surfaces |
+| `CG-RISK` | Phase 1, Week 3 “Risk Management Foundation” and Phase 5, Week 19 “Advanced Risk Management” | Replace slogans such as “2% rule” and “2:1” with configurable laws: account and portfolio heat, gap/leverage/correlation/liquidity risk, stop distance, lot rounding, scaling, drawdown limits, stress cases, and when a plan must be rejected. | `finance_strategy`, `pi_trade_plan`, `pi_portfolio_risk` |
+| `CG-PSYCHOLOGY` | Phase 1, Week 4 “Market Psychology” and Phase 5, Week 20 “Trading Psychology Mastery” | Specify user-declared bias/emotion/checklist vocabulary, pre-trade and post-trade review, process-adherence scoring, losing/winning-streak review, and boundaries against inferred diagnosis or automatic risk changes. | `pi_trade_journal` and every persona review loop |
+| `CG-TECH` | Phase 2, Weeks 5–8 “Technical Analysis” | Provide exact formulas, seeds, parameters, warm-up, missing-session and corporate-action treatment for SMA/EMA, RSI, MACD, KD9, Bollinger, ATR and VWAP; operational definitions and counterexamples for support/resistance, trend, breakout, gaps, divergence, volume confirmation, patterns and multi-timeframe use. | `finance_indicators`, `pi_stock_technicals`, screeners, charts and alerts |
+| `CG-FUNDAMENTAL` | Phase 3, Weeks 9–12 “Fundamental Analysis” | Define a minimum complete investor dossier, statement/period/segment/debt and cash-flow checks, sector-specific metrics, business quality, governance/management evidence, industry/macro context, valuation methods, sensitivity, and “insufficient evidence” cases. | governance/industry, quality/growth/valuation, fundamentals, and `pi_investor_workbench` |
+| `CG-SWING` | Phase 4, Week 13 “Swing Trading System” and Week 16 “Strategy Integration” | Walk one complete weekly-to-daily workflow: universe, sector/regime/catalyst context, setup and confirmation, entry/stop/target/expiry, sizing/scaling, monitoring, exits, invalidation and journal review; distinguish required evidence from preferences. | `finance_strategy`, `pi_swing_workbench`, the next sprint |
+| `CG-DAY` | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Define pre-market, auction, opening-range, intraday and close workflows; permissible data latency; spread/depth/tape use; overtrading controls; order choice; partial/non-fill, gap, latency, impact and queue uncertainty; and track-specific stop/order availability. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench` |
+| `CG-QUANT` | Phase 4, Week 15 “Quantitative Approaches” | Specify the research protocol: falsifiable hypothesis, point-in-time universe/data availability, adjustments, feature/signal versioning, fill/cost model, train/validation/test and walk-forward design, multiple testing, uncertainty/significance, robustness, benchmarks and reproducible run acceptance. | `pi_quant_research`, `pi_backtest`, factor lab and event study |
+| `CG-PORTFOLIO` | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | Define position/portfolio sizing, diversification versus hidden concentration, correlation regimes, rebalance and cash-flow rules, leverage/liquidity/currency exposure, VaR/CVaR limits, stress tests and drawdown response without false precision. | portfolio, risk, scenarios, attribution and rebalance proposals |
+| `CG-LIVE` | Phase 6, Weeks 21–24+ “Live Trading” | Define readiness evidence for paper-to-micro-live transition, broker/account criteria, size-increase and stop conditions, execution and emotion review, incident handling and rollback; this augments rather than weakens the separate security review. | paper-broker acceptance and any live-broker design |
+
+For a useful answer, ask the advisor to return: persona and holding horizon;
+track/instrument scope; required inputs and permissible freshness; exact formulas
+or decision rules with defaults identified as defaults; unknown/fail-closed
+cases; at least two worked examples and two counterexamples; and what the tool
+must never conclude. This becomes requirements evidence, not provider evidence.
+
 ## Rules for every finance plugin
 
 Finance tools need a stricter contract than ordinary convenience plugins:
@@ -100,997 +189,22 @@ Finance tools need a stricter contract than ordinary convenience plugins:
 - Output is research tooling, not a guarantee, fiduciary service, or substitute
   for professional advice.
 
-## Shared packages before plugins
+## Roadmap phases
 
-These are reusable Hex libraries rather than Pi extensions. Building them first
-prevents every plugin from inventing incompatible finance types.
+This file is the governing index. Together, `ROADMAP.md` and `R0.md`–`R3.md`
+are the proposal catalog required by the repository guidelines. The lifecycle,
+trader-requirement steering decisions, course-demand gates, track laws, and
+finance-plugin rules above apply to every phase file.
 
-| Package | State | Purpose | First types/capabilities |
+| Phase | Detailed roadmap | Scope | Exit/steering purpose |
 | --- | --- | --- | --- |
-| `finance_core` | Experimental | Canonical domain model | exact values, identity ambiguity, units/adjustments/sessions, and versioned `Observation(a)` JSON |
-| `finance_track` | Experimental | User-visible market scope | closed `cn`/`hk`/`us` identity, validated result context, versioned JSON, and explicit cross-track legs |
-| `finance_evidence` | Experimental | Cross-input evidence policy | typed unit, quality/restatement, time-order, licence/redistribution, and same/cross-track compatibility |
-| `finance_listing` | Experimental | Effective listing identity | track/MIC-scoped keys, effective aliases, and evidence-backed relationships without market-owned code or board rules |
-| `finance_series` | Experimental | Time-series operations | ordered observations, missing policy, exact/as-of alignment, resampling, OHLCV, exact returns/paths, and attribution |
-| `finance_ohlcv` | Experimental | Exact provider-neutral bar and receipt contract | raw-plus-normalized values, OHLC geometry, canonical observations, strict order/exact deduplication, content-bound acquisition receipts, and supplied-calendar gap classification |
-| `finance_cn_ohlcv` | Experimental | Isolated CN gap composition | exact SSE/SZSE/BSE calendar and listing identity, complete Eastmoney receipt, and per-gap status evidence with four fail-closed outcomes |
-| `finance_hk_ohlcv` | Experimental | Isolated HK gap composition | exact XHKG/HKEX calendar and listing identity, complete Eastmoney receipt, retained half-day evidence, and four fail-closed gap outcomes |
-| `finance_us_ohlcv` | Experimental | Isolated US gap composition | exact NYSE/Nasdaq calendar, listing interval, complete provider receipt, and per-gap status evidence with four fail-closed outcomes |
-| `finance_quote` | Experimental | Exact provider-neutral quote contract | raw-plus-normalized bid/ask prices and sizes, market codes, canonical observations, and unverified provider size semantics |
-| `finance_calendar` | Experimental | Trading-time rules | sessions, holidays, business days, joint calendars, coupon schedules, and named day counts; provider data remains pluggable |
-| `finance_market_calendar` | Experimental | Bounded calendar data | track/source/licence/version/coverage wrapper that rejects dates outside reviewed datasets |
-| `finance_market_authorities` | Experimental | Official source ownership | track-prefixed roles and HTTPS links with explicit access, redistribution, scope, and limitations |
-| `finance_cn_identity` / `finance_hk_identity` | Experimental | Isolated market identity laws | explicit code/venue/board/currency, ambiguity preservation, historical aliases, and A/H legs over synthetic tests |
-| `finance_cn_calendar` / `finance_hk_calendar` / `finance_us_calendar` | Experimental | Isolated market-time contracts | source-reviewed, coverage-bounded 2026 SSE/SZSE/BSE, HKEX, NYSE, and Nasdaq schedules with exact venue/MIC and no extrapolation |
-| `finance_market_rules` | Experimental | Effective market-rule engine | source/evidence-labelled ticks, lots, limits, settlement and eligibility with strict dated unknown/conflict behavior |
-| `finance_cn_rules` / `finance_hk_rules` / `finance_us_rules` | Experimental | Isolated rule vocabulary | strict exact-listing selection plus narrow dated official profiles for established normal mainland CNY equities, applicable HKD equity spread bands, and current NYSE/Nasdaq regular displayed-quote increments |
-| `finance_market_documents` | Experimental | Disclosure identity and lineage | exact originals, reporting periods, corrections, replacements, translations, parallel languages, and attachment hashes |
-| `finance_document_attachment` | Experimental | Bounded attachment acceptance | media allowlist, byte/page/redirect limits, cancellation and content hash; arbitrary archive/OCR attachments fail closed |
-| `finance_archive` | Experimental | Reviewed ZIP effect contract | exact required UTF-8 entries, archive/entry/count/total budgets, cancellation, CRC/length validation, and fail-closed names/encryption/ZIP64/compression without filesystem writes or recursion |
-| `finance_cn_documents` / `finance_hk_documents` | Experimental | Isolated disclosure vocabulary | track-owned document classes and source-language policy without cross-track imports |
-| `finance_market_accounting` | Experimental | Lossless reported facts | exact lexemes/scales, standard/scope/period/audit/restatement context, executable mappings, and ambiguity preservation |
-| `finance_cn_accounting` / `finance_hk_accounting` | Experimental | Isolated accounting vocabulary | source-document issuer coherence and track-owned standard/report classes |
-| `finance_track_capabilities` | Experimental | Track setup policy | exact tool-prefix isolation, honest blocked decisions, and typed provider-health contracts |
-| `finance_provenance` | Experimental | Reproducible evidence | canonical manifests, redaction, identities, assumptions, and bounded injected verification |
-| `finance_http` | Experimental | Provider-safe transport | retry/backoff, rate limits, bounded concurrency, cache/cassette policy, cancellation, and redacted errors |
-| `finance_table` | Experimental | Agent-friendly output | unit-aware annotated Markdown/CSV/JSON with compound budgets and omission summaries |
-| `finance_math` | Experimental | Deterministic analytics | arbitrary exact formulas, finite approximate statistics/risk/regression, cash flows, fixed income, and bounded solvers |
-| `finance_testkit` | Experimental | Provider fixtures | frozen clocks, shared cassettes, synthetic quotes/bars, decoder conformance, redaction laws, and fixture governance |
-| `finance_cn_testkit` / `finance_hk_testkit` | Experimental | Isolated market scenarios | seed-stable identity, session, rule, Unicode document, correction, scale, and exact-lexeme cases without authoritative-data claims |
-| `finance_openfigi` | Experimental | Instrument identity provider | OpenFIGI v3 mapping/filter plans, opaque optional authentication, pagination, fixtures, separate rate buckets, and bounded shared execution |
-| `finance_eastmoney` | Experimental | CN/HK public-web market data | bounded caller-identified SSE/SZSE/BSE/HK quote and raw unadjusted daily-history plans/decoders with exact lexemes and unknown latency/rights |
-| `finance_market_alpaca` | Experimental | US credentialed market data | exact-symbol latest quote plus symbol/as-of raw daily USD bar plans, explicit IEX/SIP feeds, secret auth, bounded runtime/pagination, exact numeric lexemes, and subscription/redistribution limits |
-| `finance_sec` | Experimental | Primary filing-data provider | identified public access, normalized CIKs, bounded ticker/submissions/company-facts plans, typed recent filings, conservative pacing, and cancellation |
-
-Provider adapters should also be ordinary packages when possible—for example,
-`finance_sec`, `finance_fred`, `finance_openfigi`, and
-`finance_market_alpaca`. Pi plugins then compose those libraries and expose
-agent tools. This makes the data client reusable outside Pi and keeps its test
-surface independent of the extension runtime.
-
-### Wave A arbitration — 2026-08-04
-
-The five packages supplied in the first-batch proposal are confirmed as the
-complete foundation and have graduated to **Experimental**. They live under
-`finance/<name>/`; they are libraries, not loadable Pi extensions, so they do
-not export `extension` and are not bundled into `dist/`.
-
-The proposal is accepted with these binding decisions:
-
-- Dependencies form a directed graph: `finance_core` imports no other finance
-  package; `finance_provenance`, `finance_http`, and `finance_table` may import
-  core; `finance_testkit` may import core and HTTP. Core tests cannot depend on
-  testkit.
-- Core owns the minimal `SourceRef` and optional evidence identifier carried by
-  `Observation(a)`. Provenance enriches those references. This avoids a
-  core/provenance cycle while keeping every observation attributable.
-- HTTP transport, retry sleeps, cassette file access, and evidence verification
-  are promise-returning operations. Their Gleam APIs must not disguise network
-  or file I/O as synchronous `Result` values.
-- `finance_http` owns cassette request/response formats and replay transport.
-  Testkit supplies builders and fixtures rather than a competing cassette type.
-- A transport never silently substitutes stale data after rate limiting or an
-  outage. Provider adapters may request a cached fallback, but must return its
-  source, age, and stale status explicitly.
-- Source fingerprints identify normalized requests; evidence identifiers are
-  content-addressed and include the observed content/as-of identity. Fetching
-  the same request with changed content therefore produces new evidence.
-- Table rendering validates column/cell compatibility. Currency codes are the
-  portable default; locale-specific symbols are an explicit rendering policy.
-- Authoritative calendar fixtures must be licence-reviewed and
-  provenance-labelled. Synthetic market data is seeded and unmistakably fake;
-  personal database exports are never package fixtures.
-
-The substrate acceptance suite now passes. The F0 batch—`pi_finance_setup`,
-`pi_cn_setup`, `pi_hk_setup`, `pi_finance_guardrails`, and
-`pi_finance_symbols`—is confirmed and Experimental; the original F0 batch
-graduated on 2026-08-04 and the isolated setup shells on 2026-08-05.
-`finance_setup` and guardrails are provider-neutral; CN/HK setup composes shared
-policy behind isolated track contracts. Symbols consumes the reusable read-only
-`finance_openfigi` adapter, which
-uses `finance_http` and explicit public-domain/freshness limitations. SEC has
-since graduated as the first F1 slice below; US latest quote and narrow daily
-history have now graduated separately, and a narrow receipt-based US report
-compositor is Experimental. Broader taxonomy, direct programmatic tool
-orchestration, comparisons, and earnings reports remain Draft until their
-provider, credential, entitlement, and licence designs are accepted.
-
-### SEC EDGAR vertical slice — 2026-08-04
-
-`finance_sec`, `pi_sec_edgar`, and the first `pi_sec_xbrl` slice have graduated
-to **Experimental**. The provider package owns caller identity, CIK validation,
-official request plans, response
-bounds, typed company/submissions decoding, cancellation, retries, and a
-conservative eight-request-per-second shared runtime. The plugin exposes
-`/sec-company`, `sec_company_search`, and `sec_company_submissions`, with pure
-deterministic ranking and exact form filtering outside its Pi effect shell.
-
-The XBRL slice adds `sec_xbrl_concepts` and `sec_xbrl_facts`. It preserves
-numeric JSON source lexemes, taxonomy/tag, unit, period, accession, fiscal
-metadata, form/amendment, filed date, frame, and duplicates. Concept discovery
-uses company-facts; exact fact lookup uses the smaller company-concept endpoint.
-
-`pi_stock_fundamentals` has also graduated to an **Experimental fundamental
-slice**. Its executable registry covers seven US-GAAP metrics and requires exact
-units. It supports exact dates plus calendar-classified instant, quarter,
-half-year YTD, nine-month YTD, and annual shapes at an exact end date. Explicit
-filing policies preserve all, select original/amended forms, select the latest
-validated filing date, or select an accession. It returns no-match, unique, or
-ambiguous; accepted alternative tags and repeated facts have no hidden precedence.
-Its strict derived layer can subtract a unique nine-month YTD source from a
-compatible unique annual source for additive Q4 metrics, retaining both facts,
-and can construct chronological direct-fact trends only after every point proves
-the same metric, unit, taxonomy/tag, and period class. A pure `finance_math`
-composition layer now calculates free cash flow, net margin, and diluted EPS
-from unique facts only after proving the same exact period and filing context;
-outputs expose formula trees, policies, assumptions, and complete input sources.
-Exact growth now validates every adjacent quarter-over-quarter or year-over-year
-calendar gap, while direct TTM accepts only four contiguous additive quarter
-facts. An annual-plus-YTD bridge now calculates `annual + current YTD - prior
-comparable YTD` under independent source policies and strict fiscal-window
-proofs. A typed direct/derived-quarter constructor now supports mixed TTM while
-expanding derived Q4 into annual-minus-YTD formula leaves. Debt, broader
-profitability/return metrics, scale/currency conversion, and statement
-reconstruction remain outside this slice.
-The general multi-input metric boundary also supports independent named
-accession overrides while retaining a strict same-filing calculation law.
-
-### Three-track OHLCV vertical slice — 2026-08-06
-
-`finance_ohlcv`, `finance_market_alpaca`, and the isolated `pi_us_ohlcv`,
-`pi_cn_ohlcv`, and `pi_hk_ohlcv` shells have graduated to **Experimental** for
-narrow daily read-only slices. The shared pure contract
-retains every raw numeric lexeme beside its exact decimal, validates OHLC
-geometry/non-negative volume, rejects decreasing or conflicting duplicate
-timestamps, collapses only exact duplicates, constructs canonical observations,
-and exposes exact close returns through `finance_series`. It distinguishes a
-provider source instant from a date-only ordering anchor and proven share volume
-from an explicitly unknown provider unit.
-
-The provider adapter targets Alpaca's historical stock-bars endpoint with a
-required exact uppercase symbol, explicit symbol `asof` date, explicit `iex` or
-`sip` feed, USD, `1Day`, ascending order, and raw adjustment. Authentication is
-secret-redacted; responses, pagination, retries, pacing, concurrency, and total
-pages/bars are bounded; JSON numeric tokens and request IDs are retained; normal
-tests use offline responses only. IEX is never presented as consolidated SIP,
-and a successful credentialed request conveys no redistribution grant.
-
-`us_stock_ohlcv` reports provider pagination separately from market-calendar
-completeness. A reviewed US calendar now exists as an independent tool, but the
-acquisition shell deliberately leaves it uncomposed from listing and suspension
-evidence. Absent rows remain unclassified in that provider result. The separate
-network-free US gap compositor described below can classify copied 2026 receipt
-fields only after exact listing/status evidence and complete pagination are
-supplied. Corporate-action adjustments, intraday/realtime bars, authoritative
-listing/status sources, and permitted real fixtures remain later work.
-
-`cn_stock_ohlcv` and `hk_stock_ohlcv` reuse the independently bounded
-Eastmoney `klt=101`, `fqt=0` history seam without importing Alpaca or each
-other. They retain the complete provider rows—including amount, amplitude,
-change, and turnover lexemes—beside canonical OHLCV. CN requires a coherent
-caller-declared venue/board/share-class/currency combination. HK requires a
-caller-declared board/share-class/currency and never assumes HKD. Because the
-provider supplies dates without exact instants or proven volume units, both
-facts remain explicitly limited; row-budget truncation is separate from
-unassessed market-calendar/status gaps. This history-only batch changes no
-track's `quotes_history` feature score.
-
-### US latest quote vertical slice — 2026-08-06
-
-`finance_quote` and `pi_us_quote` have graduated to **Experimental**. The
-`us_stock_quote` tool makes one bounded request to Alpaca's latest multi-symbol
-quote endpoint for exactly one uppercase symbol, USD, and an explicit `iex` or
-`sip` feed. The adapter retains the exact JSON lexemes for bid/ask prices and
-sizes plus provider timestamp, exchanges, conditions, tape, and request ID.
-
-The canonical quote observation rejects negative values, unsafe market codes,
-provider mismatch, and retrieval before source time. It deliberately retains
-locked or crossed source quotes, because interpreting them requires condition
-and market context. A successful response proves neither consolidated coverage
-nor freshness: IEX remains one exchange, SIP access/recency remains
-subscription-dependent, provider size semantics are unverified, and the plugin
-grants no redistribution right. No default-feed fallback, venue inference,
-session inference, quote caching, or company-name resolution is performed.
-
-With both `us_stock_quote` and `us_stock_ohlcv` loaded, the existing
-`quotes_history` family is covered and US installed feature breadth rises from
-70% to 80%.
-
-### US market-calendar vertical slice — 2026-08-06
-
-`finance_us_calendar` and `pi_us_market_calendar` are **Experimental** for
-calendar year 2026. `us_market_calendar` requires exact `nyse` or `nasdaq`,
-retains `XNYS` or `XNAS`, and uses each exchange's official schedule reference.
-It preserves all ten full closures plus the November 27 and December 24 1:00
-p.m. Eastern early closes, and rejects dates outside coverage without a weekday
-fallback.
-
-The data is local, source-reviewed, and requires no runtime environment or
-network access. Planned schedules may be superseded by exchange alerts;
-pre-market/after-hours, auctions, other products, settlement, FINRA reporting,
-security suspensions, and redistribution rights remain outside the slice. With
-the calendar tool and the paired quote/OHLCV tools loaded, US installed feature
-breadth reached 90% at this checkpoint. This breadth credit does not claim that
-the independent OHLCV tool classifies missing rows.
-
-### US effective-rule vertical slice — 2026-08-06
-
-`finance_us_rules` and `pi_us_market_rules` are **Experimental** for one narrow
-effective-rule profile. `us_trading_rules` requires an exact `nyse`/XNYS or
-`nasdaq`/XNAS listing, uppercase symbol, namespaced instrument ID, USD,
-caller-declared `nms_stock` and `normal` status, the
-`regular_displayed_quote` regime, an exact date, and nominal price.
-
-For the reviewed June 11, 2026 through October 31, 2027 interval, it returns the
-exchange's current `$0.01` quotation increment at or above `$1.00` and
-`$0.0001` below `$1.00`. It retains the venue rule plus SEC Release 34-105656,
-which defers compliance with amended Rule 612's half-cent assignment until the
-first business day of November 2027. Dates outside coverage and unsupported
-security, status, currency, or regime inputs fail closed. Listing identity and
-status remain caller supplied; lot/order acceptance, auctions, extended hours,
-LULD, halts, short sales, access fees, settlement, execution, and best
-execution remain outside the slice. The local profile requires no environment
-or runtime network access.
-
-With this tool and all independently required US surfaces loaded, installed US
-feature breadth reaches 100%. That number means all ten workflow families have
-a matching surface; it does not claim complete rules, authoritative identity,
-market-data entitlement, or source maturity. The next OHLCV work is explicit
-composition of exact venue/calendar/listing/suspension receipts into missing-row
-classification, not another feature-score increment. That composition has now
-graduated as the bounded slice below.
-
-### US OHLCV gap-composition slice — 2026-08-06
-
-`finance_us_ohlcv` and `pi_us_ohlcv_gaps` are **Experimental** for deterministic
-composition of copied 2026 Alpaca daily-bar receipt fields. The
-`us_ohlcv_gap_assessment` tool performs no environment lookup or network I/O.
-It requires exact NYSE/XNYS or Nasdaq/XNAS identity, a namespaced instrument ID,
-an effective listing interval and reference, the canonical Alpaca raw-daily
-source reference, explicit IEX/SIP and identity-as-of values, ordered bar dates,
-complete pagination, and ordered trading-or-suspended receipts for every absent
-open listing date. `us_stock_ohlcv` now emits a versioned canonical projection
-that binds those provider fields, retrieval time, ordered bar dates, and every
-page's byte length, request ID, and body SHA-256. The compositor independently
-reconstructs and hashes that projection before classification.
-
-The pure classifier walks every civil date in the bounded range. Planned closed
-dates become `market_closure`; open dates outside the listing interval become
-`unavailable_history`; an explicit suspended status becomes `suspension`; and
-an explicit trading status plus complete provider coverage becomes
-`provider_omission`. Every result retains its calendar, listing, status, and/or
-provider evidence legs. Truncation, duplicate/decreasing dates, MIC mismatch,
-bars on closures or outside the listing, irrelevant status receipts, source
-identity mismatch, and unexplained open dates reject the entire assessment.
-
-The compositor validates structural and cryptographic content coherence, not
-receipt authenticity. Its SHA-256 is not a provider signature; listing and
-status evidence remain caller supplied and unverified, the planned calendar may
-be superseded, and the original acquisition result remains
-`calendar_not_assessed`. The CN and HK counterparts described below are now
-implemented. Authority-owned listing/status adapters, signed/authenticated
-receipts, corporate actions, later calendars, and permitted fixtures remain
-common depth work. This improvement changes no feature score.
-
-An authority-source audit did not justify weakening that boundary. Nasdaq's
-[symbol lookup](https://www.nasdaqtrader.com/Trader.aspx?id=symbollookup) says
-its information is for the current trading day, while the
-[halt RSS contract](https://nasdaqtrader.com/Trader.aspx?id=TradeHaltRSS)
-records halt exceptions rather than a positive normal-trading receipt for each
-session. The SEC's
-[EDGAR data guidance](https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data)
-says its ticker/exchange associations are periodically updated and are not
-guaranteed for accuracy or scope. None proves the exact historical listing
-interval plus positive per-session status required by the classifier, so no
-adapter is presented as authoritative yet.
-
-### CN OHLCV gap-composition slice — 2026-08-06
-
-`finance_cn_ohlcv` and `pi_cn_ohlcv_gaps` are **Experimental** for the mainland
-counterpart. `cn_stock_ohlcv` now hashes its validated Eastmoney response body
-and emits a versioned canonical receipt binding exact venue, board, share
-class, currency, code, range, row limit, source plan, retrieval time,
-pagination, ordered bar dates, byte length, optional request ID, and body
-SHA-256. The network-free `cn_ohlcv_gap_assessment` independently reconstructs
-that projection before it composes an exact listing interval, the reviewed 2026
-SSE/SZSE/BSE calendar, complete provider coverage, and explicit status evidence
-for every absent open listing date.
-
-The reusable canonical receipt and four-state classification laws now live in
-provider-neutral `finance_ohlcv`; CN retains its own identity, calendar, and
-Eastmoney source-plan validation. Incomplete or altered receipts, cross-venue
-identity, bars on closures or outside the listing, irrelevant status evidence,
-and unexplained open dates fail closed. Output evidence distinguishes closures,
-suspensions, provider omissions, and unavailable history without mutating or
-synthesizing bars. Matching SHA-256 proves copied-content coherence, not
-Eastmoney origin, listing authority, exchange status, or redistribution rights.
-
-### HK OHLCV gap-composition slice — 2026-08-06
-
-`finance_hk_ohlcv` and `pi_hk_ohlcv_gaps` complete the **Experimental**
-three-track structural counterpart. `hk_stock_ohlcv` emits its independent
-HK-specific canonical acquisition receipt; `hk_ohlcv_gap_assessment` verifies
-that receipt without environment lookup or network I/O, reconstructs the exact
-Eastmoney HK plan, and composes XHKG listing identity, the reviewed 2026 HKEX
-securities calendar, complete coverage, and per-gap status evidence.
-
-The HK calendar receipt retains February 16, December 24, and December 31 as
-published half days. Daily missing-row classification treats those dates as
-open and still requires explicit status evidence when a bar is absent; it does
-not claim that one daily row proves intraday completeness. Board, share class,
-declared currency, five-digit code, range, limit, response bytes/body hash, and
-ordered dates are all bound by the canonical digest. Identity drift,
-truncation, missing/conflicting evidence, or changed copied content fails
-closed. As with US and CN, a digest match is not provider authentication or
-exchange authority. All three tracks are now feature-ready at this narrow
-receipt-composition level; authority-owned listing/status adapters, provider
-authentication, data-unit semantics, corporate actions, later calendars, and
-permitted live fixtures remain common depth work.
-
-The term "complete OHLCV" therefore has two distinct checkpoints. Daily raw
-acquisition and structural missing-row composition are implemented on every
-track. Authority-grade completeness is not: four of the six explicit gates are
-complete everywhere, HK has a rolling-window partial listing-start gate, and no
-track has authority-owned positive per-session status.
-
-| Gate | US | CN | HK |
-| --- | --- | --- | --- |
-| Validated raw daily acquisition | Ready | Ready | Ready |
-| Content-bound acquisition projection | Ready | Ready | Ready |
-| Exact track-owned 2026 calendar | Ready | Ready | Ready |
-| Fail-closed four-state gap compositor | Ready | Ready | Ready |
-| Authority-owned effective listing interval | Missing | Missing | Partial: non-tentative `New Listing` starts in the rolling current-two-week page only |
-| Authority-owned positive status for every relevant session | Missing | Missing | Missing |
-
-Production-complete OHLCV is a still broader bar. All tracks additionally need
-reviewed corporate-action/adjustment variants, stable source-time and volume
-semantics, later-calendar/schema-drift maintenance plus permitted real fixtures,
-and explicit production/redistribution rights. CN/HK also need exact provider
-amount/turnover semantics; US needs broader feed/product entitlement and action
-coverage. Feature breadth must not be reported as completion of those gates.
-
-For the next steering review, do not schedule another OHLCV acquisition shell.
-The candidate sequence is: (1) audit direct SSE/SZSE/BSE effective
-identity/listing-start sources to bring CN authority depth toward HK; (2) define
-one positive per-session status contract, the blocker shared by every track;
-(3) decide whether broad HK/US historical masters require licensed products;
-and only then (4) add source-owned corporate actions/adjustment factors and
-documented unit semantics. Each decision must include fixture, update,
-redistribution, and provider-authentication policy before implementation.
-
-### CN current-security repository-evidence slice — 2026-08-06
-
-`finance_cninfo` and `pi_cn_disclosures` now capture the complete bounded public
-security-catalogue response before semantic decoding. `cn_security_search` and
-the identity leg of `cn_disclosure_search` emit a versioned canonical receipt
-binding the exact repository URL, observation/retrieval time, byte length, body
-SHA-256, provenance evidence ID/source fingerprint, resolution, and every exact
-code/organization/name/category/pinyin candidate.
-
-Unlike the HKEXnews receipt below, this is CNINFO repository evidence rather
-than direct SSE/SZSE/BSE venue evidence. Venue, board, share class, currency,
-effective listing dates, and trading status remain null; the provider supplies
-no catalogue timestamp, and the digest is content-bound rather than a CNINFO
-signature. `cn_ohlcv_gap_assessment` therefore continues to require separate
-listing/status inputs. The next mainland authority slice needs direct
-venue-owned effective identity and dated status sources.
-
-### HK current-security authority-evidence slice — 2026-08-06
-
-`finance_hkex` and `pi_hk_disclosures` now capture the exact public
-current-security JSONP response before semantic decoding. `hk_security_search`
-and the identity leg of `hk_disclosure_search` emit a versioned canonical
-receipt binding the exact query URL, observation/retrieval time, byte length,
-body SHA-256, provenance evidence ID/source fingerprint, resolution, and every
-exact code/name/stock-ID candidate. The receipt is direct HKEXnews exchange
-evidence for current catalogue membership at retrieval and retains XHKG scope.
-
-This is intentionally not wired into `hk_ohlcv_gap_assessment` as a historical
-listing receipt. The endpoint supplies no effective listing start/end, board,
-share class, currency, or positive per-session trading status. Those fields
-remain null, and the canonical digest is content-bound rather than an HKEX
-signature. The next authority slice needs an interval-bearing HKEX listing
-source and dated suspension/trading-status evidence; absence from a halt feed
-must not be interpreted as proof of trading.
-
-### HK current Full List profile slice — 2026-08-06
-
-`finance_hkex` and the existing `pi_hk_disclosures` shell now add
-`hk_security_profile` over HKEX's official Full List of Securities XLSX. The
-request is exact-host/path allowlisted, caller-identified, paced, bounded to 2
-MB and cancellation-aware. Original workbook bytes are captured as
-NoRedistribution evidence before the reviewed `finance_archive` effect extracts
-only the declared workbook parts under count and decompression budgets with
-safe-name, encryption, ZIP64, compression, length, UTF-8, and CRC checks.
-
-The pure decoder validates the workbook/sheet relationship, fixed headers, and
-stated update date before resolving one exact five-digit code. Its canonical
-receipt retains category, sub-category, board lot, ISIN, expiry and eligibility
-markers, debt fields, spread table, trading currency, RMB counter, archive
-metadata, source hash, and provenance IDs. Main Board/GEM is derived only from
-the exact HKEX sub-category. The workbook has no listing-start field and Full
-List membership does not prove positive session status; listing start/end and
-trading status stay null, so the tool is deliberately not an
-`hk_ohlcv_gap_assessment` authority leg.
-
-### HK rolling recent-listing authority slice — 2026-08-06
-
-`finance_hkex` and the existing `pi_hk_disclosures` shell now add
-`hk_recent_listing_event` over HKEX's public
-[Newly Listed Securities](https://www.hkex.com.hk/Services/Trading/Securities/Trading-News/Newly-Listed-Securities?sc_lang=en)
-page. The exact English path is caller-identified, paced, cancellation-aware,
-bounded to 4 MB and 30 seconds, and captured before semantic decoding. The pure
-decoder validates the rolling current-two-week scope, ten-column header, page
-update date, exact five-digit code, event date/tentative marker, board lot,
-eligibility markers, corporate action, and related code.
-
-Only a unique, non-tentative row whose action is exactly `New Listing` produces
-`listingEffectiveFrom`. Tentative dates, consolidations, rights trading, and
-other actions retain their source row but produce no listing-start claim. The
-canonical receipt binds the page bytes/SHA-256, provenance identities, update
-date, query, resolution, and exact candidate. A read-only live validation on
-2026-08-06 resolved 03308 ZJ INNOLIGHT to the non-tentative 2026-07-30 listing
-event. The source is only a rolling two-week public view: no match does not
-prove historical absence, while listing end and positive session status remain
-null. HKEX's broader listing-status fields are documented in its licensed
-[MDF transmission specification](https://www.hkex.com.hk/eng/prod/dataprod/Documents/MDS3%208%20MDF%20Transmission%20Specification%20v7.8.pdf),
-and HKEX separately publishes a
-[historical-data product catalogue](https://www.hkex.com.hk/eng/ods/historicalData.aspx),
-so this public slice is not presented as a substitute for a licensed historical
-master.
-
-### US cited source-fact report slice — 2026-08-06
-
-`pi_stock_research_report` has graduated to **Experimental** for a narrow US
-receipt-composition slice. `/us-research` queues an explicit agent workflow over
-`us_stock_quote`, `us_stock_ohlcv`, `sec_company_submissions`, and
-`stock_fundamental_period`; `us_company_brief` then validates and renders the
-selected exact receipts without owning another provider client.
-
-Pi's public `getAllTools()` surface returns tool metadata rather than callable
-implementations, so the command-mediated agent sequence is explicit. The final
-compositor is deterministic and network-free. It accepts only bounded sections,
-requires exact Alpaca symbol/feed/source and SEC CIK/source coherence, refuses
-duplicate or ambiguous fundamental selection, emits stable evidence roots and
-direct source links, and lists missing capabilities rather than filling them
-with model knowledge. Copied receipt integrity is explicitly not
-cryptographically verified; interpretation and investment-thesis generation
-remain outside this slice.
-
-### Track-safe watchlist slice — 2026-08-06
-
-`pi_watchlist` has graduated to **Experimental** for branch-scoped workflow
-state. `/watch`, `watchlist_add`, `watchlist_remove`, and `watchlist_snapshot`
-manage bounded named lists without owning a market-data client. Every member is
-keyed by exact `track + namespaced instrument ID + symbol + MIC`; notes, HTTPS
-thesis links, and lowercase tags remain user-authored metadata, not provider
-observations or resolved identity evidence.
-
-Persistence is a versioned Pi custom-entry event log on the active session
-branch. Pure replay requires contiguous revisions and revalidates every event.
-Identical adds are idempotent, removal requires the complete listing key, tree
-changes restore only the selected branch, and corrupted entries lock mutation
-instead of being skipped. Deterministic snapshots expose bounds, revision,
-identity status, and durability. Resume and inherited forks are covered; a new
-session starts empty. User-owned cross-session storage, imports, conflict
-resolution, snapshot hashing, and authoritative identity binding remain later
-reviewed capabilities.
-
-This arbitration accepts read-only company discovery, recent filing metadata,
-raw standard/entity-wide XBRL fact evidence, and the documented seven direct
-fundamentals. Broader normalized accounting metrics,
-company extensions, dimensional/segment facts, filing document retrieval/search,
-and EDGAR Next submission APIs remain out of scope. The plugins require an
-identifiable SEC user-agent contact, stay below the published access ceiling,
-and label both ticker and XBRL coverage limitations explicitly.
-
-### Metrics substrate expansion — 2026-08-04
-
-`finance_math` has graduated from Draft to **Experimental**. Finance metrics are
-an open algebra rather than a closed registry: exact formula trees compose named
-inputs, preserve explicit missing-data failures, require division precision,
-and return declared units, assumptions, and input names. Approximate analytical
-primitives are isolated behind an explicit binary-float contract with estimator,
-day-count, bracket, tolerance, and iteration policies supplied by callers.
-
-This makes new scalar accounting, valuation, performance, risk, and cash-flow
-metrics ordinary pure compositions. Time-dependent metrics additionally need
-`finance_series` alignment/rolling semantics and `finance_calendar` market-time
-rules; the series layer is implemented below while calendar work remains.
-
-### Time-series substrate expansion — 2026-08-04
-
-`finance_series` has graduated from Draft to **Experimental** using local path
-dependencies on `finance_core` and `finance_math`. It validates strictly ordered
-timelines, preserves missing values, performs explicit join policies, exposes
-rolling warm-up behavior, delegates resampling buckets to injected calendar
-rules, calculates exact decimal returns, and aligns portfolio/factor samples
-before approximate analytics.
-
-This closes the positional-list hazard for beta, correlation, tracking error,
-and related metrics. `finance_calendar` remains necessary for authoritative
-session, holiday, timezone, and day-count behavior; series code intentionally
-does not guess those rules.
-
-### Calendar substrate expansion — 2026-08-04
-
-`finance_calendar` has graduated from Draft to **Experimental** with a local
-path dependency on `finance_core`. It owns pure Gregorian arithmetic, explicit
-local zone/offset values, weekly and dated market rules, overnight trading-date
-classification, finite business-day searches, and named financial day-count
-conventions.
-
-The base package intentionally ships no authoritative holiday dataset and no
-timezone FFI. Maintained calendar adapters must provide effective-dated,
-licence-reviewed closures and convert instants through a real IANA timezone
-resolver before applying these pure rules.
-
-### Analytics enrichment — 2026-08-04
-
-The math and series substrates now cover reliability-weighted estimators,
-expected shortfall, downside deviation, Sharpe/Sortino/Omega, bounded
-multi-factor OLS, fixed-income duration/convexity/DV01, cumulative wealth and
-drawdown paths, time-varying portfolio weights, and component contribution
-series. Numerical tolerance, estimator, annualization, compounding, missing-path,
-and renormalization choices remain explicit inputs rather than defaults hidden
-inside named metrics.
-
-## Plugin proposals
-
-Priorities mean:
-
-- **P0**: foundation for the first useful equity research agent;
-- **P1**: high-value research and portfolio capabilities;
-- **P2**: breadth, specialized analysis, or licensed-data integrations;
-- **P3**: execution or operationally sensitive capability.
-
-### Foundation and trust
-
-| Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
-| --- | --- | --- | --- |
-| `pi_finance_setup` | P0 | Checks provider keys, connectivity, entitlements, currency/timezone defaults, and installed companion plugins without revealing secrets. | `/finance-setup`, `finance_capabilities`, `finance_provider_health` |
-| `pi_finance_track_status` | P0 | Keeps the active `cn`/`hk`/`us` navigation track visible with currency, timezone, auditable source maturity, installed feature coverage, and agent contact; restores and switches it without relabelling data. | `/finance-track`, `/cn-track`, `/hk-track`, `/us-track`, `finance_track_status`, `finance_track_switch` |
-| `pi_cn_disclosures` (**Experimental discovery/repository-receipt slice**) | P0 | CNINFO exact-code organization candidates plus a content-bound repository-catalogue receipt and catalogue-bound paged announcement metadata for read-only local analysis. | `cn_security_search`, `cn_disclosure_search` |
-| `pi_hk_disclosures` (**Experimental discovery/current-profile authority-receipt slice**) | P0 | HKEXnews exact stock-ID candidates plus a content-bound current-catalogue receipt, bounded initial-page issuer titles, HKEX Full List current profile evidence, and rolling two-week exact listing-start evidence for non-tentative new listings. | `hk_security_search`, `hk_security_profile`, `hk_recent_listing_event`, `hk_disclosure_search` |
-| `pi_cn_market_calendar` (**Experimental 2026 slice**) | P0 | Source-reviewed SSE/SZSE/BSE planned sessions and closures with explicit venue, source, coverage, entitlement, and exceptional-notice limits. | `cn_market_calendar` |
-| `pi_hk_market_calendar` (**Experimental 2026 slice**) | P0 | HKEX circular CT/075/25 full closures and half-days with bounded coverage and explicit market/rights limits. | `hk_market_calendar` |
-| `pi_us_market_calendar` (**Experimental 2026 slice**) | P0 | Venue-explicit NYSE/XNYS and Nasdaq/XNAS regular-equity closures and 1:00 p.m. Eastern early closes with bounded coverage and separate official sources. | `us_market_calendar` |
-| `pi_us_market_rules` (**Experimental current-rule slice**) | P0 | Exact-listing NYSE/Nasdaq regular displayed-quote increments for a bounded reviewed interval, retaining exchange and SEC sources and rejecting unsupported regimes. | `us_trading_rules` |
-| `pi_cn_market_data` (**Experimental public-web slice**) | P0 | Explicit SSE/SZSE/BSE Eastmoney quote and raw unadjusted daily history with bounded requests, exact provider scaling/lexemes, and visible unknown latency/rights. | `cn_stock_quote`, `cn_stock_history` |
-| `pi_hk_market_data` (**Experimental public-web slice**) | P0 | HK Eastmoney quote and raw unadjusted daily history with mandatory caller-declared listing currency and visible unknown latency/rights. | `hk_stock_quote`, `hk_stock_history` |
-| `pi_cn_market_rules` (**Experimental dated slice**) | P0 | Official 2026-07-06 established normal CNY A-share tick, quantity, odd-lot exit, and standard price-limit profiles for exact SSE/SZSE/BSE boards. | `cn_trading_rules` |
-| `pi_hk_market_rules` (**Experimental dated slice**) | P0 | Official HKEX 2026-08-03 HKD applicable-equity minimum spreads with issuer-specific caller-evidenced board lots. | `hk_trading_rules` |
-| `pi_finance_guardrails` | P0 | Shared freshness, provenance, disclaimer, and action policy. Rejects answers that mix incompatible currencies, periods, or adjustment bases. | `/finance-policy`, `finance_validate_evidence`, `finance_check_freshness` |
-| `pi_finance_symbols` | P0 | Resolves company names, tickers, FIGIs, CIKs, MICs, share classes, and historical symbols; returns ambiguity instead of guessing. | `/symbol`, `security_search`, `security_resolve`, `security_identifiers` |
-| `pi_finance_calendar` | P0 | Answers exchange session/holiday questions and normalizes market timestamps. | `/market-hours`, `market_session`, `market_days`, `next_market_open` |
-| `pi_finance_sources` | P0 | Shows the provenance ledger for the current research session and exports a reproducibility manifest. | `/sources`, `/evidence-export`, `finance_sources`, `finance_replay_manifest` |
-| `pi_finance_cache` | P1 | User-controlled local cache inspection, expiry, offline replay, and provider usage accounting. | `/finance-cache`, `cache_status`, `cache_expire`, `provider_usage` |
-| `pi_finance_data_quality` | P1 | Cross-checks duplicate/stale data, split discontinuities, missing periods, unit changes, and provider disagreement. | `data_quality_check`, `quote_crosscheck`, `series_anomalies` |
-
-### Equity market data
-
-| Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
-| --- | --- | --- | --- |
-| `pi_stock_quote` | P0 | Current/delayed quote snapshots with bid/ask, last trade, session, source, and freshness. Backend chosen explicitly. | `/quote`, `stock_quote`, `stock_quotes` |
-| `pi_us_quote` (**Experimental Alpaca latest slice**) | P0 | Exact latest Alpaca US best bid/ask for one symbol and explicit IEX/SIP feed, preserving market codes and unknown freshness/size semantics. | `us_stock_quote` |
-| `pi_stock_history` | P0 | Daily/intraday OHLCV with raw/adjusted controls and corporate-action metadata. | `/chart-data`, `stock_bars`, `stock_returns`, `stock_performance` |
-| `pi_us_ohlcv` (**Experimental Alpaca daily slice**) | P0 | Exact raw daily US OHLCV for one Alpaca symbol/as-of identity and explicit IEX/SIP feed, with bounded pagination, page-body hashes, a canonical gap-projection digest, and visible calendar/rights gaps. | `us_stock_ohlcv` |
-| `pi_us_ohlcv_gaps` (**Experimental receipt-composition slice**) | P0 | Network-free 2026 NYSE/Nasdaq missing-row classification from a SHA-256-bound Alpaca projection plus exact listing, calendar, and status receipts; incomplete, changed, or conflicting evidence fails closed. | `us_ohlcv_gap_assessment` |
-| `pi_cn_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily mainland OHLCV for a caller-declared venue/board/share-class/currency identity, retaining provider rows with unknown volume/session/calendar/rights semantics. | `cn_stock_ohlcv` |
-| `pi_cn_ohlcv_gaps` (**Experimental receipt-composition slice**) | P0 | Network-free 2026 SSE/SZSE/BSE missing-row classification from a SHA-256-bound Eastmoney projection plus independently repeated listing, calendar, and status receipts. | `cn_ohlcv_gap_assessment` |
-| `pi_hk_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily HK OHLCV for a caller-declared board/share-class/currency identity, without assuming HKD, half-days, suspensions, or provider volume units. | `hk_stock_ohlcv` |
-| `pi_hk_ohlcv_gaps` (**Experimental receipt-composition slice**) | P0 | HK-owned canonical acquisition receipt and network-free 2026 HKEX calendar/listing/status composition, preserving half-day and currency semantics without importing CN/US domains. | `hk_ohlcv_gap_assessment` |
-| `pi_stock_market_snapshot` | P1 | Index/sector/industry breadth, leaders, laggards, gaps, volume, and volatility snapshots. | `/market`, `market_snapshot`, `market_breadth`, `market_movers` |
-| `pi_stock_screener` | P1 | Reproducible universe filters combining price, liquidity, fundamentals, growth, valuation, and technical fields. | `/screen`, `stock_screen`, `screen_explain`, `screen_save` |
-| `pi_stock_corporate_actions` | P1 | Splits, dividends, symbol changes, mergers, spinoffs, and delistings, with adjustment impact. | `/actions`, `corporate_actions`, `dividend_history`, `split_history` |
-| `pi_stock_earnings_calendar` | P1 | Upcoming/recent earnings dates, confirmation status, fiscal period, time-of-day, and estimate provenance. | `/earnings`, `earnings_calendar`, `earnings_event` |
-| `pi_stock_market_calendar` | P1 | Equity-specific auctions, halts, short sessions, and pre/post-market context beyond the generic calendar. | `stock_session_status`, `trading_halts`, `market_schedule` |
-| `pi_stock_order_book` | P2 | Entitlement-aware top-of-book or depth snapshots, with an explicit warning that snapshots are not executable prices. | `/book`, `stock_top_of_book`, `stock_depth` |
-| `pi_stock_tape` | P2 | Recent trades, sale conditions, volume profile, and intraday microstructure summaries. | `/tape`, `stock_trades`, `volume_profile`, `trade_conditions` |
-
-Market-data plugins should expose a provider name in both the tool result and
-tool name or configuration. Plausible adapters include Alpaca, Polygon/Massive,
-Nasdaq Data Link, and a local licensed feed. Free/delayed and paid/real-time
-coverage must never be described as equivalent.
-
-### China stock-market track
-
-China is a first-class target, not a localization layer over US equities. The
-shared finance types should be global from the start, while China-specific
-plugins own the exchange rules, disclosures, identifiers, units, language, and
-provider contracts for Shanghai, Shenzhen, Beijing, and—where stated—Hong Kong.
-
-| Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
-| --- | --- | --- | --- |
-| `pi_cn_stock_symbols` | P0 | Resolves Chinese names, short names, six-digit codes, exchange/MIC, board, A/B/H relationships, CDRs, share classes, and historical names without guessing from code alone. | `/cn-symbol`, `cn_security_search`, `cn_security_resolve`, `cn_security_identifiers` |
-| `pi_cn_market_calendar` | P0 | Current Experimental slice answers exact 2026 SSE/SZSE/BSE planned sessions and holidays; later versions add exceptional-notice refresh and settlement-date calculations by security type. | `cn_market_calendar`; proposed `/cn-hours`, `cn_market_session`, `cn_market_days`, `cn_settlement_date` |
-| `pi_cn_stock_rules` | P0 | Current Experimental slice exposes dated standard CNY A-share tick/lot/limit facts; later work adds exceptional ST/delisting/IPO/suspension/settlement/order regimes. | `cn_trading_rules`; proposed `/cn-rules`, `cn_price_limit`, `cn_order_constraints` |
-| `pi_cn_stock_quote` | P0 | Current Experimental Eastmoney slice exposes bounded explicit-venue vendor quotes with unknown latency/rights; later work adds licensed A/B-share semantics, suspension, session and calculated limits. | `cn_stock_quote`; proposed `/cn-quote`, `cn_stock_quotes` |
-| `pi_cn_stock_history` | P0 | Current Experimental Eastmoney slice preserves bounded raw unadjusted daily lexemes; later work adds intraday, suspension completeness, actions and audited adjustment formulas. | `cn_stock_history`; proposed `/cn-history`, `cn_stock_bars`, `cn_stock_returns`, `cn_adjustment_factors` |
-| `pi_cn_stock_announcements` | P0 | Searches and retrieves original exchange/CNInfo announcements, periodic reports, ad-hoc disclosures, and attachments with Chinese titles preserved. | `/cn-announcements`, `cn_announcements`, `cn_announcement`, `cn_announcement_search` |
-| `pi_cn_stock_financials` | P0 | Current Experimental vendor slice preserves exact revenue/parent-profit tokens, labels, visible mappings, unknown filing context, and source-retaining net margin; later work links official documents and broadens statements, scope, standards, corrections, audit/restatement, metrics and trends. | `cn_financial_statement`, `cn_stock_fundamental`, `cn_stock_fundamental_metric`; proposed `/cn-financials`, `cn_company_financials`, `cn_financial_trends` |
-| `pi_cn_stock_research_report` | P0 | Orchestrates China sources into a bilingual-capable, cited company brief that separates primary disclosures from vendor-derived metrics. | `/cn-research`, `cn_company_brief`, `cn_compare_companies` |
-| `pi_cn_market_snapshot` | P1 | Shanghai/Shenzhen/Beijing index, board, breadth, turnover, limit-up/down, suspension, and liquidity summaries. | `/cn-market`, `cn_market_snapshot`, `cn_market_breadth`, `cn_market_movers` |
-| `pi_cn_stock_screener` | P1 | A-share/Beijing filters for board, ST state, liquidity, market cap, financials, valuation, growth, dividends, and trading constraints. | `/cn-screen`, `cn_stock_screen`, `cn_screen_explain` |
-| `pi_cn_stock_corporate_actions` | P1 | Cash/stock dividends, bonus issues, capitalization, rights issues, splits, mergers, symbol changes, and ex-right/ex-dividend records. | `/cn-actions`, `cn_corporate_actions`, `cn_dividend_history`, `cn_ex_rights` |
-| `pi_cn_stock_earnings` | P1 | Reporting calendar, preliminary results, performance forecasts, express reports, periodic reports, and revision history as distinct event types. | `/cn-earnings`, `cn_reporting_calendar`, `cn_performance_forecasts`, `cn_results_history` |
-| `pi_cn_stock_share_structure` | P1 | Total/tradable/restricted shares, A/B/H classes, state/legal-person holdings where disclosed, and dated changes to denominators. | `cn_share_structure`, `cn_share_capital_changes` |
-| `pi_cn_stock_shareholders` | P1 | Top shareholders, top tradable holders, shareholder count, beneficial-owner context, and quarter-over-quarter changes with disclosure lag. | `/cn-holders`, `cn_top_shareholders`, `cn_holder_changes`, `cn_shareholder_count` |
-| `pi_cn_stock_restricted_shares` | P1 | Upcoming and historical restricted-share unlocks, eligible quantities, holders, source announcements, and float-impact estimates. | `/cn-unlocks`, `cn_restricted_unlocks`, `cn_unlock_impact` |
-| `pi_cn_stock_pledges` | P1 | Disclosed share pledges, freezes, controlling-shareholder exposure, releases, and concentration warnings. | `/cn-pledges`, `cn_share_pledges`, `cn_pledge_changes` |
-| `pi_cn_stock_insiders` | P1 | Director/supervisor/senior-management and major-holder increases, reductions, plans, completions, and short-swing context from disclosures. | `/cn-insiders`, `cn_holder_trades`, `cn_reduction_plans` |
-| `pi_cn_stock_public_info` | P1 | Exchange public trading information such as unusual-movement reasons and 龙虎榜, preserving the published seat/institution labels. | `/cn-public-info`, `cn_dragon_tiger`, `cn_abnormal_trading` |
-| `pi_cn_stock_margin` | P1 | 融资融券 eligibility, balances, purchases/sales, changes, and market aggregates with unit-aware output. | `/cn-margin`, `cn_margin_eligibility`, `cn_margin_balance`, `cn_margin_changes` |
-| `pi_cn_stock_block_trades` | P1 | 大宗交易 records with price, discount/premium, volume, amount, and published buyer/seller branch labels. | `/cn-blocks`, `cn_block_trades`, `cn_block_trade_summary` |
-| `pi_cn_stock_connect` | P1 | Shanghai/Shenzhen-Hong Kong Stock Connect eligibility, buy-only/sell-only state, effective dates, calendars, quotas where published, and cross-list mappings. | `/stock-connect`, `connect_eligibility`, `connect_changes`, `connect_calendar` |
-| `pi_cn_stock_indices` | P1 | CSI/SSE/SZSE/BSE index identity, methodology links, constituents, weights, rebalances, and index performance. | `/cn-index`, `cn_index_profile`, `cn_index_constituents`, `cn_index_changes` |
-| `pi_cn_stock_sector_concept` | P1 | Explicitly sourced CSRC/exchange/vendor industry and concept classifications; never treats competing taxonomies as interchangeable. | `/cn-sector`, `cn_industry_classification`, `cn_sector_members`, `cn_concept_members` |
-| `pi_cn_stock_valuation` | P1 | China-aware peer multiples and DCF inputs with share-class currency, cross-listed securities, non-tradable/restricted shares, and source dates exposed. | `/cn-value`, `cn_trading_comps`, `cn_valuation`, `cn_valuation_sensitivity` |
-| `pi_cn_stock_filing_diff` | P1 | Chinese section/table-aware comparison of periodic and ad-hoc disclosures, including corrected/restated documents and changed risk factors. | `/cn-filing-diff`, `cn_filing_diff`, `cn_disclosure_changes` |
-| `pi_cn_stock_watch` | P1 | Watches announcements, forecasts, unlocks, pledges, suspensions, rule status, and Stock Connect eligibility for named lists. | `/cn-watch`, `cn_watch_add`, `cn_watch_snapshot`, `cn_watch_poll` |
-| `pi_cn_regulatory` | P1 | Searches CSRC and exchange rules, inquiries, disciplinary actions, supervision letters, and enforcement releases with effective dates. | `/cn-regulation`, `cn_rule_search`, `cn_company_regulatory_events`, `cn_enforcement_search` |
-| `pi_cn_ipo` | P2 | IPO pipeline, prospectuses, inquiry responses, registration status, offer calendar, listing result, lockups, and sponsor/accountant/law-firm identity. | `/cn-ipo`, `cn_ipo_pipeline`, `cn_ipo_company`, `cn_ipo_calendar` |
-| `pi_cn_convertible_bonds` | P2 | Exchange-listed convertibles, conversion terms, price triggers, redemption/put clauses, dilution, parity, premium, and announcements. | `/cn-convertible`, `cn_convertible_terms`, `cn_convertible_valuation`, `cn_convertible_events` |
-| `pi_cn_funds_etf` | P2 | Listed funds/ETFs, NAV/IOPV context, holdings where licensed, creations/redemptions, distributions, and tracking diagnostics. | `/cn-fund`, `cn_fund_profile`, `cn_etf_holdings`, `cn_tracking_difference` |
-| `pi_cn_mutual_funds` | P2 | Public-fund profiles, managers, portfolios, periodic reports, fees, benchmarks, and performance with survivorship warnings. | `/cn-mutual-fund`, `cn_fund_search`, `cn_fund_portfolio`, `cn_fund_performance` |
-| `pi_cn_macro` | P1 | NBS/PBOC/SAFE and other official macro series with original release, frequency, units, revisions, and publication calendar. | `/cn-macro`, `cn_macro_search`, `cn_macro_series`, `cn_macro_calendar` |
-| `pi_cn_policy_monitor` | P2 | A dated, sourced monitor for monetary, securities, industrial, trade, and company-relevant policy documents; translation is always labelled. | `/cn-policy`, `cn_policy_search`, `cn_policy_timeline`, `cn_policy_watch` |
-| `pi_hk_stock` | P2 | Current isolated slices cover HKEXnews identity/disclosures, 2026 sessions, dated spreads, vendor quote/history, and an exact two-field vendor fundamental workflow; later work adds official filing-linked statements, actions, authoritative board lots, and A/H relationships. | `hk_stock_quote`, `hk_financial_statement`, `hk_stock_fundamental`, `hk_stock_fundamental_metric`; proposed `/hk-stock`, `hk_announcements`, `ah_compare` |
-| `pi_cn_broker_readonly` | P3 | A broker-specific, read-only view of Chinese accounts, positions, orders, cash, settlement, and entitlements. | `/cn-broker`, `cn_broker_positions`, `cn_broker_orders`, `cn_broker_cash` |
-| `pi_cn_broker_paper` | P3 | Provider-specific simulation that enforces China instrument/session/lot/limit rules and clearly states simulation limitations. | `/cn-paper-trade`, `cn_paper_order_draft`, `cn_paper_order_submit` |
-
-China-specific correctness requirements:
-
-- Security identity includes venue and board. The bare code `000001`, a company
-  name, or an English translation is never accepted as globally unambiguous.
-- Original Chinese document titles, text excerpts, units, and source links are
-  retained. Machine or model translations are optional derived content and are
-  labelled as translations; the original controls when they differ.
-- All exchange times are handled in `Asia/Shanghai`; Hong Kong uses its own
-  venue calendar. Midday breaks and exceptional sessions are represented rather
-  than flattened into a US-style continuous session.
-- Price-limit, lot, eligibility, suspension, and settlement behavior is resolved
-  from the security, board, status, and effective date. No plugin hardcodes a
-  universal “10% A-share rule.”
-- Financial decoders preserve `元`, `万元`, `亿元`, shares, `万股`, and percentage
-  scales, and distinguish consolidated from parent-company statements.
-- Adjusted history always returns the corporate-action inputs and algorithm.
-  Labels such as 前复权 and 后复权 are not treated as provider-independent unless
-  their formulas and base date match.
-- Preliminary earnings, performance forecasts, express reports, audited annual
-  reports, and later corrections are different evidence classes.
-- Exchange pages may be public without granting an undocumented bulk API or
-  redistribution right. Prefer documented products, official downloads, or a
-  licensed vendor; do not make reverse-engineered scraping the default adapter.
-
-Generic plugins such as portfolio risk, thesis tracking, event studies, and
-backtesting should support China instruments once these adapters exist. They do
-not need duplicate `pi_cn_*` versions unless local rules materially change their
-public contract.
-
-### Filings, fundamentals, and company intelligence
-
-| Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
-| --- | --- | --- | --- |
-| `pi_sec_edgar` (**Experimental first slice**) | P0 | Company candidate identity and recent filing metadata now; document retrieval/search remains planned. | `/sec-company`, `sec_company_search`, `sec_company_submissions`; later `sec_filing`, `sec_search_filing` |
-| `pi_sec_xbrl` (**Experimental raw-fact slice**) | P0 | Exact company concepts/facts retaining taxonomy, units, period, accession, form/amendment, filed date, frame, and duplicates; normalized metrics remain planned. | `sec_xbrl_concepts`, `sec_xbrl_facts`; later `/facts`, `sec_compare_fact` |
-| `pi_stock_fundamentals` (**Experimental fundamental slice**) | P0 | Seven US-GAAP direct facts with inspectable mappings, exact/classified periods, explicit filing precedence and ambiguity, strict Q4/trends, exact source-graph formulas, calendar-validated growth, direct/bridged/composed TTM, explicit direct-versus-derived quarter provenance, and a concise network-free workflow guide; debt, broader metrics, and segments remain planned. | `/fundamentals`, `stock_fundamental_definitions`, `stock_fundamental`, `stock_fundamental_period`, `stock_fundamental_q4`, `stock_fundamental_trend`, `stock_fundamental_growth`, `stock_fundamental_ttm`, `stock_fundamental_ttm_bridge`, `stock_fundamental_ttm_composed`, `stock_fundamental_metric`; later `company_financials`, `segment_history` |
-| `pi_filing_diff` | P1 | Section-aware comparison of successive filings, highlighting changed risks, accounting policy, guidance, and exhibits. | `/filing-diff`, `filing_diff`, `filing_changes` |
-| `pi_filing_monitor` | P1 | Watches configured companies/forms and injects a sourced summary when new filings arrive. | `/filing-watch`, `filing_watch_add`, `filing_watch_list`, `filing_watch_poll` |
-| `pi_sec_insiders` | P1 | Form 3/4/5 transactions with role, ownership type, transaction code, price, and post-transaction holdings. | `/insiders`, `insider_transactions`, `insider_summary` |
-| `pi_sec_ownership` | P1 | 13F, 13D/G, and institutional ownership changes with reporting-lag warnings. | `/ownership`, `institutional_holdings`, `ownership_changes` |
-| `pi_company_profile` | P1 | Business description, exchanges, securities, fiscal calendar, industry classification, and primary-source links. | `/company`, `company_profile`, `company_entities` |
-| `pi_earnings_release` | P1 | Retrieves and compares company earnings releases and filed exhibits; avoids treating marketing metrics as GAAP facts. | `/release`, `earnings_release`, `earnings_release_diff` |
-| `pi_earnings_transcript` | P2 | Licensed transcript search, speaker-aware excerpts, topic extraction, and quarter-over-quarter comparison. | `/transcript`, `transcript_search`, `transcript_compare` |
-| `pi_company_guidance` | P2 | Tracks explicit management guidance ranges, units, horizon, source passage, and revisions. | `/guidance`, `company_guidance`, `guidance_history` |
-| `pi_consensus_estimates` | P2 | Licensed analyst estimates, revisions, dispersion, and surprise history with vendor attribution. | `/estimates`, `consensus_estimates`, `estimate_revisions`, `earnings_surprises` |
-
-SEC data is the preferred first fundamentals source because it is primary and
-its submissions/company-facts APIs require no API key. Normalization remains
-hard: company extensions, restatements, units, fiscal calendars, and duplicate
-contexts must remain visible rather than being papered over.
-
-### Research and valuation
-
-| Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
-| --- | --- | --- | --- |
-| `pi_stock_peers` | P1 | Builds an explainable peer set by industry, business mix, size, geography, and user constraints. | `/peers`, `peer_candidates`, `peer_compare` |
-| `pi_stock_comps` | P1 | Comparable-company tables with consistent dates, currencies, enterprise values, and denominator definitions. | `/comps`, `trading_comps`, `comps_explain` |
-| `pi_stock_valuation` | P1 | Transparent DCF, dividend, residual-income, and multiples models with editable assumptions and sensitivity grids. | `/value`, `dcf`, `valuation_multiples`, `valuation_sensitivity` |
-| `pi_stock_quality` | P1 | Profitability, accruals, leverage, dilution, cash conversion, and accounting-quality diagnostics. | `/quality`, `quality_scorecard`, `accounting_flags` |
-| `pi_stock_growth` | P1 | Historical growth decomposition, cyclicality, base effects, and scenario ranges. | `/growth`, `growth_analysis`, `growth_scenarios` |
-| `pi_stock_technicals` | P1 | Deterministic indicators and regime summaries without unsupported predictive language. | `/technicals`, `technical_indicators`, `support_resistance`, `trend_regime` |
-| `pi_stock_event_study` | P2 | Abnormal-return studies around earnings, filings, guidance, splits, or user-supplied events. | `/event-study`, `event_study`, `event_window_returns` |
-| `pi_stock_factor_lab` | P2 | Cross-sectional value, quality, momentum, size, low-volatility, and custom factors with neutralization controls. | `/factors`, `factor_exposure`, `factor_rank`, `factor_test` |
-| `pi_stock_thesis` | P1 | Stores bull/base/bear theses as structured claims, evidence, disconfirming signals, and review dates. | `/thesis`, `thesis_create`, `thesis_update`, `thesis_audit` |
-| `pi_stock_research_report` (**Experimental US source-fact slice**) | P0 | Queues existing read-only US tools and deterministically validates their exact receipts into a cited brief; earnings and comparison reports remain planned. | `/us-research`, `us_company_brief`; later `/earnings-preview`, `compare_companies` |
-
-The report plugin should orchestrate; it should not own a second copy of every
-data client. If a required capability is absent, it should state that gap in the
-report rather than substitute unsourced model knowledge.
-
-### News and event intelligence
-
-| Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
-| --- | --- | --- | --- |
-| `pi_finance_news` | P1 | Provider-backed company/market news search with timestamps, canonical URLs, deduplication, and licence-aware excerpts. | `/news`, `finance_news`, `news_search`, `news_cluster` |
-| `pi_finance_catalysts` | P1 | A sourced timeline joining earnings, filings, guidance, macro releases, dividends, and user events. | `/catalysts`, `catalyst_calendar`, `company_timeline` |
-| `pi_finance_alerts` | P1 | Poll-based alerts for price, volume, filings, fundamentals, news, and thesis conditions; lifecycle-safe cleanup on reload. | `/alerts`, `alert_add`, `alert_list`, `alert_remove`, `alert_poll` |
-| `pi_finance_sentiment` | P2 | Transparent text classification over licensed/user-supplied documents, with samples and uncertainty—not a magic score. | `/sentiment`, `document_sentiment`, `sentiment_compare` |
-| `pi_finance_rumor_check` | P2 | Cross-checks a market claim against filings, issuer releases, regulator sources, and licensed news. | `/verify-market-claim`, `market_claim_check` |
-
-### Macro, rates, and other asset classes
-
-| Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
-| --- | --- | --- | --- |
-| `pi_macro_fred` | P0 | FRED/ALFRED series search, observations, transformations, release dates, and historical vintages. | `/fred`, `fred_search`, `fred_series`, `fred_vintage`, `macro_release_calendar` |
-| `pi_macro_dashboard` | P1 | Configurable growth/inflation/labor/liquidity/credit dashboards composed from provenance-rich series. | `/macro`, `macro_dashboard`, `macro_compare` |
-| `pi_rates_treasury` | P1 | Treasury yields, auctions, debt, and curve analytics from official or clearly licensed sources. | `/rates`, `treasury_curve`, `yield_spread`, `auction_calendar` |
-| `pi_fx_ecb` | P1 | ECB reference exchange rates and SDMX series with explicit base, quote, and fixing conventions. | `/fx`, `fx_rate`, `fx_history`, `fx_convert` |
-| `pi_fixed_income` | P2 | Bond lookup, cash flows, yield/duration/convexity, spread analysis, and entitlement-aware TRACE data. | `/bond`, `bond_cashflows`, `bond_analytics`, `bond_trades` |
-| `pi_options` | P2 | Chains, contract identity, Greeks, implied volatility, payoff diagrams, and scenario surfaces. | `/options`, `option_chain`, `option_greeks`, `option_payoff`, `iv_surface` |
-| `pi_cftc_cot` | P2 | CFTC Commitments of Traders positioning, changes, percentiles, and report-lag context. | `/cot`, `cot_positions`, `cot_changes`, `cot_extremes` |
-| `pi_commodities` | P2 | Futures curves, roll/term structure, contract calendars, and commodity-specific units. | `/commodity`, `futures_curve`, `curve_spread`, `roll_yield` |
-| `pi_crypto_market` | P2 | Spot crypto products, candles, order books, funding context, and venue identity. | `/crypto`, `crypto_quote`, `crypto_bars`, `crypto_book` |
-| `pi_global_markets` | P2 | Country/index/ETF and cross-market dashboard with trading calendars, currencies, and local-vs-ADR identity. | `/global-markets`, `global_snapshot`, `cross_market_compare` |
-
-### Portfolio, risk, and workflow
-
-| Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
-| --- | --- | --- | --- |
-| `pi_portfolio` | P1 | Imports and validates positions from CSV/JSON or read-only broker APIs; calculates value, P&L, weights, and exposures. | `/portfolio`, `portfolio_import`, `portfolio_summary`, `portfolio_positions` |
-| `pi_portfolio_risk` | P1 | Concentration, volatility, beta, correlation, VaR/CVaR, liquidity, currency, and drawdown diagnostics with method labels. | `/risk`, `portfolio_risk`, `risk_contributors`, `correlation_matrix` |
-| `pi_portfolio_scenarios` | P1 | User-defined and historical shocks across securities, factors, rates, FX, volatility, and correlations. | `/scenario`, `portfolio_scenario`, `stress_test` |
-| `pi_portfolio_attribution` | P2 | Return attribution by position, sector, factor, currency, and period with cash-flow-aware calculations. | `/attribution`, `performance_attribution`, `portfolio_returns` |
-| `pi_portfolio_rebalance` | P2 | Generates tax/fee/liquidity-aware rebalance proposals but never submits them. | `/rebalance`, `rebalance_plan`, `rebalance_validate` |
-| `pi_tax_lots` | P2 | Lot-level gains, holding periods, harvest candidates, and jurisdiction-labelled estimates. | `/lots`, `tax_lots`, `realized_gains`, `harvest_candidates` |
-| `pi_trade_journal` | P1 | Records decisions, assumptions, orders, fills, screenshots/links, and post-trade reviews in portable local data. | `/journal`, `journal_entry`, `journal_search`, `trade_review` |
-| `pi_watchlist` (**Experimental session-branch slice**) | P0 | Exact track/listing-key named watchlists with bounded notes, HTTPS thesis links, tags, versioned event replay, and deterministic compact snapshots; cross-session storage remains planned. | `/watch`, `watchlist_add`, `watchlist_remove`, `watchlist_snapshot` |
-| `pi_backtest` | P2 | Reproducible bar-based strategy tests with transaction costs, survivorship/look-ahead warnings, and exported run manifests. | `/backtest`, `backtest_run`, `backtest_compare`, `backtest_audit` |
-
-### Execution—deliberately last
-
-| Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
-| --- | --- | --- | --- |
-| `pi_broker_readonly_alpaca` | P2 | Read-only accounts, positions, orders, activities, and entitlements from Alpaca. | `/broker`, `broker_accounts`, `broker_positions`, `broker_orders` |
-| `pi_broker_readonly_ibkr` | P2 | Read-only IBKR portfolio/account/contract access with session and pacing visibility. | `/ibkr`, `ibkr_accounts`, `ibkr_positions`, `ibkr_contract_search` |
-| `pi_broker_paper_alpaca` | P3 | Explicit paper order drafts, validation, submission, cancel/replace, and fill monitoring. | `/paper-trade`, `paper_order_draft`, `paper_order_submit`, `paper_order_cancel` |
-| `pi_broker_paper_ibkr` | P3 | The same paper-first workflow for an IBKR simulated account. | `/paper-ibkr`, `ibkr_paper_order_draft`, `ibkr_paper_order_submit` |
-| `pi_broker_live` | P3 | Optional live adapter only after a security review and prolonged paper use. No generic auto-trading mode. | `/live-order`, `live_order_draft`, `live_order_submit`, `live_order_cancel` |
-| `pi_trade_compliance` | P3 | Account/user policy: symbols, asset classes, max quantity/notional, trading window, order types, daily loss, and immutable decision logs. | `/trade-policy`, `trade_policy_check`, `trade_audit` |
-
-Live execution needs a stronger interaction contract than an LLM tool call:
-
-1. The model may create a non-executable order draft.
-2. The policy plugin validates account, instrument, side, quantity/notional,
-   price type, session, stale quote, and configured limits.
-3. Pi displays the exact normalized order and estimated maximum cost in an
-   interactive confirmation.
-4. The user confirms with a short-lived nonce; ordinary natural-language assent
-   is insufficient.
-5. Submission uses an idempotency/client-order ID and records the broker request
-   ID, response, and policy decision with secrets redacted.
-6. The agent separately polls and reports acknowledgement, partial fills,
-   rejection, cancellation, and final state. A submitted order is never called
-   filled until the broker says so.
-
-Paper trading stays a separate package and endpoint. Alpaca explicitly notes
-that its paper environment does not model effects such as market impact,
-information leakage, latency slippage, or queue position, so simulated results
-must not be presented as live-performance estimates.
-
-## Recommended build sequence
-
-### F0 — trustworthy substrate
-
-Build `finance_core`, `finance_provenance`, `finance_http`, `finance_table`, and
-`finance_testkit`, then the shared track/status/capability foundations and the
-`pi_finance_setup`, `pi_finance_track_status`, `pi_cn_setup`, `pi_hk_setup`,
-`pi_finance_guardrails`, and `pi_finance_symbols` plugins.
-
-Acceptance:
-
-- one canonical observation envelope is used across packages;
-- secrets are redacted from tool results and errors;
-- identifier ambiguity and stale data are observable test cases;
-- OpenFIGI uses v3 rather than the retired v2 API;
-- provider HTTP behavior has deterministic fixtures and rate-limit tests.
-
-### F1 — first equity research agent
-
-Build `pi_stock_quote`, `pi_stock_history`, `pi_sec_edgar`, `pi_sec_xbrl`,
-`pi_stock_fundamentals`, `pi_watchlist`, and `pi_stock_research_report`.
-
-The quote/history, SEC, fundamental, branch-persistent watchlist, and narrow
-source-fact report slices are Experimental. Authoritative security resolution,
-user-owned cross-session watchlist storage, cryptographically bound cross-tool
-receipts, and full automatic orchestration remain open, so F1 is not yet
-complete.
-
-Acceptance: given a US-listed company, Pi resolves the security, gets a properly
-labelled quote/history, finds primary filings, extracts a small audited set of
-fundamentals, and produces a cited report. The same run can be reproduced from
-an evidence manifest without a model call to fetch facts.
-
-### F2 — monitoring and analysis
-
-Add corporate actions, earnings calendar/releases, filing diff/monitor,
-screening, peers/comps, valuation, technicals, news, catalysts, and alerts.
-
-Acceptance: a saved watchlist produces a bounded, sourced morning brief and
-alerts survive `/new` and `/fork` correctly while stopping cleanly on reload or
-session shutdown.
-
-### F3 — portfolio agent
-
-Add portfolio import, risk, scenarios, attribution, thesis tracking, journal,
-and rebalance proposals.
-
-Acceptance: every portfolio result reconciles to imported positions and a dated
-price snapshot; risk/valuation outputs expose methods, assumptions, missing
-data, and sensitivity rather than a single unexplained score.
-
-### F4 — asset-class breadth
-
-Add FRED/ALFRED macro data, official rate/FX sources, options, fixed income,
-CFTC positioning, commodities, crypto, and global markets according to demand.
-
-Acceptance: shared types handle calendars, currencies, units, contract identity,
-and different data frequencies without equity-specific shortcuts.
-
-### F5 — paper execution
-
-Add one read-only broker adapter, its paper-only execution companion, and trade
-policy/audit plugins. Run paper-only for an extended period with fault injection.
-
-Acceptance: duplicate calls do not duplicate orders; every transition is
-reconciled against the broker; UI-less mode cannot submit; stale quotes and
-policy violations fail closed; all lifecycle cleanup is idempotent.
-
-### F6 — optional live execution
-
-Only consider a broker-specific live plugin after a separate threat model,
-security review, operational runbook, and explicit user decision. A generic
-provider-independent live order tool should not be the first design.
-
-### CN0–CN4 — China parallel track
-
-The China track can begin alongside F1 without waiting for US feature breadth:
-
-1. **CN0 identity/rules:** `pi_cn_stock_symbols`, `pi_cn_market_calendar`, and
-   `pi_cn_stock_rules`.
-2. **CN1 primary research:** announcements, financials, quote/history, and the
-   first China company report.
-3. **CN2 market structure:** corporate actions, earnings, share structure,
-   unlocks, pledges, public information, margin, block trades, and Stock Connect.
-4. **CN3 analysis:** China screener, industries/concepts, indices, valuation,
-   filing diff, watches, regulatory events, and macro/policy context.
-5. **CN4 breadth:** Beijing-specific edge cases, convertibles, funds/ETFs, IPOs,
-   Hong Kong/A-H comparison, and only then read-only/paper broker work.
-
-As of 2026-08-05, the CN/HK substrate is Experimental. Isolated identity,
-official 2026 calendar, public-web quote/history and narrow exact fundamental
-workflows, official dated rule, and official disclosure-discovery shells compose
-shared evidence, HTTP, math, coverage, and capability policy. `cn_setup` and
-`hk_setup` are loadable track-labelled preflights; with all matching tools each
-covers the ten current feature families. Authoritative venue identity,
-production data rights, exceptional rule/calendar state, official filing-linked
-statement depth, broader accounting, and redistribution remain visibly
-incomplete under `CN_TRACK.md` and the structured status receipt.
-
-CN1 acceptance: Pi can take an unambiguous Shanghai, Shenzhen, or Beijing
-listing, show a source/freshness-labelled quote, retrieve original disclosures,
-normalize a small audited set of financial fields without losing Chinese units
-or statement scope, and produce a cited report containing the original Chinese
-source titles.
-
-## Suggested first sprint
-
-The best vertical slice is narrow enough to finish and broad enough to feel like
-a finance agent:
-
-1. `finance_core`: identifiers, exact decimals, dated observations, provenance.
-2. `finance_http`: redaction, retry/backoff, rate limits, fixtures.
-3. `finance_openfigi` + `pi_finance_symbols`: unambiguous instrument identity.
-4. `finance_sec` + `pi_sec_edgar`: company and filing lookup.
-5. `pi_sec_xbrl` + `pi_stock_fundamentals`: preserve raw facts, then expose the
-   initial revenue, net income, assets, cash, operating cash flow, reported PP&E
-   purchases, and diluted-share mappings. Debt waits for a component graph.
-6. `pi_stock_quote`: one configurable market-data backend, delayed/real-time
-   status always visible.
-7. `pi_stock_research_report`: one concise, cited company brief.
-8. `pi_watchlist`: exact track/listing keys with bounded branch persistence and
-   a deterministic snapshot.
-
-This slice exercises commands, typed tools, network cancellation, provider
-configuration, structured results, provenance, caching, and report composition.
-It also exposes the next binding gaps through real use rather than expanding
-`pi_gleam` speculatively.
-
-## Provider notes
-
-Provider choice is configuration and packaging policy, not an invisible
-fallback chain.
-
-- [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)
-  provide unauthenticated submissions and XBRL JSON, update throughout the day,
-  and require compliant automated-access behavior.
-- [OpenFIGI v3](https://www.openfigi.com/api/documentation) maps third-party
-  identifiers and exposes explicit rate limits. Its v2 API reached sunset in
-  July 2026, so new code must target v3.
-- [FRED and ALFRED](https://fred.stlouisfed.org/docs/api/fred/series/series_observations.html)
-  provide macro observations, transformations, release data, and historical
-  vintages. Underlying series can retain third-party usage restrictions.
-- [Alpaca market data](https://docs.alpaca.markets/us/docs/about-market-data-api)
-  covers historical/real-time equities, options, and crypto over HTTP and
-  WebSocket, but access and feed breadth depend on authentication and plan.
-- [Alpaca historical stock bars](https://docs.alpaca.markets/us/reference/stockbars)
-  is the accepted first US OHLCV acquisition seam. The implemented slice fixes
-  `1Day`, USD, ascending, and raw adjustment; requires explicit IEX/SIP and
-  symbol-as-of identity; and follows page tokens only within caller budgets.
-- [Alpaca paper trading](https://docs.alpaca.markets/us/v1.4.2/docs/paper-trading)
-  is useful for workflow testing but documents important simulation omissions.
-- [IBKR Web API](https://ibkrcampus.com/campus/ibkr-api-page/webapi-doc/)
-  exposes account, portfolio, market-data, and order workflows with authentication,
-  session, subscription, and endpoint pacing constraints.
-- [Nasdaq Data Link](https://docs.data.nasdaq.com/docs/getting-started) offers
-  free and premium datasets through several APIs; datasets must retain their
-  individual entitlement and usage terms.
-- [CFTC Commitments of Traders](https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm)
-  is available through the CFTC public reporting API and is naturally suited to
-  a positioning plugin.
-- [ECB Data Portal](https://data.ecb.europa.eu/help/api/data) exposes SDMX data,
-  including reference FX series and revision-aware queries.
-- [FINRA Query API](https://developer.finra.org/products/query-api) covers
-  equity and fixed-income datasets, while data-specific terms and TRACE product
-  boundaries need separate review.
-- [Coinbase Advanced Trade API](https://docs.cdp.coinbase.com/api-reference/advanced-trade-api/rest-api/introduction)
-  provides REST order management and WebSocket market data for a possible
-  crypto adapter; trading remains outside the early equity roadmap.
-- [Shanghai Stock Exchange data services](https://english.sse.com.cn/markets/dataservice/products/)
-  distinguish licensed real-time Level 1/2 products from historical and
-  end-of-day data, so public visibility must not be mistaken for redistribution
-  permission.
-- [Shenzhen Stock Exchange data services](https://www.szse.cn/English/services/dataServices/index.html)
-  describe real-time, delayed, end-of-day, corporate, and other information
-  products managed by its authorized information company.
-- [CNInfo](https://www.cninfo.com.cn/) is operated by an SZSE subsidiary as a
-  statutory disclosure platform and aggregates Shanghai, Shenzhen, and Beijing
-  company announcements and related public information.
-- [Beijing Stock Exchange disclosures](https://www.bse.cn/disclosure/announcement.html)
-  provide an official announcement surface that must be covered alongside the
-  longer-established Shanghai and Shenzhen venues.
-- [HKEX Stock Connect eligibility](https://www.hkex.com.hk/Mutual-Market/Stock-Connect/Eligible-Stocks/View-All-Eligible-Securities?sc_lang=en)
-  publishes dated northbound/southbound eligibility and special sell-only lists;
-  eligibility must therefore be modelled as time-varying state.
-- [CSRC disclosure rules](https://www.csrc.gov.cn/csrc/c106256/c1653948/content.shtml)
-  and exchange rules should be retained with effective dates; summaries and
-  translations cannot replace the controlling Chinese source.
-- [National Bureau of Statistics data](https://data.stats.gov.cn/) is a
-  candidate primary source for the China macro plugin, alongside PBOC and SAFE
-  releases whose access and reuse terms must be studied per dataset.
-
-Unofficial scraping endpoints should not be the default data substrate. If a
-community plugin supports one, it must identify it as unofficial, isolate its
-decoder, respect the site's terms, and fail clearly when the surface changes.
-
-## Open decisions
-
-- Which market-data provider should power the first quote/history adapter?
-- Is the first audience US equities only, or should the core types require
-  US and China equities together? The core types should be multi-market from day
-  one either way.
-- Beyond the first branch-scoped watchlist event log, where should state that
-  must survive `/new` or be shared across sessions live: a user-owned local
-  directory, a small database, or an external service?
-- Should `finance_core` and provider libraries live in this monorepo alongside
-  Pi plugins or in a separate Gleam finance repository?
-- Which report is the flagship workflow: company brief, earnings review,
-  watchlist morning brief, or portfolio risk review?
-- Which licensed China market-data provider can cover Shanghai, Shenzhen, and
-  Beijing with documented programmatic access and acceptable redistribution
-  terms?
-
-None of these choices changes the safety-first ordering: identity and
-provenance, then primary-source research, then analytics and portfolio work,
-then paper execution, and live execution only as an explicit later project.
+| **R0 — Trustworthy substrate and implemented baseline** | [`R0.md`](R0.md) | Shared finance packages, dependency laws, completed arbitrations, Experimental vertical slices, and the current depth gaps. | Establish what is real and reusable before counting trader-facing breadth. |
+| **R1 — Finance capability catalog** | [`R1.md`](R1.md) | Foundation/trust, market data, CN/HK/US research, fundamentals, valuation, trader workbenches, events, macro, portfolio, backtest, and execution proposals. | Keep the complete capability map while thin workbenches compose shared engines instead of cloning them. |
+| **R2 — Delivery and trader-workflow convergence** | [`R2.md`](R2.md) | F0–F6 delivery, T0–T4 four-trader acceptance, CN0–CN4, and the next swing-trader sprint. | Choose implementation order from trader decision loops; stop at every open course gate before design. |
+| **R3 — Provider policy and open decisions** | [`R3.md`](R3.md) | Candidate/accepted providers, entitlement and source cautions, and unresolved product/data decisions. | Resolve provider and policy choices without creating invisible fallback chains. |
+
+Read phases in order for a full audit. They are categories, not permission to
+skip dependencies: an item in a later file still depends on all applicable R0
+contracts, track-specific evidence gates, and course-demand stops. New detailed
+proposals go in the appropriate phase file and must be linked from this index if
+they change a phase's scope.
