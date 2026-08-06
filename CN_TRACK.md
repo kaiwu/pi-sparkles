@@ -1,6 +1,6 @@
 # China track delivery ledger
 
-Snapshot: **2026-08-05**
+Snapshot: **2026-08-06**
 
 This ledger turns the China section of `ROADMAP.md` into an implementation
 sequence. It is a plan, dependency record, and acceptance checklist. It does not
@@ -19,6 +19,11 @@ disclosures, language, data rights, and provider contracts remain China-owned.
   derived fundamental slices, plus dated official-rule slices behind
   `cn_setup`/`hk_setup`. Official filing-linked statement semantics, broader
   accounting, market structure, and research/report capabilities remain open.
+- All three isolated OHLCV shells are now Experimental. `finance_ohlcv`
+  supplies shared exact validation/composition; `us_stock_ohlcv` uses bounded
+  credentialed Alpaca IEX/SIP bars, while `cn_stock_ohlcv` and
+  `hk_stock_ohlcv` reuse bounded Eastmoney raw history without importing the US
+  adapter. Calendar/status composition and provider-unit proof remain open.
 - The repository will expose exactly three market tracks: `cn` (mainland
   China), `hk` (Hong Kong), and `us` (United States). Provider-neutral and
   cross-market capabilities are not additional tracks.
@@ -87,9 +92,9 @@ daily rows but do not yet establish a shared, calendar-aware OHLCV contract.
 
 | Track | Current input | Planned isolated plugin/tool surface | Reuse | Track-owned work before exit |
 | --- | --- | --- | --- | --- |
-| `cn` | `cn_stock_history`: raw, unadjusted daily Eastmoney rows for explicit SSE/SZSE/BSE identities. | `plugins/cn_ohlcv/` with `cn_stock_ohlcv` | `finance_eastmoney`, `finance_series`, `finance_calendar`, `finance_math`, canonical observations, and bounded HTTP. | Mainland venue/board identity, CNY and share-volume semantics, `Asia/Shanghai` sessions, suspension versus missing-row policy, amount/turnover evidence, adjustment state, and SSE/SZSE/BSE coverage. |
-| `hk` | `hk_stock_history`: raw, unadjusted daily Eastmoney rows for exact five-digit HK identities and declared listing currency. | `plugins/hk_ohlcv/` with `hk_stock_ohlcv` | The same provider-neutral series/calendar/math contracts and HK Eastmoney adapter, behind an independent shell. | HKEX identity, listing currency, `Asia/Hong_Kong` sessions/half-days, suspension versus missing-row policy, volume/turnover semantics, adjustment state, and no inherited mainland defaults. |
-| `us` | No track-owned OHLCV provider or plugin exists in the current repository. | `plugins/us_ohlcv/` with `us_stock_ohlcv` after a provider/rights decision. | `finance_series`, `finance_calendar`, `finance_math`, canonical observations, bounded HTTP, and the same conformance suite; no CN/HK provider assumptions. | Choose and document the US provider, identity key, entitlement/redistribution, USD/venue/timezone/session semantics, corporate-action adjustment contract, pagination, pacing, and fixtures. |
+| `cn` | `cn_stock_history`: raw, unadjusted daily Eastmoney rows for explicit SSE/SZSE/BSE identities. | `plugins/cn_ohlcv/` with `cn_stock_ohlcv` is implemented. | `finance_ohlcv`, `finance_eastmoney`, canonical observations, exact series/math, bounded HTTP, and isolated mocked conformance tests. | The first slice requires coherent caller-declared venue/board/share-class/currency, retains exact provider rows and raw adjustment, and labels the date-only ordering anchor plus unknown volume unit/session/calendar/rights. Remaining: independently proven listing identity, composed official calendar/status, suspension classification, amount/turnover units, and permitted real fixtures. |
+| `hk` | `hk_stock_history`: raw, unadjusted daily Eastmoney rows for exact five-digit HK identities and declared listing currency. | `plugins/hk_ohlcv/` with `hk_stock_ohlcv` is implemented. | The same provider-neutral OHLCV/series/calendar/math contracts and HK Eastmoney adapter behind an independent shell. | The first slice requires caller-declared board/share-class/currency, retains exact provider rows and raw adjustment, and labels date-only/unknown volume/session/calendar/rights semantics. Remaining: independently proven HKEX identity/currency, composed official calendar/half-day/status evidence, suspension classification, amount/turnover units, and permitted real fixtures. |
+| `us` | Experimental `finance_market_alpaca` raw daily bars for one exact symbol/as-of key and explicit `iex` or `sip` feed. | `plugins/us_ohlcv/` with `us_stock_ohlcv` is implemented. | `finance_ohlcv`, `finance_series`, `finance_calendar`, `finance_math`, canonical observations, bounded HTTP, and isolated mocked conformance tests; no CN/HK provider assumptions. | First slice retains exact numeric lexemes, USD/share units, `America/New_York`, provider-defined daily session/raw-adjustment semantics, bounded pagination, request IDs, subscription-scoped entitlement, and no redistribution grant. Remaining: reviewed US calendar/status and exact session-membership classification, authoritative listing identity, corporate actions/adjustments, broader feed/product rights, and permitted real fixtures. |
 
 The first OHLCV slice is daily and read-only. Every result must retain exact
 source values plus normalized open/high/low/close/volume, interval and session
@@ -106,6 +111,17 @@ calendar-alignment, return, and rendering components, but may not import one
 another or relabel one track's evidence. Because quote/history is already one
 of the ten statusline feature families for CN/HK, this batch improves depth and
 cross-track parity; it does not inflate `feat` merely by adding another tool.
+The US first slice likewise leaves `feat` at 70% because the existing
+`quotes_history` requirement is not satisfied by OHLCV history alone.
+
+The accepted US provider decision is Alpaca Market Data for this Experimental
+credential-holder slice. IEX and SIP remain separate explicit feeds; a
+successful request proves only the caller's access to that request. The plugin
+does not grant redistribution, choose a default feed, infer a listing venue,
+or treat the Alpaca symbol/as-of mapping as an authoritative security master.
+Only raw daily USD/share bars are accepted. Alpaca-supported split, dividend,
+spin-off, combined adjustments, intraday/realtime products, and other feeds
+require later reviewed contracts.
 
 Ledger states used below:
 
@@ -292,6 +308,29 @@ Ledger states used below:
   and `us_ohlcv` batch, reusing the existing CN/HK raw-history acquisition seam
   and provider-neutral series/calendar laws while leaving the US provider and
   rights decision explicit.
+- **2026-08-06 — US-first exact OHLCV slice:** added pure `finance_ohlcv`
+  validation over canonical observations and ordered series, preserving raw and
+  normalized decimals, rejecting invalid bar geometry/reordering/conflicting
+  duplicates, collapsing only exact duplicates, and separating provider
+  pagination from calendar-gap assessment. Added `finance_market_alpaca` with
+  secret-redacted auth, exact JSON numeric-token decoding, raw USD daily plans,
+  explicit IEX/SIP selection, symbol-as-of identity, 5 MB/15-second response
+  bounds, cancellation, conservative 180/min pacing, ten-page/5,000-bar hard
+  ceilings, and offline fixtures. The isolated `us_stock_ohlcv` shell follows
+  tokens under caller budgets, retains provider request IDs, timezone/provider-session/
+  unit/adjustment/entitlement/rights receipts, and reports calendar gaps as not
+  assessed rather than guessing closures, suspensions, omissions, or unavailable
+  history. US `feat` stays 70%; CN/HK shells were still open at this checkpoint.
+- **2026-08-06 — CN/HK exact OHLCV counterparts:** added isolated
+  `cn_stock_ohlcv` and `hk_stock_ohlcv` shells over the existing bounded
+  Eastmoney history seam and shared `finance_ohlcv` laws. Both retain every raw
+  provider row plus normalized OHLCV, reject invalid geometry/order/conflicting
+  dates, use visibly date-derived ordering anchors, keep provider volume units
+  unknown, and expose row-budget truncation independently from calendar gaps.
+  CN validates coherent caller-declared venue/board/share-class/currency; HK
+  requires board/share-class/currency and never assumes HKD. Neither shell
+  imports Alpaca, guesses session membership or suspensions, fills bars, or
+  changes feature scores.
 
 ## Binding decisions
 
@@ -674,7 +713,7 @@ rights, track isolation, and deterministic verification remain mandatory.
 | CN-F24 | Done for the Experimental public-web slice | Implement reusable bounded Eastmoney quote/history decoding once, then expose independent CN/HK shells and evidence contracts. | `cn_stock_quote`/`cn_stock_history` require exact SSE/SZSE/BSE; `hk_stock_quote`/`hk_stock_history` retain declared currency. Quotes preserve provider scale/time and history preserves raw unadjusted lexemes. Bounds, cancellation, pacing, caller identity, mocked bindings, source limitations, and track-only feature contribution are tested. |
 | CN-F25 | Done for the scoped current-rule slices | Implement dated official rules by composing shared pure rule laws while retaining market-specific shapes and separate shells. | `cn_trading_rules` covers exact established-normal mainland board pairs from 2026-07-06. `hk_trading_rules` covers reviewed HKD applicable-equity spread bands from 2026-08-03 and requires issuer-specific board-lot evidence. Both expose sources/clauses/audit limits, fail closed, pass unit/binding/artifact gates, and bring CN/HK installed feature breadth to the current US 70% score. |
 | CN-F26 | Done for the narrow Experimental vendor-fundamental slice | Reuse Eastmoney transport/runtime and exact-number capture below Pi, then expose separate CN/HK raw, normalized, and derived shells. Keep market mappings/context laws separate while composing the same exact decimal/formula engine. | `cn_financial_statement` requires venue, code, period end, and caller-proven currency; `hk_financial_statement` strictly joins provider context and line responses. Each track has visible two-field mappings and exact source-retaining net margin. Unit/mocked binding/artifact/Pi-load gates cover request bounds, exact tokens, mappings, context coherence, formulas, track isolation, and no normal-test network. This closes the current CN/HK feature denominator at 100% without changing 65%/70% source maturity or claiming official filing completeness. |
-| CN-F27 | Open — next plugin batch | Build one provider-neutral exact OHLCV validation/composition contract over `finance_series`, `finance_calendar`, `finance_math`, canonical observations, and bounded adapters. Reuse CN/HK Eastmoney raw-history acquisition; choose a separate accepted US provider. Expose isolated `cn_stock_ohlcv`, `hk_stock_ohlcv`, and `us_stock_ohlcv` shells. | First exit is bounded daily read-only OHLCV for all three tracks with exact source lexemes, normalized values, interval/timezone/session, currency and volume unit, explicit adjustment, completeness/gap states, provenance/entitlement, deterministic ordering/deduplication, offline fixtures, architecture isolation, bindings, artifacts, and Pi-load tests. No synthetic bars, cross-track fallback, or feature-score inflation. |
+| CN-F27 | Implementing — three isolated daily shells done | `finance_ohlcv`, `finance_market_alpaca`, and `us_stock_ohlcv` implement the Alpaca slice; independent `cn_stock_ohlcv` and `hk_stock_ohlcv` shells now reuse only the Eastmoney history adapter. The shared contract distinguishes source instants from date-only anchors and proven shares from unknown provider volume units. | Unit, mocked binding, artifact, architecture, and Pi-load gates cover exact raw/normalized values, identity inputs, adjustment, request/row budgets, entitlement/rights limits, deterministic order/exact deduplication, and unassessed calendar gaps. Batch exit still requires market-owned calendar/status composition, suspension proof, CN/HK amount/turnover/volume semantics, authoritative listing identity/currency, and permitted real fixtures. No synthetic bars, cross-track fallback, or feature-score inflation. |
 
 The repository policy currently names `bun run test:live:sec` as the sole live
 provider lane. CN development therefore uses fixtures and mocked Bun contracts.

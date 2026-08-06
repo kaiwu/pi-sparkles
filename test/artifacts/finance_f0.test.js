@@ -8,12 +8,14 @@ for (const name of [
   "cn_disclosures",
   "cn_market_calendar",
   "cn_market_data",
+  "cn_ohlcv",
   "cn_fundamentals",
   "cn_market_rules",
   "hk_setup",
   "hk_disclosures",
   "hk_market_calendar",
   "hk_market_data",
+  "hk_ohlcv",
   "hk_fundamentals",
   "hk_market_rules",
   "finance_guardrails",
@@ -21,6 +23,7 @@ for (const name of [
   "sec_edgar",
   "sec_xbrl",
   "stock_fundamentals",
+  "us_ohlcv",
 ]) {
   describe(`${name} artifact`, () => {
     test("exports a Pi extension factory", async () => {

@@ -234,6 +234,14 @@ Every finance observation should retain:
 Provider choice must be visible configuration, not an undocumented fallback
 chain.
 
+The current `us_stock_ohlcv` slice is the concrete first application of this
+rule. It requires the caller to select Alpaca IEX or SIP, retains the exact
+symbol/as-of mapping key and source numeric lexemes, and reports subscription
+and redistribution limits. Pagination completeness is separate from market-
+calendar completeness: until reviewed US calendar and status evidence is
+composed, absent rows are not labelled as closures, suspensions, provider
+omissions, or unavailable history.
+
 ### Identity and normalization
 
 Tickers and short security codes are not permanent global identifiers. Correct
@@ -438,7 +446,9 @@ slice:
 3. unambiguous security resolution;
 4. primary filing and announcement retrieval;
 5. a deliberately small set of audited financial facts;
-6. one clearly labelled market-data provider;
+6. one clearly labelled market-data provider (now implemented as isolated
+   raw-daily Alpaca US and Eastmoney CN/HK OHLCV slices, with their unequal
+   entitlements and units kept visible);
 7. one concise cited company or watchlist report;
 8. an exportable evidence manifest.
 

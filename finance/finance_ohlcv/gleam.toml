@@ -1,0 +1,23 @@
+name = "finance_ohlcv"
+version = "0.1.0"
+target = "javascript"
+description = "Provider-neutral exact OHLCV validation and composition"
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+finance_core = { path = "../finance_core" }
+finance_calendar = { path = "../finance_calendar" }
+finance_math = { path = "../finance_math" }
+finance_series = { path = "../finance_series" }
+
+[dev-dependencies]
+gleeunit = ">= 1.9.0 and < 2.0.0"
+
+[javascript]
+runtime = "bun"
+
+[metadata.finance]
+status = "experimental"
+scope = "provider-neutral"

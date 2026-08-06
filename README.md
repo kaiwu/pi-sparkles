@@ -14,7 +14,7 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- forty-one Experimental finance packages, including provider adapters,
+- forty-three Experimental finance packages, including provider adapters,
   shared track/evidence/rules/document/accounting policy, and isolated CN/HK
   identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,
@@ -34,6 +34,11 @@ repository currently contains:
   source-retaining net margin, and unknown official-filing context preserved;
 - the first F1 research slices: `sec_edgar`, `sec_xbrl`, and
   `stock_fundamentals`, backed by the read-only `finance_sec` adapter;
+- isolated three-track OHLCV slices over the exact provider-neutral
+  `finance_ohlcv` contract: credentialed Alpaca IEX/SIP raw daily bars in
+  `us_ohlcv`, plus bounded Eastmoney date-only raw history in `cn_ohlcv` and
+  `hk_ohlcv` with caller-declared identity/currency and unknown provider volume
+  units kept visible;
 - `hello`, a reference command and typed tool;
 - `safety_gate`, a reference result-bearing event handler with asynchronous UI;
 - `lifecycle`, a reference for typed state restoration and safe cleanup;
@@ -73,6 +78,14 @@ direct-quarter TTM additionally prove explicit calendar gaps and contiguous
 coverage; an independently sourced annual-plus-YTD bridge covers TTM when four
 direct quarters are unavailable. A typed `DirectQuarter | DerivedQuarter`
 composition expands every derived Q4 back to its annual/YTD source leaves.
+`us_stock_ohlcv` requires an exact Alpaca symbol/as-of date and explicit IEX or
+SIP feed. It preserves source numeric lexemes, follows pagination only within
+caller budgets, retains request IDs, and labels USD/share/timezone/provider-
+session/raw-adjustment semantics without asserting unverified trade-session
+membership. Missing sessions remain calendar-unassessed until a
+reviewed US calendar/status source can distinguish closures, suspensions,
+provider omissions, and unavailable history. This history-only slice does not
+increase the US feature score.
 
 The binding is an initial `0.1.0` implementation, not a published Hex package.
 Its typed surface covers normal plugin authoring, while `pi/raw` makes the
@@ -140,6 +153,97 @@ SEC_USER_AGENT_CONTACT="you@your-real-domain.com" bun run test:live:sec
 The runner makes at most ten sequential attempts, refuses redirects, and emits
 a JSON compatibility report. It is intentionally excluded from `bun run test`;
 deterministic unit and binding tests never contact public providers.
+
+## Runtime environment by plugin
+
+Set runtime variables in the environment that launches Pi, before loading the
+plugin bundle. This repository does not load `.env` files. Reload or restart Pi
+after changing provider configuration because plugins capture it when their
+extension factory initializes.
+
+There is intentionally no generic `AGENT_CONTACT` or `API_KEY` variable.
+Caller identity and credentials are provider-scoped so one track cannot
+silently borrow another provider's authority. `*_USER_AGENT_CONTACT` and
+`*_USER_AGENT_PRODUCT` values are non-secret and are sent to the named provider.
+API keys and secret keys are credentials: inject them with a secret manager or
+the process supervisor, never commit them or place real values in documentation.
+
+### Shared and reference plugins
+
+| Plugin | Required variables | Optional variables | Behavior without optional configuration |
+| --- | --- | --- | --- |
+| `finance_symbols` | None | `OPENFIGI_API_KEY` (**secret**) | Uses anonymous OpenFIGI access with its lower limits. |
+| `finance_setup` | None | None | Reports configuration/capability state without ambient credentials. |
+| `finance_guardrails` | None | None | Pure evidence and freshness policy. |
+| `finance_track_status` | None | None | Its visible agent contact is explicit session/tool state, not an environment variable. |
+| `hello`, `lifecycle`, `safety_gate` | None | None | Reference plugins require no provider configuration. |
+
+### CN track
+
+| Plugin | Required variables | Optional variables | Notes |
+| --- | --- | --- | --- |
+| `cn_disclosures` | `CNINFO_USER_AGENT_CONTACT` | `CNINFO_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-cn-disclosures/0.1`. |
+| `cn_market_data` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-cn-market-data/0.1`. |
+| `cn_fundamentals` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-cn-fundamentals/0.1`. |
+| `cn_ohlcv` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-cn-ohlcv/0.1`. |
+| `cn_setup`, `cn_market_calendar`, `cn_market_rules` | None | None | Local capability, reviewed-calendar, and rule data require no ambient provider access. |
+
+The three Eastmoney plugins share the same caller identity variables, but keep
+independent Pi shells and track contracts. CNINFO configuration does not grant
+Eastmoney access, and neither configuration is accepted as HKEX or US authority.
+
+### HK track
+
+| Plugin | Required variables | Optional variables | Notes |
+| --- | --- | --- | --- |
+| `hk_disclosures` | `HKEX_USER_AGENT_CONTACT` | `HKEX_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-disclosures/0.1`. |
+| `hk_market_data` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-market-data/0.1`. |
+| `hk_fundamentals` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-fundamentals/0.1`. |
+| `hk_ohlcv` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-ohlcv/0.1`. |
+| `hk_setup`, `hk_market_calendar`, `hk_market_rules` | None | None | Local capability, reviewed-calendar, and rule data require no ambient provider access. |
+
+Eastmoney variables are shared at the provider layer across CN and HK, but a
+configured caller identity never permits cross-track fallback or relabelling.
+HKEX configuration applies only to the HK disclosure plugin.
+
+### US track
+
+| Plugin | Required variables | Optional variables | Notes |
+| --- | --- | --- | --- |
+| `sec_edgar` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-sec-edgar/0.1`. |
+| `sec_xbrl` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-sec-xbrl/0.1`. |
+| `stock_fundamentals` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-fundamentals/0.1`. |
+| `us_ohlcv` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-ohlcv/0.1`; feed entitlement still depends on the Alpaca account and requested IEX/SIP feed. |
+
+The three SEC plugins share one fair-access identity. Alpaca credentials are a
+separate authority and never enable SEC tools or `finance_symbols`.
+
+### Example launch configuration
+
+This example shows variable names and non-secret caller identities. Replace the
+credential placeholders through a secret manager rather than committing a
+shell file:
+
+```sh
+export CNINFO_USER_AGENT_CONTACT="ops@example.com"
+export HKEX_USER_AGENT_CONTACT="ops@example.com"
+export EASTMONEY_USER_AGENT_CONTACT="ops@example.com"
+export SEC_USER_AGENT_CONTACT="ops@example.com"
+export ALPACA_USER_AGENT_CONTACT="ops@example.com"
+
+export OPENFIGI_API_KEY="<secret-manager:openfigi>"       # optional
+export ALPACA_API_KEY_ID="<secret-manager:alpaca-key-id>"
+export ALPACA_API_SECRET_KEY="<secret-manager:alpaca-secret>"
+
+pi --no-extensions \
+  -e ./dist/cn_ohlcv \
+  -e ./dist/hk_ohlcv \
+  -e ./dist/us_ohlcv
+```
+
+`PI_SOURCE_DIR` is development-only configuration for `bun run test:pi`; no
+runtime plugin reads it. Normal tests supply fixture values and mocked
+transports and do not require real provider credentials.
 
 ## Pi extension contract
 
@@ -210,7 +314,9 @@ pi-sparkles/
 │   ├── finance_market_calendar/
 │   ├── finance_market_documents/
 │   ├── finance_market_rules/
+│   ├── finance_market_alpaca/
 │   ├── finance_math/
+│   ├── finance_ohlcv/
 │   ├── finance_openfigi/
 │   ├── finance_provenance/
 │   ├── finance_sec/
@@ -223,11 +329,13 @@ pi-sparkles/
 │   ├── cn_disclosures/           CNINFO security and announcement discovery
 │   ├── cn_market_calendar/       official bounded SSE/SZSE/BSE 2026 calendar
 │   ├── cn_market_data/           bounded Eastmoney CN quote/raw history
+│   ├── cn_ohlcv/                 exact Eastmoney CN daily OHLCV
 │   ├── cn_market_rules/          dated official mainland rule profile
 │   ├── cn_setup/                 isolated mainland capability preflight
 │   ├── hk_disclosures/           HKEXnews security and title discovery
 │   ├── hk_market_calendar/       official bounded HKEX 2026 calendar
 │   ├── hk_market_data/           bounded Eastmoney HK quote/raw history
+│   ├── hk_ohlcv/                 exact Eastmoney HK daily OHLCV
 │   ├── hk_market_rules/          dated official HKEX rule profile
 │   ├── hk_setup/                 isolated Hong Kong capability preflight
 │   ├── finance_setup/            capability/configuration preflight
@@ -239,6 +347,7 @@ pi-sparkles/
 │   ├── sec_edgar/                SEC company and recent filing metadata
 │   ├── sec_xbrl/                 exact SEC XBRL concept and fact evidence
 │   ├── stock_fundamentals/       audited direct-fact normalization
+│   ├── us_ohlcv/                 exact Alpaca US daily bars
 │   ├── hello/                    command and typed-tool example
 │   ├── lifecycle/                state restoration/lifecycle example
 │   └── safety_gate/              typed event/async-UI example
@@ -281,8 +390,10 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_provenance` | Evidence identities, assumptions, licences, manifests, canonical encoding, hashing, redaction, and verification plans. |
 | `finance_http` | Safe requests, bounded fetch transport, cancellation, retry/`Retry-After`, rate limits, pooling, scheduling, caching, and cassettes. |
 | `finance_math` | Composable exact formula trees plus explicit approximate statistics, regression, risk, cash-flow, and fixed-income policies. |
+| `finance_ohlcv` | Exact raw-plus-normalized OHLCV bars, source-instant/date-anchor and proven/unknown-volume distinctions, canonical observations, strict ordering/exact deduplication, and separate pagination/calendar completeness. |
 | `finance_openfigi` | OpenFIGI v3 access, mapping/search plans, pagination, decoding, authenticated/anonymous rate profiles, and a bounded shared runtime. |
 | `finance_eastmoney` | Bounded public-web SSE/SZSE/BSE/HK quote and raw daily-history plans/decoders with exact source lexemes, explicit caller identity, unknown service level, and unknown redistribution. |
+| `finance_market_alpaca` | Credentialed bounded US raw-daily stock-bar plans/decoders with explicit IEX/SIP, symbol-as-of identity, exact source lexemes, and subscription/redistribution limits. |
 | `finance_sec` | Identified read-only SEC access, normalized CIKs, bounded EDGAR request plans, typed submissions/XBRL facts, lossless numeric lexemes, explicit filing/period resolution, strict Q4/trend derivation, and conservative shared pacing. |
 | `finance_series` | Ordered observations, alignment, as-of joins, returns, windows, resampling, portfolio paths, and analytics. |
 | `finance_calendar` | Dates, market calendars, business-day rules, schedules, joint calendars, and day-count conventions. |

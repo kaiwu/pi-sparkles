@@ -17,10 +17,12 @@ finance_core ─┬─> finance_provenance
               ├─> finance_http ─┬─> finance_openfigi
               │                 ├─> finance_sec
               │                 ├─> finance_eastmoney
+              │                 ├─> finance_market_alpaca
               │                 └─> finance_testkit
               ├─> finance_table
               ├─> finance_math ────> finance_series
               ├────────────────────> finance_series
+              ├────────────────────> finance_ohlcv <─ finance_series + calendar + math
               └─> finance_calendar ─┬─> finance_sec
                                     └─> finance_market_calendar
 
@@ -51,7 +53,7 @@ The authority contract validates track-scoped source ownership, official links,
 operational access, redistribution, and limitations without embedding any
 market's registry in the shared package.
 `finance_testkit` depends on core and HTTP. `finance_openfigi`, `finance_sec`,
-and `finance_eastmoney` remain reusable outside Pi and share the HTTP policies
+`finance_eastmoney`, and `finance_market_alpaca` remain reusable outside Pi and share the HTTP policies
 rather than implementing plugin-local fetch stacks. Eastmoney's public-web
 adapter is local-analysis-only with unknown latency, service level, and
 redistribution; it preserves exact quote scaling and raw daily-bar lexemes
@@ -60,6 +62,13 @@ also owns lossless XBRL source-number
 decoding and composes calendar arithmetic for explicit statement-period shapes,
 so every consumer sees the same exact facts and period rules. No core package or core
 test may depend on testkit or a provider adapter.
+
+`finance_ohlcv` composes core, calendar arithmetic, exact series/math, and
+canonical observations. It retains source lexemes beside normalized decimals,
+validates geometry and ordering, collapses only exact duplicates, and keeps
+provider pagination completeness separate from evidence-backed calendar-gap
+classification. The Alpaca adapter is its first US acquisition seam; IEX/SIP,
+credentials, symbol-as-of identity, raw adjustment, and rights remain explicit.
 
 `finance_cn_testkit` and `finance_hk_testkit` are outward market-owned test
 packages, not provider-neutral foundations. Each composes the base seeded
@@ -91,6 +100,11 @@ remain pure and independently testable.
 
 The F0 Pi extensions and the
 `sec_edgar`/`sec_xbrl`/`stock_fundamentals` F1 slices are now Experimental.
+The isolated `us_ohlcv`, `cn_ohlcv`, and `hk_ohlcv` slices are Experimental
+over `finance_ohlcv`. US composes `finance_market_alpaca`; CN/HK independently
+compose `finance_eastmoney`. Missing-session classification remains unavailable
+until each shell composes its reviewed market calendar/status contract, and the
+Eastmoney slices preserve date-only anchors and unknown provider volume units.
 The SEC foundation also supplies pure exact-period filing resolution, strict
 source-retaining Q4 subtraction, and comparable direct-fact trend validation;
 provider I/O and Pi rendering remain outside those derivation laws.

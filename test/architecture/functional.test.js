@@ -104,6 +104,7 @@ describe("functional architecture", () => {
       "finance_hk_testkit",
       "finance_math",
       "finance_series",
+      "finance_ohlcv",
       "finance_table",
     ]) {
       const directory = join(FINANCE_DIR, name, "src");
@@ -134,6 +135,26 @@ describe("functional architecture", () => {
           ? /^import finance_cn_(?:\w+)(?:\s|\/|\.|$)/m
           : null;
       if (!forbidden) continue;
+      for (const path of filesBelow(join(pkg.directory, "src"), ".gleam")) {
+        expect(forbidden.test(source(path)), display(path)).toBeFalse();
+      }
+    }
+  });
+
+  test("us plugin shells cannot import CN or HK market packages", () => {
+    const forbidden = /^import finance_(?:cn_|hk_|eastmoney)(?:\w+)?(?:\s|\/|\.|$)/m;
+    for (const pkg of discoverPackages(PLUGINS_DIR)) {
+      if (!pkg.name.startsWith("pi_sparkles_us_")) continue;
+      for (const path of filesBelow(join(pkg.directory, "src"), ".gleam")) {
+        expect(forbidden.test(source(path)), display(path)).toBeFalse();
+      }
+    }
+  });
+
+  test("cn and hk plugin shells cannot import US market adapters", () => {
+    const forbidden = /^import finance_market_alpaca(?:\s|\/|\.|$)/m;
+    for (const pkg of discoverPackages(PLUGINS_DIR)) {
+      if (!/pi_sparkles_(cn|hk)_/.test(pkg.name)) continue;
       for (const path of filesBelow(join(pkg.directory, "src"), ".gleam")) {
         expect(forbidden.test(source(path)), display(path)).toBeFalse();
       }

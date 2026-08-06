@@ -112,6 +112,7 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_evidence` | Experimental | Cross-input evidence policy | typed unit, quality/restatement, time-order, licence/redistribution, and same/cross-track compatibility |
 | `finance_listing` | Experimental | Effective listing identity | track/MIC-scoped keys, effective aliases, and evidence-backed relationships without market-owned code or board rules |
 | `finance_series` | Experimental | Time-series operations | ordered observations, missing policy, exact/as-of alignment, resampling, OHLCV, exact returns/paths, and attribution |
+| `finance_ohlcv` | Experimental | Exact provider-neutral bar contract | raw-plus-normalized values, OHLC geometry, canonical observations, strict order/exact deduplication, and separate pagination/calendar completeness |
 | `finance_calendar` | Experimental | Trading-time rules | sessions, holidays, business days, joint calendars, coupon schedules, and named day counts; provider data remains pluggable |
 | `finance_market_calendar` | Experimental | Bounded calendar data | track/source/licence/version/coverage wrapper that rejects dates outside reviewed datasets |
 | `finance_market_authorities` | Experimental | Official source ownership | track-prefixed roles and HTTPS links with explicit access, redistribution, scope, and limitations |
@@ -133,6 +134,7 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_cn_testkit` / `finance_hk_testkit` | Experimental | Isolated market scenarios | seed-stable identity, session, rule, Unicode document, correction, scale, and exact-lexeme cases without authoritative-data claims |
 | `finance_openfigi` | Experimental | Instrument identity provider | OpenFIGI v3 mapping/filter plans, opaque optional authentication, pagination, fixtures, separate rate buckets, and bounded shared execution |
 | `finance_eastmoney` | Experimental | CN/HK public-web market data | bounded caller-identified SSE/SZSE/BSE/HK quote and raw unadjusted daily-history plans/decoders with exact lexemes and unknown latency/rights |
+| `finance_market_alpaca` | Experimental | US credentialed market data | exact-symbol/as-of raw daily USD bar plans, explicit IEX/SIP feeds, secret auth, bounded pagination/runtime, exact numeric lexemes, and subscription/redistribution limits |
 | `finance_sec` | Experimental | Primary filing-data provider | identified public access, normalized CIKs, bounded ticker/submissions/company-facts plans, typed recent filings, conservative pacing, and cancellation |
 
 Provider adapters should also be ordinary packages when possible—for example,
@@ -225,6 +227,44 @@ profitability/return metrics, scale/currency conversion, and statement
 reconstruction remain outside this slice.
 The general multi-input metric boundary also supports independent named
 accession overrides while retaining a strict same-filing calculation law.
+
+### Three-track OHLCV vertical slice — 2026-08-06
+
+`finance_ohlcv`, `finance_market_alpaca`, and the isolated `pi_us_ohlcv`,
+`pi_cn_ohlcv`, and `pi_hk_ohlcv` shells have graduated to **Experimental** for
+narrow daily read-only slices. The shared pure contract
+retains every raw numeric lexeme beside its exact decimal, validates OHLC
+geometry/non-negative volume, rejects decreasing or conflicting duplicate
+timestamps, collapses only exact duplicates, constructs canonical observations,
+and exposes exact close returns through `finance_series`. It distinguishes a
+provider source instant from a date-only ordering anchor and proven share volume
+from an explicitly unknown provider unit.
+
+The provider adapter targets Alpaca's historical stock-bars endpoint with a
+required exact uppercase symbol, explicit symbol `asof` date, explicit `iex` or
+`sip` feed, USD, `1Day`, ascending order, and raw adjustment. Authentication is
+secret-redacted; responses, pagination, retries, pacing, concurrency, and total
+pages/bars are bounded; JSON numeric tokens and request IDs are retained; normal
+tests use offline responses only. IEX is never presented as consolidated SIP,
+and a successful credentialed request conveys no redistribution grant.
+
+`us_stock_ohlcv` reports provider pagination separately from market-calendar
+completeness. Because a reviewed US calendar/status source is not yet composed,
+absent rows remain unclassified rather than being guessed as market closures,
+suspensions, provider omissions, or unavailable history. Corporate-action
+adjustments, intraday/realtime bars, authoritative listing/venue identity,
+and permitted real fixtures remain later work.
+
+`cn_stock_ohlcv` and `hk_stock_ohlcv` reuse the independently bounded
+Eastmoney `klt=101`, `fqt=0` history seam without importing Alpaca or each
+other. They retain the complete provider rows—including amount, amplitude,
+change, and turnover lexemes—beside canonical OHLCV. CN requires a coherent
+caller-declared venue/board/share-class/currency combination. HK requires a
+caller-declared board/share-class/currency and never assumes HKD. Because the
+provider supplies dates without exact instants or proven volume units, both
+facts remain explicitly limited; row-budget truncation is separate from
+unassessed market-calendar/status gaps. This history-only batch changes no
+track's `quotes_history` feature score.
 
 This arbitration accepts read-only company discovery, recent filing metadata,
 raw standard/entity-wide XBRL fact evidence, and the documented seven direct
@@ -321,6 +361,9 @@ Priorities mean:
 | --- | --- | --- | --- |
 | `pi_stock_quote` | P0 | Current/delayed quote snapshots with bid/ask, last trade, session, source, and freshness. Backend chosen explicitly. | `/quote`, `stock_quote`, `stock_quotes` |
 | `pi_stock_history` | P0 | Daily/intraday OHLCV with raw/adjusted controls and corporate-action metadata. | `/chart-data`, `stock_bars`, `stock_returns`, `stock_performance` |
+| `pi_us_ohlcv` (**Experimental Alpaca daily slice**) | P0 | Exact raw daily US OHLCV for one Alpaca symbol/as-of identity and explicit IEX/SIP feed, with bounded pagination and visible calendar/rights gaps. | `us_stock_ohlcv` |
+| `pi_cn_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily mainland OHLCV for a caller-declared venue/board/share-class/currency identity, retaining provider rows with unknown volume/session/calendar/rights semantics. | `cn_stock_ohlcv` |
+| `pi_hk_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily HK OHLCV for a caller-declared board/share-class/currency identity, without assuming HKD, half-days, suspensions, or provider volume units. | `hk_stock_ohlcv` |
 | `pi_stock_market_snapshot` | P1 | Index/sector/industry breadth, leaders, laggards, gaps, volume, and volatility snapshots. | `/market`, `market_snapshot`, `market_breadth`, `market_movers` |
 | `pi_stock_screener` | P1 | Reproducible universe filters combining price, liquidity, fundamentals, growth, valuation, and technical fields. | `/screen`, `stock_screen`, `screen_explain`, `screen_save` |
 | `pi_stock_corporate_actions` | P1 | Splits, dividends, symbol changes, mergers, spinoffs, and delistings, with adjustment impact. | `/actions`, `corporate_actions`, `dividend_history`, `split_history` |
@@ -657,6 +700,10 @@ fallback chain.
 - [Alpaca market data](https://docs.alpaca.markets/us/docs/about-market-data-api)
   covers historical/real-time equities, options, and crypto over HTTP and
   WebSocket, but access and feed breadth depend on authentication and plan.
+- [Alpaca historical stock bars](https://docs.alpaca.markets/us/reference/stockbars)
+  is the accepted first US OHLCV acquisition seam. The implemented slice fixes
+  `1Day`, USD, ascending, and raw adjustment; requires explicit IEX/SIP and
+  symbol-as-of identity; and follows page tokens only within caller budgets.
 - [Alpaca paper trading](https://docs.alpaca.markets/us/v1.4.2/docs/paper-trading)
   is useful for workflow testing but documents important simulation omissions.
 - [IBKR Web API](https://ibkrcampus.com/campus/ibkr-api-page/webapi-doc/)
