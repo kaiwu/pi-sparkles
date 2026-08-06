@@ -1,8 +1,10 @@
 import finance_cninfo
+import finance_cninfo/current_security_reference
 import finance_cninfo/disclosure
 import finance_cninfo/discovery_runtime
 import finance_cninfo/request
 import finance_cninfo/security_master.{type Security}
+import finance_core/identifier
 import finance_core/time
 import finance_http/pool
 import finance_http/response as http_response
@@ -64,18 +66,17 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
           use outcome <- promise.await(fetch_security_master(
             provider_runtime,
             access,
+            input.code,
             id,
             transport.from_abort_signal(raw.dynamic(signal)),
           ))
           case outcome {
             Error(message) -> tool.reject(message)
-            Ok(values) -> {
-              let resolution =
-                security_master.resolve_code(values, code: input.code)
-              let candidates = selection.candidates(resolution)
+            Ok(reference) -> {
+              let candidates = current_security_reference.candidates(reference)
               tool.text_result(
                 render_security(input.code, candidates),
-                security_json(input.code, candidates),
+                security_json(reference),
               )
               |> promise.resolve
             }
@@ -107,10 +108,10 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
           ))
           case outcome {
             Error(message) -> tool.reject(message)
-            Ok(#(security, page)) ->
+            Ok(#(security, reference, page)) ->
               tool.text_result(
                 render_disclosures(security, page),
-                disclosure_json(security, input, page),
+                disclosure_json(security, reference, input, page),
               )
               |> promise.resolve
           }
@@ -142,9 +143,10 @@ fn provider() -> Provider {
 fn fetch_security_master(
   provider_runtime: discovery_runtime.Runtime,
   access: finance_cninfo.Access,
+  code: String,
   id: String,
   cancellation: transport.Cancellation,
-) -> Promise(Result(List(Security), String)) {
+) -> Promise(Result(current_security_reference.Reference, String)) {
   case request.security_master(access) {
     Error(_) -> promise.resolve(Error("CNINFO security request was invalid"))
     Ok(request_value) -> {
@@ -154,15 +156,33 @@ fn fetch_security_master(
         request: request_value,
         cancellation: cancellation,
       ))
-      case checked_body(outcome, "security catalogue") {
-        Error(message) -> promise.resolve(Error(message))
-        Ok(body) ->
-          case security_master.decode(body) {
+      case outcome {
+        Error(error) ->
+          promise.resolve(Error(
+            "CNINFO security catalogue request failed safely: "
+            <> string.inspect(error),
+          ))
+        Ok(response_value) ->
+          case time.instant(environment.now_milliseconds()) {
             Error(_) ->
               promise.resolve(Error(
-                "CNINFO returned an invalid security catalogue",
+                "CNINFO security retrieval clock was invalid",
               ))
-            Ok(values) -> promise.resolve(Ok(values))
+            Ok(retrieved_at) ->
+              case
+                current_security_reference.capture(
+                  code,
+                  response_value,
+                  retrieved_at,
+                )
+              {
+                Error(error) ->
+                  promise.resolve(Error(
+                    "CNINFO security catalogue could not be captured as exact repository evidence: "
+                    <> string.inspect(error),
+                  ))
+                Ok(reference) -> promise.resolve(Ok(reference))
+              }
           }
       }
     }
@@ -175,17 +195,26 @@ fn fetch_disclosures(
   input: DisclosureInput,
   id: String,
   cancellation: transport.Cancellation,
-) -> Promise(Result(#(Security, disclosure.Page), String)) {
+) -> Promise(
+  Result(
+    #(Security, current_security_reference.Reference, disclosure.Page),
+    String,
+  ),
+) {
   use master <- promise.await(fetch_security_master(
     provider_runtime,
     access,
+    input.code,
     id <> "-identity",
     cancellation,
   ))
   case master {
     Error(message) -> promise.resolve(Error(message))
-    Ok(values) -> {
-      let resolution = security_master.resolve_code(values, code: input.code)
+    Ok(reference) -> {
+      let resolution =
+        reference
+        |> current_security_reference.candidates
+        |> identifier.resolve
       case selection.select(resolution, input.organization_id) {
         Error(selection.NoCandidate) ->
           promise.resolve(Error(
@@ -234,7 +263,8 @@ fn fetch_disclosures(
                           promise.resolve(Error(
                             "CNINFO returned invalid announcement metadata",
                           ))
-                        Ok(page) -> promise.resolve(Ok(#(security, page)))
+                        Ok(page) ->
+                          promise.resolve(Ok(#(security, reference, page)))
                       }
                   }
                 }
@@ -476,24 +506,33 @@ fn render_disclosures(security: Security, page: disclosure.Page) -> String {
   <> int.to_string(disclosure.total_announcements(page))
 }
 
-fn security_json(code: String, candidates: List(Security)) -> json.Json {
+fn security_json(reference: current_security_reference.Reference) -> json.Json {
+  let candidates = current_security_reference.candidates(reference)
   json.object(
     list.append(
       cn_track_fields("cn_cninfo_security_reference", [
         "code_does_not_prove_venue_board_share_class_currency_or_status",
-        "catalogue_source_timestamp_not_supplied",
+        "catalogue_provider_timestamp_not_supplied",
+        "receipt_is_sha256_content_bound_not_provider_authenticated",
         "redistribution_not_approved",
       ]),
       [
         #("provider", json.string("CNINFO")),
         #(
           "source",
-          json.string("https://www.cninfo.com.cn/new/data/szse_stock.json"),
+          json.string(current_security_reference.source_reference(reference)),
         ),
         #("access", json.string("read_only_public_local_analysis")),
-        #("queryCode", json.string(code)),
-        #("resolution", json.string(resolution_name(candidates))),
+        #(
+          "queryCode",
+          json.string(current_security_reference.query_code(reference)),
+        ),
+        #(
+          "resolution",
+          json.string(current_security_reference.resolution(reference)),
+        ),
         #("candidates", json.array(candidates, security_candidate_json)),
+        #("currentSecurityReceipt", current_security_receipt_json(reference)),
       ],
     ),
   )
@@ -513,6 +552,7 @@ fn security_candidate_json(value: Security) -> json.Json {
 
 fn disclosure_json(
   security: Security,
+  reference: current_security_reference.Reference,
   input: DisclosureInput,
   page: disclosure.Page,
 ) -> json.Json {
@@ -521,7 +561,7 @@ fn disclosure_json(
       cn_track_fields("cn_cninfo_disclosure_search", [
         "cninfo_repository_does_not_by_itself_prove_exchange_origin",
         "provider_time_semantics_not_verified_as_exchange_publication_time",
-        "response_retrieval_time_not_yet_captured",
+        "announcement_response_retrieval_time_not_yet_captured",
         "redistribution_not_approved",
       ]),
       [
@@ -537,6 +577,7 @@ fn disclosure_json(
           json.string(security_master.organization_id(security)),
         ),
         #("shortName", json.string(security_master.short_name(security))),
+        #("currentSecurityReceipt", current_security_receipt_json(reference)),
         #("category", json.string(disclosure.category_name(input.category))),
         #("page", json.int(input.page)),
         #("pageSize", json.int(input.page_size)),
@@ -550,6 +591,91 @@ fn disclosure_json(
       ],
     ),
   )
+}
+
+fn current_security_receipt_json(
+  value: current_security_reference.Reference,
+) -> json.Json {
+  let retrieved_at =
+    value
+    |> current_security_reference.retrieved_at
+    |> time.unix_milliseconds
+  json.object([
+    #("schema", json.string(current_security_reference.schema)),
+    #("schemaVersion", json.int(current_security_reference.schema_version)),
+    #("digestAlgorithm", json.string("sha256")),
+    #(
+      "canonicalDigest",
+      json.string(current_security_reference.canonical_digest(value)),
+    ),
+    #("track", json.string("cn")),
+    #("authorityId", json.string(current_security_reference.authority_id)),
+    #("provider", json.string("CNINFO")),
+    #(
+      "sourceReference",
+      json.string(current_security_reference.source_reference(value)),
+    ),
+    #("queryCode", json.string(current_security_reference.query_code(value))),
+    #("observedAtUnixMilliseconds", json.int(retrieved_at)),
+    #("retrievedAtUnixMilliseconds", json.int(retrieved_at)),
+    #(
+      "catalogueScope",
+      json.string("public_repository_catalogue_snapshot_exact_code_only"),
+    ),
+    #("resolution", json.string(current_security_reference.resolution(value))),
+    #(
+      "candidates",
+      json.array(
+        current_security_reference.candidates(value),
+        security_candidate_json,
+      ),
+    ),
+    #(
+      "evidence",
+      json.object([
+        #(
+          "evidenceId",
+          json.string(current_security_reference.evidence_id(value)),
+        ),
+        #(
+          "sourceFingerprint",
+          json.string(current_security_reference.source_fingerprint(value)),
+        ),
+        #(
+          "mediaType",
+          json.string(current_security_reference.media_type(value)),
+        ),
+        #(
+          "responseByteLength",
+          json.int(current_security_reference.response_byte_length(value)),
+        ),
+        #(
+          "contentSha256",
+          json.string(current_security_reference.content_sha256(value)),
+        ),
+      ]),
+    ),
+    #(
+      "claims",
+      json.object([
+        #("repositoryCatalogueResponseAtRetrieval", json.bool(True)),
+        #("venueMic", json.null()),
+        #("board", json.null()),
+        #("shareClass", json.null()),
+        #("currency", json.null()),
+        #("listingEffectiveFrom", json.null()),
+        #("listingEffectiveTo", json.null()),
+        #("tradingStatus", json.null()),
+      ]),
+    ),
+    #(
+      "integrity",
+      json.object([
+        #("state", json.string("sha256_content_bound")),
+        #("providerAuthenticated", json.bool(False)),
+      ]),
+    ),
+  ])
 }
 
 fn announcement_json(value: disclosure.Announcement) -> json.Json {
@@ -599,14 +725,6 @@ fn cn_track_fields(
       limitations: limitations,
     )
   track_json.result_fields(value)
-}
-
-fn resolution_name(values: List(Security)) -> String {
-  case values {
-    [] -> "no_match"
-    [_] -> "unique"
-    [_, _, ..] -> "ambiguous"
-  }
 }
 
 fn option_json(value: Option(a), encode: fn(a) -> json.Json) -> json.Json {

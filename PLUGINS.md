@@ -259,6 +259,55 @@ SHA-256 values and one canonical projection digest. The compositor rebuilds and
 verifies that digest before classification; a match proves content coherence,
 not an Alpaca signature or provider-origin authentication.
 
+The CN and HK OHLCV paths now use the same provider-neutral canonical receipt
+and four-state classifier behind isolated market-owned policies. Their
+acquisition projections bind exact track identity, Eastmoney source plan,
+response bytes/body hash, and ordered dates; network-free compositors verify
+them before joining the reviewed 2026 mainland or HKEX calendar plus copied
+listing/status evidence. HK retains published half-day dates without treating a
+daily row as intraday-completeness proof. Matching SHA-256 is still only content
+coherence: Eastmoney is vendor evidence, and caller-supplied listing or status
+references do not become exchange authentication.
+
+The HK authority-depth work has started inside the existing `hk_disclosures`
+surface instead of adding another shell. Each exact-code lookup is now captured
+before decoding as a canonical, SHA-256-bound HKEXnews current-security receipt,
+and `hk_disclosure_search` retains the same receipt used to select its stock ID.
+It proves code/name/stock-ID membership in the current catalogue at retrieval
+and an XHKG source scope. It deliberately leaves board, share class, currency,
+listing start/end, and per-session trading status unknown. Therefore it is a
+usable authority evidence leg, but not yet the historical listing/status proof
+required by an OHLCV gap assessment.
+
+The same plugin now exposes `hk_security_profile` over HKEX's official Full
+List of Securities workbook. The adapter captures the original XLSX bytes and
+SHA-256 first, then uses the reviewed `finance_archive` boundary to extract only
+five required UTF-8 parts under archive/entry/count/total budgets, rejecting
+unsafe names, encryption, ZIP64, unsupported compression, length or CRC drift,
+and cancellation. The canonical profile receipt preserves the workbook update
+date, category/sub-category, derived board only for exact known labels, board
+lot, ISIN, eligibility markers, trading currency, RMB counter, and per-entry
+CRC evidence. It is a current profile, not an effective listing interval or a
+positive session-status assertion, so it remains outside `hk_ohlcv_gaps`.
+
+`hk_recent_listing_event` adds a separate, narrower HKEX authority receipt over
+the public "Newly Listed Securities" page. The pure decoder validates the
+rolling-current-two-week heading, ten-column table, update date, exact code,
+event date, tentative marker, board lot, four eligibility markers, corporate
+action, and related code. Only an exact non-tentative `New Listing` row yields
+`listingEffectiveFrom`; every other action and every tentative row leaves that
+claim null. The page does not supply historical coverage, listing end, or
+positive session status, so this is partial authority depth rather than a
+complete `hk_ohlcv_gaps` input.
+
+CN uses the same capture-before-decode law under a deliberately weaker source
+claim. `cn_disclosures` now retains a canonical SHA-256-bound CNINFO catalogue
+receipt in both security and announcement-search results. It binds exact
+code/organization/name/category/pinyin candidates from the repository snapshot,
+but venue, board, share class, currency, listing interval, and status remain
+unknown. CNINFO repository visibility does not become SSE/SZSE/BSE authority,
+so this receipt likewise cannot satisfy the CN OHLCV listing/status inputs.
+
 The separate `us_trading_rules` tool supplies only the venue-explicit current
 regular displayed-quote increment for a caller-identified NYSE/Nasdaq NMS stock
 within its reviewed interval. It retains exchange and SEC sources, has no
@@ -474,9 +523,10 @@ slice:
 6. one clearly labelled market-data provider (now implemented as an exact
    Alpaca US latest quote plus isolated raw-daily Alpaca US and Eastmoney CN/HK
    OHLCV slices, with their unequal entitlements and units kept visible);
-7. one venue-explicit market calendar (implemented for NYSE/Nasdaq 2026 and
-   consumed by the separate SHA-256-bound OHLCV gap compositor, while the
-   acquisition result itself remains calendar-unassessed);
+7. one venue-explicit market calendar and evidence join (implemented for
+   NYSE/Nasdaq, SSE/SZSE/BSE, and HKEX 2026 through separate SHA-256-bound
+   OHLCV gap compositors, while each acquisition result itself remains
+   calendar-unassessed);
 8. one concise cited company or watchlist report;
 9. an exportable evidence manifest.
 

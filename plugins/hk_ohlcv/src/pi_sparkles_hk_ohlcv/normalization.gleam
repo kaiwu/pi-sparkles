@@ -43,7 +43,7 @@ pub fn batch(
   use source_ref <- result.try(
     source.new(
       "eastmoney",
-      source_reference(plan),
+      query.history_source_reference(plan),
       source.Other("public_web_rights_unknown"),
     )
     |> result.map_error(InvalidSource),
@@ -124,22 +124,6 @@ fn pagination(
     True -> finance_ohlcv.TruncatedByBarBudget(query.history_limit(plan))
     False -> finance_ohlcv.AllPages
   }
-}
-
-fn source_reference(plan: HistoryQuery) -> String {
-  "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid="
-  <> query.secid(query.history_market(plan), query.history_code(plan))
-  <> "&klt=101&fqt=0&beg="
-  <> compact_date(query.history_start(plan))
-  <> "&end="
-  <> compact_date(query.history_end(plan))
-  <> "&lmt="
-  <> int.to_string(query.history_limit(plan))
-}
-
-fn compact_date(value: time.Date) -> String {
-  let #(year, month, day) = time.date_parts(value)
-  int.to_string(year) <> two_digits(month) <> two_digits(day)
 }
 
 fn date_text(value: time.Date) -> String {

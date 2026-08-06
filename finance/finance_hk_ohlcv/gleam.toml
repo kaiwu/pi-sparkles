@@ -1,0 +1,28 @@
+name = "finance_hk_ohlcv"
+version = "0.1.0"
+target = "javascript"
+description = "Evidence-complete Hong Kong OHLCV receipt composition"
+
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+finance_core = { path = "../finance_core" }
+finance_hk_calendar = { path = "../finance_hk_calendar" }
+finance_hk_identity = { path = "../finance_hk_identity" }
+finance_listing = { path = "../finance_listing" }
+finance_market_calendar = { path = "../finance_market_calendar" }
+finance_ohlcv = { path = "../finance_ohlcv" }
+finance_provenance = { path = "../finance_provenance" }
+finance_track = { path = "../finance_track" }
+
+[dev-dependencies]
+gleeunit = ">= 1.9.0 and < 2.0.0"
+
+[javascript]
+runtime = "bun"
+
+[metadata.finance]
+status = "experimental"
+track = "hk"

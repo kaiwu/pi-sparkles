@@ -58,6 +58,10 @@ pub fn requests_are_caller_identified_bounded_and_unadjusted_test() {
   request.query(history_request)
   |> list.contains(request.QueryParameter("secid", "116.00700", request.Public))
   |> should.be_true
+  query.history_source_reference(history_plan)
+  |> should.equal(
+    "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=116.00700&klt=101&fqt=0&beg=20260801&end=20260805&lmt=10",
+  )
 }
 
 pub fn quote_decoder_uses_integer_scale_and_preserves_hk_precision_test() {

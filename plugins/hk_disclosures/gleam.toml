@@ -1,7 +1,7 @@
 name = "pi_sparkles_hk_disclosures"
 version = "0.1.0"
 target = "javascript"
-description = "Track-isolated HKEXnews security and disclosure discovery for Pi"
+description = "Track-isolated HKEX security, recent-listing, and disclosure discovery for Pi"
 
 licences = ["Apache-2.0"]
 gleam = ">= 1.18.0"

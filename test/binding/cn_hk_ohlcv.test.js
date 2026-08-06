@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
 const originalFetch = globalThis.fetch;
@@ -55,6 +56,34 @@ async function execute(tool, input) {
   );
 }
 
+function receiptDigest(receipt) {
+  const canonical = {
+    schema: receipt.schema,
+    schema_version: receipt.schemaVersion,
+    track: receipt.venue === "hk" ? "hk" : "cn",
+    provider: receipt.provider,
+    venue: receipt.venue,
+    board: receipt.board,
+    share_class: receipt.shareClass,
+    currency: receipt.currency,
+    code: receipt.code,
+    start_date: receipt.startDate,
+    end_date: receipt.endDate,
+    limit: String(receipt.limit),
+    source_reference: receipt.sourceReference,
+    retrieved_at_unix_ms: String(receipt.retrievedAtUnixMilliseconds),
+    pagination: receipt.pagination,
+    pages: receipt.pages.map((page) => ({
+      sequence: page.sequence,
+      request_id: page.requestId,
+      byte_length: String(page.byteLength),
+      content_sha256: page.contentSha256,
+    })),
+    bar_dates: receipt.barDates,
+  };
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
 describe("CN/HK Eastmoney OHLCV boundaries", () => {
   test("normalizes exact CN rows without inventing timestamps or volume units", async () => {
     const tools = await harness("cn_ohlcv");
@@ -99,6 +128,41 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
     expect(result.details.bars[0].normalized.open).toBe("1350.6");
     expect(result.details.providerRows[0].amount).toBe("4898665275.00");
 
+    const receipt = result.details.gapAssessmentReceipt;
+    expect(receipt).toMatchObject({
+      schema: "pi-sparkles/cn-ohlcv-gap-receipt",
+      schemaVersion: 1,
+      digestAlgorithm: "sha256",
+      provider: "eastmoney",
+      venue: "sse",
+      board: "main",
+      shareClass: "a_share",
+      currency: "CNY",
+      code: "600519",
+      startDate: "2024-08-01",
+      endDate: "2024-08-02",
+      limit: 3,
+      pagination: "complete",
+      barDates: ["2024-08-01", "2024-08-02"],
+      integrity: {
+        state: "sha256_content_bound",
+        scope: "canonical_cn_gap_projection_v1",
+        providerAuthenticated: false,
+      },
+    });
+    expect(receipt.sourceReference).toBe(
+      "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=1.600519&klt=101&fqt=0&beg=20240801&end=20240802&lmt=3",
+    );
+    expect(receipt.pages).toEqual([
+      {
+        sequence: 1,
+        requestId: null,
+        byteLength: Buffer.byteLength(cnFixture),
+        contentSha256: createHash("sha256").update(cnFixture).digest("hex"),
+      },
+    ]);
+    expect(receipt.digest).toBe(receiptDigest(receipt));
+
     expect(requests).toHaveLength(1);
     expect(requests[0].url.hostname).toBe("push2his.eastmoney.com");
     expect(requests[0].url.pathname).toBe("/api/qt/stock/kline/get");
@@ -140,6 +204,41 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
     expect(result.details.bars[0].raw.close).toBe("372.400");
     expect(result.details.bars[0].normalized.close).toBe("372.4");
     expect(result.details.providerRows[0].turnoverPercent).toBe("0.25");
+
+    const receipt = result.details.gapAssessmentReceipt;
+    expect(receipt).toMatchObject({
+      schema: "pi-sparkles/hk-ohlcv-gap-receipt",
+      schemaVersion: 1,
+      digestAlgorithm: "sha256",
+      provider: "eastmoney",
+      venue: "hk",
+      board: "main",
+      shareClass: "ordinary_share",
+      currency: "CNY",
+      code: "00700",
+      startDate: "2024-08-01",
+      endDate: "2024-08-02",
+      limit: 2,
+      pagination: "truncated_by_bar_budget",
+      barDates: ["2024-08-01", "2024-08-02"],
+      integrity: {
+        state: "sha256_content_bound",
+        scope: "canonical_hk_gap_projection_v1",
+        providerAuthenticated: false,
+      },
+    });
+    expect(receipt.sourceReference).toBe(
+      "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=116.00700&klt=101&fqt=0&beg=20240801&end=20240802&lmt=2",
+    );
+    expect(receipt.pages).toEqual([
+      {
+        sequence: 1,
+        requestId: null,
+        byteLength: Buffer.byteLength(hkFixture),
+        contentSha256: createHash("sha256").update(hkFixture).digest("hex"),
+      },
+    ]);
+    expect(receipt.digest).toBe(receiptDigest(receipt));
 
     expect(requests).toHaveLength(1);
     expect(requests[0].url.searchParams.get("secid")).toBe("116.00700");

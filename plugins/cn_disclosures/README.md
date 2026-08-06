@@ -15,6 +15,15 @@ one-request-per-second, one-in-flight, cancellation-aware, retry-bounded,
 20-second/5-MB bounded, and fixture tested. The announcement POST is marked as
 a repeatable read only because its form is a public search query.
 
+Both tools retain their identity lookup as a versioned CNINFO catalogue
+receipt. The response is captured before decoding and exposes retrieval time,
+byte length, body SHA-256, evidence ID/source fingerprint, exact candidates,
+and a canonical SHA-256 digest. It proves repository catalogue association for
+each returned exact candidate at that retrieval only. Venue, board, share
+class, currency, effective listing interval, and trading status remain null;
+the digest is content-bound rather than provider-authenticated. It therefore
+cannot replace the listing/status evidence required by `cn_ohlcv_gaps`.
+
 Security results preserve the CNINFO code, organization ID, Chinese short name,
 category, and pinyin. A six-digit code is a candidate lookup, not proof of SSE,
 SZSE, BSE, board, share class, currency, or current listing status. Disclosure

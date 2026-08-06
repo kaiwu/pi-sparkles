@@ -6,9 +6,14 @@ import finance_core/observation
 import finance_core/source
 import finance_core/time
 import finance_ohlcv
+import finance_ohlcv/acquisition_receipt
+import finance_provenance/hash
+import finance_provenance/identity
 import finance_series/series
+import finance_track
 import gleam/list
 import gleam/option.{None, Some}
+import gleam/string
 import gleeunit
 import gleeunit/should
 
@@ -124,8 +129,68 @@ pub fn close_returns_use_exact_series_math_test() {
   |> should.equal(["0.1"])
 }
 
+pub fn canonical_acquisition_receipt_binds_track_identity_pages_and_dates_test() {
+  let original = acquisition("600519", string.repeat("a", 64))
+  let changed = acquisition("000001", string.repeat("b", 64))
+  let canonical = acquisition_receipt.canonical_text(original)
+  canonical |> string.contains("\"track\":\"cn\"") |> should.be_true
+  let assert Ok(first_digest) = hash.text(canonical)
+  let assert Ok(changed_digest) =
+    changed |> acquisition_receipt.canonical_text |> hash.text
+  first_digest |> should.not_equal(changed_digest)
+}
+
+pub fn canonical_acquisition_receipt_rejects_reserved_fields_and_page_gaps_test() {
+  acquisition_receipt.identity_field("provider", "forged")
+  |> should.equal(Error(acquisition_receipt.ReservedIdentityField("provider")))
+
+  let assert Ok(content_hash) = identity.sha256(string.repeat("a", 64))
+  let assert Ok(page_two) = acquisition_receipt.page(2, None, 100, content_hash)
+  let assert Ok(code) = acquisition_receipt.identity_field("code", "600519")
+  acquisition_receipt.new(
+    schema: "pi-sparkles/test-ohlcv-gap-receipt",
+    schema_version: 1,
+    track: finance_track.Cn,
+    provider: "fixture",
+    identity: [code],
+    source_reference: "https://example.test/source",
+    retrieved_at: instant(1_800_000_000_000),
+    pagination: acquisition_receipt.Complete,
+    pages: [page_two],
+    range_start: civil(2026, 6, 18),
+    range_end: civil(2026, 6, 24),
+    bar_dates: [civil(2026, 6, 18)],
+  )
+  |> should.equal(Error(acquisition_receipt.InvalidPageSequence(1, 2)))
+}
+
 fn batch(bars) -> finance_ohlcv.Batch {
   let assert Ok(value) = make_batch(bars)
+  value
+}
+
+fn acquisition(
+  code_value: String,
+  hash_value: String,
+) -> acquisition_receipt.Receipt {
+  let assert Ok(code) = acquisition_receipt.identity_field("code", code_value)
+  let assert Ok(content_hash) = identity.sha256(hash_value)
+  let assert Ok(page) = acquisition_receipt.page(1, None, 100, content_hash)
+  let assert Ok(value) =
+    acquisition_receipt.new(
+      schema: "pi-sparkles/test-ohlcv-gap-receipt",
+      schema_version: 1,
+      track: finance_track.Cn,
+      provider: "fixture",
+      identity: [code],
+      source_reference: "https://example.test/source",
+      retrieved_at: instant(1_800_000_000_000),
+      pagination: acquisition_receipt.Complete,
+      pages: [page],
+      range_start: civil(2026, 6, 18),
+      range_end: civil(2026, 6, 24),
+      bar_dates: [civil(2026, 6, 18)],
+    )
   value
 }
 

@@ -1,5 +1,6 @@
 import finance_authority_snapshot/artifact
 import finance_cninfo
+import finance_cninfo/current_security_reference
 import finance_cninfo/disclosure
 import finance_cninfo/discovery_runtime
 import finance_cninfo/request
@@ -101,6 +102,38 @@ pub fn public_security_master_is_bounded_and_preserves_candidates_test() {
   security_master.short_name(value) |> should.equal("平安银行")
 }
 
+pub fn current_security_reference_binds_repository_snapshot_and_unknown_venue_test() {
+  let fixture =
+    "{\"stockList\":[{\"code\":\"000001\",\"pinyin\":\"payh\",\"category\":\"A股\",\"orgId\":\"gssz0000001\",\"zwjc\":\"平安银行\"}]}"
+  let changed_fixture =
+    "{\"stockList\":[{\"code\":\"000001\",\"pinyin\":\"payh\",\"category\":\"A股\",\"orgId\":\"gssz0000001\",\"zwjc\":\"平安银行股份有限公司\"}]}"
+  let assert Ok(response_value) = text_response(fixture)
+  let assert Ok(changed_response) = text_response(changed_fixture)
+  let assert Ok(reference) =
+    current_security_reference.capture("000001", response_value, instant(1000))
+  let assert Ok(changed) =
+    current_security_reference.capture(
+      "000001",
+      changed_response,
+      instant(1000),
+    )
+
+  current_security_reference.query_code(reference) |> should.equal("000001")
+  current_security_reference.resolution(reference) |> should.equal("unique")
+  current_security_reference.source_reference(reference)
+  |> should.equal("https://www.cninfo.com.cn/new/data/szse_stock.json")
+  current_security_reference.response_byte_length(reference)
+  |> should.equal(string.byte_size(fixture))
+  current_security_reference.content_sha256(reference)
+  |> string.length
+  |> should.equal(64)
+  current_security_reference.canonical_text(reference)
+  |> string.contains("\"venue_mic\":null")
+  |> should.be_true
+  current_security_reference.canonical_digest(reference)
+  |> should.not_equal(current_security_reference.canonical_digest(changed))
+}
+
 pub fn announcement_query_is_repeatable_bounded_and_exact_identified_test() {
   let assert Ok(access) =
     finance_cninfo.access("pi-sparkles/0.1", "research@example.com")
@@ -166,6 +199,18 @@ fn pdf_response() -> Result(
     5,
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "255044462d",
+    duration(5),
+  )
+}
+
+fn text_response(
+  body: String,
+) -> Result(http_response.Response, http_response.ResponseError) {
+  http_response.new(
+    200,
+    [http_response.Header("content-type", "application/json")],
+    body,
+    string.byte_size(body),
     duration(5),
   )
 }

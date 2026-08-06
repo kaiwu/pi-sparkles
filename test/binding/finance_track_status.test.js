@@ -63,6 +63,8 @@ async function harness({
     "cn_stock_fundamental_metric",
     "hk_authorities",
     "hk_security_search",
+    "hk_security_profile",
+    "hk_recent_listing_event",
     "hk_market_calendar",
     "hk_trading_rules",
     "hk_disclosure_search",

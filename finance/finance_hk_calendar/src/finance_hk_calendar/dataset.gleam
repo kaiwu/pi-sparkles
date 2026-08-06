@@ -8,6 +8,7 @@ import finance_market_calendar/dataset as market_dataset
 import finance_provenance/evidence.{type Licence}
 import finance_track
 import finance_track/context as track_context
+import gleam/list
 import gleam/option.{None, Some}
 
 pub type CalendarDatasetError {
@@ -121,6 +122,21 @@ pub fn official_2026_source() -> source.SourceRef {
       kind: source.Exchange,
     )
   value
+}
+
+pub fn official_2026_half_day_dates() -> List(time.Date) {
+  hk_2026_overrides()
+  |> list.filter(fn(value) {
+    let #(_, trading_day) = value
+    case trading_day {
+      calendar.Open([_, _]) -> True
+      _ -> False
+    }
+  })
+  |> list.map(fn(value) {
+    let #(date, _) = value
+    date
+  })
 }
 
 pub fn full_day_sessions() -> List(calendar.Session) {

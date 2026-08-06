@@ -1,6 +1,7 @@
 import finance_calendar/date
 import finance_core/time
 import finance_track
+import gleam/int
 import gleam/list
 import gleam/order.{Gt}
 import gleam/string
@@ -118,6 +119,17 @@ pub fn history_limit(value: HistoryQuery) -> Int {
   value.limit
 }
 
+pub fn history_source_reference(value: HistoryQuery) -> String {
+  "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid="
+  <> secid(value.market, value.code)
+  <> "&klt=101&fqt=0&beg="
+  <> compact_date(value.start_date)
+  <> "&end="
+  <> compact_date(value.end_date)
+  <> "&lmt="
+  <> int.to_string(value.limit)
+}
+
 pub fn income_track(value: IncomeQuery) -> finance_track.Track {
   value.track
 }
@@ -171,4 +183,16 @@ fn valid_code(market: Market, code: String) -> Bool {
   && code
   |> string.to_graphemes
   |> list.all(fn(character) { string.contains("0123456789", character) })
+}
+
+fn compact_date(value: time.Date) -> String {
+  let #(year, month, day) = time.date_parts(value)
+  int.to_string(year) <> two_digits(month) <> two_digits(day)
+}
+
+fn two_digits(value: Int) -> String {
+  case value < 10 {
+    True -> "0" <> int.to_string(value)
+    False -> int.to_string(value)
+  }
 }

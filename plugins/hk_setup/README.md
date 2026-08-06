@@ -13,9 +13,13 @@ provider count toward readiness.
 
 The optional `hk_disclosures` companion advances two surfaces to Experimental
 when its tools are active: `hk_security_search` preserves exact HKEXnews stock
-IDs, and `hk_disclosure_search` preserves bounded title results and canonical
-PDF identities. Historical completeness, redistribution, and accounting remain
-blocked.
+IDs, `hk_security_profile` preserves the official HKEX Full List's bounded
+current category/sub-category, board lot, ISIN, eligibility, and currency
+evidence, `hk_recent_listing_event` preserves exact rolling-two-week events and
+derives a listing start only for a non-tentative `New Listing`, and
+`hk_disclosure_search` preserves bounded title results and canonical PDF
+identities. General effective listing intervals, positive session status,
+historical completeness, redistribution, and accounting remain blocked.
 
 The optional `hk_market_calendar` companion advances the authoritative-calendar
 surface when `hk_market_calendar` is active. It exposes HKEX circular

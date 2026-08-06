@@ -26,14 +26,15 @@ effects. Pass clocks, transport, storage, randomness, and entitlements as
 explicit capabilities. Keep unavoidable mutable cells generic and put no
 business logic in JavaScript.
 
-The finance foundations include `finance_core`, `finance_track`,
+The finance foundations include `finance_archive`, `finance_core`, `finance_track`,
 `finance_evidence`, `finance_listing`, `finance_market_calendar`,
 `finance_market_authorities`, `finance_market_rules`, `finance_market_documents`,
 `finance_document_attachment`, `finance_market_accounting`,
 `finance_track_capabilities`,
 `finance_provenance`, `finance_http`, `finance_math`, `finance_series`,
-`finance_calendar`, `finance_us_ohlcv`, `finance_table`, and `finance_testkit`. They are
-Experimental independent Gleam packages, not Pi plugins. Keep their dependency
+`finance_calendar`, `finance_ohlcv`, `finance_cn_ohlcv`, `finance_hk_ohlcv`,
+`finance_us_ohlcv`, `finance_table`, and `finance_testkit`. They are Experimental
+independent Gleam packages, not Pi plugins. Keep their dependency
 graph acyclic: core imports no finance package; track and other provider-neutral
 packages may build inward on core; evidence composes canonical observations,
 provenance, and track contexts; series may compose core, math, and calendar;
@@ -60,8 +61,11 @@ security/status, and effective date; documents retain original language plus
 correction/translation lineage; accounting retains exact numeric lexemes,
 reported scale, statement scope, audit/restatement state, and duplicates.
 Attachment retrieval must pass exact media allowlists, byte/page/redirect
-budgets, cancellation, and content-hash checks; archives and OCR fail closed
-until explicitly supported by a later reviewed effect contract.
+budgets, cancellation, and content-hash checks. Arbitrary archives and OCR fail
+closed. The only reviewed archive effect is `finance_archive`'s in-memory,
+exact-entry UTF-8 ZIP contract with explicit byte/count/decompression budgets,
+safe-name/encryption/ZIP64/compression rejection, cancellation, and CRC/length
+checks; it permits no filesystem extraction, recursion, or nested archives.
 Unknown or conflicting rules and mappings fail closed. A `cn_*` plugin must not
 import `finance_hk_*`, `finance_us_*`, or SEC market domains, and an `hk_*`
 plugin must not import `finance_cn_*`, `finance_us_*`, or SEC market domains.
@@ -75,6 +79,15 @@ it must reject incomplete or conflicting evidence and must not authenticate
 caller-supplied receipts by assertion. Its canonical gap projection may bind
 page-content hashes and copied fields, but a matching digest must not be
 presented as a provider signature, authority proof, or origin authentication.
+`finance_cn_ohlcv` owns the corresponding mainland-only join over exact
+SSE/SZSE/BSE identity and reviewed calendar scope. It must not import US/HK
+market domains or treat Eastmoney vendor origin as exchange evidence. Shared
+canonical acquisition receipts and gap classification live in `finance_ohlcv`;
+market-owned packages supply exact identity, calendar, and source-plan laws.
+`finance_hk_ohlcv` owns the XHKG/HKEX counterpart and must retain published
+half-day schedule evidence without treating a daily row as proof of intraday
+completeness. It must not import CN/US market domains or turn Eastmoney into
+HKEX evidence.
 
 Provider adapters such as `finance_openfigi` and `finance_sec` are also independent finance
 packages but sit outside the provider-neutral foundation. They may compose core

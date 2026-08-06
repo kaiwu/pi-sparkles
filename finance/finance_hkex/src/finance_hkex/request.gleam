@@ -8,6 +8,12 @@ import gleam/result
 
 pub const origin = "https://www1.hkexnews.hk"
 
+pub const securities_origin = "https://www.hkex.com.hk"
+
+pub const full_list_path = "/eng/services/trading/securities/securitieslists/ListOfSecurities.xlsx"
+
+pub const recent_listings_path = "/Services/Trading/Securities/Trading-News/Newly-Listed-Securities"
+
 pub const security_prefix_path = "/search/prefix.do"
 
 pub const title_search_path = "/search/titlesearch.xhtml"
@@ -15,6 +21,61 @@ pub const title_search_path = "/search/titlesearch.xhtml"
 pub type RequestError {
   InvalidHttp(request.RequestError)
   InvalidAccess(finance_hkex.AccessError)
+}
+
+pub fn full_list(access: Access) -> Result(request.Request, RequestError) {
+  let assert Ok(timeout) = time.duration(30_000)
+  use base <- result.try(
+    request.new(request.Get, securities_origin, full_list_path, None)
+    |> result.map_error(InvalidHttp),
+  )
+  use accepted <- result.try(
+    request.with_header(
+      base,
+      name: "Accept",
+      value: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      sensitivity: request.Public,
+    )
+    |> result.map_error(InvalidHttp),
+  )
+  use bounded <- result.try(
+    request.with_limits(
+      accepted,
+      timeout: timeout,
+      maximum_response_bytes: 2_000_000,
+    )
+    |> result.map_error(InvalidHttp),
+  )
+  finance_hkex.authorize(access, bounded) |> result.map_error(InvalidAccess)
+}
+
+pub fn recent_listings(
+  access: Access,
+) -> Result(request.Request, RequestError) {
+  let assert Ok(timeout) = time.duration(30_000)
+  use base <- result.try(
+    request.new(request.Get, securities_origin, recent_listings_path, None)
+    |> result.map_error(InvalidHttp),
+  )
+  use language <- result.try(public_query(base, "sc_lang", "en"))
+  use accepted <- result.try(
+    request.with_header(
+      language,
+      name: "Accept",
+      value: "text/html, application/xhtml+xml;q=0.9",
+      sensitivity: request.Public,
+    )
+    |> result.map_error(InvalidHttp),
+  )
+  use bounded <- result.try(
+    request.with_limits(
+      accepted,
+      timeout: timeout,
+      maximum_response_bytes: 4_000_000,
+    )
+    |> result.map_error(InvalidHttp),
+  )
+  finance_hkex.authorize(access, bounded) |> result.map_error(InvalidAccess)
 }
 
 pub fn document(

@@ -13,6 +13,10 @@ pub opaque type Query {
   Query(code: String)
 }
 
+pub opaque type Page {
+  Page(more: String, securities: List(Security))
+}
+
 type Payload {
   Payload(more: String, stock_info: List(Security))
 }
@@ -38,6 +42,10 @@ pub fn query_code(value: Query) -> String {
 }
 
 pub fn decode(body: String) -> Result(List(Security), DecodeError) {
+  body |> decode_page |> result.map(page_securities)
+}
+
+pub fn decode_page(body: String) -> Result(Page, DecodeError) {
   let value = string.trim(body)
   let prefix = "pi_sparkles("
   let suffix = ");"
@@ -56,14 +64,25 @@ pub fn decode(body: String) -> Result(List(Security), DecodeError) {
             - string.length(prefix)
             - string.length(suffix),
         )
-      use Payload(_, values) <- result.try(
+      use Payload(more, values) <- result.try(
         json.parse(json_body, payload_decoder())
         |> result.map_error(InvalidJson),
       )
-      Ok(values)
+      case valid_text(more, 20) {
+        True -> Ok(Page(more, values))
+        False -> Error(InvalidJsonp)
+      }
     }
     _, _, _ -> Error(InvalidJsonp)
   }
+}
+
+pub fn page_more(value: Page) -> String {
+  value.more
+}
+
+pub fn page_securities(value: Page) -> List(Security) {
+  value.securities
 }
 
 pub fn resolve_code(

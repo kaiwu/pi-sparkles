@@ -112,7 +112,9 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_evidence` | Experimental | Cross-input evidence policy | typed unit, quality/restatement, time-order, licence/redistribution, and same/cross-track compatibility |
 | `finance_listing` | Experimental | Effective listing identity | track/MIC-scoped keys, effective aliases, and evidence-backed relationships without market-owned code or board rules |
 | `finance_series` | Experimental | Time-series operations | ordered observations, missing policy, exact/as-of alignment, resampling, OHLCV, exact returns/paths, and attribution |
-| `finance_ohlcv` | Experimental | Exact provider-neutral bar contract | raw-plus-normalized values, OHLC geometry, canonical observations, strict order/exact deduplication, and separate pagination/calendar completeness |
+| `finance_ohlcv` | Experimental | Exact provider-neutral bar and receipt contract | raw-plus-normalized values, OHLC geometry, canonical observations, strict order/exact deduplication, content-bound acquisition receipts, and supplied-calendar gap classification |
+| `finance_cn_ohlcv` | Experimental | Isolated CN gap composition | exact SSE/SZSE/BSE calendar and listing identity, complete Eastmoney receipt, and per-gap status evidence with four fail-closed outcomes |
+| `finance_hk_ohlcv` | Experimental | Isolated HK gap composition | exact XHKG/HKEX calendar and listing identity, complete Eastmoney receipt, retained half-day evidence, and four fail-closed gap outcomes |
 | `finance_us_ohlcv` | Experimental | Isolated US gap composition | exact NYSE/Nasdaq calendar, listing interval, complete provider receipt, and per-gap status evidence with four fail-closed outcomes |
 | `finance_quote` | Experimental | Exact provider-neutral quote contract | raw-plus-normalized bid/ask prices and sizes, market codes, canonical observations, and unverified provider size semantics |
 | `finance_calendar` | Experimental | Trading-time rules | sessions, holidays, business days, joint calendars, coupon schedules, and named day counts; provider data remains pluggable |
@@ -123,7 +125,8 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_market_rules` | Experimental | Effective market-rule engine | source/evidence-labelled ticks, lots, limits, settlement and eligibility with strict dated unknown/conflict behavior |
 | `finance_cn_rules` / `finance_hk_rules` / `finance_us_rules` | Experimental | Isolated rule vocabulary | strict exact-listing selection plus narrow dated official profiles for established normal mainland CNY equities, applicable HKD equity spread bands, and current NYSE/Nasdaq regular displayed-quote increments |
 | `finance_market_documents` | Experimental | Disclosure identity and lineage | exact originals, reporting periods, corrections, replacements, translations, parallel languages, and attachment hashes |
-| `finance_document_attachment` | Experimental | Bounded attachment acceptance | media allowlist, byte/page/redirect limits, cancellation and content hash; archive/OCR fail closed |
+| `finance_document_attachment` | Experimental | Bounded attachment acceptance | media allowlist, byte/page/redirect limits, cancellation and content hash; arbitrary archive/OCR attachments fail closed |
+| `finance_archive` | Experimental | Reviewed ZIP effect contract | exact required UTF-8 entries, archive/entry/count/total budgets, cancellation, CRC/length validation, and fail-closed names/encryption/ZIP64/compression without filesystem writes or recursion |
 | `finance_cn_documents` / `finance_hk_documents` | Experimental | Isolated disclosure vocabulary | track-owned document classes and source-language policy without cross-track imports |
 | `finance_market_accounting` | Experimental | Lossless reported facts | exact lexemes/scales, standard/scope/period/audit/restatement context, executable mappings, and ambiguity preservation |
 | `finance_cn_accounting` / `finance_hk_accounting` | Experimental | Isolated accounting vocabulary | source-document issuer coherence and track-owned standard/report classes |
@@ -364,10 +367,10 @@ The compositor validates structural and cryptographic content coherence, not
 receipt authenticity. Its SHA-256 is not a provider signature; listing and
 status evidence remain caller supplied and unverified, the planned calendar may
 be superseded, and the original acquisition result remains
-`calendar_not_assessed`. CN/HK counterparts, authority-owned listing/status
-adapters, signed/authenticated receipts, corporate actions, later calendars,
-and permitted fixtures remain later work. This depth improvement changes no
-feature score.
+`calendar_not_assessed`. The CN and HK counterparts described below are now
+implemented. Authority-owned listing/status adapters, signed/authenticated
+receipts, corporate actions, later calendars, and permitted fixtures remain
+common depth work. This improvement changes no feature score.
 
 An authority-source audit did not justify weakening that boundary. Nasdaq's
 [symbol lookup](https://www.nasdaqtrader.com/Trader.aspx?id=symbollookup) says
@@ -380,6 +383,161 @@ says its ticker/exchange associations are periodically updated and are not
 guaranteed for accuracy or scope. None proves the exact historical listing
 interval plus positive per-session status required by the classifier, so no
 adapter is presented as authoritative yet.
+
+### CN OHLCV gap-composition slice — 2026-08-06
+
+`finance_cn_ohlcv` and `pi_cn_ohlcv_gaps` are **Experimental** for the mainland
+counterpart. `cn_stock_ohlcv` now hashes its validated Eastmoney response body
+and emits a versioned canonical receipt binding exact venue, board, share
+class, currency, code, range, row limit, source plan, retrieval time,
+pagination, ordered bar dates, byte length, optional request ID, and body
+SHA-256. The network-free `cn_ohlcv_gap_assessment` independently reconstructs
+that projection before it composes an exact listing interval, the reviewed 2026
+SSE/SZSE/BSE calendar, complete provider coverage, and explicit status evidence
+for every absent open listing date.
+
+The reusable canonical receipt and four-state classification laws now live in
+provider-neutral `finance_ohlcv`; CN retains its own identity, calendar, and
+Eastmoney source-plan validation. Incomplete or altered receipts, cross-venue
+identity, bars on closures or outside the listing, irrelevant status evidence,
+and unexplained open dates fail closed. Output evidence distinguishes closures,
+suspensions, provider omissions, and unavailable history without mutating or
+synthesizing bars. Matching SHA-256 proves copied-content coherence, not
+Eastmoney origin, listing authority, exchange status, or redistribution rights.
+
+### HK OHLCV gap-composition slice — 2026-08-06
+
+`finance_hk_ohlcv` and `pi_hk_ohlcv_gaps` complete the **Experimental**
+three-track structural counterpart. `hk_stock_ohlcv` emits its independent
+HK-specific canonical acquisition receipt; `hk_ohlcv_gap_assessment` verifies
+that receipt without environment lookup or network I/O, reconstructs the exact
+Eastmoney HK plan, and composes XHKG listing identity, the reviewed 2026 HKEX
+securities calendar, complete coverage, and per-gap status evidence.
+
+The HK calendar receipt retains February 16, December 24, and December 31 as
+published half days. Daily missing-row classification treats those dates as
+open and still requires explicit status evidence when a bar is absent; it does
+not claim that one daily row proves intraday completeness. Board, share class,
+declared currency, five-digit code, range, limit, response bytes/body hash, and
+ordered dates are all bound by the canonical digest. Identity drift,
+truncation, missing/conflicting evidence, or changed copied content fails
+closed. As with US and CN, a digest match is not provider authentication or
+exchange authority. All three tracks are now feature-ready at this narrow
+receipt-composition level; authority-owned listing/status adapters, provider
+authentication, data-unit semantics, corporate actions, later calendars, and
+permitted live fixtures remain common depth work.
+
+The term "complete OHLCV" therefore has two distinct checkpoints. Daily raw
+acquisition and structural missing-row composition are implemented on every
+track. Authority-grade completeness is not: four of the six explicit gates are
+complete everywhere, HK has a rolling-window partial listing-start gate, and no
+track has authority-owned positive per-session status.
+
+| Gate | US | CN | HK |
+| --- | --- | --- | --- |
+| Validated raw daily acquisition | Ready | Ready | Ready |
+| Content-bound acquisition projection | Ready | Ready | Ready |
+| Exact track-owned 2026 calendar | Ready | Ready | Ready |
+| Fail-closed four-state gap compositor | Ready | Ready | Ready |
+| Authority-owned effective listing interval | Missing | Missing | Partial: non-tentative `New Listing` starts in the rolling current-two-week page only |
+| Authority-owned positive status for every relevant session | Missing | Missing | Missing |
+
+Production-complete OHLCV is a still broader bar. All tracks additionally need
+reviewed corporate-action/adjustment variants, stable source-time and volume
+semantics, later-calendar/schema-drift maintenance plus permitted real fixtures,
+and explicit production/redistribution rights. CN/HK also need exact provider
+amount/turnover semantics; US needs broader feed/product entitlement and action
+coverage. Feature breadth must not be reported as completion of those gates.
+
+For the next steering review, do not schedule another OHLCV acquisition shell.
+The candidate sequence is: (1) audit direct SSE/SZSE/BSE effective
+identity/listing-start sources to bring CN authority depth toward HK; (2) define
+one positive per-session status contract, the blocker shared by every track;
+(3) decide whether broad HK/US historical masters require licensed products;
+and only then (4) add source-owned corporate actions/adjustment factors and
+documented unit semantics. Each decision must include fixture, update,
+redistribution, and provider-authentication policy before implementation.
+
+### CN current-security repository-evidence slice — 2026-08-06
+
+`finance_cninfo` and `pi_cn_disclosures` now capture the complete bounded public
+security-catalogue response before semantic decoding. `cn_security_search` and
+the identity leg of `cn_disclosure_search` emit a versioned canonical receipt
+binding the exact repository URL, observation/retrieval time, byte length, body
+SHA-256, provenance evidence ID/source fingerprint, resolution, and every exact
+code/organization/name/category/pinyin candidate.
+
+Unlike the HKEXnews receipt below, this is CNINFO repository evidence rather
+than direct SSE/SZSE/BSE venue evidence. Venue, board, share class, currency,
+effective listing dates, and trading status remain null; the provider supplies
+no catalogue timestamp, and the digest is content-bound rather than a CNINFO
+signature. `cn_ohlcv_gap_assessment` therefore continues to require separate
+listing/status inputs. The next mainland authority slice needs direct
+venue-owned effective identity and dated status sources.
+
+### HK current-security authority-evidence slice — 2026-08-06
+
+`finance_hkex` and `pi_hk_disclosures` now capture the exact public
+current-security JSONP response before semantic decoding. `hk_security_search`
+and the identity leg of `hk_disclosure_search` emit a versioned canonical
+receipt binding the exact query URL, observation/retrieval time, byte length,
+body SHA-256, provenance evidence ID/source fingerprint, resolution, and every
+exact code/name/stock-ID candidate. The receipt is direct HKEXnews exchange
+evidence for current catalogue membership at retrieval and retains XHKG scope.
+
+This is intentionally not wired into `hk_ohlcv_gap_assessment` as a historical
+listing receipt. The endpoint supplies no effective listing start/end, board,
+share class, currency, or positive per-session trading status. Those fields
+remain null, and the canonical digest is content-bound rather than an HKEX
+signature. The next authority slice needs an interval-bearing HKEX listing
+source and dated suspension/trading-status evidence; absence from a halt feed
+must not be interpreted as proof of trading.
+
+### HK current Full List profile slice — 2026-08-06
+
+`finance_hkex` and the existing `pi_hk_disclosures` shell now add
+`hk_security_profile` over HKEX's official Full List of Securities XLSX. The
+request is exact-host/path allowlisted, caller-identified, paced, bounded to 2
+MB and cancellation-aware. Original workbook bytes are captured as
+NoRedistribution evidence before the reviewed `finance_archive` effect extracts
+only the declared workbook parts under count and decompression budgets with
+safe-name, encryption, ZIP64, compression, length, UTF-8, and CRC checks.
+
+The pure decoder validates the workbook/sheet relationship, fixed headers, and
+stated update date before resolving one exact five-digit code. Its canonical
+receipt retains category, sub-category, board lot, ISIN, expiry and eligibility
+markers, debt fields, spread table, trading currency, RMB counter, archive
+metadata, source hash, and provenance IDs. Main Board/GEM is derived only from
+the exact HKEX sub-category. The workbook has no listing-start field and Full
+List membership does not prove positive session status; listing start/end and
+trading status stay null, so the tool is deliberately not an
+`hk_ohlcv_gap_assessment` authority leg.
+
+### HK rolling recent-listing authority slice — 2026-08-06
+
+`finance_hkex` and the existing `pi_hk_disclosures` shell now add
+`hk_recent_listing_event` over HKEX's public
+[Newly Listed Securities](https://www.hkex.com.hk/Services/Trading/Securities/Trading-News/Newly-Listed-Securities?sc_lang=en)
+page. The exact English path is caller-identified, paced, cancellation-aware,
+bounded to 4 MB and 30 seconds, and captured before semantic decoding. The pure
+decoder validates the rolling current-two-week scope, ten-column header, page
+update date, exact five-digit code, event date/tentative marker, board lot,
+eligibility markers, corporate action, and related code.
+
+Only a unique, non-tentative row whose action is exactly `New Listing` produces
+`listingEffectiveFrom`. Tentative dates, consolidations, rights trading, and
+other actions retain their source row but produce no listing-start claim. The
+canonical receipt binds the page bytes/SHA-256, provenance identities, update
+date, query, resolution, and exact candidate. A read-only live validation on
+2026-08-06 resolved 03308 ZJ INNOLIGHT to the non-tentative 2026-07-30 listing
+event. The source is only a rolling two-week public view: no match does not
+prove historical absence, while listing end and positive session status remain
+null. HKEX's broader listing-status fields are documented in its licensed
+[MDF transmission specification](https://www.hkex.com.hk/eng/prod/dataprod/Documents/MDS3%208%20MDF%20Transmission%20Specification%20v7.8.pdf),
+and HKEX separately publishes a
+[historical-data product catalogue](https://www.hkex.com.hk/eng/ods/historicalData.aspx),
+so this public slice is not presented as a substitute for a licensed historical
+master.
 
 ### US cited source-fact report slice — 2026-08-06
 
@@ -492,8 +650,8 @@ Priorities mean:
 | --- | --- | --- | --- |
 | `pi_finance_setup` | P0 | Checks provider keys, connectivity, entitlements, currency/timezone defaults, and installed companion plugins without revealing secrets. | `/finance-setup`, `finance_capabilities`, `finance_provider_health` |
 | `pi_finance_track_status` | P0 | Keeps the active `cn`/`hk`/`us` navigation track visible with currency, timezone, auditable source maturity, installed feature coverage, and agent contact; restores and switches it without relabelling data. | `/finance-track`, `/cn-track`, `/hk-track`, `/us-track`, `finance_track_status`, `finance_track_switch` |
-| `pi_cn_disclosures` (**Experimental discovery slice**) | P0 | CNINFO exact-code organization candidates plus catalogue-bound paged announcement metadata for read-only local analysis. | `cn_security_search`, `cn_disclosure_search` |
-| `pi_hk_disclosures` (**Experimental discovery slice**) | P0 | HKEXnews exact stock-ID candidates plus bounded initial-page issuer titles with visible truncation. | `hk_security_search`, `hk_disclosure_search` |
+| `pi_cn_disclosures` (**Experimental discovery/repository-receipt slice**) | P0 | CNINFO exact-code organization candidates plus a content-bound repository-catalogue receipt and catalogue-bound paged announcement metadata for read-only local analysis. | `cn_security_search`, `cn_disclosure_search` |
+| `pi_hk_disclosures` (**Experimental discovery/current-profile authority-receipt slice**) | P0 | HKEXnews exact stock-ID candidates plus a content-bound current-catalogue receipt, bounded initial-page issuer titles, HKEX Full List current profile evidence, and rolling two-week exact listing-start evidence for non-tentative new listings. | `hk_security_search`, `hk_security_profile`, `hk_recent_listing_event`, `hk_disclosure_search` |
 | `pi_cn_market_calendar` (**Experimental 2026 slice**) | P0 | Source-reviewed SSE/SZSE/BSE planned sessions and closures with explicit venue, source, coverage, entitlement, and exceptional-notice limits. | `cn_market_calendar` |
 | `pi_hk_market_calendar` (**Experimental 2026 slice**) | P0 | HKEX circular CT/075/25 full closures and half-days with bounded coverage and explicit market/rights limits. | `hk_market_calendar` |
 | `pi_us_market_calendar` (**Experimental 2026 slice**) | P0 | Venue-explicit NYSE/XNYS and Nasdaq/XNAS regular-equity closures and 1:00 p.m. Eastern early closes with bounded coverage and separate official sources. | `us_market_calendar` |
@@ -519,7 +677,9 @@ Priorities mean:
 | `pi_us_ohlcv` (**Experimental Alpaca daily slice**) | P0 | Exact raw daily US OHLCV for one Alpaca symbol/as-of identity and explicit IEX/SIP feed, with bounded pagination, page-body hashes, a canonical gap-projection digest, and visible calendar/rights gaps. | `us_stock_ohlcv` |
 | `pi_us_ohlcv_gaps` (**Experimental receipt-composition slice**) | P0 | Network-free 2026 NYSE/Nasdaq missing-row classification from a SHA-256-bound Alpaca projection plus exact listing, calendar, and status receipts; incomplete, changed, or conflicting evidence fails closed. | `us_ohlcv_gap_assessment` |
 | `pi_cn_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily mainland OHLCV for a caller-declared venue/board/share-class/currency identity, retaining provider rows with unknown volume/session/calendar/rights semantics. | `cn_stock_ohlcv` |
+| `pi_cn_ohlcv_gaps` (**Experimental receipt-composition slice**) | P0 | Network-free 2026 SSE/SZSE/BSE missing-row classification from a SHA-256-bound Eastmoney projection plus independently repeated listing, calendar, and status receipts. | `cn_ohlcv_gap_assessment` |
 | `pi_hk_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily HK OHLCV for a caller-declared board/share-class/currency identity, without assuming HKD, half-days, suspensions, or provider volume units. | `hk_stock_ohlcv` |
+| `pi_hk_ohlcv_gaps` (**Experimental receipt-composition slice**) | P0 | HK-owned canonical acquisition receipt and network-free 2026 HKEX calendar/listing/status composition, preserving half-day and currency semantics without importing CN/US domains. | `hk_ohlcv_gap_assessment` |
 | `pi_stock_market_snapshot` | P1 | Index/sector/industry breadth, leaders, laggards, gaps, volume, and volatility snapshots. | `/market`, `market_snapshot`, `market_breadth`, `market_movers` |
 | `pi_stock_screener` | P1 | Reproducible universe filters combining price, liquidity, fundamentals, growth, valuation, and technical fields. | `/screen`, `stock_screen`, `screen_explain`, `screen_save` |
 | `pi_stock_corporate_actions` | P1 | Splits, dividends, symbol changes, mergers, spinoffs, and delistings, with adjustment impact. | `/actions`, `corporate_actions`, `dividend_history`, `split_history` |

@@ -19,6 +19,14 @@ The request is read-only, caller-identified, limited to 1–1000 rows, bounded t
 provider. If the response reaches the row limit, pagination is reported as
 truncated because Eastmoney exposes no continuation token on this route.
 
+Every successful result also emits a versioned `gapAssessmentReceipt`. Its
+canonical SHA-256 binds the exact HK identity and range, Eastmoney source plan,
+retrieval time, pagination state, ordered normalized bar dates, and response
+byte length/body hash. The separate network-free `hk_ohlcv_gap_assessment`
+tool can verify and compose that copied receipt with independently supplied
+listing, 2026 HKEX calendar, and status evidence. The digest is a content
+coherence check, not an Eastmoney signature or HKEX proof.
+
 Runtime configuration:
 
 - `EASTMONEY_USER_AGENT_CONTACT` (for example `ops@example.com`)

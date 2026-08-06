@@ -28,10 +28,20 @@ must use `CalendarNotAssessed`; it must not turn a missing row into one of those
 facts. No bar interpolation, forward fill, corporate-action adjustment, or
 timezone inference occurs here.
 
-The isolated `finance_us_ohlcv` package now supplies the first strict
-market-owned composition: it joins the bounded US calendar, an exact listing
-interval, complete provider coverage, and explicit per-gap status receipts.
-This generic package still does not import that market-specific policy.
+`finance_ohlcv/acquisition_receipt` supplies the provider-neutral canonical
+receipt law: exact track/provider/source identity fields, retrieval time,
+pagination state, sequential bounded pages, optional request IDs, response-byte
+lengths and SHA-256 values, plus ordered bar dates. Market packages choose their
+own ordered identity fields. A matching digest proves copied-content coherence,
+not provider origin or authentication.
+
+`finance_ohlcv/gap_assessment` supplies the provider-neutral four-state
+classifier over an explicitly supplied reviewed calendar and listing interval.
+It requires complete provider coverage and exact status evidence for every
+absent open listing date, and rejects duplicate, out-of-range, closure, or
+listing conflicts. The isolated `finance_us_ohlcv`, `finance_cn_ohlcv`, and
+`finance_hk_ohlcv` packages provide their market-owned identity, source-plan,
+and calendar policy; this generic package imports none of those market domains.
 
 The initial interval contract is deliberately daily; volume is either proven
 shares or explicitly unknown. Additional intervals and market-owned volume

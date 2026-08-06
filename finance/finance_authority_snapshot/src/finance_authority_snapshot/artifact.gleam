@@ -12,6 +12,7 @@ import gleam/string
 
 pub type Signature {
   Pdf
+  Zip
 }
 
 pub opaque type Policy {
@@ -238,6 +239,7 @@ fn validate_response(
 fn matches_signature(signature: Signature, prefix_hex: String) -> Bool {
   case signature {
     Pdf -> string.starts_with(prefix_hex, "255044462d")
+    Zip -> string.starts_with(prefix_hex, "504b0304")
   }
 }
 

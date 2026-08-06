@@ -1,6 +1,8 @@
 import finance_core/adjustment
 import finance_core/currency.{type Currency}
 import finance_core/decimal
+import finance_core/identifier
+import finance_core/instrument
 import finance_core/market
 import finance_core/observation.{type Observation}
 import finance_core/source
@@ -11,9 +13,12 @@ import finance_eastmoney/query
 import finance_eastmoney/request as provider_request
 import finance_eastmoney/runtime
 import finance_hk_identity/identity
+import finance_hk_ohlcv/gap_receipt
 import finance_http/response as http_response
 import finance_http/transport
 import finance_ohlcv
+import finance_provenance/hash
+import finance_provenance/identity as provenance_identity
 import finance_track
 import finance_track/context as track_context
 import finance_track/json as track_json
@@ -49,6 +54,10 @@ type Provider {
   InvalidConfiguration(reason: String)
 }
 
+type FetchOutcome {
+  FetchOutcome(history: history.History, page_receipt: gap_receipt.Page)
+}
+
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   let provider = provider()
   tool.register(
@@ -76,13 +85,13 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
               ))
               case fetched {
                 Error(message) -> tool.reject(message)
-                Ok(provider_value) -> {
+                Ok(outcome) -> {
                   let assert Ok(retrieved_at) =
                     time.instant(environment.now_milliseconds())
                   case
                     normalization.batch(
                       query_plan,
-                      provider_value,
+                      outcome.history,
                       retrieved_at,
                       input.declared_currency,
                     )
@@ -93,17 +102,31 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                         <> string.inspect(error),
                       )
                     Ok(batch) ->
-                      tool.text_result(
-                        render(provider_value, batch),
-                        result_json(
+                      case
+                        build_gap_receipt(
                           input,
                           query_plan,
-                          provider_value,
                           batch,
+                          outcome.page_receipt,
                           retrieved_at,
-                        ),
-                      )
-                      |> promise.resolve
+                        )
+                      {
+                        Error(message) -> tool.reject(message)
+                        Ok(#(receipt, digest)) ->
+                          tool.text_result(
+                            render(outcome.history, batch),
+                            result_json(
+                              input,
+                              query_plan,
+                              outcome.history,
+                              batch,
+                              retrieved_at,
+                              receipt,
+                              digest,
+                            ),
+                          )
+                          |> promise.resolve
+                      }
                   }
                 }
               }
@@ -172,19 +195,132 @@ fn fetch(provider_runtime, access, plan, id, cancellation) {
                 <> int.to_string(status),
               ))
             True ->
-              case
-                history.decode(http_response.body(response_value), for: plan)
-              {
-                Ok(value) -> promise.resolve(Ok(value))
-                Error(_) ->
-                  promise.resolve(Error(
-                    "Eastmoney returned invalid, mismatched, or over-budget daily bars",
-                  ))
+              case response_page_receipt(response_value) {
+                Error(message) -> promise.resolve(Error(message))
+                Ok(page_receipt) ->
+                  case
+                    history.decode(
+                      http_response.body(response_value),
+                      for: plan,
+                    )
+                  {
+                    Ok(value) ->
+                      promise.resolve(Ok(FetchOutcome(value, page_receipt)))
+                    Error(_) ->
+                      promise.resolve(Error(
+                        "Eastmoney returned invalid, mismatched, or over-budget daily bars",
+                      ))
+                  }
               }
           }
         }
       }
     }
+  }
+}
+
+fn response_page_receipt(
+  response: http_response.Response,
+) -> Result(gap_receipt.Page, String) {
+  use content_hash <- result.try(
+    hash.text(http_response.body(response))
+    |> result.map_error(fn(_) {
+      "Eastmoney response content could not be hashed safely"
+    }),
+  )
+  gap_receipt.page(
+    1,
+    http_response.first_header(response, name: "x-request-id"),
+    http_response.byte_length(response),
+    content_hash,
+  )
+  |> result.map_error(fn(_) {
+    "Eastmoney response page receipt was structurally invalid"
+  })
+}
+
+fn build_gap_receipt(
+  input: Input,
+  plan: query.HistoryQuery,
+  batch: finance_ohlcv.Batch,
+  page_receipt: gap_receipt.Page,
+  retrieved_at: time.Instant,
+) -> Result(#(gap_receipt.Receipt, provenance_identity.Sha256), String) {
+  use listing <- result.try(receipt_listing(input))
+  let bar_dates =
+    batch
+    |> finance_ohlcv.observations
+    |> list.map(fn(observation) {
+      observation.value |> finance_ohlcv.session_date
+    })
+  use receipt <- result.try(
+    gap_receipt.new(
+      listing: listing,
+      start_date: query.history_start(plan),
+      end_date: query.history_end(plan),
+      limit: query.history_limit(plan),
+      source_reference: query.history_source_reference(plan),
+      retrieved_at: retrieved_at,
+      pagination: receipt_pagination(finance_ohlcv.pagination(batch)),
+      pages: [page_receipt],
+      bar_dates: bar_dates,
+    )
+    |> result.map_error(fn(_) {
+      "Eastmoney HK gap-assessment receipt was structurally invalid"
+    }),
+  )
+  use digest <- result.try(
+    receipt
+    |> gap_receipt.canonical_text
+    |> hash.text
+    |> result.map_error(fn(_) {
+      "Eastmoney HK gap-assessment receipt could not be hashed safely"
+    }),
+  )
+  Ok(#(receipt, digest))
+}
+
+fn receipt_listing(input: Input) -> Result(identity.Listing, String) {
+  use instrument_id <- result.try(
+    identifier.instrument_id("eastmoney:hk:" <> input.code)
+    |> result.map_error(fn(_) { "Invalid HK receipt instrument identity" }),
+  )
+  use board <- result.try(receipt_board(input.board))
+  use share_class <- result.try(receipt_share_class(input.share_class))
+  identity.new(
+    instrument_id,
+    input.code,
+    board,
+    share_class,
+    input.declared_currency,
+    instrument.UnknownStatus,
+  )
+  |> result.map_error(fn(_) { "Invalid HK receipt listing identity" })
+}
+
+fn receipt_board(value: String) -> Result(identity.Board, String) {
+  case value {
+    "main" -> Ok(identity.MainBoard)
+    "gem" -> Ok(identity.Gem)
+    _ -> Error("Invalid HK receipt board identity")
+  }
+}
+
+fn receipt_share_class(value: String) -> Result(identity.ShareClass, String) {
+  case value {
+    "ordinary_share" -> Ok(identity.OrdinaryShare)
+    "depositary_receipt" -> Ok(identity.DepositaryReceipt)
+    _ -> Error("Invalid HK receipt share class")
+  }
+}
+
+fn receipt_pagination(
+  value: finance_ohlcv.Pagination,
+) -> gap_receipt.Pagination {
+  case value {
+    finance_ohlcv.AllPages -> gap_receipt.Complete
+    finance_ohlcv.TruncatedByBarBudget(_) -> gap_receipt.TruncatedByBarBudget
+    finance_ohlcv.TruncatedByPageBudget(_) -> gap_receipt.TruncatedByBarBudget
   }
 }
 
@@ -321,6 +457,8 @@ fn result_json(
   provider_value: history.History,
   batch: finance_ohlcv.Batch,
   retrieved_at: time.Instant,
+  receipt: gap_receipt.Receipt,
+  receipt_digest: provenance_identity.Sha256,
 ) -> json.Json {
   json.object(
     list.append(track_json.result_fields(result_context(input)), [
@@ -373,6 +511,10 @@ fn result_json(
         calendar_json(finance_ohlcv.calendar_assessment(batch)),
       ),
       #(
+        "gapAssessmentReceipt",
+        gap_assessment_receipt_json(receipt, receipt_digest),
+      ),
+      #(
         "gapStates",
         json.array(
           [
@@ -394,6 +536,72 @@ fn result_json(
       #("limitations", json.array(limitations(), json.string)),
     ]),
   )
+}
+
+fn gap_assessment_receipt_json(
+  value: gap_receipt.Receipt,
+  digest: provenance_identity.Sha256,
+) -> json.Json {
+  json.object([
+    #("schema", json.string(gap_receipt.schema_name)),
+    #("schemaVersion", json.int(gap_receipt.schema_version)),
+    #("digestAlgorithm", json.string(gap_receipt.digest_algorithm)),
+    #("digest", json.string(provenance_identity.sha256_value(digest))),
+    #("provider", json.string(gap_receipt.provider(value))),
+    #("venue", json.string(gap_receipt.venue_name())),
+    #("board", json.string(gap_receipt.board_name(gap_receipt.board(value)))),
+    #(
+      "shareClass",
+      json.string(gap_receipt.share_class_name(gap_receipt.share_class(value))),
+    ),
+    #("currency", json.string(value |> gap_receipt.currency |> currency.code)),
+    #("code", json.string(gap_receipt.code(value))),
+    #("startDate", json.string(date_text(gap_receipt.start_date(value)))),
+    #("endDate", json.string(date_text(gap_receipt.end_date(value)))),
+    #("limit", json.int(gap_receipt.limit(value))),
+    #("sourceReference", json.string(gap_receipt.source_reference(value))),
+    #(
+      "retrievedAtUnixMilliseconds",
+      json.int(time.unix_milliseconds(gap_receipt.retrieved_at(value))),
+    ),
+    #(
+      "pagination",
+      json.string(gap_receipt.pagination_name(gap_receipt.pagination(value))),
+    ),
+    #("pages", json.array(gap_receipt.pages(value), receipt_page_json)),
+    #(
+      "barDates",
+      json.array(gap_receipt.bar_dates(value), fn(value) {
+        value |> date_text |> json.string
+      }),
+    ),
+    #(
+      "integrity",
+      json.object([
+        #("state", json.string("sha256_content_bound")),
+        #("scope", json.string("canonical_hk_gap_projection_v1")),
+        #("providerAuthenticated", json.bool(False)),
+      ]),
+    ),
+  ])
+}
+
+fn receipt_page_json(value: gap_receipt.Page) -> json.Json {
+  json.object([
+    #("sequence", json.int(gap_receipt.page_sequence(value))),
+    #(
+      "requestId",
+      json.nullable(gap_receipt.page_request_id(value), json.string),
+    ),
+    #("byteLength", json.int(gap_receipt.page_byte_length(value))),
+    #(
+      "contentSha256",
+      value
+        |> gap_receipt.page_content_sha256
+        |> provenance_identity.sha256_value
+        |> json.string,
+    ),
+  ])
 }
 
 fn provider_row_json(value: history.Bar) -> json.Json {

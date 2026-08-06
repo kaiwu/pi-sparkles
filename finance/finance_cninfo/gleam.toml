@@ -15,6 +15,7 @@ finance_authority_snapshot = { path = "../finance_authority_snapshot" }
 finance_core = { path = "../finance_core" }
 finance_http = { path = "../finance_http" }
 finance_pdf = { path = "../finance_pdf" }
+finance_provenance = { path = "../finance_provenance" }
 finance_track = { path = "../finance_track" }
 
 [dev-dependencies]

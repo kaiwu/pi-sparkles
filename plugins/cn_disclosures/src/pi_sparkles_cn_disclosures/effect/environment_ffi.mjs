@@ -5,3 +5,7 @@ export function read_product() {
 export function read_contact() {
   return process.env.CNINFO_USER_AGENT_CONTACT ?? "";
 }
+
+export function read_now_milliseconds() {
+  return Date.now();
+}

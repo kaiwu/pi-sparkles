@@ -137,7 +137,7 @@ fn specs() -> List(capability.Spec) {
     capability.RequiresTool(
       "provider-backed identity",
       "hk_security_search",
-      "HKEXnews current-security lookup is approved for bounded read-only local analysis and preserves exact stock IDs; redistribution and historical security-master completeness remain unapproved",
+      "the hk_disclosures companion preserves exact HKEXnews stock IDs, a bounded HKEX Full List current profile, and rolling-two-week exact events whose non-tentative New Listing rows can prove a listing start; general effective intervals, positive status, redistribution, and historical completeness remain unapproved",
     ),
     capability.RequiresTool(
       "authoritative calendar",

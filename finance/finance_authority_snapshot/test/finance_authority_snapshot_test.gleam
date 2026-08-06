@@ -182,6 +182,45 @@ pub fn binary_pdf_capture_rejects_signature_mismatch_test() {
   |> should.equal(Error(artifact.SignatureMismatch(artifact.Pdf)))
 }
 
+pub fn binary_zip_becomes_byte_preserving_hashed_evidence_test() {
+  let assert Ok(source_ref) =
+    source.new(
+      "HKEX",
+      "https://www.hkex.com.hk/ListOfSecurities.xlsx",
+      source.Exchange,
+    )
+  let assert Ok(policy) =
+    artifact.local_analysis_policy(
+      finance_track.Hk,
+      "hk_hkex_securities",
+      source_ref,
+      "direct:HKEX",
+      ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+      10_000,
+      artifact.Zip,
+    )
+  let assert Ok(response_value) =
+    binary_response.new(
+      200,
+      [
+        response.Header(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ),
+      ],
+      "UEsDBA==",
+      4,
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "504b0304",
+      duration(5),
+    )
+
+  let assert Ok(value) =
+    artifact.capture(policy, response_value, instant(1), instant(2))
+  artifact.track(value) |> should.equal(finance_track.Hk)
+  artifact.body_base64(value) |> should.equal("UEsDBA==")
+}
+
 pub fn runtime_policy_is_allowlisted_and_bounded_test() {
   let assert Ok(window) = time.duration(1000)
   let assert Ok(elapsed) = time.duration(15_000)
