@@ -24,6 +24,11 @@ disclosures, language, data rights, and provider contracts remain China-owned.
   credentialed Alpaca IEX/SIP bars, while `cn_stock_ohlcv` and
   `hk_stock_ohlcv` reuse bounded Eastmoney raw history without importing the US
   adapter. Calendar/status composition and provider-unit proof remain open.
+- The US quote counterpart is now Experimental: `finance_quote` supplies the
+  exact provider-neutral envelope and `us_stock_quote` uses the same bounded
+  Alpaca runtime with explicit IEX/SIP selection. It preserves bid/ask market
+  codes and exact tokens while keeping freshness, session, latency, and size
+  semantics unknown.
 - The repository will expose exactly three market tracks: `cn` (mainland
   China), `hk` (Hong Kong), and `us` (United States). Provider-neutral and
   cross-market capabilities are not additional tracks.
@@ -55,10 +60,11 @@ With all matching implemented tools installed, the current status receipt is:
 | --- | ---: | ---: | --- |
 | `cn` | 65% | 100% | navigation, source registry, security identity, market calendar, effective rules, quote/history, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
 | `hk` | 70% | 100% | navigation, source registry, security identity, market calendar, effective rules, quote/history, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
-| `us` | 80% | 70% | navigation, source registry, security identity, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
+| `us` | 80% | 80% | navigation, source registry, security identity, quote/history, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
 
 This closes every requirement in the current CN/HK installed-feature
-denominator; US remains at its independently measured 70%. It does not claim
+denominator; US now reaches an independently measured 80% when both Alpaca
+quote and OHLCV tools are loaded. It does not claim
 complete statement depth or 85% operational source maturity. The
 structured status receipt exposes the denominator, contributions, every source
 criterion, missing requirements, and critical gaps so a user or LLM can audit
@@ -84,7 +90,7 @@ authority gaps visible. The statusline `feat` score measures those installed
 families; the separate `src` receipt and this ledger carry source maturity and
 semantic depth.
 
-## Next plugin batch — OHLCV
+## Current plugin batch — OHLCV and US quote
 
 OHLCV is the next implementation batch. Existing CN/HK history tools are a
 provider acquisition seam, not the completed batch: they preserve bounded raw
@@ -111,8 +117,10 @@ calendar-alignment, return, and rendering components, but may not import one
 another or relabel one track's evidence. Because quote/history is already one
 of the ten statusline feature families for CN/HK, this batch improves depth and
 cross-track parity; it does not inflate `feat` merely by adding another tool.
-The US first slice likewise leaves `feat` at 70% because the existing
-`quotes_history` requirement is not satisfied by OHLCV history alone.
+The US OHLCV slice alone likewise leaves `feat` at 70%. The separate
+`us_stock_quote` counterpart now completes that existing `quotes_history`
+requirement when both tools are active, raising US `feat` to 80% without
+claiming calendar, effective-rules, freshness, or full market-data readiness.
 
 The accepted US provider decision is Alpaca Market Data for this Experimental
 credential-holder slice. IEX and SIP remain separate explicit feeds; a
@@ -331,6 +339,29 @@ Ledger states used below:
   requires board/share-class/currency and never assumes HKD. Neither shell
   imports Alpaca, guesses session membership or suspensions, fills bars, or
   changes feature scores.
+- **2026-08-06 — US exact latest quote counterpart:** added pure
+  `finance_quote`, extended `finance_market_alpaca` with a bounded explicit-feed
+  latest-quote plan/decoder, and added isolated `us_stock_quote`. Exact bid/ask
+  prices and sizes, source time, exchange/condition/tape codes, request ID,
+  selected feed, and source reference survive the boundary. Freshness, latency,
+  session, and provider size units remain unknown; IEX is not relabelled SIP and
+  no redistribution is granted. With `us_stock_ohlcv` also active, US `feat`
+  becomes 80%; missing calendar and effective-rules families remain visible.
+- **2026-08-06 — first US cited source-fact brief:** added the network-free
+  `stock_research_report` compositor. `/us-research` queues the explicit agent
+  sequence across existing Alpaca/SEC tools; `us_company_brief` validates
+  bounded copied receipts, exact symbol/feed/CIK/source coherence, unique
+  fundamental facts, and safe filing links before rendering stable evidence
+  roots. Missing and ambiguous inputs remain gaps, copied receipt integrity is
+  not overstated, and the compositor performs no provider I/O or model-fact
+  generation. This adds report depth without changing the ten-family score.
+- **2026-08-06 — track-safe watchlist workflow state:** added `watchlist` with
+  exact `cn`/`hk`/`us` + namespaced instrument ID + symbol + MIC member keys,
+  bounded user notes/HTTPS thesis links/tags, versioned branch event replay,
+  exact-key removal, and deterministic snapshots. Resume and inherited forks
+  restore only their active branch; malformed events lock mutation. This is
+  user-authored workflow state, not identity or market evidence, does not alter
+  any track score, and does not yet persist across `/new`.
 
 ## Binding decisions
 
@@ -702,7 +733,7 @@ rights, track isolation, and deterministic verification remain mandatory.
 | CN-F13 | Open | Architecture gates pure packages against Pi/Promise/FFI, forbids CN/HK shells from importing SEC or sibling market packages, and binding-tests setup/status, disclosure, calendar, rules, and market-data isolation/failure behavior. | Extend the same gates for every future shell; current implemented vertical slices have binding and artifact coverage. |
 | CN-F14 | Done | `finance_track_capabilities` and `finance_market_authorities` power isolated `cn_setup` and `hk_setup` shells. Setup, source, capabilities, authorities, and provider-health commands/tools expose exact track contexts/defaults, verified official links, and honest access/provider blocks. | Headless/UI results visibly say CN/HK; authority IDs are track-prefixed; unknown providers remain unknown; public search never becomes provider health; sibling and SEC tools cannot satisfy state; unit, binding, artifact, and Pi-load gates cover both. |
 | CN-F15 | Done | `finance_document_attachment` defines pure fail-closed acceptance for exact media allowlists, byte/page limits, redirect/cross-host policy, content hash, cancellation, archives, and OCR. Accepted metadata composes the shared document attachment identity. | Malformed, oversized, missing-page, redirected, cross-host, cancelled, archive, OCR, unsupported-media, missing-hash, and distinct-hash tests pass; no effect or unsafe unpacking is hidden in the package. |
-| CN-F16 | Waiting | Design track-scoped persistence only when watch/broker work begins. Reuse typed lifecycle reducers, but choose storage ownership, migration, fork/new behavior, compaction, reload cleanup, and corruption recovery first. | Deterministic lifecycle sequences and no cross-track state-key collision. |
+| CN-F16 | Done for the Experimental branch-scoped watchlist slice; cross-session storage remains open | `watchlist` reuses typed lifecycle/session entries with pure versioned event replay. It chooses active-branch ownership, inherited-fork/resume restoration, fresh state on `/new`, bounded revisions, and fail-closed corruption handling without a database or provider dependency. | Exact track + namespaced instrument ID + symbol + MIC keys prevent cross-track collision; unit/binding tests cover idempotence, exact removal, deterministic snapshots, active-tree restoration, malformed-state locking, and no overwrite. User-owned cross-session storage, migration/import, conflict resolution, and snapshot hashing remain later contracts. |
 | CN-F17 | Done | Make the active `cn`/`hk`/`us` navigation track continuously visible and explicitly switchable. Show typed currency/timezone defaults and a non-secret agent contact without changing source-evidence semantics. | TUI statusline, strict slash/tool switching, active-branch restore, malformed-state fallback, headless structured status, track-change events, and all-three-track binding tests. |
 | CN-F18 | Done | Add a provider-neutral strategy for the reusable parts of TradingAgents-CN's approach without weakening provenance: cache-first mode, configurable ordered channels, first-compatible-success fallback, per-source records, exact semantic contracts, visible attempt traces, and origin/route separation. Add isolated CN and HK disclosure profiles. | Pure laws reject candidate, cross-track, duplicate, trust-inverted, out-of-order, post-success, and semantically incompatible fallback. CN keeps venue origin through CNINFO only for an independently proven exact venue identity; otherwise CNINFO remains repository provenance. HK remains HKEXnews-only. |
 | CN-F19 | Open (discovery, exact-PDF, and structural-inspection slices done) | `finance_authority_snapshot`, `finance_csrc`, and `finance_sfc` implement bounded UTF-8 authority acquisition. `finance_cninfo` and `finance_hkex` now add source-owned security/disclosure discovery plus exact PDF acquisition with SHA-256/base64 and signature validation. `finance_pdf` binds bounded page inspection to the same hash. Remaining: complete HK pagination policy, text-layer/OCR policy, exact CN venue proof, direct SSE/SZSE/BSE adapters, ZIP inspection if justified, and statement-semantic decoders. | Implemented slices have exact hosts/paths, caller identity, one-per-second pacing, cancellation, bounded retry/pool/queue/body/parser time/pages, strict identity/status/media/length/signature/page-walk checks, source hashes, parser receipts, visible truncation/no-redistribution policy, README contracts, and offline fixtures/binding mocks. Exit requires approved fixture rights and at least 85% of the versioned disclosure-family denominator, with all critical identity/provenance/version fields. CNINFO provenance cannot become venue origin without evidence. |
@@ -711,9 +742,10 @@ rights, track isolation, and deterministic verification remain mandatory.
 | CN-F22 | Done | Implement the first official-source identity/disclosure discovery vertical slice for both CN and HK. Reuse `finance_http`, source-owned document references, exact track contexts, and setup/status composition; keep two independent shells. | `cn_security_search` + `cn_disclosure_search` use CNINFO catalogue identity before bounded paged POST discovery. `hk_security_search` + `hk_disclosure_search` use pinned-callback JSONP identity before bounded initial-page title discovery. Fixtures reject wrapper/path/identity mismatch; bindings prove caller identification, exact track, request order, Unicode/multi-counter retention, canonical documents, and truncation. No live request enters normal tests. |
 | CN-F23 | Done for the 2026 planned-schedule slice | Implement official-source market-calendar tools for both tracks by composing the shared pure engine while keeping separate datasets, tool names, contexts, sources, and limitations. | `cn_market_calendar` requires exact `sse`/`szse`/`bse` and exposes each venue's official 2026 source; `hk_market_calendar` preserves HKEX CT/075/25 closures and half-days. Both fail outside coverage, report unknown redistribution, pass unit/binding/artifact/Pi-load gates, and contribute only to their own track's `market_calendar` feature. |
 | CN-F24 | Done for the Experimental public-web slice | Implement reusable bounded Eastmoney quote/history decoding once, then expose independent CN/HK shells and evidence contracts. | `cn_stock_quote`/`cn_stock_history` require exact SSE/SZSE/BSE; `hk_stock_quote`/`hk_stock_history` retain declared currency. Quotes preserve provider scale/time and history preserves raw unadjusted lexemes. Bounds, cancellation, pacing, caller identity, mocked bindings, source limitations, and track-only feature contribution are tested. |
-| CN-F25 | Done for the scoped current-rule slices | Implement dated official rules by composing shared pure rule laws while retaining market-specific shapes and separate shells. | `cn_trading_rules` covers exact established-normal mainland board pairs from 2026-07-06. `hk_trading_rules` covers reviewed HKD applicable-equity spread bands from 2026-08-03 and requires issuer-specific board-lot evidence. Both expose sources/clauses/audit limits, fail closed, pass unit/binding/artifact gates, and bring CN/HK installed feature breadth to the current US 70% score. |
+| CN-F25 | Done for the scoped current-rule slices | Implement dated official rules by composing shared pure rule laws while retaining market-specific shapes and separate shells. | `cn_trading_rules` covers exact established-normal mainland board pairs from 2026-07-06. `hk_trading_rules` covers reviewed HKD applicable-equity spread bands from 2026-08-03 and requires issuer-specific board-lot evidence. Both expose sources/clauses/audit limits, fail closed, pass unit/binding/artifact gates, and brought CN/HK installed feature breadth to the then-current US 70% score. |
 | CN-F26 | Done for the narrow Experimental vendor-fundamental slice | Reuse Eastmoney transport/runtime and exact-number capture below Pi, then expose separate CN/HK raw, normalized, and derived shells. Keep market mappings/context laws separate while composing the same exact decimal/formula engine. | `cn_financial_statement` requires venue, code, period end, and caller-proven currency; `hk_financial_statement` strictly joins provider context and line responses. Each track has visible two-field mappings and exact source-retaining net margin. Unit/mocked binding/artifact/Pi-load gates cover request bounds, exact tokens, mappings, context coherence, formulas, track isolation, and no normal-test network. This closes the current CN/HK feature denominator at 100% without changing 65%/70% source maturity or claiming official filing completeness. |
 | CN-F27 | Implementing — three isolated daily shells done | `finance_ohlcv`, `finance_market_alpaca`, and `us_stock_ohlcv` implement the Alpaca slice; independent `cn_stock_ohlcv` and `hk_stock_ohlcv` shells now reuse only the Eastmoney history adapter. The shared contract distinguishes source instants from date-only anchors and proven shares from unknown provider volume units. | Unit, mocked binding, artifact, architecture, and Pi-load gates cover exact raw/normalized values, identity inputs, adjustment, request/row budgets, entitlement/rights limits, deterministic order/exact deduplication, and unassessed calendar gaps. Batch exit still requires market-owned calendar/status composition, suspension proof, CN/HK amount/turnover/volume semantics, authoritative listing identity/currency, and permitted real fixtures. No synthetic bars, cross-track fallback, or feature-score inflation. |
+| CN-F28 | Done for the Experimental US latest-quote slice | `finance_quote` and the extended `finance_market_alpaca` adapter back isolated `us_stock_quote`; explicit IEX/SIP selection is required and no CN/HK domain is imported. | Exact quote-token, market-code, auth-redaction, request-bound, mocked binding, artifact, architecture, and readiness tests pass. The paired US quote/OHLCV tools cover `quotes_history` and raise US breadth to 80%; calendar, rules, authoritative identity, real-time proof, stable size semantics, production rights, and permitted live fixtures remain open. |
 
 The repository policy currently names `bun run test:live:sec` as the sole live
 provider lane. CN development therefore uses fixtures and mocked Bun contracts.

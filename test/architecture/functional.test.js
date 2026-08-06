@@ -105,6 +105,7 @@ describe("functional architecture", () => {
       "finance_math",
       "finance_series",
       "finance_ohlcv",
+      "finance_quote",
       "finance_table",
     ]) {
       const directory = join(FINANCE_DIR, name, "src");

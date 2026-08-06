@@ -14,7 +14,7 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- forty-three Experimental finance packages, including provider adapters,
+- forty-four Experimental finance packages, including provider adapters,
   shared track/evidence/rules/document/accounting policy, and isolated CN/HK
   identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,
@@ -39,6 +39,13 @@ repository currently contains:
   `us_ohlcv`, plus bounded Eastmoney date-only raw history in `cn_ohlcv` and
   `hk_ohlcv` with caller-declared identity/currency and unknown provider volume
   units kept visible;
+- an exact US latest best-bid-and-ask slice in `us_quote`, using explicit
+  Alpaca IEX/SIP selection and the provider-neutral `finance_quote` envelope;
+- a network-free `stock_research_report` compositor that validates exact
+  Alpaca/SEC receipts and renders a deterministic US source-fact brief;
+- a track-safe `watchlist` workflow plugin with exact listing keys, bounded
+  notes/tags/thesis links, branch-replayed versioned events, and deterministic
+  snapshots;
 - `hello`, a reference command and typed tool;
 - `safety_gate`, a reference result-bearing event handler with asynchronous UI;
 - `lifecycle`, a reference for typed state restoration and safe cleanup;
@@ -56,8 +63,9 @@ active session branch.
 surfaces with exact track contexts. They report the new pure market foundations
 as Experimental. Their matching discovery, calendar, market-data, rules, and
 fundamental tools advance only their own installed surfaces. CN/HK cover all
-ten current feature families when those tools are loaded; US remains
-independently measured at 70%. Their depth and source-maturity receipts remain
+ten current feature families when those tools are loaded; US reaches
+independently measured 80% breadth when both Alpaca quote and OHLCV tools are
+loaded. Their depth and source-maturity receipts remain
 different and auditable. Authoritative venue
 identity, production market-data entitlement, exceptional rule regimes, PDF
 semantics, official filing-linked accounting depth, later-year calendars, and
@@ -84,8 +92,16 @@ caller budgets, retains request IDs, and labels USD/share/timezone/provider-
 session/raw-adjustment semantics without asserting unverified trade-session
 membership. Missing sessions remain calendar-unassessed until a
 reviewed US calendar/status source can distinguish closures, suspensions,
-provider omissions, and unavailable history. This history-only slice does not
-increase the US feature score.
+provider omissions, and unavailable history. `us_stock_quote` supplies the
+paired latest best bid/ask required by the existing quote/history family. It
+preserves exact provider price and size tokens, exchange/condition/tape codes,
+and explicitly reports freshness, latency, session, and size-unit semantics as
+unknown rather than converting a successful request into a real-time claim.
+`watchlist` keeps each saved member on its explicit `cn`, `hk`, or `us` leg and
+requires a namespaced instrument ID, uppercase symbol, and exact MIC. Its first
+Experimental persistence contract survives resume and inherited forks through
+the active Pi session branch; it deliberately does not claim cross-session
+`/new` durability or authoritative identity resolution.
 
 The binding is an initial `0.1.0` implementation, not a published Hex package.
 Its typed surface covers normal plugin authoring, while `pi/raw` makes the
@@ -176,6 +192,8 @@ the process supervisor, never commit them or place real values in documentation.
 | `finance_setup` | None | None | Reports configuration/capability state without ambient credentials. |
 | `finance_guardrails` | None | None | Pure evidence and freshness policy. |
 | `finance_track_status` | None | None | Its visible agent contact is explicit session/tool state, not an environment variable. |
+| `stock_research_report` | None | None | Composes caller-supplied tool receipts without direct provider access; `/us-research` queues the agent workflow. |
+| `watchlist` | None | None | Uses versioned Pi session-branch entries; no provider, credential, or external storage configuration. |
 | `hello`, `lifecycle`, `safety_gate` | None | None | Reference plugins require no provider configuration. |
 
 ### CN track
@@ -213,6 +231,7 @@ HKEX configuration applies only to the HK disclosure plugin.
 | `sec_edgar` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-sec-edgar/0.1`. |
 | `sec_xbrl` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-sec-xbrl/0.1`. |
 | `stock_fundamentals` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-fundamentals/0.1`. |
+| `us_quote` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-quote/0.1`; feed entitlement and recency depend on the requested IEX/SIP feed and account. |
 | `us_ohlcv` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-ohlcv/0.1`; feed entitlement still depends on the Alpaca account and requested IEX/SIP feed. |
 
 The three SEC plugins share one fair-access identity. Alpaca credentials are a
@@ -238,6 +257,7 @@ export ALPACA_API_SECRET_KEY="<secret-manager:alpaca-secret>"
 pi --no-extensions \
   -e ./dist/cn_ohlcv \
   -e ./dist/hk_ohlcv \
+  -e ./dist/us_quote \
   -e ./dist/us_ohlcv
 ```
 
@@ -317,6 +337,7 @@ pi-sparkles/
 │   ├── finance_market_alpaca/
 │   ├── finance_math/
 │   ├── finance_ohlcv/
+│   ├── finance_quote/
 │   ├── finance_openfigi/
 │   ├── finance_provenance/
 │   ├── finance_sec/
@@ -347,6 +368,9 @@ pi-sparkles/
 │   ├── sec_edgar/                SEC company and recent filing metadata
 │   ├── sec_xbrl/                 exact SEC XBRL concept and fact evidence
 │   ├── stock_fundamentals/       audited direct-fact normalization
+│   ├── stock_research_report/    deterministic cited US receipt composition
+│   ├── watchlist/                track-safe branch-persistent workflow state
+│   ├── us_quote/                 exact Alpaca US latest best bid/ask
 │   ├── us_ohlcv/                 exact Alpaca US daily bars
 │   ├── hello/                    command and typed-tool example
 │   ├── lifecycle/                state restoration/lifecycle example
@@ -391,9 +415,10 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_http` | Safe requests, bounded fetch transport, cancellation, retry/`Retry-After`, rate limits, pooling, scheduling, caching, and cassettes. |
 | `finance_math` | Composable exact formula trees plus explicit approximate statistics, regression, risk, cash-flow, and fixed-income policies. |
 | `finance_ohlcv` | Exact raw-plus-normalized OHLCV bars, source-instant/date-anchor and proven/unknown-volume distinctions, canonical observations, strict ordering/exact deduplication, and separate pagination/calendar completeness. |
+| `finance_quote` | Exact raw-plus-normalized bid/ask prices and sizes, provider market codes, canonical observations, and explicitly unverified provider size units. |
 | `finance_openfigi` | OpenFIGI v3 access, mapping/search plans, pagination, decoding, authenticated/anonymous rate profiles, and a bounded shared runtime. |
 | `finance_eastmoney` | Bounded public-web SSE/SZSE/BSE/HK quote and raw daily-history plans/decoders with exact source lexemes, explicit caller identity, unknown service level, and unknown redistribution. |
-| `finance_market_alpaca` | Credentialed bounded US raw-daily stock-bar plans/decoders with explicit IEX/SIP, symbol-as-of identity, exact source lexemes, and subscription/redistribution limits. |
+| `finance_market_alpaca` | Credentialed bounded US latest-quote and raw-daily stock-bar plans/decoders with explicit IEX/SIP, exact source lexemes, and subscription/redistribution limits. |
 | `finance_sec` | Identified read-only SEC access, normalized CIKs, bounded EDGAR request plans, typed submissions/XBRL facts, lossless numeric lexemes, explicit filing/period resolution, strict Q4/trend derivation, and conservative shared pacing. |
 | `finance_series` | Ordered observations, alignment, as-of joins, returns, windows, resampling, portfolio paths, and analytics. |
 | `finance_calendar` | Dates, market calendars, business-day rules, schedules, joint calendars, and day-count conventions. |
@@ -441,6 +466,15 @@ The first F0 plugin batch demonstrates this direction:
   permits independent exact-accession selection.
   General multi-input metrics likewise accept a named accession per input, but
   still reject combinations whose resolved facts do not share one filing context.
+- `stock_research_report` queues the existing US evidence tools and validates
+  their bounded copied receipts into a deterministic source-fact brief. It
+  refuses symbol/feed/CIK/source mismatch, future-as-of evidence, duplicate
+  metrics, and hidden ambiguity, while stating that receipt integrity is not
+  cryptographically proven.
+- `watchlist` stores only explicit track/listing identities and user-authored
+  metadata. Its pure reducer enforces bounds, idempotence, exact-key removal,
+  contiguous versioned replay, and deterministic snapshots; the Pi shell owns
+  only branch restoration, event appends, and typed tool rendering.
 
 All foundation interfaces are Experimental. Local path dependencies are
 intentional during monorepo development; published packages must use Hex

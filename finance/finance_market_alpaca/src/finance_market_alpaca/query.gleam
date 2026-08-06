@@ -23,6 +23,10 @@ pub opaque type DailyBarsQuery {
   )
 }
 
+pub opaque type LatestQuoteQuery {
+  LatestQuoteQuery(symbol: String, feed: Feed)
+}
+
 pub type QueryError {
   InvalidSymbol
   InvalidDateRange
@@ -65,6 +69,24 @@ pub fn daily_bars(
         maximum_bars,
       ))
   }
+}
+
+pub fn latest_quote(
+  symbol symbol: String,
+  feed feed: Feed,
+) -> Result(LatestQuoteQuery, QueryError) {
+  case valid_symbol(symbol) {
+    True -> Ok(LatestQuoteQuery(symbol, feed))
+    False -> Error(InvalidSymbol)
+  }
+}
+
+pub fn quote_symbol(value: LatestQuoteQuery) -> String {
+  value.symbol
+}
+
+pub fn quote_feed(value: LatestQuoteQuery) -> Feed {
+  value.feed
 }
 
 pub fn symbol(value: DailyBarsQuery) -> String {

@@ -23,6 +23,7 @@ finance_core ─┬─> finance_provenance
               ├─> finance_math ────> finance_series
               ├────────────────────> finance_series
               ├────────────────────> finance_ohlcv <─ finance_series + calendar + math
+              ├────────────────────> finance_quote
               └─> finance_calendar ─┬─> finance_sec
                                     └─> finance_market_calendar
 
@@ -69,6 +70,11 @@ validates geometry and ordering, collapses only exact duplicates, and keeps
 provider pagination completeness separate from evidence-backed calendar-gap
 classification. The Alpaca adapter is its first US acquisition seam; IEX/SIP,
 credentials, symbol-as-of identity, raw adjustment, and rights remain explicit.
+`finance_quote` is the smaller provider-neutral latest-quote contract. It
+preserves exact price and size lexemes, market codes, source time, currency, and
+canonical observation metadata, while refusing to infer consolidation,
+freshness, session, or the provider's changing size semantics. The Alpaca
+adapter supplies an explicitly selected IEX/SIP acquisition seam for it.
 
 `finance_cn_testkit` and `finance_hk_testkit` are outward market-owned test
 packages, not provider-neutral foundations. Each composes the base seeded
@@ -100,11 +106,21 @@ remain pure and independently testable.
 
 The F0 Pi extensions and the
 `sec_edgar`/`sec_xbrl`/`stock_fundamentals` F1 slices are now Experimental.
-The isolated `us_ohlcv`, `cn_ohlcv`, and `hk_ohlcv` slices are Experimental
+The isolated `us_quote`, `us_ohlcv`, `cn_ohlcv`, and `hk_ohlcv` slices are Experimental
 over `finance_ohlcv`. US composes `finance_market_alpaca`; CN/HK independently
 compose `finance_eastmoney`. Missing-session classification remains unavailable
 until each shell composes its reviewed market calendar/status contract, and the
 Eastmoney slices preserve date-only anchors and unknown provider volume units.
+The US quote slice preserves bid/ask exchange, condition, tape, exact price and
+size tokens, and unknown freshness/latency/size-unit semantics.
+`stock_research_report` is a Pi plugin rather than a finance package. Its pure
+domain module validates bounded copied Alpaca/SEC receipts and renders stable
+source roots; its shell only registers the compositor and queues the explicit
+agent workflow. It does not introduce another HTTP or provider dependency.
+`watchlist` is likewise a Pi workflow plugin, not a provider or finance
+foundation. It composes `finance_listing` keys and `finance_track`, keeps each
+member's track explicit, and persists only bounded user-authored events in the
+active Pi branch; it contributes no market-source coverage.
 The SEC foundation also supplies pure exact-period filing resolution, strict
 source-retaining Q4 subtraction, and comparable direct-fact trend validation;
 provider I/O and Pi rendering remain outside those derivation laws.

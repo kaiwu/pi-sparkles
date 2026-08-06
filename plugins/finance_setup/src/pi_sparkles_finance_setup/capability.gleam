@@ -80,6 +80,21 @@ pub fn provider_health(
     "openfigi" -> registered("OpenFIGI v3", "security_resolve", active_tools)
     "sec" | "sec-edgar" | "edgar" ->
       registered("SEC EDGAR", "sec_company_search", active_tools)
+    "alpaca" | "alpaca-market-data" ->
+      case has_any(active_tools, ["us_stock_quote", "us_stock_ohlcv"]) {
+        True ->
+          Capability(
+            "Alpaca Market Data",
+            Experimental,
+            "typed read-only US market-data tool is active; this is installation state, not a live health probe",
+          )
+        False ->
+          Capability(
+            "Alpaca Market Data",
+            MissingDependency,
+            "required active tool is not installed: us_stock_quote or us_stock_ohlcv",
+          )
+      }
     "" -> Capability("provider", InvalidConfiguration, "provider is required")
     name ->
       Capability(
@@ -141,4 +156,8 @@ fn registered(
         "required active tool is not installed: " <> tool_name,
       )
   }
+}
+
+fn has_any(values: List(String), expected: List(String)) -> Bool {
+  list.any(expected, fn(value) { list.contains(values, value) })
 }

@@ -47,6 +47,8 @@ async function harness({
     "sec_xbrl_facts",
     "stock_fundamental",
     "stock_fundamental_metric",
+    "us_stock_quote",
+    "us_stock_ohlcv",
     "cn_authorities",
     "cn_security_search",
     "cn_market_calendar",
@@ -126,7 +128,7 @@ describe("finance track status binding", () => {
       ctx,
     );
     expect(statuses.at(-1).text).toBe(
-      "US · USD · America/New_York · src:80% · feat:70% · agent:agent@example.test",
+      "US · USD · America/New_York · src:80% · feat:80% · agent:agent@example.test",
     );
 
     for (const [command, expected] of [
@@ -140,7 +142,7 @@ describe("finance track status binding", () => {
       ],
       [
         "us-track",
-        "US · USD · America/New_York · src:80% · feat:70% · agent:agent@example.test",
+        "US · USD · America/New_York · src:80% · feat:80% · agent:agent@example.test",
       ],
     ]) {
       await instance.commands.get(command).handler("", ctx);

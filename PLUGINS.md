@@ -106,6 +106,13 @@ manifests, and trade journals. State that must outlive or be shared across Pi
 sessions is usually better stored in a user-owned database or external service,
 with session entries containing stable references and display metadata.
 
+The first Experimental `watchlist` slice chooses session-branch entries for a
+bounded local contract. It persists versioned add/update/remove events, replays
+only the active branch with contiguous revisions, and locks malformed state.
+Every member retains its own `cn`, `hk`, or `us` track plus namespaced instrument
+ID, symbol, and MIC. This survives resume and inherited forks, but not `/new`;
+cross-session storage remains a separate explicit user-owned capability.
+
 ### Model and provider integration
 
 Plugins can inspect available models, change the selected model and thinking
@@ -234,13 +241,13 @@ Every finance observation should retain:
 Provider choice must be visible configuration, not an undocumented fallback
 chain.
 
-The current `us_stock_ohlcv` slice is the concrete first application of this
-rule. It requires the caller to select Alpaca IEX or SIP, retains the exact
-symbol/as-of mapping key and source numeric lexemes, and reports subscription
-and redistribution limits. Pagination completeness is separate from market-
-calendar completeness: until reviewed US calendar and status evidence is
-composed, absent rows are not labelled as closures, suspensions, provider
-omissions, or unavailable history.
+The current `us_stock_quote` and `us_stock_ohlcv` slices are concrete first
+applications of this rule. Both require the caller to select Alpaca IEX or SIP,
+retain exact source numeric lexemes, and report subscription and redistribution
+limits. Quote freshness, session, and provider size units remain unknown.
+History pagination completeness is separate from market-calendar completeness:
+until reviewed US calendar and status evidence is composed, absent rows are not
+labelled as closures, suspensions, provider omissions, or unavailable history.
 
 ### Identity and normalization
 
@@ -446,11 +453,24 @@ slice:
 3. unambiguous security resolution;
 4. primary filing and announcement retrieval;
 5. a deliberately small set of audited financial facts;
-6. one clearly labelled market-data provider (now implemented as isolated
-   raw-daily Alpaca US and Eastmoney CN/HK OHLCV slices, with their unequal
-   entitlements and units kept visible);
+6. one clearly labelled market-data provider (now implemented as an exact
+   Alpaca US latest quote plus isolated raw-daily Alpaca US and Eastmoney CN/HK
+   OHLCV slices, with their unequal entitlements and units kept visible);
 7. one concise cited company or watchlist report;
 8. an exportable evidence manifest.
+
+The first `stock_research_report` slice implements the final composition step
+without adding another data client. `/us-research` queues the named existing
+tools, while `us_company_brief` validates bounded exact receipts and renders
+direct source links plus stable evidence roots. It labels copied receipts as
+not cryptographically verified and never converts missing or ambiguous inputs
+into model-supplied facts.
+
+The companion `watchlist` slice supplies bounded named workflow state without
+adding a data source. Exact listing keys, notes, HTTPS thesis links, and tags are
+reduced purely; `/watch` and `watchlist_snapshot` render deterministic state.
+It does not treat caller-declared identity as provider evidence or merge one
+track's member into another track.
 
 Quotes, generic indicators, and standalone valuation calculators are useful
 features but weak businesses. Provenance-rich change detection, continuous

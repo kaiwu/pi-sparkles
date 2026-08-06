@@ -3,6 +3,7 @@ import finance_http/request
 import finance_market_alpaca
 import finance_market_alpaca/bars
 import finance_market_alpaca/query
+import finance_market_alpaca/quotes
 import finance_market_alpaca/request as provider_request
 import gleam/list
 import gleam/option.{Some}
@@ -64,6 +65,54 @@ pub fn request_is_raw_usd_ascending_bounded_and_secret_test() {
   request.safe_key(value)
   |> string.contains("secret-key")
   |> should.be_false
+}
+
+pub fn latest_quote_request_has_explicit_feed_and_small_response_budget_test() {
+  let assert Ok(plan) = query.latest_quote("AAPL", query.Sip)
+  let assert Ok(value) = provider_request.latest_quote(access(), plan)
+  request.path(value) |> should.equal(provider_request.latest_quotes_path)
+  request.maximum_response_bytes(value) |> should.equal(250_000)
+  [
+    request.QueryParameter("symbols", "AAPL", request.Public),
+    request.QueryParameter("feed", "sip", request.Public),
+    request.QueryParameter("currency", "USD", request.Public),
+  ]
+  |> list.all(fn(expected) { request.query(value) |> list.contains(expected) })
+  |> should.be_true
+  request.safe_key(value)
+  |> string.contains("secret-key")
+  |> should.be_false
+}
+
+pub fn quote_decoder_preserves_exact_tokens_and_market_codes_test() {
+  let assert Ok(plan) = query.latest_quote("AAPL", query.Iex)
+  let assert Ok(value) = quotes.decode(quote_fixture(), for: plan)
+  quotes.bid_price(value) |> should.equal("189.1000")
+  quotes.ask_price(value) |> should.equal("189.1200")
+  quotes.bid_size(value) |> should.equal("7")
+  quotes.ask_exchange(value) |> should.equal("V")
+  quotes.conditions(value) |> should.equal(["R"])
+  quotes.tape(value) |> should.equal("C")
+  time.unix_milliseconds(quotes.at(value)) |> should.equal(1_722_974_399_123)
+}
+
+pub fn quote_decoder_rejects_symbol_timestamp_and_negative_values_test() {
+  let assert Ok(plan) = query.latest_quote("AAPL", query.Iex)
+  quotes.decode(
+    string.replace(quote_fixture(), "\"AAPL\"", "\"MSFT\""),
+    for: plan,
+  )
+  |> should.equal(Error(quotes.UnexpectedSymbols))
+  quotes.decode(
+    string.replace(quote_fixture(), "189.1000", "-189.1000"),
+    for: plan,
+  )
+  |> should.be_error
+  quotes.decode(
+    string.replace(quote_fixture(), "19:59:59.123456789Z", "19:59:59+00:00"),
+    for: plan,
+  )
+  |> should.be_error
 }
 
 pub fn decoder_preserves_source_lexemes_timestamp_and_pagination_test() {
@@ -140,4 +189,8 @@ fn page_fixture() -> String {
 
 fn reversed_fixture() -> String {
   "{\"bars\":{\"AAPL\":[{\"c\":189.84,\"h\":190.01,\"l\":186.31,\"n\":598765,\"o\":186.90,\"t\":\"2024-08-02T04:00:00Z\",\"v\":49910111,\"vw\":188.7654},{\"c\":187.12,\"h\":188.10,\"l\":184.22,\"n\":612345,\"o\":185.6200,\"t\":\"2024-08-01T04:00:00Z\",\"v\":50292117,\"vw\":186.432100}]},\"next_page_token\":null}"
+}
+
+fn quote_fixture() -> String {
+  "{\"quotes\":{\"AAPL\":{\"ap\":189.1200,\"as\":4,\"ax\":\"V\",\"bp\":189.1000,\"bs\":7,\"bx\":\"V\",\"c\":[\"R\"],\"t\":\"2024-08-06T19:59:59.123456789Z\",\"z\":\"C\"}}}"
 }

@@ -113,6 +113,7 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_listing` | Experimental | Effective listing identity | track/MIC-scoped keys, effective aliases, and evidence-backed relationships without market-owned code or board rules |
 | `finance_series` | Experimental | Time-series operations | ordered observations, missing policy, exact/as-of alignment, resampling, OHLCV, exact returns/paths, and attribution |
 | `finance_ohlcv` | Experimental | Exact provider-neutral bar contract | raw-plus-normalized values, OHLC geometry, canonical observations, strict order/exact deduplication, and separate pagination/calendar completeness |
+| `finance_quote` | Experimental | Exact provider-neutral quote contract | raw-plus-normalized bid/ask prices and sizes, market codes, canonical observations, and unverified provider size semantics |
 | `finance_calendar` | Experimental | Trading-time rules | sessions, holidays, business days, joint calendars, coupon schedules, and named day counts; provider data remains pluggable |
 | `finance_market_calendar` | Experimental | Bounded calendar data | track/source/licence/version/coverage wrapper that rejects dates outside reviewed datasets |
 | `finance_market_authorities` | Experimental | Official source ownership | track-prefixed roles and HTTPS links with explicit access, redistribution, scope, and limitations |
@@ -134,7 +135,7 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_cn_testkit` / `finance_hk_testkit` | Experimental | Isolated market scenarios | seed-stable identity, session, rule, Unicode document, correction, scale, and exact-lexeme cases without authoritative-data claims |
 | `finance_openfigi` | Experimental | Instrument identity provider | OpenFIGI v3 mapping/filter plans, opaque optional authentication, pagination, fixtures, separate rate buckets, and bounded shared execution |
 | `finance_eastmoney` | Experimental | CN/HK public-web market data | bounded caller-identified SSE/SZSE/BSE/HK quote and raw unadjusted daily-history plans/decoders with exact lexemes and unknown latency/rights |
-| `finance_market_alpaca` | Experimental | US credentialed market data | exact-symbol/as-of raw daily USD bar plans, explicit IEX/SIP feeds, secret auth, bounded pagination/runtime, exact numeric lexemes, and subscription/redistribution limits |
+| `finance_market_alpaca` | Experimental | US credentialed market data | exact-symbol latest quote plus symbol/as-of raw daily USD bar plans, explicit IEX/SIP feeds, secret auth, bounded runtime/pagination, exact numeric lexemes, and subscription/redistribution limits |
 | `finance_sec` | Experimental | Primary filing-data provider | identified public access, normalized CIKs, bounded ticker/submissions/company-facts plans, typed recent filings, conservative pacing, and cancellation |
 
 Provider adapters should also be ordinary packages when possible—for example,
@@ -184,9 +185,11 @@ graduated on 2026-08-04 and the isolated setup shells on 2026-08-05.
 policy behind isolated track contracts. Symbols consumes the reusable read-only
 `finance_openfigi` adapter, which
 uses `finance_http` and explicit public-domain/freshness limitations. SEC has
-since graduated as the first F1 slice below; quote, history, broader taxonomy, and
-report orchestration remain Draft until their provider, credential,
-entitlement, and licence designs are accepted.
+since graduated as the first F1 slice below; US latest quote and narrow daily
+history have now graduated separately, and a narrow receipt-based US report
+compositor is Experimental. Broader taxonomy, direct programmatic tool
+orchestration, comparisons, and earnings reports remain Draft until their
+provider, credential, entitlement, and licence designs are accepted.
 
 ### SEC EDGAR vertical slice — 2026-08-04
 
@@ -265,6 +268,65 @@ provider supplies dates without exact instants or proven volume units, both
 facts remain explicitly limited; row-budget truncation is separate from
 unassessed market-calendar/status gaps. This history-only batch changes no
 track's `quotes_history` feature score.
+
+### US latest quote vertical slice — 2026-08-06
+
+`finance_quote` and `pi_us_quote` have graduated to **Experimental**. The
+`us_stock_quote` tool makes one bounded request to Alpaca's latest multi-symbol
+quote endpoint for exactly one uppercase symbol, USD, and an explicit `iex` or
+`sip` feed. The adapter retains the exact JSON lexemes for bid/ask prices and
+sizes plus provider timestamp, exchanges, conditions, tape, and request ID.
+
+The canonical quote observation rejects negative values, unsafe market codes,
+provider mismatch, and retrieval before source time. It deliberately retains
+locked or crossed source quotes, because interpreting them requires condition
+and market context. A successful response proves neither consolidated coverage
+nor freshness: IEX remains one exchange, SIP access/recency remains
+subscription-dependent, provider size semantics are unverified, and the plugin
+grants no redistribution right. No default-feed fallback, venue inference,
+session inference, quote caching, or company-name resolution is performed.
+
+With both `us_stock_quote` and `us_stock_ohlcv` loaded, the existing
+`quotes_history` family is covered and US installed feature breadth rises from
+70% to 80%. US remains below the 85% operational threshold because market
+calendar and effective-rule families are still absent.
+
+### US cited source-fact report slice — 2026-08-06
+
+`pi_stock_research_report` has graduated to **Experimental** for a narrow US
+receipt-composition slice. `/us-research` queues an explicit agent workflow over
+`us_stock_quote`, `us_stock_ohlcv`, `sec_company_submissions`, and
+`stock_fundamental_period`; `us_company_brief` then validates and renders the
+selected exact receipts without owning another provider client.
+
+Pi's public `getAllTools()` surface returns tool metadata rather than callable
+implementations, so the command-mediated agent sequence is explicit. The final
+compositor is deterministic and network-free. It accepts only bounded sections,
+requires exact Alpaca symbol/feed/source and SEC CIK/source coherence, refuses
+duplicate or ambiguous fundamental selection, emits stable evidence roots and
+direct source links, and lists missing capabilities rather than filling them
+with model knowledge. Copied receipt integrity is explicitly not
+cryptographically verified; interpretation and investment-thesis generation
+remain outside this slice.
+
+### Track-safe watchlist slice — 2026-08-06
+
+`pi_watchlist` has graduated to **Experimental** for branch-scoped workflow
+state. `/watch`, `watchlist_add`, `watchlist_remove`, and `watchlist_snapshot`
+manage bounded named lists without owning a market-data client. Every member is
+keyed by exact `track + namespaced instrument ID + symbol + MIC`; notes, HTTPS
+thesis links, and lowercase tags remain user-authored metadata, not provider
+observations or resolved identity evidence.
+
+Persistence is a versioned Pi custom-entry event log on the active session
+branch. Pure replay requires contiguous revisions and revalidates every event.
+Identical adds are idempotent, removal requires the complete listing key, tree
+changes restore only the selected branch, and corrupted entries lock mutation
+instead of being skipped. Deterministic snapshots expose bounds, revision,
+identity status, and durability. Resume and inherited forks are covered; a new
+session starts empty. User-owned cross-session storage, imports, conflict
+resolution, snapshot hashing, and authoritative identity binding remain later
+reviewed capabilities.
 
 This arbitration accepts read-only company discovery, recent filing metadata,
 raw standard/entity-wide XBRL fact evidence, and the documented seven direct
@@ -360,6 +422,7 @@ Priorities mean:
 | Proposed plugin | Priority | What it gives Pi | Candidate commands/tools |
 | --- | --- | --- | --- |
 | `pi_stock_quote` | P0 | Current/delayed quote snapshots with bid/ask, last trade, session, source, and freshness. Backend chosen explicitly. | `/quote`, `stock_quote`, `stock_quotes` |
+| `pi_us_quote` (**Experimental Alpaca latest slice**) | P0 | Exact latest Alpaca US best bid/ask for one symbol and explicit IEX/SIP feed, preserving market codes and unknown freshness/size semantics. | `us_stock_quote` |
 | `pi_stock_history` | P0 | Daily/intraday OHLCV with raw/adjusted controls and corporate-action metadata. | `/chart-data`, `stock_bars`, `stock_returns`, `stock_performance` |
 | `pi_us_ohlcv` (**Experimental Alpaca daily slice**) | P0 | Exact raw daily US OHLCV for one Alpaca symbol/as-of identity and explicit IEX/SIP feed, with bounded pagination and visible calendar/rights gaps. | `us_stock_ohlcv` |
 | `pi_cn_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily mainland OHLCV for a caller-declared venue/board/share-class/currency identity, retaining provider rows with unknown volume/session/calendar/rights semantics. | `cn_stock_ohlcv` |
@@ -487,7 +550,7 @@ contexts must remain visible rather than being papered over.
 | `pi_stock_event_study` | P2 | Abnormal-return studies around earnings, filings, guidance, splits, or user-supplied events. | `/event-study`, `event_study`, `event_window_returns` |
 | `pi_stock_factor_lab` | P2 | Cross-sectional value, quality, momentum, size, low-volatility, and custom factors with neutralization controls. | `/factors`, `factor_exposure`, `factor_rank`, `factor_test` |
 | `pi_stock_thesis` | P1 | Stores bull/base/bear theses as structured claims, evidence, disconfirming signals, and review dates. | `/thesis`, `thesis_create`, `thesis_update`, `thesis_audit` |
-| `pi_stock_research_report` | P0 | Orchestrates other read-only tools into a cited company brief, earnings preview/review, or comparison report. | `/research`, `/earnings-preview`, `company_brief`, `compare_companies` |
+| `pi_stock_research_report` (**Experimental US source-fact slice**) | P0 | Queues existing read-only US tools and deterministically validates their exact receipts into a cited brief; earnings and comparison reports remain planned. | `/us-research`, `us_company_brief`; later `/earnings-preview`, `compare_companies` |
 
 The report plugin should orchestrate; it should not own a second copy of every
 data client. If a required capability is absent, it should state that gap in the
@@ -529,7 +592,7 @@ report rather than substitute unsourced model knowledge.
 | `pi_portfolio_rebalance` | P2 | Generates tax/fee/liquidity-aware rebalance proposals but never submits them. | `/rebalance`, `rebalance_plan`, `rebalance_validate` |
 | `pi_tax_lots` | P2 | Lot-level gains, holding periods, harvest candidates, and jurisdiction-labelled estimates. | `/lots`, `tax_lots`, `realized_gains`, `harvest_candidates` |
 | `pi_trade_journal` | P1 | Records decisions, assumptions, orders, fills, screenshots/links, and post-trade reviews in portable local data. | `/journal`, `journal_entry`, `journal_search`, `trade_review` |
-| `pi_watchlist` | P0 | Persistent named watchlists with notes, thesis links, tags, and compact snapshots. | `/watch`, `watchlist_add`, `watchlist_remove`, `watchlist_snapshot` |
+| `pi_watchlist` (**Experimental session-branch slice**) | P0 | Exact track/listing-key named watchlists with bounded notes, HTTPS thesis links, tags, versioned event replay, and deterministic compact snapshots; cross-session storage remains planned. | `/watch`, `watchlist_add`, `watchlist_remove`, `watchlist_snapshot` |
 | `pi_backtest` | P2 | Reproducible bar-based strategy tests with transaction costs, survivorship/look-ahead warnings, and exported run manifests. | `/backtest`, `backtest_run`, `backtest_compare`, `backtest_audit` |
 
 ### Execution—deliberately last
@@ -584,6 +647,12 @@ Acceptance:
 
 Build `pi_stock_quote`, `pi_stock_history`, `pi_sec_edgar`, `pi_sec_xbrl`,
 `pi_stock_fundamentals`, `pi_watchlist`, and `pi_stock_research_report`.
+
+The quote/history, SEC, fundamental, branch-persistent watchlist, and narrow
+source-fact report slices are Experimental. Authoritative security resolution,
+user-owned cross-session watchlist storage, cryptographically bound cross-tool
+receipts, and full automatic orchestration remain open, so F1 is not yet
+complete.
 
 Acceptance: given a US-listed company, Pi resolves the security, gets a properly
 labelled quote/history, finds primary filings, extracts a small audited set of
@@ -677,6 +746,8 @@ a finance agent:
 6. `pi_stock_quote`: one configurable market-data backend, delayed/real-time
    status always visible.
 7. `pi_stock_research_report`: one concise, cited company brief.
+8. `pi_watchlist`: exact track/listing keys with bounded branch persistence and
+   a deterministic snapshot.
 
 This slice exercises commands, typed tools, network cancellation, provider
 configuration, structured results, provenance, caching, and report composition.
@@ -756,8 +827,9 @@ decoder, respect the site's terms, and fail clearly when the surface changes.
 - Is the first audience US equities only, or should the core types require
   US and China equities together? The core types should be multi-market from day
   one either way.
-- Where should persistent watchlists, theses, alerts, and evidence manifests
-  live: session entries, a user-owned local directory, or a small database?
+- Beyond the first branch-scoped watchlist event log, where should state that
+  must survive `/new` or be shared across sessions live: a user-owned local
+  directory, a small database, or an external service?
 - Should `finance_core` and provider libraries live in this monorepo alongside
   Pi plugins or in a separate Gleam finance repository?
 - Which report is the flagship workflow: company brief, earnings review,

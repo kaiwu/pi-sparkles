@@ -3,20 +3,24 @@
 Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `finance_market_alpaca` is a credentialed, read-only adapter for Alpaca's US
-historical stock-bars endpoint. The first slice deliberately supports one exact
-symbol, `1Day`, ascending order, USD prices, and `raw` adjustment only.
+historical stock-bars and latest stock-quotes endpoints. The bars slice supports
+one exact symbol, `1Day`, ascending order, USD prices, and `raw` adjustment
+only. The quote slice supports one exact symbol, USD, and an explicit feed.
 
-The request contract requires an explicit `iex` or `sip` feed and a symbol
+Both request contracts require an explicit `iex` or `sip` feed. Bars require a symbol
 `asof` date. It bounds each page to 1,000 bars, the workflow to 5,000 bars and
 10 pages, responses to 5 MB, requests to 15 seconds, concurrency to two, and a
-conservative 180 admissions per minute. Pagination tokens are followed only by
+conservative 180 admissions per minute. A quote response is capped at 250 KB
+and 10 seconds. Pagination tokens are followed only by
 the Pi shell under those caller-visible budgets. Authentication headers are
 marked secret and are excluded from safe request identities and results.
 
-The decoder captures JSON numeric tokens through the runtime's standardized
+The decoders capture JSON numeric tokens through the runtime's standardized
 `JSON.parse` source context, preserving the exact provider lexemes for open,
 high, low, close, volume, trade count, and VWAP. It validates the requested
 symbol key, page bound, timestamp/date range, and non-decreasing provider order.
+The quote decoder additionally retains bid/ask exchanges, conditions, tape, and
+exact provider-reported sizes without asserting a size unit.
 Normal tests use fixed response strings and injected transports; they never use
 live credentials or network calls.
 

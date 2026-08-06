@@ -236,6 +236,12 @@ fn us_tool_contributions(
     ]),
   )
   |> append_when(
+    has_all(active_tools, ["us_stock_quote", "us_stock_ohlcv"]),
+    contribution(finance_track.Us, "us_quotes_history", "Alpaca", [
+      "quotes_history",
+    ]),
+  )
+  |> append_when(
     list.contains(active_tools, "sec_company_submissions"),
     contribution(finance_track.Us, "us_disclosure_discovery", "SEC", [
       "disclosure_discovery",

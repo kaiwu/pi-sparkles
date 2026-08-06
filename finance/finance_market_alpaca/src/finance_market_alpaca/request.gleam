@@ -1,7 +1,7 @@
 import finance_core/time
 import finance_http/request
 import finance_market_alpaca.{type Access}
-import finance_market_alpaca/query.{type DailyBarsQuery}
+import finance_market_alpaca/query.{type DailyBarsQuery, type LatestQuoteQuery}
 import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -10,6 +10,8 @@ import gleam/string
 pub const origin = "https://data.alpaca.markets"
 
 pub const bars_path = "/v2/stocks/bars"
+
+pub const latest_quotes_path = "/v2/stocks/quotes/latest"
 
 pub type RequestError {
   InvalidPageLimit
@@ -83,6 +85,39 @@ pub fn daily_bars(
     None -> Ok(value)
     Some(token) -> public_query(value, "page_token", token)
   })
+  finance_market_alpaca.authorize(access, value)
+  |> result.map_error(InvalidAccess)
+}
+
+pub fn latest_quote(
+  access: Access,
+  plan: LatestQuoteQuery,
+) -> Result(request.Request, RequestError) {
+  let assert Ok(timeout) = time.duration(10_000)
+  use base <- result.try(
+    request.new(request.Get, origin, latest_quotes_path, None)
+    |> result.map_error(InvalidHttp),
+  )
+  use bounded <- result.try(
+    request.with_limits(base, timeout: timeout, maximum_response_bytes: 250_000)
+    |> result.map_error(InvalidHttp),
+  )
+  use accepted <- result.try(public_header(
+    bounded,
+    "Accept",
+    "application/json",
+  ))
+  use value <- result.try(public_query(
+    accepted,
+    "symbols",
+    query.quote_symbol(plan),
+  ))
+  use value <- result.try(public_query(
+    value,
+    "feed",
+    query.feed_name(query.quote_feed(plan)),
+  ))
+  use value <- result.try(public_query(value, "currency", "USD"))
   finance_market_alpaca.authorize(access, value)
   |> result.map_error(InvalidAccess)
 }

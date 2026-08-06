@@ -53,6 +53,8 @@ pub fn readiness_receipts_expose_current_track_gaps_test() {
       "sec_xbrl_facts",
       "stock_fundamental",
       "stock_fundamental_metric",
+      "us_stock_quote",
+      "us_stock_ohlcv",
     ])
 
   readiness.source_percentage(cn) |> should.equal(65)
@@ -60,7 +62,7 @@ pub fn readiness_receipts_expose_current_track_gaps_test() {
   readiness.source_percentage(hk) |> should.equal(70)
   readiness.feature_percentage(hk) |> should.equal(100)
   readiness.source_percentage(us) |> should.equal(80)
-  readiness.feature_percentage(us) |> should.equal(70)
+  readiness.feature_percentage(us) |> should.equal(80)
 }
 
 pub fn sibling_track_tools_cannot_inflate_feature_coverage_test() {

@@ -69,7 +69,10 @@ pub fn send(
 ) -> Promise(Result(Response, SendError)) {
   case
     request.origin(request_value) == provider_request.origin
-    && request.path(request_value) == provider_request.bars_path
+    && {
+      request.path(request_value) == provider_request.bars_path
+      || request.path(request_value) == provider_request.latest_quotes_path
+    }
   {
     False -> promise.resolve(Error(UnexpectedTarget))
     True -> {

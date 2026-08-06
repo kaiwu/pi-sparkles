@@ -23,6 +23,9 @@ for (const name of [
   "sec_edgar",
   "sec_xbrl",
   "stock_fundamentals",
+  "stock_research_report",
+  "watchlist",
+  "us_quote",
   "us_ohlcv",
 ]) {
   describe(`${name} artifact`, () => {

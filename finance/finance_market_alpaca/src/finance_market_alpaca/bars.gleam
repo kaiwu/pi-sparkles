@@ -236,7 +236,9 @@ fn validate_page_token(value: Option(String)) -> Result(Nil, DecodeError) {
   }
 }
 
-fn parse_timestamp(value: String) -> Result(#(time.Instant, time.Date), Nil) {
+pub fn parse_timestamp(
+  value: String,
+) -> Result(#(time.Instant, time.Date), Nil) {
   case string.ends_with(value, "Z") {
     False -> Error(Nil)
     True -> {
