@@ -13,7 +13,9 @@ finance_core = { path = "../../finance/finance_core" }
 finance_ohlcv = { path = "../../finance/finance_ohlcv" }
 finance_market_alpaca = { path = "../../finance/finance_market_alpaca" }
 finance_http = { path = "../../finance/finance_http" }
+finance_provenance = { path = "../../finance/finance_provenance" }
 finance_track = { path = "../../finance/finance_track" }
+finance_us_ohlcv = { path = "../../finance/finance_us_ohlcv" }
 pi_gleam = { path = "../../pi_gleam" }
 
 [dev-dependencies]

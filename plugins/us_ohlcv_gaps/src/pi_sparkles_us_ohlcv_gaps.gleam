@@ -5,10 +5,13 @@ import finance_listing/effective
 import finance_listing/listing
 import finance_market_alpaca/query as alpaca_query
 import finance_ohlcv
+import finance_provenance/hash
+import finance_provenance/identity
 import finance_track
 import finance_track/context as track_context
 import finance_track/json as track_json
 import finance_us_ohlcv/assessment
+import finance_us_ohlcv/gap_receipt
 import gleam/dynamic/decode
 import gleam/int
 import gleam/javascript/promise.{type Promise}
@@ -27,16 +30,30 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "us_ohlcv_gap_assessment",
     "US OHLCV gap assessment",
-    "Classify every absent date in one copied Alpaca daily-bar receipt using the exact 2026 NYSE or Nasdaq calendar, caller-supplied listing interval, explicit status receipts, and complete provider pagination",
+    "Classify every absent date in one SHA-256-bound copied Alpaca daily-bar projection using the exact 2026 NYSE or Nasdaq calendar, caller-supplied listing interval, explicit status receipts, and complete provider pagination",
     "Compose bounded US OHLCV evidence without fetching data, synthesizing bars, or guessing closures, suspensions, provider omissions, or unavailable history",
     tool.parameters(input_schema(), input_decoder()),
     tool.Parallel,
     fn(_id, input, _signal, _updates, _ctx) {
-      case query.run(input) {
-        Ok(value) ->
-          tool.text_result(render(value), result_json(value, input))
-          |> promise.resolve
+      case query.canonical_receipt(input) {
         Error(error) -> tool.reject(error_message(error))
+        Ok(canonical) ->
+          case hash.text(canonical) {
+            Error(_) ->
+              tool.reject(
+                "The copied provider receipt could not be hashed safely",
+              )
+            Ok(actual_digest) ->
+              case query.run(input, actual_digest) {
+                Ok(value) ->
+                  tool.text_result(
+                    render(value),
+                    result_json(value, input, actual_digest),
+                  )
+                  |> promise.resolve
+                Error(error) -> tool.reject(error_message(error))
+              }
+          }
       }
     },
   )
@@ -47,14 +64,40 @@ fn input_schema() -> schema.Schema {
   schema.object([
     schema.Required("venue", schema.string_enum(["nyse", "nasdaq"])),
     schema.Required("instrumentId", bounded_string(3, 200)),
-    schema.Required("symbol", bounded_string(1, 20)),
     schema.Required("listingStartDate", bounded_string(10, 10)),
     schema.Required("listingEndDate", schema.nullable(bounded_string(10, 10))),
     schema.Required("listingEvidenceReference", bounded_string(1, 2000)),
+    schema.Required("providerReceipt", provider_receipt_schema()),
+    schema.Required(
+      "statusReceipts",
+      schema.array(status_schema()) |> schema.with_array_length(0, 366),
+    ),
+  ])
+}
+
+fn provider_receipt_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("schema", schema.string_enum([gap_receipt.schema_name])),
+    schema.Required(
+      "schemaVersion",
+      schema.integer() |> schema.with_number_range(1.0, 1.0),
+    ),
+    schema.Required(
+      "digestAlgorithm",
+      schema.string_enum([gap_receipt.digest_algorithm]),
+    ),
+    schema.Required("digest", bounded_string(64, 64)),
+    schema.Required("provider", schema.string_enum(["alpaca"])),
+    schema.Required("symbol", bounded_string(1, 20)),
     schema.Required("startDate", bounded_string(10, 10)),
     schema.Required("endDate", bounded_string(10, 10)),
     schema.Required("identityAsOf", bounded_string(10, 10)),
     schema.Required("feed", schema.string_enum(["iex", "sip"])),
+    schema.Required("sourceReference", bounded_string(1, 2000)),
+    schema.Required(
+      "retrievedAtUnixMilliseconds",
+      schema.integer() |> schema.with_number_range(0.0, 9_007_199_254_740_991.0),
+    ),
     schema.Required(
       "pagination",
       schema.string_enum([
@@ -63,20 +106,30 @@ fn input_schema() -> schema.Schema {
         "truncated_by_bar_budget",
       ]),
     ),
-    schema.Required("sourceReference", bounded_string(1, 2000)),
     schema.Required(
-      "requestIds",
-      schema.array(bounded_string(1, 200)) |> schema.with_array_length(0, 10),
+      "pages",
+      schema.array(page_receipt_schema()) |> schema.with_array_length(1, 10),
     ),
     schema.Required(
       "barDates",
       schema.array(bounded_string(10, 10))
         |> schema.with_array_length(0, 366),
     ),
+  ])
+}
+
+fn page_receipt_schema() -> schema.Schema {
+  schema.object([
     schema.Required(
-      "statusReceipts",
-      schema.array(status_schema()) |> schema.with_array_length(0, 366),
+      "sequence",
+      schema.integer() |> schema.with_number_range(1.0, 10.0),
     ),
+    schema.Required("requestId", schema.nullable(bounded_string(1, 200))),
+    schema.Required(
+      "byteLength",
+      schema.integer() |> schema.with_number_range(0.0, 2_000_000.0),
+    ),
+    schema.Required("contentSha256", bounded_string(64, 64)),
   ])
 }
 
@@ -91,7 +144,6 @@ fn status_schema() -> schema.Schema {
 fn input_decoder() -> decode.Decoder(query.Input) {
   use venue <- decode.field("venue", venue_decoder())
   use instrument_id <- decode.field("instrumentId", decode.string)
-  use symbol <- decode.field("symbol", decode.string)
   use listing_start <- decode.field("listingStartDate", date_decoder())
   use listing_end <- decode.field(
     "listingEndDate",
@@ -101,14 +153,10 @@ fn input_decoder() -> decode.Decoder(query.Input) {
     "listingEvidenceReference",
     decode.string,
   )
-  use start_date <- decode.field("startDate", date_decoder())
-  use end_date <- decode.field("endDate", date_decoder())
-  use identity_as_of <- decode.field("identityAsOf", date_decoder())
-  use feed <- decode.field("feed", feed_decoder())
-  use pagination <- decode.field("pagination", pagination_decoder())
-  use source_reference <- decode.field("sourceReference", decode.string)
-  use request_ids <- decode.field("requestIds", decode.list(of: decode.string))
-  use bar_dates <- decode.field("barDates", decode.list(of: date_decoder()))
+  use provider_receipt <- decode.field(
+    "providerReceipt",
+    provider_receipt_decoder(),
+  )
   use statuses <- decode.field(
     "statusReceipts",
     decode.list(of: status_decoder()),
@@ -116,19 +164,62 @@ fn input_decoder() -> decode.Decoder(query.Input) {
   decode.success(query.Input(
     venue,
     instrument_id,
-    symbol,
     listing_start,
     listing_end,
     listing_evidence,
+    provider_receipt,
+    statuses,
+  ))
+}
+
+fn provider_receipt_decoder() -> decode.Decoder(query.ProviderInput) {
+  use schema_name <- decode.field("schema", decode.string)
+  use schema_version <- decode.field("schemaVersion", decode.int)
+  use digest_algorithm <- decode.field("digestAlgorithm", decode.string)
+  use digest <- decode.field("digest", decode.string)
+  use provider <- decode.field("provider", decode.string)
+  use symbol <- decode.field("symbol", decode.string)
+  use start_date <- decode.field("startDate", date_decoder())
+  use end_date <- decode.field("endDate", date_decoder())
+  use identity_as_of <- decode.field("identityAsOf", date_decoder())
+  use feed <- decode.field("feed", feed_decoder())
+  use source_reference <- decode.field("sourceReference", decode.string)
+  use retrieved_at <- decode.field(
+    "retrievedAtUnixMilliseconds",
+    instant_decoder(),
+  )
+  use pagination <- decode.field("pagination", pagination_decoder())
+  use pages <- decode.field("pages", decode.list(of: page_receipt_decoder()))
+  use bar_dates <- decode.field("barDates", decode.list(of: date_decoder()))
+  decode.success(query.ProviderInput(
+    schema_name,
+    schema_version,
+    digest_algorithm,
+    digest,
+    provider,
+    symbol,
     start_date,
     end_date,
     identity_as_of,
     feed,
-    pagination,
     source_reference,
-    request_ids,
+    retrieved_at,
+    pagination,
+    pages,
     bar_dates,
-    statuses,
+  ))
+}
+
+fn page_receipt_decoder() -> decode.Decoder(query.PageInput) {
+  use sequence <- decode.field("sequence", decode.int)
+  use request_id <- decode.field("requestId", decode.optional(decode.string))
+  use byte_length <- decode.field("byteLength", decode.int)
+  use content_sha256 <- decode.field("contentSha256", decode.string)
+  decode.success(query.PageInput(
+    sequence,
+    request_id,
+    byte_length,
+    content_sha256,
   ))
 }
 
@@ -157,15 +248,24 @@ fn feed_decoder() -> decode.Decoder(alpaca_query.Feed) {
   }
 }
 
-fn pagination_decoder() -> decode.Decoder(assessment.ProviderCompleteness) {
+fn pagination_decoder() -> decode.Decoder(gap_receipt.Pagination) {
   use value <- decode.then(decode.string)
   case value {
-    "complete" -> decode.success(assessment.Complete)
+    "complete" -> decode.success(gap_receipt.Complete)
     "truncated_by_page_budget" ->
-      decode.success(assessment.Incomplete("truncated_by_page_budget"))
+      decode.success(gap_receipt.TruncatedByPageBudget)
     "truncated_by_bar_budget" ->
-      decode.success(assessment.Incomplete("truncated_by_bar_budget"))
-    _ -> decode.failure(assessment.Incomplete("invalid"), "pagination state")
+      decode.success(gap_receipt.TruncatedByBarBudget)
+    _ -> decode.failure(gap_receipt.TruncatedByPageBudget, "pagination state")
+  }
+}
+
+fn instant_decoder() -> decode.Decoder(time.Instant) {
+  use value <- decode.then(decode.int)
+  let assert Ok(placeholder) = time.instant(0)
+  case time.instant(value) {
+    Ok(instant) -> decode.success(instant)
+    Error(_) -> decode.failure(placeholder, "non-negative Unix milliseconds")
   }
 }
 
@@ -197,11 +297,16 @@ fn render(value: assessment.Assessment) -> String {
   <> " absent dates"
 }
 
-fn result_json(value: assessment.Assessment, input: query.Input) -> json.Json {
+fn result_json(
+  value: assessment.Assessment,
+  input: query.Input,
+  actual_digest: identity.Sha256,
+) -> json.Json {
   let listing_receipt = assessment.listing_receipt_value(value)
   let key = assessment.listing_key(listing_receipt)
   let interval = assessment.listing_interval(listing_receipt)
   let provider = assessment.provider(value)
+  let provider_input = input.provider_receipt
   let calendar_source = assessment.calendar_source(value)
   json.object(
     list.append(track_json.result_fields(result_context(value)), [
@@ -250,9 +355,16 @@ fn result_json(value: assessment.Assessment, input: query.Input) -> json.Json {
       #(
         "providerReceipt",
         json.object([
+          #("schema", json.string(provider_input.schema)),
+          #("schemaVersion", json.int(provider_input.schema_version)),
+          #("digestAlgorithm", json.string(provider_input.digest_algorithm)),
+          #("digest", json.string(provider_input.digest)),
           #("provider", json.string(assessment.provider_name(provider))),
-          #("feed", json.string(alpaca_query.feed_name(input.feed))),
-          #("identityAsOf", json.string(date_text(input.identity_as_of))),
+          #("feed", json.string(alpaca_query.feed_name(provider_input.feed))),
+          #(
+            "identityAsOf",
+            json.string(date_text(provider_input.identity_as_of)),
+          ),
           #(
             "sourceReference",
             json.string(assessment.provider_source_reference(provider)),
@@ -263,8 +375,21 @@ fn result_json(value: assessment.Assessment, input: query.Input) -> json.Json {
           ),
           #("pagination", json.string("complete")),
           #(
+            "retrievedAtUnixMilliseconds",
+            json.int(time.unix_milliseconds(provider_input.retrieved_at)),
+          ),
+          #("pages", json.array(provider_input.pages, provider_page_json)),
+          #(
             "integrity",
-            json.string("copied_receipt_not_cryptographically_verified"),
+            json.object([
+              #("state", json.string("sha256_content_match")),
+              #("scope", json.string("canonical_gap_projection_v1")),
+              #(
+                "actualDigest",
+                json.string(identity.sha256_value(actual_digest)),
+              ),
+              #("providerAuthenticated", json.bool(False)),
+            ]),
           ),
         ]),
       ),
@@ -293,6 +418,16 @@ fn result_json(value: assessment.Assessment, input: query.Input) -> json.Json {
       #("limitations", json.array(limitations(), json.string)),
     ]),
   )
+}
+
+fn provider_page_json(value: query.PageInput) -> json.Json {
+  let query.PageInput(sequence, request_id, byte_length, content_sha256) = value
+  json.object([
+    #("sequence", json.int(sequence)),
+    #("requestId", json.nullable(request_id, json.string)),
+    #("byteLength", json.int(byte_length)),
+    #("contentSha256", json.string(content_sha256)),
+  ])
 }
 
 fn status_json(value: assessment.StatusReceipt) -> json.Json {
@@ -351,7 +486,8 @@ fn result_context(value: assessment.Assessment) -> track_context.Context {
 fn limitations() -> List(String) {
   [
     "listing_and_status_evidence_is_caller_supplied_and_not_authority_verified",
-    "copied_receipt_integrity_is_not_cryptographically_verified",
+    "sha256_content_match_is_not_a_provider_signature_or_authentication",
+    "digest_scope_is_the_gap_projection_not_full_bar_value_replay",
     "official_planned_calendar_may_be_superseded_by_exchange_alerts",
     "calendar_year_2026_only",
     "provider_omission_requires_complete_pagination_and_explicit_trading_status",
@@ -368,6 +504,16 @@ fn error_message(value: query.QueryError) -> String {
     query.InvalidListingInterval(_) -> "The exact listing interval is invalid"
     query.InvalidListingReceipt(_) ->
       "The listing receipt does not match the exact US venue/MIC or evidence contract"
+    query.InvalidReceiptEnvelope ->
+      "The copied provider receipt schema, version, algorithm, or provider is invalid"
+    query.InvalidContentHash(_)
+    | query.InvalidPageReceipt(_, _)
+    | query.InvalidGapReceipt(_) ->
+      "The copied provider receipt page or canonical content is invalid"
+    query.InvalidReceiptDigest ->
+      "The copied provider receipt digest is not a valid SHA-256 value"
+    query.ReceiptDigestMismatch ->
+      "The copied provider receipt does not match its canonical SHA-256 digest"
     query.InvalidProviderPlan(_) ->
       "The copied Alpaca date, symbol, feed, or as-of plan is invalid"
     query.SourceReferenceMismatch ->

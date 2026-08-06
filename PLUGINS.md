@@ -254,6 +254,10 @@ only when exact venue/listing scope, complete pagination, the canonical Alpaca
 source identity, and one explicit trading-or-suspended receipt per absent open
 listing date all agree. Its output retains every evidence leg and labels copied
 listing/status receipts unverified; it does not mutate the provider result.
+`us_stock_ohlcv` emits the copyable provider projection with ordered page-body
+SHA-256 values and one canonical projection digest. The compositor rebuilds and
+verifies that digest before classification; a match proves content coherence,
+not an Alpaca signature or provider-origin authentication.
 
 The separate `us_trading_rules` tool supplies only the venue-explicit current
 regular displayed-quote increment for a caller-identified NYSE/Nasdaq NMS stock
@@ -470,8 +474,9 @@ slice:
 6. one clearly labelled market-data provider (now implemented as an exact
    Alpaca US latest quote plus isolated raw-daily Alpaca US and Eastmoney CN/HK
    OHLCV slices, with their unequal entitlements and units kept visible);
-7. one venue-explicit market calendar (now implemented for NYSE/Nasdaq 2026,
-   but not yet joined to OHLCV missing-row classification);
+7. one venue-explicit market calendar (implemented for NYSE/Nasdaq 2026 and
+   consumed by the separate SHA-256-bound OHLCV gap compositor, while the
+   acquisition result itself remains calendar-unassessed);
 8. one concise cited company or watchlist report;
 9. an exportable evidence manifest.
 

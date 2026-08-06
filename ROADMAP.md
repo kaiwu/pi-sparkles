@@ -346,7 +346,10 @@ It requires exact NYSE/XNYS or Nasdaq/XNAS identity, a namespaced instrument ID,
 an effective listing interval and reference, the canonical Alpaca raw-daily
 source reference, explicit IEX/SIP and identity-as-of values, ordered bar dates,
 complete pagination, and ordered trading-or-suspended receipts for every absent
-open listing date.
+open listing date. `us_stock_ohlcv` now emits a versioned canonical projection
+that binds those provider fields, retrieval time, ordered bar dates, and every
+page's byte length, request ID, and body SHA-256. The compositor independently
+reconstructs and hashes that projection before classification.
 
 The pure classifier walks every civil date in the bounded range. Planned closed
 dates become `market_closure`; open dates outside the listing interval become
@@ -357,12 +360,26 @@ provider evidence legs. Truncation, duplicate/decreasing dates, MIC mismatch,
 bars on closures or outside the listing, irrelevant status receipts, source
 identity mismatch, and unexplained open dates reject the entire assessment.
 
-The compositor validates structural coherence, not receipt authenticity.
-Listing and status evidence remain caller supplied and unverified, the planned
-calendar may be superseded, and the original acquisition result remains
+The compositor validates structural and cryptographic content coherence, not
+receipt authenticity. Its SHA-256 is not a provider signature; listing and
+status evidence remain caller supplied and unverified, the planned calendar may
+be superseded, and the original acquisition result remains
 `calendar_not_assessed`. CN/HK counterparts, authority-owned listing/status
-adapters, corporate actions, later calendars, and cryptographic receipt
-manifests remain later work. This depth improvement changes no feature score.
+adapters, signed/authenticated receipts, corporate actions, later calendars,
+and permitted fixtures remain later work. This depth improvement changes no
+feature score.
+
+An authority-source audit did not justify weakening that boundary. Nasdaq's
+[symbol lookup](https://www.nasdaqtrader.com/Trader.aspx?id=symbollookup) says
+its information is for the current trading day, while the
+[halt RSS contract](https://nasdaqtrader.com/Trader.aspx?id=TradeHaltRSS)
+records halt exceptions rather than a positive normal-trading receipt for each
+session. The SEC's
+[EDGAR data guidance](https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data)
+says its ticker/exchange associations are periodically updated and are not
+guaranteed for accuracy or scope. None proves the exact historical listing
+interval plus positive per-session status required by the classifier, so no
+adapter is presented as authoritative yet.
 
 ### US cited source-fact report slice — 2026-08-06
 
@@ -499,8 +516,8 @@ Priorities mean:
 | `pi_stock_quote` | P0 | Current/delayed quote snapshots with bid/ask, last trade, session, source, and freshness. Backend chosen explicitly. | `/quote`, `stock_quote`, `stock_quotes` |
 | `pi_us_quote` (**Experimental Alpaca latest slice**) | P0 | Exact latest Alpaca US best bid/ask for one symbol and explicit IEX/SIP feed, preserving market codes and unknown freshness/size semantics. | `us_stock_quote` |
 | `pi_stock_history` | P0 | Daily/intraday OHLCV with raw/adjusted controls and corporate-action metadata. | `/chart-data`, `stock_bars`, `stock_returns`, `stock_performance` |
-| `pi_us_ohlcv` (**Experimental Alpaca daily slice**) | P0 | Exact raw daily US OHLCV for one Alpaca symbol/as-of identity and explicit IEX/SIP feed, with bounded pagination and visible calendar/rights gaps. | `us_stock_ohlcv` |
-| `pi_us_ohlcv_gaps` (**Experimental receipt-composition slice**) | P0 | Network-free 2026 NYSE/Nasdaq missing-row classification from exact copied Alpaca, listing, calendar, and status receipts; incomplete or conflicting evidence fails closed. | `us_ohlcv_gap_assessment` |
+| `pi_us_ohlcv` (**Experimental Alpaca daily slice**) | P0 | Exact raw daily US OHLCV for one Alpaca symbol/as-of identity and explicit IEX/SIP feed, with bounded pagination, page-body hashes, a canonical gap-projection digest, and visible calendar/rights gaps. | `us_stock_ohlcv` |
+| `pi_us_ohlcv_gaps` (**Experimental receipt-composition slice**) | P0 | Network-free 2026 NYSE/Nasdaq missing-row classification from a SHA-256-bound Alpaca projection plus exact listing, calendar, and status receipts; incomplete, changed, or conflicting evidence fails closed. | `us_ohlcv_gap_assessment` |
 | `pi_cn_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily mainland OHLCV for a caller-declared venue/board/share-class/currency identity, retaining provider rows with unknown volume/session/calendar/rights semantics. | `cn_stock_ohlcv` |
 | `pi_hk_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily HK OHLCV for a caller-declared board/share-class/currency identity, without assuming HKD, half-days, suspensions, or provider volume units. | `hk_stock_ohlcv` |
 | `pi_stock_market_snapshot` | P1 | Index/sector/industry breadth, leaders, laggards, gaps, volume, and volatility snapshots. | `/market`, `market_snapshot`, `market_breadth`, `market_movers` |

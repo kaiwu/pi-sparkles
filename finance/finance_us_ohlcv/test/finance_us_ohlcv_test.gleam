@@ -3,11 +3,15 @@ import finance_core/time
 import finance_listing/effective
 import finance_listing/listing
 import finance_ohlcv
+import finance_provenance/hash
+import finance_provenance/identity
 import finance_track
 import finance_us_ohlcv
 import finance_us_ohlcv/assessment
+import finance_us_ohlcv/gap_receipt
 import gleam/list
-import gleam/option.{None}
+import gleam/option.{None, Some}
+import gleam/string
 import gleeunit
 import gleeunit/should
 
@@ -178,6 +182,72 @@ pub fn exact_track_mic_and_venue_are_not_relabelled_test() {
   |> should.equal(Error(assessment.ListingVenueMismatch))
 }
 
+pub fn canonical_gap_receipt_binds_page_content_and_bar_dates_test() {
+  let original =
+    gap_projection(
+      [civil(2026, 6, 18), civil(2026, 6, 24)],
+      string.repeat("a", 64),
+    )
+  let changed_page =
+    gap_projection(
+      [civil(2026, 6, 18), civil(2026, 6, 24)],
+      string.repeat("b", 64),
+    )
+  let changed_dates =
+    gap_projection([civil(2026, 6, 18)], string.repeat("a", 64))
+  let assert Ok(original_digest) =
+    original |> gap_receipt.canonical_text |> hash.text
+  let assert Ok(repeated_digest) =
+    original |> gap_receipt.canonical_text |> hash.text
+  let assert Ok(changed_page_digest) =
+    changed_page |> gap_receipt.canonical_text |> hash.text
+  let assert Ok(changed_dates_digest) =
+    changed_dates |> gap_receipt.canonical_text |> hash.text
+
+  original_digest |> should.equal(repeated_digest)
+  original_digest |> should.not_equal(changed_page_digest)
+  original_digest |> should.not_equal(changed_dates_digest)
+  gap_receipt.request_ids(original)
+  |> should.equal(["request-one", "request-two"])
+}
+
+pub fn gap_receipt_rejects_non_sequential_pages_and_bar_date_duplicates_test() {
+  let assert Ok(hash_value) = identity.sha256(string.repeat("a", 64))
+  let assert Ok(page_one) =
+    gap_receipt.page(1, Some("request-one"), 100, hash_value)
+  let assert Ok(page_three) =
+    gap_receipt.page(3, Some("request-three"), 100, hash_value)
+  gap_receipt.new(
+    provider: "alpaca",
+    symbol: "IBM",
+    start_date: civil(2026, 6, 18),
+    end_date: civil(2026, 6, 24),
+    identity_as_of: civil(2026, 6, 25),
+    feed: "sip",
+    source_reference: "https://data.alpaca.markets/v2/stocks/bars?fixture=receipt",
+    retrieved_at: instant(1_775_000_000_000),
+    pagination: gap_receipt.Complete,
+    pages: [page_one, page_three],
+    bar_dates: [civil(2026, 6, 18), civil(2026, 6, 18)],
+  )
+  |> should.equal(Error(gap_receipt.InvalidBarDateOrder))
+
+  gap_receipt.new(
+    provider: "alpaca",
+    symbol: "IBM",
+    start_date: civil(2026, 6, 18),
+    end_date: civil(2026, 6, 24),
+    identity_as_of: civil(2026, 6, 25),
+    feed: "sip",
+    source_reference: "https://data.alpaca.markets/v2/stocks/bars?fixture=receipt",
+    retrieved_at: instant(1_775_000_000_000),
+    pagination: gap_receipt.Complete,
+    pages: [page_one, page_three],
+    bar_dates: [civil(2026, 6, 18)],
+  )
+  |> should.equal(Error(gap_receipt.InvalidPageSequence(2, 3)))
+}
+
 fn nyse_listing(starts: time.Date) -> assessment.ListingReceipt {
   let key = listing_key(finance_track.Us, "XNYS")
   let assert Ok(interval) = effective.new(starts, None)
@@ -202,6 +272,33 @@ fn complete_provider() -> assessment.ProviderReceipt {
   value
 }
 
+fn gap_projection(
+  bar_dates: List(time.Date),
+  first_hash: String,
+) -> gap_receipt.Receipt {
+  let assert Ok(first_content_hash) = identity.sha256(first_hash)
+  let assert Ok(second_content_hash) = identity.sha256(string.repeat("c", 64))
+  let assert Ok(first) =
+    gap_receipt.page(1, Some("request-one"), 100, first_content_hash)
+  let assert Ok(second) =
+    gap_receipt.page(2, Some("request-two"), 200, second_content_hash)
+  let assert Ok(value) =
+    gap_receipt.new(
+      provider: "alpaca",
+      symbol: "IBM",
+      start_date: civil(2026, 6, 18),
+      end_date: civil(2026, 6, 24),
+      identity_as_of: civil(2026, 6, 25),
+      feed: "sip",
+      source_reference: "https://data.alpaca.markets/v2/stocks/bars?fixture=receipt",
+      retrieved_at: instant(1_775_000_000_000),
+      pagination: gap_receipt.Complete,
+      pages: [first, second],
+      bar_dates: bar_dates,
+    )
+  value
+}
+
 fn listing_key(track: finance_track.Track, mic_value: String) -> listing.Key {
   let assert Ok(instrument_id) = identifier.instrument_id("figi:BBG000BLNNH6")
   let assert Ok(symbol) = identifier.symbol("IBM")
@@ -211,5 +308,10 @@ fn listing_key(track: finance_track.Track, mic_value: String) -> listing.Key {
 
 fn civil(year: Int, month: Int, day: Int) -> time.Date {
   let assert Ok(value) = time.date(year, month, day)
+  value
+}
+
+fn instant(milliseconds: Int) -> time.Instant {
+  let assert Ok(value) = time.instant(milliseconds)
   value
 }

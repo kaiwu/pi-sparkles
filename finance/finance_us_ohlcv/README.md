@@ -8,6 +8,14 @@ bounded `finance_us_calendar` dataset, an exact `finance_listing` key and
 effective interval, a complete provider acquisition receipt, and one explicit
 trading-or-suspended status receipt for every absent open listing date.
 
+`finance_us_ohlcv/gap_receipt` also defines the pure canonical projection used
+to hand an acquisition receipt to the compositor. Version 1 binds the exact US
+track, provider plan identity, retrieval time, pagination state, ordered bar
+dates, and every fetched page's sequence, byte length, optional request ID, and
+body SHA-256. Hash interpretation stays in the Pi effect shells through the
+reviewed `finance_provenance/hash` interpreter; this package only constructs and
+validates immutable canonical content.
+
 The classifier walks every civil date in an inclusive range of at most 366
 dates. It returns separate `MarketClosure`, `Suspension`, `ProviderOmission`,
 and `UnavailableHistory` outcomes while retaining all evidence legs used for
@@ -26,5 +34,6 @@ Listing and status references are caller-supplied evidence pointers; this
 package validates their structure and coherence but does not retrieve or
 authenticate them. Its output is therefore a deterministic classification from
 supplied receipts, not proof that those receipts came from an authority. It
-does not fetch data, mutate a bar batch, synthesize bars, infer suspensions,
-assess corporate actions, or grant redistribution rights.
+also treats a matching SHA-256 as content coherence, not a provider signature
+or origin proof. It does not fetch data, mutate a bar batch, synthesize bars,
+infer suspensions, assess corporate actions, or grant redistribution rights.

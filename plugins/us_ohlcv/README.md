@@ -21,7 +21,10 @@ Every result includes:
   raw-adjustment semantics; exact trade-session membership remains an explicit
   unverified provider limitation;
 - Alpaca request IDs, pages fetched, truncation reason, exact duplicate count,
-  retrieval time, feed entitlement, and redistribution limitations; and
+  retrieval time, feed entitlement, and redistribution limitations;
+- a copy-ready `gapAssessmentReceipt` with SHA-256 for each exact response body
+  and one canonical SHA-256 binding provider plan identity, retrieval time,
+  pagination, page receipts, and ordered normalized bar dates; and
 - an explicit `calendar_not_assessed` receipt. This acquisition tool never
   guesses that a missing session is a closure, suspension, provider omission,
   or unavailable history.
@@ -30,7 +33,8 @@ The separately loadable, network-free `us_ohlcv_gaps` plugin can now compose
 copied output fields with the reviewed 2026 venue calendar, an exact listing
 interval, and explicit status receipts. It does not mutate this tool's result,
 and incomplete pagination or missing/conflicting evidence rejects the
-assessment.
+assessment. The digest detects a changed or incomplete copy; it is not an
+Alpaca signature and does not authenticate provider origin.
 
 Configure credentials only through the runtime environment:
 

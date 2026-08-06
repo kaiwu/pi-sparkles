@@ -72,7 +72,9 @@ than treating either venue as a global or provider-derived default, and
 turning caller declarations into verified identity or security status.
 `finance_us_ohlcv` owns the US-only calendar/listing/status/provider-receipt join;
 it must reject incomplete or conflicting evidence and must not authenticate
-caller-supplied receipts by assertion.
+caller-supplied receipts by assertion. Its canonical gap projection may bind
+page-content hashes and copied fields, but a matching digest must not be
+presented as a provider signature, authority proof, or origin authentication.
 
 Provider adapters such as `finance_openfigi` and `finance_sec` are also independent finance
 packages but sit outside the provider-neutral foundation. They may compose core

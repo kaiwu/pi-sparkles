@@ -13,9 +13,12 @@ import finance_market_alpaca/query
 import finance_market_alpaca/request as provider_request
 import finance_market_alpaca/runtime
 import finance_ohlcv
+import finance_provenance/hash
+import finance_provenance/identity
 import finance_track
 import finance_track/context as track_context
 import finance_track/json as track_json
+import finance_us_ohlcv/gap_receipt
 import gleam/dynamic/decode
 import gleam/int
 import gleam/javascript/promise.{type Promise}
@@ -56,6 +59,7 @@ type FetchOutcome {
     pagination: finance_ohlcv.Pagination,
     next_page_token: Option(String),
     request_ids: List(String),
+    page_receipts: List(gap_receipt.Page),
   )
 }
 
@@ -65,7 +69,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "us_stock_ohlcv",
     "US exact daily OHLCV",
-    "Fetch bounded raw-adjustment Alpaca daily US stock bars for an exact symbol/as-of identity and explicit IEX or SIP feed; preserve source numeric lexemes and expose pagination, entitlement, and unassessed calendar gaps",
+    "Fetch bounded raw-adjustment Alpaca daily US stock bars for an exact symbol/as-of identity and explicit IEX or SIP feed; preserve source numeric lexemes, page-body hashes, a canonical gap-projection digest, pagination, entitlement, and unassessed calendar gaps",
     "Retrieve reproducible daily US OHLCV without feed fallback, adjustment, synthetic bars, or guessed closures and suspensions",
     tool.parameters(input_schema(), input_decoder()),
     tool.Parallel,
@@ -86,6 +90,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                   None,
                   [],
                   0,
+                  [],
                   [],
                   [],
                 ),
@@ -109,11 +114,29 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                         <> string.inspect(error),
                       )
                     Ok(batch) ->
-                      tool.text_result(
-                        render(query_plan, batch, outcome),
-                        result_json(query_plan, batch, outcome, retrieved_at),
-                      )
-                      |> promise.resolve
+                      case
+                        build_gap_receipt(
+                          query_plan,
+                          batch,
+                          outcome,
+                          retrieved_at,
+                        )
+                      {
+                        Error(message) -> tool.reject(message)
+                        Ok(#(receipt, digest)) ->
+                          tool.text_result(
+                            render(query_plan, batch, outcome),
+                            result_json(
+                              query_plan,
+                              batch,
+                              outcome,
+                              retrieved_at,
+                              receipt,
+                              digest,
+                            ),
+                          )
+                          |> promise.resolve
+                      }
                   }
                 }
               }
@@ -173,6 +196,7 @@ fn fetch_pages(
   pages_fetched: Int,
   accumulated: List(alpaca_bars.RawBar),
   request_ids: List(String),
+  page_receipts: List(gap_receipt.Page),
 ) -> Promise(Result(FetchOutcome, String)) {
   let remaining = query.maximum_bars(plan) - list.length(accumulated)
   let page_limit = int.min(query.page_size(plan), remaining)
@@ -185,6 +209,7 @@ fn fetch_pages(
           finance_ohlcv.TruncatedByBarBudget(query.maximum_bars(plan)),
           page_token,
           request_ids,
+          page_receipts,
         )),
       )
     False ->
@@ -200,92 +225,102 @@ fn fetch_pages(
           case checked_response(response) {
             Error(message) -> promise.resolve(Error(message))
             Ok(response_value) ->
-              case
-                alpaca_bars.decode_page(
-                  http_response.body(response_value),
-                  for: plan,
-                  page_limit: page_limit,
-                )
-              {
-                Error(_) ->
-                  promise.resolve(Error(
-                    "Alpaca returned invalid, mismatched, or over-budget daily bars",
-                  ))
-                Ok(page) -> {
-                  let combined =
-                    list.append(accumulated, alpaca_bars.bars(page))
-                  let next_pages = pages_fetched + 1
-                  let next_request_ids = case
-                    http_response.first_header(
-                      response_value,
-                      name: "x-request-id",
+              case response_page_receipt(response_value, pages_fetched + 1) {
+                Error(message) -> promise.resolve(Error(message))
+                Ok(page_receipt) ->
+                  case
+                    alpaca_bars.decode_page(
+                      http_response.body(response_value),
+                      for: plan,
+                      page_limit: page_limit,
                     )
                   {
-                    Some(value) -> list.append(request_ids, [value])
-                    None -> request_ids
-                  }
-                  case alpaca_bars.next_page_token(page) {
-                    None ->
-                      promise.resolve(
-                        Ok(FetchOutcome(
-                          combined,
-                          next_pages,
-                          finance_ohlcv.AllPages,
-                          None,
-                          next_request_ids,
-                        )),
-                      )
-                    Some(next_token) ->
-                      case
-                        list.contains(seen_tokens, next_token)
-                        || page_token == Some(next_token),
-                        list.length(combined) >= query.maximum_bars(plan),
-                        next_pages >= query.maximum_pages(plan)
+                    Error(_) ->
+                      promise.resolve(Error(
+                        "Alpaca returned invalid, mismatched, or over-budget daily bars",
+                      ))
+                    Ok(page) -> {
+                      let combined =
+                        list.append(accumulated, alpaca_bars.bars(page))
+                      let next_pages = pages_fetched + 1
+                      let next_page_receipts =
+                        list.append(page_receipts, [page_receipt])
+                      let next_request_ids = case
+                        http_response.first_header(
+                          response_value,
+                          name: "x-request-id",
+                        )
                       {
-                        True, _, _ ->
-                          promise.resolve(Error(
-                            "Alpaca repeated a pagination token; pagination stopped safely",
-                          ))
-                        _, True, _ ->
-                          promise.resolve(
-                            Ok(FetchOutcome(
-                              combined,
-                              next_pages,
-                              finance_ohlcv.TruncatedByBarBudget(
-                                query.maximum_bars(plan),
-                              ),
-                              Some(next_token),
-                              next_request_ids,
-                            )),
-                          )
-                        _, _, True ->
-                          promise.resolve(
-                            Ok(FetchOutcome(
-                              combined,
-                              next_pages,
-                              finance_ohlcv.TruncatedByPageBudget(
-                                query.maximum_pages(plan),
-                              ),
-                              Some(next_token),
-                              next_request_ids,
-                            )),
-                          )
-                        False, False, False ->
-                          fetch_pages(
-                            provider_runtime,
-                            access,
-                            plan,
-                            id,
-                            cancellation,
-                            Some(next_token),
-                            [next_token, ..seen_tokens],
-                            next_pages,
-                            combined,
-                            next_request_ids,
-                          )
+                        Some(value) -> list.append(request_ids, [value])
+                        None -> request_ids
                       }
+                      case alpaca_bars.next_page_token(page) {
+                        None ->
+                          promise.resolve(
+                            Ok(FetchOutcome(
+                              combined,
+                              next_pages,
+                              finance_ohlcv.AllPages,
+                              None,
+                              next_request_ids,
+                              next_page_receipts,
+                            )),
+                          )
+                        Some(next_token) ->
+                          case
+                            list.contains(seen_tokens, next_token)
+                            || page_token == Some(next_token),
+                            list.length(combined) >= query.maximum_bars(plan),
+                            next_pages >= query.maximum_pages(plan)
+                          {
+                            True, _, _ ->
+                              promise.resolve(Error(
+                                "Alpaca repeated a pagination token; pagination stopped safely",
+                              ))
+                            _, True, _ ->
+                              promise.resolve(
+                                Ok(FetchOutcome(
+                                  combined,
+                                  next_pages,
+                                  finance_ohlcv.TruncatedByBarBudget(
+                                    query.maximum_bars(plan),
+                                  ),
+                                  Some(next_token),
+                                  next_request_ids,
+                                  next_page_receipts,
+                                )),
+                              )
+                            _, _, True ->
+                              promise.resolve(
+                                Ok(FetchOutcome(
+                                  combined,
+                                  next_pages,
+                                  finance_ohlcv.TruncatedByPageBudget(
+                                    query.maximum_pages(plan),
+                                  ),
+                                  Some(next_token),
+                                  next_request_ids,
+                                  next_page_receipts,
+                                )),
+                              )
+                            False, False, False ->
+                              fetch_pages(
+                                provider_runtime,
+                                access,
+                                plan,
+                                id,
+                                cancellation,
+                                Some(next_token),
+                                [next_token, ..seen_tokens],
+                                next_pages,
+                                combined,
+                                next_request_ids,
+                                next_page_receipts,
+                              )
+                          }
+                      }
+                    }
                   }
-                }
               }
           }
         }
@@ -313,6 +348,78 @@ fn checked_response(
           Error("Alpaca bars request returned HTTP " <> int.to_string(status))
       }
     }
+  }
+}
+
+fn response_page_receipt(
+  response: http_response.Response,
+  sequence: Int,
+) -> Result(gap_receipt.Page, String) {
+  use content_hash <- result.try(
+    hash.text(http_response.body(response))
+    |> result.map_error(fn(_) {
+      "Alpaca response content could not be hashed safely"
+    }),
+  )
+  gap_receipt.page(
+    sequence,
+    http_response.first_header(response, name: "x-request-id"),
+    http_response.byte_length(response),
+    content_hash,
+  )
+  |> result.map_error(fn(_) {
+    "Alpaca response page receipt was structurally invalid"
+  })
+}
+
+fn build_gap_receipt(
+  plan: query.DailyBarsQuery,
+  batch: finance_ohlcv.Batch,
+  fetched: FetchOutcome,
+  retrieved_at: time.Instant,
+) -> Result(#(gap_receipt.Receipt, identity.Sha256), String) {
+  let bar_dates =
+    batch
+    |> finance_ohlcv.observations
+    |> list.map(fn(observation) {
+      observation.value |> finance_ohlcv.session_date
+    })
+  use receipt <- result.try(
+    gap_receipt.new(
+      provider: "alpaca",
+      symbol: query.symbol(plan),
+      start_date: query.start_date(plan),
+      end_date: query.end_date(plan),
+      identity_as_of: query.as_of_date(plan),
+      feed: query.feed_name(query.feed(plan)),
+      source_reference: query.daily_bars_source_reference(plan),
+      retrieved_at: retrieved_at,
+      pagination: receipt_pagination(fetched.pagination),
+      pages: fetched.page_receipts,
+      bar_dates: bar_dates,
+    )
+    |> result.map_error(fn(_) {
+      "Alpaca gap-assessment receipt was structurally invalid"
+    }),
+  )
+  use digest <- result.try(
+    receipt
+    |> gap_receipt.canonical_text
+    |> hash.text
+    |> result.map_error(fn(_) {
+      "Alpaca gap-assessment receipt could not be hashed safely"
+    }),
+  )
+  Ok(#(receipt, digest))
+}
+
+fn receipt_pagination(
+  value: finance_ohlcv.Pagination,
+) -> gap_receipt.Pagination {
+  case value {
+    finance_ohlcv.AllPages -> gap_receipt.Complete
+    finance_ohlcv.TruncatedByPageBudget(_) -> gap_receipt.TruncatedByPageBudget
+    finance_ohlcv.TruncatedByBarBudget(_) -> gap_receipt.TruncatedByBarBudget
   }
 }
 
@@ -496,6 +603,8 @@ fn result_json(
   batch: finance_ohlcv.Batch,
   fetched: FetchOutcome,
   retrieved_at: time.Instant,
+  receipt: gap_receipt.Receipt,
+  receipt_digest: identity.Sha256,
 ) -> json.Json {
   json.object(
     list.append(track_json.result_fields(result_context(query.feed(plan))), [
@@ -538,6 +647,10 @@ fn result_json(
         calendar_json(finance_ohlcv.calendar_assessment(batch)),
       ),
       #(
+        "gapAssessmentReceipt",
+        gap_assessment_receipt_json(receipt, receipt_digest),
+      ),
+      #(
         "gapStates",
         json.array(
           [
@@ -555,6 +668,66 @@ fn result_json(
       #("limitations", json.array(limitations(query.feed(plan)), json.string)),
     ]),
   )
+}
+
+fn gap_assessment_receipt_json(
+  value: gap_receipt.Receipt,
+  digest: identity.Sha256,
+) -> json.Json {
+  json.object([
+    #("schema", json.string(gap_receipt.schema_name)),
+    #("schemaVersion", json.int(gap_receipt.schema_version)),
+    #("digestAlgorithm", json.string(gap_receipt.digest_algorithm)),
+    #("digest", json.string(identity.sha256_value(digest))),
+    #("provider", json.string(gap_receipt.provider(value))),
+    #("symbol", json.string(gap_receipt.symbol(value))),
+    #("startDate", json.string(date_text(gap_receipt.start_date(value)))),
+    #("endDate", json.string(date_text(gap_receipt.end_date(value)))),
+    #("identityAsOf", json.string(date_text(gap_receipt.identity_as_of(value)))),
+    #("feed", json.string(gap_receipt.feed(value))),
+    #("sourceReference", json.string(gap_receipt.source_reference(value))),
+    #(
+      "retrievedAtUnixMilliseconds",
+      json.int(time.unix_milliseconds(gap_receipt.retrieved_at(value))),
+    ),
+    #(
+      "pagination",
+      json.string(gap_receipt.pagination_name(gap_receipt.pagination(value))),
+    ),
+    #("pages", json.array(gap_receipt.pages(value), receipt_page_json)),
+    #(
+      "barDates",
+      json.array(gap_receipt.bar_dates(value), fn(value) {
+        value |> date_text |> json.string
+      }),
+    ),
+    #(
+      "integrity",
+      json.object([
+        #("state", json.string("sha256_content_bound")),
+        #("scope", json.string("canonical_gap_projection_v1")),
+        #("providerAuthenticated", json.bool(False)),
+      ]),
+    ),
+  ])
+}
+
+fn receipt_page_json(value: gap_receipt.Page) -> json.Json {
+  json.object([
+    #("sequence", json.int(gap_receipt.page_sequence(value))),
+    #(
+      "requestId",
+      json.nullable(gap_receipt.page_request_id(value), json.string),
+    ),
+    #("byteLength", json.int(gap_receipt.page_byte_length(value))),
+    #(
+      "contentSha256",
+      value
+        |> gap_receipt.page_content_sha256
+        |> identity.sha256_value
+        |> json.string,
+    ),
+  ])
 }
 
 fn bar_json(value: Observation(finance_ohlcv.Bar)) -> json.Json {

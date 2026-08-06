@@ -45,7 +45,8 @@ repository currently contains:
   units kept visible;
 - a network-free `us_ohlcv_gaps` compositor that joins copied Alpaca receipt
   fields to the exact 2026 venue calendar, listing interval, and per-gap status
-  evidence without changing or synthesizing bars;
+  evidence only after reconstructing the acquisition plugin's canonical
+  SHA-256-bound page projection, without changing or synthesizing bars;
 - an exact US latest best-bid-and-ask slice in `us_quote`, using explicit
   Alpaca IEX/SIP selection and the provider-neutral `finance_quote` envelope;
 - a network-free `stock_research_report` compositor that validates exact
@@ -96,7 +97,8 @@ direct quarters are unavailable. A typed `DirectQuarter | DerivedQuarter`
 composition expands every derived Q4 back to its annual/YTD source leaves.
 `us_stock_ohlcv` requires an exact Alpaca symbol/as-of date and explicit IEX or
 SIP feed. It preserves source numeric lexemes, follows pagination only within
-caller budgets, retains request IDs, and labels USD/share/timezone/provider-
+caller budgets, retains request IDs and exact page-body SHA-256 values, emits a
+versioned canonical gap-projection digest, and labels USD/share/timezone/provider-
 session/raw-adjustment semantics without asserting unverified trade-session
 membership. The separate reviewed US calendar can classify planned exchange
 days, but `us_stock_ohlcv` deliberately does not compose it with listing and
@@ -105,9 +107,10 @@ silently classified as closures, suspensions, provider omissions, or
 unavailable history. The separate network-free `us_ohlcv_gap_assessment` tool
 can now classify a copied 2026 receipt only when pagination is complete, exact
 venue/listing scope is supplied, and every absent open listing date has an
-explicit trading-or-suspended status receipt. Its supplied evidence is not
-authority or cryptographically verified, and it never mutates the acquisition
-result. `us_stock_quote` supplies the
+explicit trading-or-suspended status receipt. It verifies the copied provider
+projection's SHA-256 before classification, but the digest is not a provider
+signature and its listing/status evidence is not authority verified. It never
+mutates the acquisition result. `us_stock_quote` supplies the
 paired latest best bid/ask required by the existing quote/history family. It
 preserves exact provider price and size tokens, exchange/condition/tape codes,
 and explicitly reports freshness, latency, session, and size-unit semantics as
@@ -442,7 +445,7 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_http` | Safe requests, bounded fetch transport, cancellation, retry/`Retry-After`, rate limits, pooling, scheduling, caching, and cassettes. |
 | `finance_math` | Composable exact formula trees plus explicit approximate statistics, regression, risk, cash-flow, and fixed-income policies. |
 | `finance_ohlcv` | Exact raw-plus-normalized OHLCV bars, source-instant/date-anchor and proven/unknown-volume distinctions, canonical observations, strict ordering/exact deduplication, and separate pagination/calendar completeness. |
-| `finance_us_ohlcv` | US-only exact venue-calendar/listing/status/provider-receipt composition with four typed gap outcomes and fail-closed conflicts. |
+| `finance_us_ohlcv` | US-only exact venue-calendar/listing/status/provider-receipt composition, a pure canonical SHA-256 projection contract, four typed gap outcomes, and fail-closed conflicts. |
 | `finance_quote` | Exact raw-plus-normalized bid/ask prices and sizes, provider market codes, canonical observations, and explicitly unverified provider size units. |
 | `finance_openfigi` | OpenFIGI v3 access, mapping/search plans, pagination, decoding, authenticated/anonymous rate profiles, and a bounded shared runtime. |
 | `finance_eastmoney` | Bounded public-web SSE/SZSE/BSE/HK quote and raw daily-history plans/decoders with exact source lexemes, explicit caller identity, unknown service level, and unknown redistribution. |
@@ -478,7 +481,8 @@ The first F0 plugin batch demonstrates this direction:
 - `us_market_rules` exposes the current NYSE/Nasdaq regular displayed-quote
   increment for an exact listing and date, while rejecting unsupported regimes;
 - `us_ohlcv_gaps` structurally classifies copied 2026 Alpaca missing dates only
-  after complete pagination and exact calendar/listing/status evidence;
+  after canonical projection SHA-256 verification, complete pagination, and
+  exact calendar/listing/status evidence;
 - `cn_setup` and `hk_setup` provide isolated readiness reports and refuse to
   treat sibling/SEC tools or unapproved providers as available;
 - `finance_guardrails` composes evidence checks and accumulates typed issues;

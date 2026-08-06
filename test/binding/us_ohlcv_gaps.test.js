@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
 const artifact = resolve(import.meta.dir, "../../dist/us_ohlcv_gaps/index.js");
@@ -45,21 +46,15 @@ async function execute(tool, input) {
 }
 
 function input(overrides = {}) {
+  const { providerReceipt: providerOverrides = {}, ...inputOverrides } =
+    overrides;
   return {
     venue: "nyse",
     instrumentId: "figi:BBG000BLNNH6",
-    symbol: "IBM",
     listingStartDate: "2026-01-01",
     listingEndDate: null,
     listingEvidenceReference: "authority:listing:IBM:XNYS:2026",
-    startDate: "2026-06-18",
-    endDate: "2026-06-24",
-    identityAsOf: "2026-06-25",
-    feed: "sip",
-    pagination: "complete",
-    sourceReference,
-    requestIds: ["request-one", "request-two"],
-    barDates: ["2026-06-18", "2026-06-24"],
+    providerReceipt: providerReceipt(providerOverrides),
     statusReceipts: [
       {
         date: "2026-06-22",
@@ -72,8 +67,67 @@ function input(overrides = {}) {
         evidenceReference: "authority:nyse-status:IBM:2026-06-23",
       },
     ],
+    ...inputOverrides,
+  };
+}
+
+function providerReceipt(overrides = {}) {
+  const receipt = {
+    schema: "pi-sparkles/us-ohlcv-gap-receipt",
+    schemaVersion: 1,
+    digestAlgorithm: "sha256",
+    provider: "alpaca",
+    symbol: "IBM",
+    startDate: "2026-06-18",
+    endDate: "2026-06-24",
+    identityAsOf: "2026-06-25",
+    feed: "sip",
+    sourceReference,
+    retrievedAtUnixMilliseconds: 1775000000000,
+    pagination: "complete",
+    pages: [
+      {
+        sequence: 1,
+        requestId: "request-one",
+        byteLength: 100,
+        contentSha256: "a".repeat(64),
+      },
+      {
+        sequence: 2,
+        requestId: "request-two",
+        byteLength: 200,
+        contentSha256: "b".repeat(64),
+      },
+    ],
+    barDates: ["2026-06-18", "2026-06-24"],
     ...overrides,
   };
+  return { ...receipt, digest: receiptDigest(receipt) };
+}
+
+function receiptDigest(receipt) {
+  const canonical = {
+    schema: receipt.schema,
+    schema_version: receipt.schemaVersion,
+    track: "us",
+    provider: receipt.provider,
+    symbol: receipt.symbol,
+    start_date: receipt.startDate,
+    end_date: receipt.endDate,
+    identity_as_of: receipt.identityAsOf,
+    feed: receipt.feed,
+    source_reference: receipt.sourceReference,
+    retrieved_at_unix_ms: String(receipt.retrievedAtUnixMilliseconds),
+    pagination: receipt.pagination,
+    pages: receipt.pages.map((page) => ({
+      sequence: page.sequence,
+      request_id: page.requestId,
+      byte_length: String(page.byteLength),
+      content_sha256: page.contentSha256,
+    })),
+    bar_dates: receipt.barDates,
+  };
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
 }
 
 describe("US OHLCV gap receipt composition", () => {
@@ -104,6 +158,12 @@ describe("US OHLCV gap receipt composition", () => {
       feed: "sip",
       pagination: "complete",
       requestIds: ["request-one", "request-two"],
+      digestAlgorithm: "sha256",
+    });
+    expect(result.details.providerReceipt.integrity).toMatchObject({
+      state: "sha256_content_match",
+      scope: "canonical_gap_projection_v1",
+      providerAuthenticated: false,
     });
     expect(result.details.assessment).toEqual({
       state: "fully_classified_from_supplied_receipts",
@@ -139,7 +199,9 @@ describe("US OHLCV gap receipt composition", () => {
     await expect(
       execute(
         tools.get("us_ohlcv_gap_assessment"),
-        input({ pagination: "truncated_by_page_budget" }),
+        input({
+          providerReceipt: { pagination: "truncated_by_page_budget" },
+        }),
       ),
     ).rejects.toThrow("complete provider pagination");
 
@@ -149,6 +211,16 @@ describe("US OHLCV gap receipt composition", () => {
         input({ statusReceipts: [] }),
       ),
     ).rejects.toThrow("2026-06-22");
+    expect(fetchCalls).toBe(0);
+  });
+
+  test("rejects a copied projection changed after the digest was issued", async () => {
+    const tools = await harness();
+    const value = input();
+    value.providerReceipt.barDates = ["2026-06-18"];
+    await expect(
+      execute(tools.get("us_ohlcv_gap_assessment"), value),
+    ).rejects.toThrow("canonical SHA-256 digest");
     expect(fetchCalls).toBe(0);
   });
 });

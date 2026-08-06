@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
 const artifact = resolve(import.meta.dir, "../../dist/us_ohlcv/index.js");
@@ -94,6 +95,42 @@ describe("US Alpaca OHLCV boundary", () => {
     expect(result.details.calendarCompleteness.state).toBe(
       "calendar_not_assessed",
     );
+    expect(result.details.gapAssessmentReceipt).toMatchObject({
+      schema: "pi-sparkles/us-ohlcv-gap-receipt",
+      schemaVersion: 1,
+      digestAlgorithm: "sha256",
+      provider: "alpaca",
+      symbol: "AAPL",
+      startDate: "2024-08-01",
+      endDate: "2024-08-05",
+      identityAsOf: "2024-08-06",
+      feed: "sip",
+      pagination: "complete",
+      barDates: ["2024-08-01", "2024-08-02", "2024-08-05"],
+      integrity: {
+        state: "sha256_content_bound",
+        scope: "canonical_gap_projection_v1",
+        providerAuthenticated: false,
+      },
+    });
+    expect(result.details.gapAssessmentReceipt.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.details.gapAssessmentReceipt.digest).toBe(
+      receiptDigest(result.details.gapAssessmentReceipt),
+    );
+    expect(result.details.gapAssessmentReceipt.pages).toEqual([
+      {
+        sequence: 1,
+        requestId: "request-one",
+        byteLength: Buffer.byteLength(firstPage),
+        contentSha256: createHash("sha256").update(firstPage).digest("hex"),
+      },
+      {
+        sequence: 2,
+        requestId: "request-two",
+        byteLength: Buffer.byteLength(secondPage),
+        contentSha256: createHash("sha256").update(secondPage).digest("hex"),
+      },
+    ]);
     expect(result.details.availability).toBe("bars_returned");
     expect(result.details.bars).toHaveLength(3);
     expect(result.details.bars[0].raw.open).toBe("185.6200");
@@ -145,3 +182,28 @@ describe("US Alpaca OHLCV boundary", () => {
     );
   });
 });
+
+function receiptDigest(receipt) {
+  const canonical = {
+    schema: receipt.schema,
+    schema_version: receipt.schemaVersion,
+    track: "us",
+    provider: receipt.provider,
+    symbol: receipt.symbol,
+    start_date: receipt.startDate,
+    end_date: receipt.endDate,
+    identity_as_of: receipt.identityAsOf,
+    feed: receipt.feed,
+    source_reference: receipt.sourceReference,
+    retrieved_at_unix_ms: String(receipt.retrievedAtUnixMilliseconds),
+    pagination: receipt.pagination,
+    pages: receipt.pages.map((page) => ({
+      sequence: page.sequence,
+      request_id: page.requestId,
+      byte_length: String(page.byteLength),
+      content_sha256: page.contentSha256,
+    })),
+    bar_dates: receipt.barDates,
+  };
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
