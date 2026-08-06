@@ -23,12 +23,23 @@ disclosures, language, data rights, and provider contracts remain China-owned.
   supplies shared exact validation/composition; `us_stock_ohlcv` uses bounded
   credentialed Alpaca IEX/SIP bars, while `cn_stock_ohlcv` and
   `hk_stock_ohlcv` reuse bounded Eastmoney raw history without importing the US
-  adapter. Calendar/status composition and provider-unit proof remain open.
+  adapter. The separate US receipt compositor now implements strict 2026
+  calendar/listing/status/provider gap classification; CN/HK counterparts,
+  authority-owned identity/status evidence, and provider-unit proof remain open.
 - The US quote counterpart is now Experimental: `finance_quote` supplies the
   exact provider-neutral envelope and `us_stock_quote` uses the same bounded
   Alpaca runtime with explicit IEX/SIP selection. It preserves bid/ask market
   codes and exact tokens while keeping freshness, session, latency, and size
   semantics unknown.
+- The US calendar counterpart is now Experimental: `finance_us_calendar` and
+  `us_market_calendar` preserve separate NYSE/XNYS and Nasdaq/XNAS official
+  2026 schedules, including 1:00 p.m. Eastern early closes. The acquisition
+  result remains uncomposed, while `us_ohlcv_gaps` can now join copied calendar,
+  listing, status, and complete provider receipts without mutating it.
+- The US effective-rule counterpart is now Experimental: `finance_us_rules`
+  and `us_market_rules` preserve exact listing/venue/date scope for the current
+  NYSE/Nasdaq regular displayed-quote increment and expose the SEC half-cent
+  compliance boundary. Broader market-structure rules remain outside it.
 - The repository will expose exactly three market tracks: `cn` (mainland
   China), `hk` (Hong Kong), and `us` (United States). Provider-neutral and
   cross-market capabilities are not additional tracks.
@@ -60,12 +71,14 @@ With all matching implemented tools installed, the current status receipt is:
 | --- | ---: | ---: | --- |
 | `cn` | 65% | 100% | navigation, source registry, security identity, market calendar, effective rules, quote/history, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
 | `hk` | 70% | 100% | navigation, source registry, security identity, market calendar, effective rules, quote/history, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
-| `us` | 80% | 80% | navigation, source registry, security identity, quote/history, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
+| `us` | 80% | 100% | navigation, source registry, security identity, market calendar, effective rules, quote/history, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
 
-This closes every requirement in the current CN/HK installed-feature
-denominator; US now reaches an independently measured 80% when both Alpaca
-quote and OHLCV tools are loaded. It does not claim
-complete statement depth or 85% operational source maturity. The
+This closes every requirement in the current three-track installed-feature
+denominator when each track's matching tools are loaded; US reaches 100% with
+the paired Alpaca quote/OHLCV, calendar, and current-rule tools. The independent
+calendar and rules tools are not an OHLCV gap join. Installed breadth does not
+claim complete statement/rule depth, authoritative identity, market-data
+entitlement, or 85% operational source maturity. The
 structured status receipt exposes the denominator, contributions, every source
 criterion, missing requirements, and critical gaps so a user or LLM can audit
 the percentages instead of trusting the compact statusline.
@@ -100,7 +113,7 @@ daily rows but do not yet establish a shared, calendar-aware OHLCV contract.
 | --- | --- | --- | --- | --- |
 | `cn` | `cn_stock_history`: raw, unadjusted daily Eastmoney rows for explicit SSE/SZSE/BSE identities. | `plugins/cn_ohlcv/` with `cn_stock_ohlcv` is implemented. | `finance_ohlcv`, `finance_eastmoney`, canonical observations, exact series/math, bounded HTTP, and isolated mocked conformance tests. | The first slice requires coherent caller-declared venue/board/share-class/currency, retains exact provider rows and raw adjustment, and labels the date-only ordering anchor plus unknown volume unit/session/calendar/rights. Remaining: independently proven listing identity, composed official calendar/status, suspension classification, amount/turnover units, and permitted real fixtures. |
 | `hk` | `hk_stock_history`: raw, unadjusted daily Eastmoney rows for exact five-digit HK identities and declared listing currency. | `plugins/hk_ohlcv/` with `hk_stock_ohlcv` is implemented. | The same provider-neutral OHLCV/series/calendar/math contracts and HK Eastmoney adapter behind an independent shell. | The first slice requires caller-declared board/share-class/currency, retains exact provider rows and raw adjustment, and labels date-only/unknown volume/session/calendar/rights semantics. Remaining: independently proven HKEX identity/currency, composed official calendar/half-day/status evidence, suspension classification, amount/turnover units, and permitted real fixtures. |
-| `us` | Experimental `finance_market_alpaca` raw daily bars for one exact symbol/as-of key and explicit `iex` or `sip` feed. | `plugins/us_ohlcv/` with `us_stock_ohlcv` is implemented. | `finance_ohlcv`, `finance_series`, `finance_calendar`, `finance_math`, canonical observations, bounded HTTP, and isolated mocked conformance tests; no CN/HK provider assumptions. | First slice retains exact numeric lexemes, USD/share units, `America/New_York`, provider-defined daily session/raw-adjustment semantics, bounded pagination, request IDs, subscription-scoped entitlement, and no redistribution grant. Remaining: reviewed US calendar/status and exact session-membership classification, authoritative listing identity, corporate actions/adjustments, broader feed/product rights, and permitted real fixtures. |
+| `us` | Experimental `finance_market_alpaca` raw daily bars for one exact symbol/as-of key and explicit `iex` or `sip` feed. | `plugins/us_ohlcv/` with `us_stock_ohlcv` and the separate network-free `plugins/us_ohlcv_gaps/` compositor are implemented. | `finance_ohlcv`, `finance_us_ohlcv`, `finance_us_calendar`, `finance_listing`, `finance_series`, canonical observations, bounded HTTP, and isolated mocked conformance tests; no CN/HK provider assumptions. | Acquisition retains exact numeric lexemes, USD/share units, `America/New_York`, provider-defined daily session/raw-adjustment semantics, bounded pagination, request IDs, subscription-scoped entitlement, and no redistribution grant. `us_ohlcv_gap_assessment` can now classify copied 2026 receipts only with exact venue/listing scope, complete pagination, canonical Alpaca source identity, and explicit status evidence for every absent open listing date. Remaining: authority-owned listing/status adapters, cryptographic receipt integrity, corporate actions/adjustments, broader feed/product rights, later calendars, and permitted real fixtures. |
 
 The first OHLCV slice is daily and read-only. Every result must retain exact
 source values plus normalized open/high/low/close/volume, interval and session
@@ -120,7 +133,13 @@ cross-track parity; it does not inflate `feat` merely by adding another tool.
 The US OHLCV slice alone likewise leaves `feat` at 70%. The separate
 `us_stock_quote` counterpart now completes that existing `quotes_history`
 requirement when both tools are active, raising US `feat` to 80% without
-claiming calendar, effective-rules, freshness, or full market-data readiness.
+claiming effective rules, freshness, or full market-data readiness. Loading the
+independent `us_market_calendar` covers the calendar family and raises breadth
+to 90%, but does not silently change the OHLCV result contract. The independent
+`us_market_rules` surface closes the final feature family and raises installed
+breadth to 100%; it likewise does not classify OHLCV gaps or imply broad rule
+coverage. The separate `us_ohlcv_gaps` compositor adds bounded classification
+depth without changing that score or the original provider receipt.
 
 The accepted US provider decision is Alpaca Market Data for this Experimental
 credential-holder slice. IEX and SIP remain separate explicit feeds; a
@@ -347,6 +366,34 @@ Ledger states used below:
   session, and provider size units remain unknown; IEX is not relabelled SIP and
   no redistribution is granted. With `us_stock_ohlcv` also active, US `feat`
   becomes 80%; missing calendar and effective-rules families remain visible.
+- **2026-08-06 — venue-explicit US 2026 calendar:** added isolated
+  `finance_us_calendar` and `us_market_calendar` over the shared calendar
+  engines. Exact `nyse`/`XNYS` and `nasdaq`/`XNAS` contexts retain their own
+  official source references, all ten full closures, the November 27 and
+  December 24 1:00 p.m. Eastern early closes, and annual coverage failure.
+  The local tool has no environment or network dependency. With it loaded US
+  `feat` became 90% at this checkpoint, leaving effective rules as the sole
+  feature-family gap; OHLCV missing rows remained unclassified at this
+  checkpoint until the later separate evidence-join slice.
+- **2026-08-06 — venue-explicit current US quote increments:** added isolated
+  `finance_us_rules` and `us_market_rules`. The `us_trading_rules` tool requires
+  an exact NYSE/XNYS or Nasdaq/XNAS listing plus the narrowly supported USD NMS
+  stock/status/regime/date/price inputs, returns the applicable one-cent or
+  sub-dollar increment, and retains both the exchange clause and SEC Release
+  34-105656. Coverage ends before the November 2027 compliance boundary;
+  unsupported regimes and dates fail closed. The local tool has no environment
+  or network dependency. With it loaded US `feat` becomes 100%, without
+  changing source maturity or OHLCV completeness.
+- **2026-08-06 — strict US OHLCV gap receipt composition:** added isolated
+  `finance_us_ohlcv` and the network-free `us_ohlcv_gaps` plugin. The
+  `us_ohlcv_gap_assessment` tool joins an exact 2026 NYSE/Nasdaq calendar,
+  listing interval, canonical copied Alpaca source identity, complete
+  pagination, ordered bar dates, and explicit status receipts. It retains every
+  evidence leg while separating closures, suspensions, provider omissions, and
+  unavailable history. Truncation, missing evidence, date/order/MIC conflicts,
+  and bars on closures fail closed. Supplied receipt identity is not
+  cryptographically or authority verified, the acquisition result remains
+  unchanged, and this depth slice changes no feature score.
 - **2026-08-06 — first US cited source-fact brief:** added the network-free
   `stock_research_report` compositor. `/us-research` queues the explicit agent
   sequence across existing Alpaca/SEC tools; `us_company_brief` validates
@@ -698,7 +745,8 @@ Provider-neutral deficiencies should be fixed once:
 | `finance_http` | Bounded requests/responses, cancellation, retry decisions, `Retry-After`, rate state, pools, scheduling, cache/cassette types, and redaction. | Each China source defines its own auth, status mapping, retry safety, rate buckets, concurrency, pagination, cache, licence, and outage policy. Do not share SEC/OpenFIGI runtime settings. |
 | `finance_provider_strategy` | Track-isolated channel order, cache policy mapping, first-compatible-success resolution, trace retention, and separate origin/retrieval route. | CN/HK packages define their own channels and exact contracts. Candidate vendors cannot enter an executable plan until approved; no shared default priority silently spans tracks. |
 | `finance_authority_snapshot` | Shared raw UTF-8 capture, exact status/media/byte validation, local-only evidence hashing, origin/path allowlisting, cancellation-aware admission, retry, and pooling. | `finance_csrc` and `finance_sfc` own distinct tracks, authorities, endpoints, media policies, caller identity, and future semantic decoders. PDF/ZIP acquisition needs a separate bounded binary extension. |
-| `finance_calendar` | Civil-date arithmetic, multiple sessions per day, overrides, business days, joint calendars, and bounded schedule scans; `finance_market_calendar` adds source/licence/version/coverage. | The isolated packages now supply venue-owned 2026 SSE/SZSE/BSE/HKEX planned schedules, auctions/midday breaks, and HK half-days. Add annual refresh, later exceptional notices, and typed security-specific settlement/Connect policy without forking the engine. |
+| `finance_calendar` | Civil-date arithmetic, multiple sessions per day, overrides, business days, joint calendars, and bounded schedule scans; `finance_market_calendar` adds source/licence/version/coverage. | The isolated packages now supply venue-owned 2026 SSE/SZSE/BSE/HKEX and separate NYSE/Nasdaq planned schedules, including auctions/midday breaks or early closes where declared. Add annual refresh, later exceptional notices, and typed security-specific settlement/Connect policy without forking the engine. |
+| `finance_ohlcv` / `finance_us_ohlcv` | Exact provider-neutral bars keep pagination and calendar completeness separate; the isolated US layer now composes an exact 2026 venue calendar, listing interval, complete provider receipt, and per-gap status evidence. | Implement independent CN/HK composition packages over their own calendars, listing/status laws, and provider semantics. Do not import or relabel the US classifier, accept truncated receipts, or treat caller evidence as authority verified. |
 | `finance_provenance` | Content-addressed evidence, source fingerprints, licences/redistribution, assumptions, manifests, redaction, and bounded verification plans. | Define original-document, correction, attachment, translation, normalized fact, and model-summary parentage. Chinese source text remains the controlling evidence node. |
 | `finance_table` | Typed cells/units, annotations, omission budgets, and deterministic Markdown/CSV/JSON. | Test Chinese headings/content and original-unit annotations. Add terminal display-width policy only if a real TUI surface proves grapheme count insufficient; do not hide units behind locale formatting. |
 | `finance_math` | Exact formula trees, explicit scale/rounding, finite analytics, cash-flow/fixed-income primitives, and zero/missing errors. | China domain constructors must resolve inputs and prove entity, period, statement scope, filing context, unit/scale, and source coherence before evaluation. |
@@ -744,8 +792,11 @@ rights, track isolation, and deterministic verification remain mandatory.
 | CN-F24 | Done for the Experimental public-web slice | Implement reusable bounded Eastmoney quote/history decoding once, then expose independent CN/HK shells and evidence contracts. | `cn_stock_quote`/`cn_stock_history` require exact SSE/SZSE/BSE; `hk_stock_quote`/`hk_stock_history` retain declared currency. Quotes preserve provider scale/time and history preserves raw unadjusted lexemes. Bounds, cancellation, pacing, caller identity, mocked bindings, source limitations, and track-only feature contribution are tested. |
 | CN-F25 | Done for the scoped current-rule slices | Implement dated official rules by composing shared pure rule laws while retaining market-specific shapes and separate shells. | `cn_trading_rules` covers exact established-normal mainland board pairs from 2026-07-06. `hk_trading_rules` covers reviewed HKD applicable-equity spread bands from 2026-08-03 and requires issuer-specific board-lot evidence. Both expose sources/clauses/audit limits, fail closed, pass unit/binding/artifact gates, and brought CN/HK installed feature breadth to the then-current US 70% score. |
 | CN-F26 | Done for the narrow Experimental vendor-fundamental slice | Reuse Eastmoney transport/runtime and exact-number capture below Pi, then expose separate CN/HK raw, normalized, and derived shells. Keep market mappings/context laws separate while composing the same exact decimal/formula engine. | `cn_financial_statement` requires venue, code, period end, and caller-proven currency; `hk_financial_statement` strictly joins provider context and line responses. Each track has visible two-field mappings and exact source-retaining net margin. Unit/mocked binding/artifact/Pi-load gates cover request bounds, exact tokens, mappings, context coherence, formulas, track isolation, and no normal-test network. This closes the current CN/HK feature denominator at 100% without changing 65%/70% source maturity or claiming official filing completeness. |
-| CN-F27 | Implementing — three isolated daily shells done | `finance_ohlcv`, `finance_market_alpaca`, and `us_stock_ohlcv` implement the Alpaca slice; independent `cn_stock_ohlcv` and `hk_stock_ohlcv` shells now reuse only the Eastmoney history adapter. The shared contract distinguishes source instants from date-only anchors and proven shares from unknown provider volume units. | Unit, mocked binding, artifact, architecture, and Pi-load gates cover exact raw/normalized values, identity inputs, adjustment, request/row budgets, entitlement/rights limits, deterministic order/exact deduplication, and unassessed calendar gaps. Batch exit still requires market-owned calendar/status composition, suspension proof, CN/HK amount/turnover/volume semantics, authoritative listing identity/currency, and permitted real fixtures. No synthetic bars, cross-track fallback, or feature-score inflation. |
-| CN-F28 | Done for the Experimental US latest-quote slice | `finance_quote` and the extended `finance_market_alpaca` adapter back isolated `us_stock_quote`; explicit IEX/SIP selection is required and no CN/HK domain is imported. | Exact quote-token, market-code, auth-redaction, request-bound, mocked binding, artifact, architecture, and readiness tests pass. The paired US quote/OHLCV tools cover `quotes_history` and raise US breadth to 80%; calendar, rules, authoritative identity, real-time proof, stable size semantics, production rights, and permitted live fixtures remain open. |
+| CN-F27 | Implementing — three isolated daily shells plus US receipt composition done | `finance_ohlcv`, `finance_market_alpaca`, and `us_stock_ohlcv` implement the Alpaca slice; independent `cn_stock_ohlcv` and `hk_stock_ohlcv` shells reuse only the Eastmoney history adapter; `finance_us_ohlcv` adds the first strict market-owned evidence join. | Unit, mocked binding, artifact, architecture, and Pi-load gates cover exact raw/normalized values, identity inputs, adjustment, request/row budgets, entitlement/rights limits, deterministic order/exact deduplication, unassessed acquisition results, and bounded US copied-receipt classification. Batch exit still requires CN/HK calendar/status counterparts, authority-owned listing/status proof, CN/HK amount/turnover/volume semantics, cryptographic receipt integrity, and permitted real fixtures. No synthetic bars, cross-track fallback, or feature-score inflation. |
+| CN-F28 | Done for the Experimental US latest-quote slice | `finance_quote` and the extended `finance_market_alpaca` adapter back isolated `us_stock_quote`; explicit IEX/SIP selection is required and no CN/HK domain is imported. | Exact quote-token, market-code, auth-redaction, request-bound, mocked binding, artifact, architecture, and readiness tests pass. The paired US quote/OHLCV tools cover `quotes_history` and raised US breadth to 80% at that checkpoint; rules, authoritative identity, real-time proof, stable size semantics, production rights, and permitted live fixtures remain open. |
+| CN-F29 | Done for the 2026 planned US calendar slice | `finance_us_calendar` and `us_market_calendar` compose the shared engines behind a separate US contract with exact NYSE/XNYS or Nasdaq/XNAS selection. | Official source references, regular sessions, ten full closures, two 1:00 p.m. Eastern early closes, coverage failure, venue isolation, no environment/network access, binding/artifact/readiness, and architecture gates are covered. US breadth reached 90% at this checkpoint; the later CN-F31 slice now consumes this calendar through a separate receipt compositor. |
+| CN-F30 | Done for the scoped current US quote-increment slice | `finance_us_rules` and `us_market_rules` add an isolated effective-rule contract for exact NYSE/XNYS or Nasdaq/XNAS listings without importing CN/HK domains. | Official exchange and SEC sources, the reviewed 2026-06-11 through 2027-10-31 interval, exact one-cent/sub-dollar increments, strict identity/class/status/regime/date/price validation, no environment/network access, binding/artifact/readiness, and architecture gates are covered. US breadth reaches 100%; broader market structure remains open and CN-F31 separately adds bounded OHLCV receipt composition. |
+| CN-F31 | Done for the Experimental US copied-receipt gap slice | `finance_us_ohlcv` and `us_ohlcv_gaps` compose the exact 2026 venue calendar, listing interval, canonical Alpaca plan identity, complete pagination, ordered bar dates, and per-gap status evidence without changing the provider batch. | Pure and binding laws prove all four gap states, complete evidence legs, range/order/track/MIC/source validation, no network/environment access, and fail-closed truncation, closure/bar conflicts, irrelevant status, and unexplained open dates. Listing/status authenticity, authority adapters, cryptographic receipt identity, later calendars, CN/HK counterparts, adjustments, and permitted real fixtures remain open. |
 
 The repository policy currently names `bun run test:live:sec` as the sole live
 provider lane. CN development therefore uses fixtures and mocked Bun contracts.

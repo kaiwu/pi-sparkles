@@ -22,9 +22,15 @@ Every result includes:
   unverified provider limitation;
 - Alpaca request IDs, pages fetched, truncation reason, exact duplicate count,
   retrieval time, feed entitlement, and redistribution limitations; and
-- an explicit `calendar_not_assessed` receipt. Until a reviewed US calendar and
-  market-status source are composed, missing sessions are not guessed to be a
-  closure, suspension, provider omission, or unavailable history.
+- an explicit `calendar_not_assessed` receipt. This acquisition tool never
+  guesses that a missing session is a closure, suspension, provider omission,
+  or unavailable history.
+
+The separately loadable, network-free `us_ohlcv_gaps` plugin can now compose
+copied output fields with the reviewed 2026 venue calendar, an exact listing
+interval, and explicit status receipts. It does not mutate this tool's result,
+and incomplete pagination or missing/conflicting evidence rejects the
+assessment.
 
 Configure credentials only through the runtime environment:
 

@@ -236,6 +236,18 @@ fn us_tool_contributions(
     ]),
   )
   |> append_when(
+    list.contains(active_tools, "us_market_calendar"),
+    contribution(finance_track.Us, "us_market_calendar", "NYSE_Nasdaq", [
+      "market_calendar",
+    ]),
+  )
+  |> append_when(
+    list.contains(active_tools, "us_trading_rules"),
+    contribution(finance_track.Us, "us_effective_rules", "NYSE_Nasdaq_SEC", [
+      "effective_rules",
+    ]),
+  )
+  |> append_when(
     has_all(active_tools, ["us_stock_quote", "us_stock_ohlcv"]),
     contribution(finance_track.Us, "us_quotes_history", "Alpaca", [
       "quotes_history",

@@ -128,6 +128,21 @@ pub fn maximum_bars(value: DailyBarsQuery) -> Int {
   value.maximum_bars
 }
 
+/// Stable evidence reference for the exact daily-bars plan. Runtime-only page
+/// tokens and caller budgets are deliberately excluded from source identity.
+pub fn daily_bars_source_reference(value: DailyBarsQuery) -> String {
+  "https://data.alpaca.markets/v2/stocks/bars?symbols="
+  <> symbol(value)
+  <> "&timeframe=1Day&start="
+  <> date_text(start_date(value))
+  <> "&end="
+  <> date_text(end_date(value))
+  <> "&adjustment=raw&feed="
+  <> feed_name(feed(value))
+  <> "&currency=USD&sort=asc&asof="
+  <> date_text(as_of_date(value))
+}
+
 pub fn date_text(value: Date) -> String {
   let #(year, month, day) = time.date_parts(value)
   int_text(year) <> "-" <> two_digits(month) <> "-" <> two_digits(day)

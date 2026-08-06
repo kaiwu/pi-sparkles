@@ -25,6 +25,9 @@ for (const name of [
   "stock_fundamentals",
   "stock_research_report",
   "watchlist",
+  "us_market_calendar",
+  "us_market_rules",
+  "us_ohlcv_gaps",
   "us_quote",
   "us_ohlcv",
 ]) {

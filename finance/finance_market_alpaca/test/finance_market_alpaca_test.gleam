@@ -42,6 +42,10 @@ pub fn query_requires_exact_symbol_feed_identity_and_budgets_test() {
 
 pub fn request_is_raw_usd_ascending_bounded_and_secret_test() {
   let plan = plan(query.Sip)
+  query.daily_bars_source_reference(plan)
+  |> should.equal(
+    "https://data.alpaca.markets/v2/stocks/bars?symbols=AAPL&timeframe=1Day&start=2024-08-01&end=2024-08-02&adjustment=raw&feed=sip&currency=USD&sort=asc&asof=2024-08-05",
+  )
   let assert Ok(value) =
     provider_request.daily_bars(access(), plan, 100, Some("page-two"))
   request.origin(value) |> should.equal(provider_request.origin)

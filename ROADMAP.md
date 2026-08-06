@@ -113,14 +113,15 @@ prevents every plugin from inventing incompatible finance types.
 | `finance_listing` | Experimental | Effective listing identity | track/MIC-scoped keys, effective aliases, and evidence-backed relationships without market-owned code or board rules |
 | `finance_series` | Experimental | Time-series operations | ordered observations, missing policy, exact/as-of alignment, resampling, OHLCV, exact returns/paths, and attribution |
 | `finance_ohlcv` | Experimental | Exact provider-neutral bar contract | raw-plus-normalized values, OHLC geometry, canonical observations, strict order/exact deduplication, and separate pagination/calendar completeness |
+| `finance_us_ohlcv` | Experimental | Isolated US gap composition | exact NYSE/Nasdaq calendar, listing interval, complete provider receipt, and per-gap status evidence with four fail-closed outcomes |
 | `finance_quote` | Experimental | Exact provider-neutral quote contract | raw-plus-normalized bid/ask prices and sizes, market codes, canonical observations, and unverified provider size semantics |
 | `finance_calendar` | Experimental | Trading-time rules | sessions, holidays, business days, joint calendars, coupon schedules, and named day counts; provider data remains pluggable |
 | `finance_market_calendar` | Experimental | Bounded calendar data | track/source/licence/version/coverage wrapper that rejects dates outside reviewed datasets |
 | `finance_market_authorities` | Experimental | Official source ownership | track-prefixed roles and HTTPS links with explicit access, redistribution, scope, and limitations |
 | `finance_cn_identity` / `finance_hk_identity` | Experimental | Isolated market identity laws | explicit code/venue/board/currency, ambiguity preservation, historical aliases, and A/H legs over synthetic tests |
-| `finance_cn_calendar` / `finance_hk_calendar` | Experimental | Isolated market-time contracts | source-reviewed, coverage-bounded 2026 SSE/SZSE/BSE and HKEX schedules with venue/half-day semantics and no extrapolation |
+| `finance_cn_calendar` / `finance_hk_calendar` / `finance_us_calendar` | Experimental | Isolated market-time contracts | source-reviewed, coverage-bounded 2026 SSE/SZSE/BSE, HKEX, NYSE, and Nasdaq schedules with exact venue/MIC and no extrapolation |
 | `finance_market_rules` | Experimental | Effective market-rule engine | source/evidence-labelled ticks, lots, limits, settlement and eligibility with strict dated unknown/conflict behavior |
-| `finance_cn_rules` / `finance_hk_rules` | Experimental | Isolated rule vocabulary | strict exact-listing selection plus narrow dated official profiles for established normal mainland CNY equities and applicable HKD equity spread bands |
+| `finance_cn_rules` / `finance_hk_rules` / `finance_us_rules` | Experimental | Isolated rule vocabulary | strict exact-listing selection plus narrow dated official profiles for established normal mainland CNY equities, applicable HKD equity spread bands, and current NYSE/Nasdaq regular displayed-quote increments |
 | `finance_market_documents` | Experimental | Disclosure identity and lineage | exact originals, reporting periods, corrections, replacements, translations, parallel languages, and attachment hashes |
 | `finance_document_attachment` | Experimental | Bounded attachment acceptance | media allowlist, byte/page/redirect limits, cancellation and content hash; archive/OCR fail closed |
 | `finance_cn_documents` / `finance_hk_documents` | Experimental | Isolated disclosure vocabulary | track-owned document classes and source-language policy without cross-track imports |
@@ -252,11 +253,13 @@ tests use offline responses only. IEX is never presented as consolidated SIP,
 and a successful credentialed request conveys no redistribution grant.
 
 `us_stock_ohlcv` reports provider pagination separately from market-calendar
-completeness. Because a reviewed US calendar/status source is not yet composed,
-absent rows remain unclassified rather than being guessed as market closures,
-suspensions, provider omissions, or unavailable history. Corporate-action
-adjustments, intraday/realtime bars, authoritative listing/venue identity,
-and permitted real fixtures remain later work.
+completeness. A reviewed US calendar now exists as an independent tool, but the
+acquisition shell deliberately leaves it uncomposed from listing and suspension
+evidence. Absent rows remain unclassified in that provider result. The separate
+network-free US gap compositor described below can classify copied 2026 receipt
+fields only after exact listing/status evidence and complete pagination are
+supplied. Corporate-action adjustments, intraday/realtime bars, authoritative
+listing/status sources, and permitted real fixtures remain later work.
 
 `cn_stock_ohlcv` and `hk_stock_ohlcv` reuse the independently bounded
 Eastmoney `klt=101`, `fqt=0` history seam without importing Alpaca or each
@@ -288,8 +291,78 @@ session inference, quote caching, or company-name resolution is performed.
 
 With both `us_stock_quote` and `us_stock_ohlcv` loaded, the existing
 `quotes_history` family is covered and US installed feature breadth rises from
-70% to 80%. US remains below the 85% operational threshold because market
-calendar and effective-rule families are still absent.
+70% to 80%.
+
+### US market-calendar vertical slice — 2026-08-06
+
+`finance_us_calendar` and `pi_us_market_calendar` are **Experimental** for
+calendar year 2026. `us_market_calendar` requires exact `nyse` or `nasdaq`,
+retains `XNYS` or `XNAS`, and uses each exchange's official schedule reference.
+It preserves all ten full closures plus the November 27 and December 24 1:00
+p.m. Eastern early closes, and rejects dates outside coverage without a weekday
+fallback.
+
+The data is local, source-reviewed, and requires no runtime environment or
+network access. Planned schedules may be superseded by exchange alerts;
+pre-market/after-hours, auctions, other products, settlement, FINRA reporting,
+security suspensions, and redistribution rights remain outside the slice. With
+the calendar tool and the paired quote/OHLCV tools loaded, US installed feature
+breadth reached 90% at this checkpoint. This breadth credit does not claim that
+the independent OHLCV tool classifies missing rows.
+
+### US effective-rule vertical slice — 2026-08-06
+
+`finance_us_rules` and `pi_us_market_rules` are **Experimental** for one narrow
+effective-rule profile. `us_trading_rules` requires an exact `nyse`/XNYS or
+`nasdaq`/XNAS listing, uppercase symbol, namespaced instrument ID, USD,
+caller-declared `nms_stock` and `normal` status, the
+`regular_displayed_quote` regime, an exact date, and nominal price.
+
+For the reviewed June 11, 2026 through October 31, 2027 interval, it returns the
+exchange's current `$0.01` quotation increment at or above `$1.00` and
+`$0.0001` below `$1.00`. It retains the venue rule plus SEC Release 34-105656,
+which defers compliance with amended Rule 612's half-cent assignment until the
+first business day of November 2027. Dates outside coverage and unsupported
+security, status, currency, or regime inputs fail closed. Listing identity and
+status remain caller supplied; lot/order acceptance, auctions, extended hours,
+LULD, halts, short sales, access fees, settlement, execution, and best
+execution remain outside the slice. The local profile requires no environment
+or runtime network access.
+
+With this tool and all independently required US surfaces loaded, installed US
+feature breadth reaches 100%. That number means all ten workflow families have
+a matching surface; it does not claim complete rules, authoritative identity,
+market-data entitlement, or source maturity. The next OHLCV work is explicit
+composition of exact venue/calendar/listing/suspension receipts into missing-row
+classification, not another feature-score increment. That composition has now
+graduated as the bounded slice below.
+
+### US OHLCV gap-composition slice — 2026-08-06
+
+`finance_us_ohlcv` and `pi_us_ohlcv_gaps` are **Experimental** for deterministic
+composition of copied 2026 Alpaca daily-bar receipt fields. The
+`us_ohlcv_gap_assessment` tool performs no environment lookup or network I/O.
+It requires exact NYSE/XNYS or Nasdaq/XNAS identity, a namespaced instrument ID,
+an effective listing interval and reference, the canonical Alpaca raw-daily
+source reference, explicit IEX/SIP and identity-as-of values, ordered bar dates,
+complete pagination, and ordered trading-or-suspended receipts for every absent
+open listing date.
+
+The pure classifier walks every civil date in the bounded range. Planned closed
+dates become `market_closure`; open dates outside the listing interval become
+`unavailable_history`; an explicit suspended status becomes `suspension`; and
+an explicit trading status plus complete provider coverage becomes
+`provider_omission`. Every result retains its calendar, listing, status, and/or
+provider evidence legs. Truncation, duplicate/decreasing dates, MIC mismatch,
+bars on closures or outside the listing, irrelevant status receipts, source
+identity mismatch, and unexplained open dates reject the entire assessment.
+
+The compositor validates structural coherence, not receipt authenticity.
+Listing and status evidence remain caller supplied and unverified, the planned
+calendar may be superseded, and the original acquisition result remains
+`calendar_not_assessed`. CN/HK counterparts, authority-owned listing/status
+adapters, corporate actions, later calendars, and cryptographic receipt
+manifests remain later work. This depth improvement changes no feature score.
 
 ### US cited source-fact report slice — 2026-08-06
 
@@ -406,6 +479,8 @@ Priorities mean:
 | `pi_hk_disclosures` (**Experimental discovery slice**) | P0 | HKEXnews exact stock-ID candidates plus bounded initial-page issuer titles with visible truncation. | `hk_security_search`, `hk_disclosure_search` |
 | `pi_cn_market_calendar` (**Experimental 2026 slice**) | P0 | Source-reviewed SSE/SZSE/BSE planned sessions and closures with explicit venue, source, coverage, entitlement, and exceptional-notice limits. | `cn_market_calendar` |
 | `pi_hk_market_calendar` (**Experimental 2026 slice**) | P0 | HKEX circular CT/075/25 full closures and half-days with bounded coverage and explicit market/rights limits. | `hk_market_calendar` |
+| `pi_us_market_calendar` (**Experimental 2026 slice**) | P0 | Venue-explicit NYSE/XNYS and Nasdaq/XNAS regular-equity closures and 1:00 p.m. Eastern early closes with bounded coverage and separate official sources. | `us_market_calendar` |
+| `pi_us_market_rules` (**Experimental current-rule slice**) | P0 | Exact-listing NYSE/Nasdaq regular displayed-quote increments for a bounded reviewed interval, retaining exchange and SEC sources and rejecting unsupported regimes. | `us_trading_rules` |
 | `pi_cn_market_data` (**Experimental public-web slice**) | P0 | Explicit SSE/SZSE/BSE Eastmoney quote and raw unadjusted daily history with bounded requests, exact provider scaling/lexemes, and visible unknown latency/rights. | `cn_stock_quote`, `cn_stock_history` |
 | `pi_hk_market_data` (**Experimental public-web slice**) | P0 | HK Eastmoney quote and raw unadjusted daily history with mandatory caller-declared listing currency and visible unknown latency/rights. | `hk_stock_quote`, `hk_stock_history` |
 | `pi_cn_market_rules` (**Experimental dated slice**) | P0 | Official 2026-07-06 established normal CNY A-share tick, quantity, odd-lot exit, and standard price-limit profiles for exact SSE/SZSE/BSE boards. | `cn_trading_rules` |
@@ -425,6 +500,7 @@ Priorities mean:
 | `pi_us_quote` (**Experimental Alpaca latest slice**) | P0 | Exact latest Alpaca US best bid/ask for one symbol and explicit IEX/SIP feed, preserving market codes and unknown freshness/size semantics. | `us_stock_quote` |
 | `pi_stock_history` | P0 | Daily/intraday OHLCV with raw/adjusted controls and corporate-action metadata. | `/chart-data`, `stock_bars`, `stock_returns`, `stock_performance` |
 | `pi_us_ohlcv` (**Experimental Alpaca daily slice**) | P0 | Exact raw daily US OHLCV for one Alpaca symbol/as-of identity and explicit IEX/SIP feed, with bounded pagination and visible calendar/rights gaps. | `us_stock_ohlcv` |
+| `pi_us_ohlcv_gaps` (**Experimental receipt-composition slice**) | P0 | Network-free 2026 NYSE/Nasdaq missing-row classification from exact copied Alpaca, listing, calendar, and status receipts; incomplete or conflicting evidence fails closed. | `us_ohlcv_gap_assessment` |
 | `pi_cn_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily mainland OHLCV for a caller-declared venue/board/share-class/currency identity, retaining provider rows with unknown volume/session/calendar/rights semantics. | `cn_stock_ohlcv` |
 | `pi_hk_ohlcv` (**Experimental Eastmoney daily slice**) | P0 | Exact raw daily HK OHLCV for a caller-declared board/share-class/currency identity, without assuming HKD, half-days, suspensions, or provider volume units. | `hk_stock_ohlcv` |
 | `pi_stock_market_snapshot` | P1 | Index/sector/industry breadth, leaders, laggards, gaps, volume, and volatility snapshots. | `/market`, `market_snapshot`, `market_breadth`, `market_movers` |

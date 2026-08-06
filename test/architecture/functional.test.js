@@ -102,6 +102,9 @@ describe("functional architecture", () => {
       "finance_hk_documents",
       "finance_hk_accounting",
       "finance_hk_testkit",
+      "finance_us_calendar",
+      "finance_us_ohlcv",
+      "finance_us_rules",
       "finance_math",
       "finance_series",
       "finance_ohlcv",
@@ -152,10 +155,21 @@ describe("functional architecture", () => {
     }
   });
 
-  test("cn and hk plugin shells cannot import US market adapters", () => {
-    const forbidden = /^import finance_market_alpaca(?:\s|\/|\.|$)/m;
+  test("cn and hk plugin shells cannot import US market packages", () => {
+    const forbidden =
+      /^import finance_(?:market_alpaca|us_\w+)(?:\s|\/|\.|$)/m;
     for (const pkg of discoverPackages(PLUGINS_DIR)) {
       if (!/pi_sparkles_(cn|hk)_/.test(pkg.name)) continue;
+      for (const path of filesBelow(join(pkg.directory, "src"), ".gleam")) {
+        expect(forbidden.test(source(path)), display(path)).toBeFalse();
+      }
+    }
+  });
+
+  test("US market packages cannot import CN or HK market packages", () => {
+    const forbidden = /^import finance_(?:cn_|hk_)\w*(?:\s|\/|\.|$)/m;
+    for (const pkg of discoverPackages(FINANCE_DIR)) {
+      if (!pkg.name.startsWith("finance_us_")) continue;
       for (const path of filesBelow(join(pkg.directory, "src"), ".gleam")) {
         expect(forbidden.test(source(path)), display(path)).toBeFalse();
       }

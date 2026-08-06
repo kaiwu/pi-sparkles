@@ -32,7 +32,7 @@ The finance foundations include `finance_core`, `finance_track`,
 `finance_document_attachment`, `finance_market_accounting`,
 `finance_track_capabilities`,
 `finance_provenance`, `finance_http`, `finance_math`, `finance_series`,
-`finance_calendar`, `finance_table`, and `finance_testkit`. They are
+`finance_calendar`, `finance_us_ohlcv`, `finance_table`, and `finance_testkit`. They are
 Experimental independent Gleam packages, not Pi plugins. Keep their dependency
 graph acyclic: core imports no finance package; track and other provider-neutral
 packages may build inward on core; evidence composes canonical observations,
@@ -63,8 +63,16 @@ Attachment retrieval must pass exact media allowlists, byte/page/redirect
 budgets, cancellation, and content-hash checks; archives and OCR fail closed
 until explicitly supported by a later reviewed effect contract.
 Unknown or conflicting rules and mappings fail closed. A `cn_*` plugin must not
-import `finance_hk_*` or SEC market domains, and an `hk_*` plugin must not import
-`finance_cn_*` or SEC market domains.
+import `finance_hk_*`, `finance_us_*`, or SEC market domains, and an `hk_*`
+plugin must not import `finance_cn_*`, `finance_us_*`, or SEC market domains.
+US market-owned packages likewise remain isolated from CN/HK domains;
+`finance_us_calendar` owns exact NYSE/XNYS and Nasdaq/XNAS calendar scope rather
+than treating either venue as a global or provider-derived default, and
+`finance_us_rules` owns exact listing/venue/effective-date rule scope without
+turning caller declarations into verified identity or security status.
+`finance_us_ohlcv` owns the US-only calendar/listing/status/provider-receipt join;
+it must reject incomplete or conflicting evidence and must not authenticate
+caller-supplied receipts by assertion.
 
 Provider adapters such as `finance_openfigi` and `finance_sec` are also independent finance
 packages but sit outside the provider-neutral foundation. They may compose core

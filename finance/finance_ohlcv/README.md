@@ -28,6 +28,11 @@ must use `CalendarNotAssessed`; it must not turn a missing row into one of those
 facts. No bar interpolation, forward fill, corporate-action adjustment, or
 timezone inference occurs here.
 
+The isolated `finance_us_ohlcv` package now supplies the first strict
+market-owned composition: it joins the bounded US calendar, an exact listing
+interval, complete provider coverage, and explicit per-gap status receipts.
+This generic package still does not import that market-specific policy.
+
 The initial interval contract is deliberately daily; volume is either proven
 shares or explicitly unknown. Additional intervals and market-owned volume
 meanings require new typed constructors. Exact close-price series and returns compose the existing

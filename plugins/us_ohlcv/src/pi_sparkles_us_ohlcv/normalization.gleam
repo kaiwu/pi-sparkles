@@ -31,7 +31,11 @@ pub fn batch(
 ) -> Result(finance_ohlcv.Batch, NormalizationError) {
   use normalized <- result.try(normalize_bars(values, 0, []))
   use source_ref <- result.try(
-    source.new("alpaca", source_reference(plan), source.LicensedVendor)
+    source.new(
+      "alpaca",
+      query.daily_bars_source_reference(plan),
+      source.LicensedVendor,
+    )
     |> result.map_error(InvalidSource),
   )
   let assert Ok(zone) = time.timezone("America/New_York")
@@ -110,17 +114,4 @@ fn normalize_bars(
       normalize_bars(rest, index + 1, [normalized, ..reversed])
     }
   }
-}
-
-fn source_reference(plan: DailyBarsQuery) -> String {
-  "https://data.alpaca.markets/v2/stocks/bars?symbols="
-  <> query.symbol(plan)
-  <> "&timeframe=1Day&start="
-  <> query.date_text(query.start_date(plan))
-  <> "&end="
-  <> query.date_text(query.end_date(plan))
-  <> "&adjustment=raw&feed="
-  <> query.feed_name(query.feed(plan))
-  <> "&currency=USD&sort=asc&asof="
-  <> query.date_text(query.as_of_date(plan))
 }

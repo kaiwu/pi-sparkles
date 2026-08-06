@@ -246,8 +246,22 @@ applications of this rule. Both require the caller to select Alpaca IEX or SIP,
 retain exact source numeric lexemes, and report subscription and redistribution
 limits. Quote freshness, session, and provider size units remain unknown.
 History pagination completeness is separate from market-calendar completeness:
-until reviewed US calendar and status evidence is composed, absent rows are not
-labelled as closures, suspensions, provider omissions, or unavailable history.
+the reviewed `us_market_calendar` now supplies bounded NYSE/Nasdaq planned-day
+evidence, while `us_stock_ohlcv` deliberately leaves its acquisition result
+uncomposed and absent rows unlabelled. The separate network-free
+`us_ohlcv_gap_assessment` compositor can classify copied 2026 receipt fields
+only when exact venue/listing scope, complete pagination, the canonical Alpaca
+source identity, and one explicit trading-or-suspended receipt per absent open
+listing date all agree. Its output retains every evidence leg and labels copied
+listing/status receipts unverified; it does not mutate the provider result.
+
+The separate `us_trading_rules` tool supplies only the venue-explicit current
+regular displayed-quote increment for a caller-identified NYSE/Nasdaq NMS stock
+within its reviewed interval. It retains exchange and SEC sources, has no
+environment or runtime network dependency, and does not turn listing, status,
+lot, session, halt, or order-handling declarations into provider-verified
+facts. It therefore cannot be used to infer OHLCV completeness or execution
+eligibility.
 
 ### Identity and normalization
 
@@ -456,8 +470,10 @@ slice:
 6. one clearly labelled market-data provider (now implemented as an exact
    Alpaca US latest quote plus isolated raw-daily Alpaca US and Eastmoney CN/HK
    OHLCV slices, with their unequal entitlements and units kept visible);
-7. one concise cited company or watchlist report;
-8. an exportable evidence manifest.
+7. one venue-explicit market calendar (now implemented for NYSE/Nasdaq 2026,
+   but not yet joined to OHLCV missing-row classification);
+8. one concise cited company or watchlist report;
+9. an exportable evidence manifest.
 
 The first `stock_research_report` slice implements the final composition step
 without adding another data client. `/us-research` queues the named existing

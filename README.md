@@ -14,21 +14,25 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- forty-four Experimental finance packages, including provider adapters,
+- forty-seven Experimental finance packages, including provider adapters,
   shared track/evidence/rules/document/accounting policy, and isolated CN/HK
   identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,
   `cn_setup`, `hk_setup`, `finance_guardrails`, and `finance_symbols`;
 - the first isolated CN/HK provider slices: `cn_disclosures` over CNINFO and
   `hk_disclosures` over HKEXnews, each with security and disclosure discovery;
-- isolated `cn_market_calendar` and `hk_market_calendar` plugins over
-  venue-owned, coverage-bounded 2026 schedules;
+- isolated `cn_market_calendar`, `hk_market_calendar`, and
+  `us_market_calendar` plugins over venue-owned, coverage-bounded 2026
+  schedules; the US surface keeps NYSE/XNYS and Nasdaq/XNAS explicit;
 - isolated `cn_market_data` and `hk_market_data` plugins over the shared
   bounded `finance_eastmoney` adapter, with raw lexemes, explicit market and
   currency evidence, and unknown latency/redistribution kept visible;
 - isolated `cn_market_rules` and `hk_market_rules` plugins over dated official
   rule profiles, with unsupported regimes rejected and issuer-specific HK board
   lots kept caller-evidenced;
+- an isolated `us_market_rules` plugin for venue-explicit current NYSE/Nasdaq
+  regular displayed-quote increments, with the deferred SEC half-cent regime
+  and next compliance boundary kept visible;
 - isolated `cn_fundamentals` and `hk_fundamentals` vendor slices over shared
   exact Eastmoney decoding and `finance_math`, with raw facts, visible mappings,
   source-retaining net margin, and unknown official-filing context preserved;
@@ -39,6 +43,9 @@ repository currently contains:
   `us_ohlcv`, plus bounded Eastmoney date-only raw history in `cn_ohlcv` and
   `hk_ohlcv` with caller-declared identity/currency and unknown provider volume
   units kept visible;
+- a network-free `us_ohlcv_gaps` compositor that joins copied Alpaca receipt
+  fields to the exact 2026 venue calendar, listing interval, and per-gap status
+  evidence without changing or synthesizing bars;
 - an exact US latest best-bid-and-ask slice in `us_quote`, using explicit
   Alpaca IEX/SIP selection and the provider-neutral `finance_quote` envelope;
 - a network-free `stock_research_report` compositor that validates exact
@@ -63,10 +70,11 @@ active session branch.
 surfaces with exact track contexts. They report the new pure market foundations
 as Experimental. Their matching discovery, calendar, market-data, rules, and
 fundamental tools advance only their own installed surfaces. CN/HK cover all
-ten current feature families when those tools are loaded; US reaches
-independently measured 80% breadth when both Alpaca quote and OHLCV tools are
-loaded. Their depth and source-maturity receipts remain
-different and auditable. Authoritative venue
+ten current feature families when those tools are loaded. US also reaches 100%
+installed workflow breadth when its independent Alpaca quote/OHLCV, official
+calendar, and current-rule tools are loaded. The tracks' depth and
+source-maturity receipts remain different and auditable; feature breadth is not
+data completeness. Authoritative venue
 identity, production market-data entitlement, exceptional rule regimes, PDF
 semantics, official filing-linked accounting depth, later-year calendars, and
 redistribution remain visibly incomplete. Sibling or SEC tools cannot satisfy
@@ -90,9 +98,16 @@ composition expands every derived Q4 back to its annual/YTD source leaves.
 SIP feed. It preserves source numeric lexemes, follows pagination only within
 caller budgets, retains request IDs, and labels USD/share/timezone/provider-
 session/raw-adjustment semantics without asserting unverified trade-session
-membership. Missing sessions remain calendar-unassessed until a
-reviewed US calendar/status source can distinguish closures, suspensions,
-provider omissions, and unavailable history. `us_stock_quote` supplies the
+membership. The separate reviewed US calendar can classify planned exchange
+days, but `us_stock_ohlcv` deliberately does not compose it with listing and
+suspension evidence; missing rows therefore remain calendar-unassessed instead of being
+silently classified as closures, suspensions, provider omissions, or
+unavailable history. The separate network-free `us_ohlcv_gap_assessment` tool
+can now classify a copied 2026 receipt only when pagination is complete, exact
+venue/listing scope is supplied, and every absent open listing date has an
+explicit trading-or-suspended status receipt. Its supplied evidence is not
+authority or cryptographically verified, and it never mutates the acquisition
+result. `us_stock_quote` supplies the
 paired latest best bid/ask required by the existing quote/history family. It
 preserves exact provider price and size tokens, exchange/condition/tape codes,
 and explicitly reports freshness, latency, session, and size-unit semantics as
@@ -231,6 +246,9 @@ HKEX configuration applies only to the HK disclosure plugin.
 | `sec_edgar` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-sec-edgar/0.1`. |
 | `sec_xbrl` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-sec-xbrl/0.1`. |
 | `stock_fundamentals` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-fundamentals/0.1`. |
+| `us_market_calendar` | None | None | Uses source-reviewed local NYSE/Nasdaq 2026 schedule data; performs no runtime provider request. |
+| `us_market_rules` | None | None | Uses source-reviewed local NYSE/Nasdaq/SEC rule data; performs no runtime provider request. |
+| `us_ohlcv_gaps` | None | None | Composes copied Alpaca/calendar/listing/status receipts locally; performs no environment lookup or runtime provider request. |
 | `us_quote` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-quote/0.1`; feed entitlement and recency depend on the requested IEX/SIP feed and account. |
 | `us_ohlcv` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-ohlcv/0.1`; feed entitlement still depends on the Alpaca account and requested IEX/SIP feed. |
 
@@ -257,6 +275,9 @@ export ALPACA_API_SECRET_KEY="<secret-manager:alpaca-secret>"
 pi --no-extensions \
   -e ./dist/cn_ohlcv \
   -e ./dist/hk_ohlcv \
+  -e ./dist/us_market_calendar \
+  -e ./dist/us_market_rules \
+  -e ./dist/us_ohlcv_gaps \
   -e ./dist/us_quote \
   -e ./dist/us_ohlcv
 ```
@@ -345,7 +366,10 @@ pi-sparkles/
 │   ├── finance_table/
 │   ├── finance_testkit/
 │   ├── finance_track/
-│   └── finance_track_capabilities/
+│   ├── finance_track_capabilities/
+│   ├── finance_us_calendar/
+│   ├── finance_us_ohlcv/
+│   └── finance_us_rules/
 ├── plugins/
 │   ├── cn_disclosures/           CNINFO security and announcement discovery
 │   ├── cn_market_calendar/       official bounded SSE/SZSE/BSE 2026 calendar
@@ -370,6 +394,9 @@ pi-sparkles/
 │   ├── stock_fundamentals/       audited direct-fact normalization
 │   ├── stock_research_report/    deterministic cited US receipt composition
 │   ├── watchlist/                track-safe branch-persistent workflow state
+│   ├── us_market_calendar/       official bounded NYSE/Nasdaq 2026 calendar
+│   ├── us_market_rules/          current venue-explicit US quote increments
+│   ├── us_ohlcv_gaps/            network-free US missing-row evidence join
 │   ├── us_quote/                 exact Alpaca US latest best bid/ask
 │   ├── us_ohlcv/                 exact Alpaca US daily bars
 │   ├── hello/                    command and typed-tool example
@@ -402,9 +429,9 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_cn_identity` / `finance_hk_identity` | Isolated code, venue, board, ambiguity, alias, and A/H identity laws without provider fallback. |
 | `finance_market_calendar` | Source/licence/version-labelled calendar datasets that fail outside declared coverage. |
 | `finance_market_authorities` | Track-scoped official roles and links with access and redistribution kept separate from ownership. |
-| `finance_cn_calendar` / `finance_hk_calendar` | Track-specific calendar constructors over the shared engine; authoritative data remains injected. |
+| `finance_cn_calendar` / `finance_hk_calendar` / `finance_us_calendar` | Track-specific calendar constructors and source-reviewed 2026 venue datasets over the shared engine; US retains separate NYSE/XNYS and Nasdaq/XNAS evidence. |
 | `finance_market_rules` | Source-labelled effective rule validation and strict unknown/conflict selection without market constants. |
-| `finance_cn_rules` / `finance_hk_rules` | Track-owned rule vocabulary plus narrow dated official profiles: 2026-07-06 mainland established normal CNY equities and 2026-08-03 HKEX applicable HKD equity spread bands. |
+| `finance_cn_rules` / `finance_hk_rules` / `finance_us_rules` | Track-owned rule vocabulary plus narrow dated official profiles: mainland established normal CNY equities, HKEX applicable HKD equity spread bands, and venue-explicit current US regular displayed-quote increments. |
 | `finance_market_documents` | Track/issuer-scoped original documents, correction/version/translation lineage, attachment identities, and strict versioned lossless JSON. |
 | `finance_document_attachment` | Fail-closed media/size/page/redirect/hash/cancellation acceptance with archives and OCR explicitly unsupported. |
 | `finance_cn_documents` / `finance_hk_documents` | Isolated disclosure classes and source-language policy retaining exact Unicode originals. |
@@ -415,6 +442,7 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_http` | Safe requests, bounded fetch transport, cancellation, retry/`Retry-After`, rate limits, pooling, scheduling, caching, and cassettes. |
 | `finance_math` | Composable exact formula trees plus explicit approximate statistics, regression, risk, cash-flow, and fixed-income policies. |
 | `finance_ohlcv` | Exact raw-plus-normalized OHLCV bars, source-instant/date-anchor and proven/unknown-volume distinctions, canonical observations, strict ordering/exact deduplication, and separate pagination/calendar completeness. |
+| `finance_us_ohlcv` | US-only exact venue-calendar/listing/status/provider-receipt composition with four typed gap outcomes and fail-closed conflicts. |
 | `finance_quote` | Exact raw-plus-normalized bid/ask prices and sizes, provider market codes, canonical observations, and explicitly unverified provider size units. |
 | `finance_openfigi` | OpenFIGI v3 access, mapping/search plans, pagination, decoding, authenticated/anonymous rate profiles, and a bounded shared runtime. |
 | `finance_eastmoney` | Bounded public-web SSE/SZSE/BSE/HK quote and raw daily-history plans/decoders with exact source lexemes, explicit caller identity, unknown service level, and unknown redistribution. |
@@ -445,6 +473,12 @@ The first F0 plugin batch demonstrates this direction:
 - `finance_setup` validates defaults and reports only capabilities it can prove;
 - `finance_track_status` visibly marks and explicitly switches the active
   `cn`/`hk`/`us` navigation context without relabelling market evidence;
+- `us_market_calendar` exposes venue-explicit NYSE/Nasdaq 2026 closures and
+  early closes without network access or dates outside reviewed coverage;
+- `us_market_rules` exposes the current NYSE/Nasdaq regular displayed-quote
+  increment for an exact listing and date, while rejecting unsupported regimes;
+- `us_ohlcv_gaps` structurally classifies copied 2026 Alpaca missing dates only
+  after complete pagination and exact calendar/listing/status evidence;
 - `cn_setup` and `hk_setup` provide isolated readiness reports and refuse to
   treat sibling/SEC tools or unapproved providers as available;
 - `finance_guardrails` composes evidence checks and accumulates typed issues;

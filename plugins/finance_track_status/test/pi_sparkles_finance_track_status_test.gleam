@@ -55,6 +55,8 @@ pub fn readiness_receipts_expose_current_track_gaps_test() {
       "stock_fundamental_metric",
       "us_stock_quote",
       "us_stock_ohlcv",
+      "us_market_calendar",
+      "us_trading_rules",
     ])
 
   readiness.source_percentage(cn) |> should.equal(65)
@@ -62,7 +64,8 @@ pub fn readiness_receipts_expose_current_track_gaps_test() {
   readiness.source_percentage(hk) |> should.equal(70)
   readiness.feature_percentage(hk) |> should.equal(100)
   readiness.source_percentage(us) |> should.equal(80)
-  readiness.feature_percentage(us) |> should.equal(80)
+  readiness.feature_percentage(us) |> should.equal(100)
+  readiness.feature_gaps(us) |> should.equal([])
 }
 
 pub fn sibling_track_tools_cannot_inflate_feature_coverage_test() {
@@ -78,6 +81,24 @@ pub fn sibling_track_tools_cannot_inflate_feature_coverage_test() {
 
   readiness.feature_percentage(cn) |> should.equal(10)
   readiness.feature_gaps(cn)
+  |> should.equal([
+    "source_registry",
+    "security_identity",
+    "market_calendar",
+    "effective_rules",
+    "quotes_history",
+    "disclosure_discovery",
+    "raw_fundamentals",
+    "normalized_fundamentals",
+    "reproducible_derivations",
+  ])
+}
+
+pub fn gap_composition_depth_does_not_replace_acquisition_or_calendar_test() {
+  let us = readiness.inspect(finance_track.Us, ["us_ohlcv_gap_assessment"])
+
+  readiness.feature_percentage(us) |> should.equal(10)
+  readiness.feature_gaps(us)
   |> should.equal([
     "source_registry",
     "security_identity",

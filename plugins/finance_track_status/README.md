@@ -34,10 +34,14 @@ by this plugin; all other credit requires a matching installed track surface.
 The operational target is 85%, with source registry and security identity
 remaining critical. With the matching setup, identity, calendar, effective
 rules, quote/history, disclosure, raw-fundamental, normalized-fundamental, and
-derived-metric tools installed, CN and HK each report 100%; current US reports
-70% from its independently installed category set. This is workflow breadth,
-not data completeness or source-credibility parity. Removing any required
-track-owned tool immediately reopens the corresponding structured gap.
+derived-metric tools installed, CN and HK each report 100%. Current US also
+reports 100% when its independently installed source, identity, NYSE/Nasdaq
+calendar, effective-rule, paired quote/history, disclosure, raw/normalized
+fundamental, and derivation surfaces are active. This is workflow breadth, not
+data completeness, comprehensive OHLCV gap coverage, broad rule coverage, or
+source-credibility parity. The separate US gap compositor can classify only
+fully evidenced copied 2026 receipts and changes no feature score. Removing any
+required track-owned tool immediately reopens the corresponding structured gap.
 
 The interaction defaults are CN/CNY/`Asia/Shanghai`,
 HK/HKD/`Asia/Hong_Kong`, and US/USD/`America/New_York`. They are navigation and
