@@ -393,7 +393,7 @@ pi-sparkles/
 │   ├── finance_provenance/
 │   ├── finance_sec/
 │   ├── finance_series/
-│   ├── finance_strategy/         design-only CG-SWING functional core
+│   ├── finance_strategy/         evidence-only CG-SWING functional core
 │   ├── finance_table/
 │   ├── finance_testkit/
 │   ├── finance_track/
@@ -631,8 +631,9 @@ Each plugin should:
   package namespace;
 - decode external values once, then express policy, calculation, and workflow
   state as pure functions over immutable Gleam types;
-- return typed decisions/effects as data when workflows benefit from replay,
-  composition, or audit, and interpret them only at the shell;
+- return typed facts, calculations, compatibility states, proposed effects, and
+  workflow history when replay, composition, or audit benefits; finance
+  research and trade decisions remain with the LLM rather than a plugin;
 - inject clocks, transports, storage, randomness, and entitlements explicitly;
 - export `extension` with the promise-returning signature above;
 - use `pi_gleam` as a normal Hex version dependency when published;

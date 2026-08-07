@@ -106,6 +106,13 @@ reinterpret source evidence.
 
 The following decisions bind later proposals:
 
+- The LLM owns every research and trade decision. Finance libraries and plugins
+  provide compact typed facts, explicit calculations, compatibility/readiness
+  states, provenance, and workflow history; they never emit a buy/sell verdict,
+  setup qualification, plan acceptance/rejection, recommendation, or hidden
+  score. Structural validation, deterministic formula evaluation, and safety or
+  authorization enforcement remain allowed, but must be rendered as the exact
+  facts and constraints the LLM needs rather than a substituted market opinion.
 - Professional workflow fit is a release criterion, not presentation polish.
   Each workbench starts from the persona's recurring day-to-day loop, preserves
   context across interruptions, makes the routine path short, groups exceptions
@@ -148,12 +155,13 @@ The canonical local course TOC is
 [`../trading-course/ROADMAP.md`](../trading-course/ROADMAP.md). These references
 name the curriculum topic to deepen; they do not copy its illustrative rules
 into production policy. `CG-SWING` is resolved for the bounded completed-daily-
-bar workflow recorded below; every other gate remains **Open**.
+bar workflow recorded below, and `CG-MARKET-DATA` is resolved for the
+information-only daily-market-data contract; every other gate remains **Open**.
 
 | Gate | Trading-course TOC cross-reference | Finance-advisor deep dive required before design | Applies first to |
 | --- | --- | --- | --- |
-| `CG-MARKET-DATA` | Phase 1, Week 1 “Market Literacy” and Week 2 “Data & Tools” | Define the minimum trustworthy quote/bar/depth fields for each persona; source-time, session, auction, spread, volume and market-depth interpretation; trader-facing data-quality failures; and safe CSV/JSON/XLSX/SQL import expectations. | `pi_finance_dataset`, charts, snapshots, screeners, and later intraday surfaces |
-| `CG-RISK` | Phase 1, Week 3 “Risk Management Foundation” and Phase 5, Week 19 “Advanced Risk Management” | Replace slogans such as “2% rule” and “2:1” with configurable laws: account and portfolio heat, gap/leverage/correlation/liquidity risk, stop distance, lot rounding, scaling, drawdown limits, stress cases, and when a plan must be rejected. | `finance_strategy`, `pi_trade_plan`, `pi_portfolio_risk` |
+| `CG-MARKET-DATA` **(Resolved — 2026-08-07)** | Phase 1, Week 1 “Market Literacy” and Week 2 “Data & Tools” | Define the minimum trustworthy quote/bar/depth fields for each persona; source-time, session, auction, spread, volume and market-depth interpretation; trader-facing data-quality failures; and safe CSV/JSON/XLSX/SQL import expectations. | `pi_finance_dataset`, charts, snapshots, screeners, and later intraday surfaces |
+| `CG-RISK` | Phase 1, Week 3 “Risk Management Foundation” and Phase 5, Week 19 “Advanced Risk Management” | Replace slogans such as “2% rule” and “2:1” with configurable laws: account and portfolio heat, gap/leverage/correlation/liquidity risk, stop distance, lot rounding, scaling, drawdown limits, stress cases, zero-size outcomes, and every constraint the LLM must see when deciding on a proposed plan. | `finance_strategy`, `pi_trade_plan`, `pi_portfolio_risk` |
 | `CG-PSYCHOLOGY` | Phase 1, Week 4 “Market Psychology” and Phase 5, Week 20 “Trading Psychology Mastery” | Specify user-declared bias/emotion/checklist vocabulary, pre-trade and post-trade review, process-adherence scoring, losing/winning-streak review, and boundaries against inferred diagnosis or automatic risk changes. | `pi_trade_journal` and every persona review loop |
 | `CG-TECH` | Phase 2, Weeks 5–8 “Technical Analysis” | Provide exact formulas, seeds, parameters, warm-up, missing-session and corporate-action treatment for SMA/EMA, RSI, MACD, KD9, Bollinger, ATR and VWAP; operational definitions and counterexamples for support/resistance, trend, breakout, gaps, divergence, volume confirmation, patterns and multi-timeframe use. | `finance_indicators`, `pi_stock_technicals`, screeners, charts and alerts |
 | `CG-FUNDAMENTAL` | Phase 3, Weeks 9–12 “Fundamental Analysis” | Define a minimum complete investor dossier, statement/period/segment/debt and cash-flow checks, sector-specific metrics, business quality, governance/management evidence, industry/macro context, valuation methods, sensitivity, and “insufficient evidence” cases. | governance/industry, quality/growth/valuation, fundamentals, and `pi_investor_workbench` |
@@ -162,6 +170,38 @@ bar workflow recorded below; every other gate remains **Open**.
 | `CG-QUANT` | Phase 4, Week 15 “Quantitative Approaches” | Specify the research protocol: falsifiable hypothesis, point-in-time universe/data availability, adjustments, feature/signal versioning, fill/cost model, train/validation/test and walk-forward design, multiple testing, uncertainty/significance, robustness, benchmarks and reproducible run acceptance. | `pi_quant_research`, `pi_backtest`, factor lab and event study |
 | `CG-PORTFOLIO` | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | Define position/portfolio sizing, diversification versus hidden concentration, correlation regimes, rebalance and cash-flow rules, leverage/liquidity/currency exposure, VaR/CVaR limits, stress tests and drawdown response without false precision. | portfolio, risk, scenarios, attribution and rebalance proposals |
 | `CG-LIVE` | Phase 6, Weeks 21–24+ “Live Trading” | Define readiness evidence for paper-to-micro-live transition, broker/account criteria, size-increase and stop conditions, execution and emotion review, incident handling and rollback; this augments rather than weakens the separate security review. | paper-broker acceptance and any live-broker design |
+
+#### CG-MARKET-DATA resolution — 2026-08-07
+
+- **Evidence:** trading-course
+  [Session 11 and its information-only amendments](../trading-course/sessions/11_cg_market_data_20260807.md).
+- **Reviewed scope:** regular-session daily OHLCV facts for long-only cash
+  equities on the `cn`, `hk`, and `us` tracks: identity, calendar/status,
+  acquisition, timing, adjustment, units, source-rights statements, quality,
+  conflicts, imports, compact summaries, drill-down, and stable evidence
+  references.
+- **Controlling boundary:** plugins preserve and efficiently expose observations,
+  provenance, unknowns, conflicts, omissions, mechanical checks, available
+  operations, and explicitly requested calculations. They do not judge
+  correctness, trustworthiness, sufficiency, usability, freshness, readiness,
+  setup quality, provider preference, the next action, or a trade. The LLM owns
+  every such decision.
+- **Accepted mechanics:** every required slot may be known, unknown, not
+  obtained, conflicting, or a decode failure without discarding other safe
+  evidence; parse failures remain distinct from mechanical predicates;
+  classifications include their component facts and versioned rules; no
+  imputation occurs unless explicitly requested by the LLM and returned as a
+  separate calculated artifact; rights predicates retain sourced, declared,
+  host-policy, or unknown authority.
+- **Implementation freedom:** package/type placement is non-blocking. Incremental
+  shared and track-owned information contracts may proceed without claiming
+  complete provider or track coverage. `CG-TECH`, `CG-RISK`, `CG-DAY`, and the
+  other adjacent gates still own their formulas and professional decisions.
+- **Initial implementation:** [`finance_ohlcv`](finance/finance_ohlcv/README.md)
+  now exposes generic fact states, raw reported-row mechanics, quantity, rights,
+  timing comparisons, bounded acquisition-attempt evidence, a typed packet, and
+  neutral available operations alongside its existing validated `Bar`/`Batch`
+  projection. Fourteen focused offline tests and the full repository suite pass.
 
 #### CG-SWING resolution — 2026-08-06
 
@@ -172,36 +212,43 @@ bar workflow recorded below; every other gate remains **Open**.
   inspectable RSI-reversal strategy example, plan-before-order, monitoring,
   explicit exit ambiguity, expiry, and planned-versus-observed review. It is a
   workflow contract and test hypothesis, not evidence of positive expectancy.
-- **Normative design:** [`finance_strategy`](finance/finance_strategy/README.md)
-  owns pure strategy definitions, evidence guards, evaluation, and lifecycle
-  transitions. [`pi_swing_workbench`](plugins/swing_workbench/README.md) is the
-  thin Pi compositor. Neither owns indicator arithmetic, sizing, provider
-  access, market rules, fill simulation, or journal storage.
+- **Normative implementation:**
+  [`finance_strategy`](finance/finance_strategy/README.md) owns pure strategy
+  definition data, evidence compatibility projection, receipt JSON, LLM/user
+  plan declarations, and structural workflow history. It deliberately has no
+  aggregate evaluation or decision type.
+  [`pi_swing_workbench`](plugins/swing_workbench/README.md) remains the thin Pi
+  evidence compositor. Neither owns indicator arithmetic, sizing, provider
+  access, market rules, fill simulation, journal storage, or the LLM's decision.
 - **Accepted corrections:** planned closures are absent from ordered trading-
   session series; no synthetic prices or volume are inserted; price-dependent
   features require an adjustment-consistent series and provenance; row presence
   is not an observation receipt; false predicates are distinct from missing or
-  late evidence; close-known decisions cannot become earlier intraday facts;
-  and a daily bar touching stop and target without sequence evidence yields
-  `UnknownOrdering`.
+  late evidence and never become an aggregate verdict; close-known facts cannot
+  become earlier intraday facts; and a daily bar touching stop and target
+  without sequence evidence yields an explicit unknown-ordering fact.
 - **Repository boundary:** course market, fee, tax, lot, tick, account, broker,
-  and calendar facts are requirements examples. Production evaluation consumes
-  exact track/listing/effective-date receipts from the existing market-owned
-  packages and caller capabilities; it does not embed those tables as timeless
-  constants. The addendum's `CG-JOURNAL` label maps to the existing
+  and calendar facts are requirements examples. Production evidence projection
+  consumes exact track/listing/effective-date receipts from the existing
+  market-owned packages and caller capabilities; it does not embed those tables
+  as timeless constants or decide what the LLM should do. The addendum's
+  `CG-JOURNAL` label maps to the existing
   `CG-PSYCHOLOGY` gate plus the ordinary `journal_schema` dependency because
   `CG-JOURNAL` is not registered here. Provider omission and incomplete
-  evidence return `NotReady`, never a semantic rejection of the security.
-- **Adjacent gates remain open and blocking where applicable:** minimum daily
-  observation, freshness, volume/turnover, source-rights, and import semantics
-  belong to `CG-MARKET-DATA`; indicator formulas, warm-up, and adjustment
-  production to `CG-TECH`; position sizing, gap stress, account constraints,
-  and portfolio heat to `CG-RISK`;
+  evidence remain distinct compatibility facts, never a semantic rejection of
+  the security.
+- **Adjacent dependencies remain blocking where applicable:** the
+  `CG-MARKET-DATA` information contract is resolved, but exact track/provider
+  composition for daily observation, timing, volume/turnover, source-rights,
+  and import facts remains incremental; indicator formulas, warm-up, and
+  adjustment production belong to `CG-TECH`; position sizing, gap stress,
+  account constraints, and portfolio heat to `CG-RISK`;
   executable order support and fill/cost policy to `CG-DAY` and the named
   execution dependency; journal schema and psychology review to
-  `CG-PSYCHOLOGY`; and expectancy/backtest claims to `CG-QUANT`. A missing
-  dependency that can change a predicate, size, or executable order returns
-  `NotReady`; optional confirmation/ranking omissions may be labelled warnings.
+  `CG-PSYCHOLOGY`; and expectancy/backtest claims to `CG-QUANT`. Missing, stale,
+  late, conflicting, declared-only, and unsupported dependencies remain named
+  facts. Optional confirmation/ranking omissions stay visibly optional; no
+  readiness label authorizes or rejects the LLM's plan.
 
 For a useful answer, ask the advisor to return: persona and holding horizon;
 track/instrument scope; required inputs and permissible freshness; exact formulas
@@ -259,6 +306,6 @@ Read phases in order for a full audit. They are categories, not permission to
 skip dependencies: an item in a later file still depends on all applicable R0
 contracts, track-specific evidence gates, and course-demand stops. New detailed
 proposals go in the appropriate phase file and must be linked from this index if
-they change a phase's scope. [`R2.md`](R2.md#active-delivery-ledger--2026-08-06)
+they change a phase's scope. [`R2.md`](R2.md#active-delivery-ledger--2026-08-07)
 is the active work ledger; the other files should not grow duplicate status
 lists.

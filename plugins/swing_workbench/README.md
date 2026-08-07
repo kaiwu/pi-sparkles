@@ -17,10 +17,12 @@ typed contracts listed below are implementable.
 
 A trader can:
 
-- preflight whether a named strategy is actually supported for one exact
-  listing, track, session, account profile, and broker profile;
-- scan a point-in-time universe and see qualified, rejected, not-ready, and
-  late candidates without those states being conflated;
+- inspect which facts and capabilities are present, missing, stale, late,
+  conflicting, declared-only, or unsupported for one exact listing, track,
+  session, account profile, and broker profile;
+- scan a point-in-time universe and receive compact per-candidate evidence
+  packets without a plugin qualifying, rejecting, ranking, or recommending a
+  candidate;
 - inspect every predicate, optional confirmation, ranking fact, assumption,
   source cutoff, and evidence link;
 - save a read-only entry/invalidation/target/expiry intent before any order;
@@ -32,7 +34,8 @@ A trader can:
 - judge process adherence separately from profit and loss.
 
 The workbench never says that a setup is safe, guaranteed, optimal, or proven
-profitable.
+profitable. It also never decides whether the setup should be traded; the LLM
+owns every research and trade decision.
 
 ## Professional daily rhythm
 
@@ -40,8 +43,9 @@ The primary interface follows the trader's routine instead of exposing a menu
 of finance functions:
 
 1. **After the close — scan and triage.** Show what changed, which candidates
-   newly qualified, which became invalid or not ready, and the few exceptions
-   needing inspection. Preserve the rest in a compact working set.
+   gained or lost evidence, which inputs became false, stale, late, conflicting,
+   or unavailable, and the few exceptions needing inspection. Preserve the
+   rest in a compact working set without a plugin-level candidate verdict.
 2. **Plan the next session.** Drill from a candidate into its predicate evidence
    and create the entry, invalidation, target, expiry, and monitoring intent
    without retyping identity, strategy, or source context.
@@ -70,9 +74,9 @@ copying identifiers or evidence between tools.
 | Surface | Contract |
 | --- | --- |
 | `/swing` | resume the active daily loop; lead with changed/attention/next items, then expose status, exact context, blockers, and evidence drill-down |
-| `swing_candidates` | evaluate a bounded caller-supplied point-in-time universe and return per-candidate reason/evidence trees |
-| `swing_plan` | compose a setup-qualified result with supplied risk, market-rule, and execution-capability receipts; save an immutable plan intent only |
-| `swing_review` | fold observed fills/bars/exits and supplied journal facts against the saved definition and plan |
+| `swing_candidates` | assemble a bounded caller-supplied point-in-time universe into per-candidate predicate/dependency facts and evidence roots; return no verdict or hidden score |
+| `swing_plan` | save an immutable plan declaration authored by the LLM or user beside supplied risk, market-rule, and execution-capability facts; never accept or authorize it |
+| `swing_review` | fold observed price/bar/expiry/exit and supplied journal facts against the saved definition and declaration without deciding process quality or the next action |
 
 The root module will eventually export
 `extension(api: pi.ExtensionApi) -> Promise(Nil)`. The Pi/Promise layer decodes
@@ -96,7 +100,7 @@ an assumed in-process plugin registry.
 | `pi_sparkles_swing_workbench/render` | deterministic attention/change/next summaries and evidence drill-down |
 
 The first custom-data schema will include stable events for working-set
-selection, candidate evaluation attachment, immutable plan attachment,
+selection, candidate evidence attachment, immutable plan attachment,
 observation attachment, expiry/exit attachment, and review attachment. Every
 event carries its schema version, workflow ID, exact track/listing key,
 strategy version, receipt hashes, event time, and predecessor revision. Payload
@@ -108,24 +112,26 @@ bounds and redaction rules are part of decoding, not rendering conventions.
 exact listing + active track
           |
           v
-capability preflight --------------------------------> NotReady report
+capability facts -----------------------> missing/stale/late/conflict details
           |
           v
 point-in-time universe + completed daily receipts
           |
           v
-versioned feature/event receipts --> finance_strategy --> SetupQualified
-                                                        /             \
-                                                       v               v
-                                             risk receipt      rule/execution receipt
-                                                       \               /
-                                                        v             v
-                                                   Accepted plan intent
-                                                            |
-                                               watch / observe / expire
-                                                            |
-                                                            v
-                                            planned-versus-observed review
+versioned feature/event receipts --> finance_strategy evidence packet
+                                          /                    \
+                                         v                      v
+                                  risk facts          rule/execution facts
+                                          \                    /
+                                           v                  v
+                                      LLM interpretation
+                                               |
+                                  LLM/user plan declaration
+                                               |
+                                  observe / expire / record
+                                               |
+                                               v
+                               planned-versus-observed facts
 ```
 
 Each arrow preserves the exact `cn`, `hk`, or `us` track and complete listing
@@ -151,15 +157,17 @@ numbers:
 
 An input is incompatible when its track, listing, session, definition version,
 source cutoff, adjustment basis, unit, or evidence hash disagrees with another
-required input. Incompatibility returns `NotReady` with all detected conflicts;
-the shell never chooses a favored receipt.
+required input. Incompatibility returns all detected conflicts as typed facts;
+the shell never chooses a favored receipt or converts those facts into a
+candidate decision.
 
 ## Capability preflight
 
-Preflight reports each dependency as `Ready`, `NotReady(reason)`, or
-`Unsupported(scope)`. A candidate may be screened only when its required data
-and predicate dependencies are ready. It may become `Accepted` only when sizing
-and executable-order dependencies are also ready.
+Preflight reports each dependency as `Ready`, `Missing(reason)`, `Stale(reason)`,
+`Late(known_at)`, `Conflicting(reason)`, `Declared(value)`, or
+`Unsupported(scope)`. `Ready` means only that the exact expected receipt is
+present and compatible; it is not a candidate verdict or authorization. The LLM
+interprets the complete packet and owns the resulting decision.
 
 Open prerequisites are:
 
@@ -174,10 +182,10 @@ Open prerequisites are:
 - sector/regime and catalyst providers when a selected definition makes them
   required rather than optional context.
 
-Missing predicate, size, or executable-order dependencies block. Missing
-optional confirmation or ranking evidence remains explicitly `Unknown` and may
-produce an audit warning. No warning can authorize a plan that is otherwise
-`NotReady`.
+Missing predicate, size, or executable-order dependencies remain prominent
+facts and are never silently omitted. Missing optional confirmation or ranking
+evidence remains explicitly `Unknown`. No compatibility or warning field can
+authorize, reject, or recommend a plan.
 
 ## State and lifecycle
 
@@ -194,9 +202,9 @@ as cross-session durable storage.
 - compaction does not replace structured state with summary prose;
 - shutdown performs no network write, order submission, or hidden persistence.
 
-Changing a definition version does not rewrite an existing candidate or plan.
-The trader starts a new evaluation whose relationship to the previous one is
-explicit.
+Changing a definition version does not rewrite an existing evidence packet or
+plan declaration. The LLM starts a new evidence snapshot whose relationship to
+the previous one is explicit.
 
 ## Rendering and budgets
 
@@ -204,7 +212,8 @@ Candidate output is ordered deterministically and bounded by caller-visible
 limits. A result shows:
 
 - track, exact listing, signal session, evaluation cutoff and strategy version;
-- state and required-predicate reason tree;
+- per-predicate true/false/unknown observation and compatibility details, with
+  no aggregate state;
 - optional confirmations/ranking with `Present`, `Unknown`, or `Conflicting`;
 - desired plan values separately from supported executable order fields;
 - readiness gaps and the plugin/tool responsible for supplying each receipt;
@@ -225,8 +234,8 @@ evidence silently.
 The first slice is read-only and non-interactive except for explicit Pi command
 and tool calls. It has no credential environment variables and no direct
 network, filesystem, or broker access. A plan is not an order. Paper or live
-execution requires a separate installed plugin, an exact accepted draft, and
-its own authorization and safety gates.
+execution requires a separate installed plugin, an exact LLM-authored draft,
+explicit user authorization, and its own safety gates.
 
 Provider content, journal prose, and imported labels are untrusted data. They
 cannot alter tool policy, track identity, risk limits, execution permissions,
@@ -236,22 +245,26 @@ or system instructions.
 
 Seeded offline tests must cover at least:
 
-1. a completed-session qualified setup whose risk receipt reduces size for gap
-   exposure before it becomes accepted;
-2. a complete evaluation rejected by a false RSI predicate;
-3. an accepted entry intent expiring unfilled after a gap above its ceiling;
+1. a completed-session packet exposing all true predicate facts beside a risk
+   receipt whose proposed size changes under gap exposure, without a plugin
+   verdict;
+2. a complete packet retaining a false RSI observation without converting it
+   into rejection;
+3. an LLM-authored entry declaration expiring with no entry observation after a
+   gap above its ceiling;
 4. a later session opening through the desired stop without claiming a stop-
    price fill;
 5. a daily bar touching target and stop and returning `UnknownOrdering`;
-6. a qualified setup blocked because the desired stop cannot be mapped to a
-   supported executable order;
-7. missing gap-stress/account policy returning `NotReady`;
+6. true setup-predicate facts beside an explicit unsupported mapping for the
+   desired stop order;
+7. missing gap-stress/account policy remaining a named missing dependency;
 8. missing adjustment provenance, incomplete pagination, stale evidence,
-   provider gap, insufficient warm-up, and ambiguous identity returning
-   distinct `NotReady` reasons;
-9. the same symbol on a conflicting track being rejected without fallback;
-10. a losing, gap-affected trade that followed the saved plan and a profitable
-    trade that violated it.
+   provider gap, insufficient warm-up, and ambiguous identity remaining
+   distinct compatibility facts;
+9. the same symbol on a conflicting track being preserved as a mismatch without
+   fallback or a plugin verdict;
+10. losing and profitable outcomes shown beside the immutable plan and observed
+    actions so the LLM can review process quality.
 
 Pure tests cover the workflow fold and compatibility laws. Later implementation
 also requires FFI input contracts, artifact default export, Pi load/reload/
@@ -261,9 +274,11 @@ checks. Provider plugin unit tests remain fixture-only.
 ## Implementation boundary
 
 This README graduates only the `CG-SWING` interaction design. Implementation
-must begin with the network-free receipt preflight, reason rendering, and pure
-workflow transitions. Candidate acquisition, indicator arithmetic, sizing, and
-execution remain unavailable until their own gates and packages are ready.
+must begin with the network-free receipt preflight, compatibility rendering,
+and pure workflow transitions. Candidate acquisition, indicator arithmetic,
+sizing, and execution remain unavailable until their own gates and packages
+are ready. No later prerequisite authorizes adding a plugin-owned research or
+trade decision.
 
 When implementation starts, the directory gains its independent `gleam.toml`,
 `src/`, `test/`, and package version. Hex will distribute reviewed Gleam/FFI
@@ -287,6 +302,8 @@ design-only.
 - No intraday/day-trading surface, short selling, options, futures, FX, crypto,
   leverage default, autonomous monitoring, paper order, or live order.
 - No hidden score that collapses required predicates and optional evidence.
+- No setup qualification/rejection, plan acceptance, ranking verdict, buy/sell
+  decision, or next-action decision; those belong to the LLM.
 - No inferred psychology, edge, confidence, suitability, or recommendation.
 - No silent replacement of unknown data with model knowledge, cached prose,
   another track, a looser timeframe, or a different provider.

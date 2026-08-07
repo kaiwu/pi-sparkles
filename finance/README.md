@@ -41,9 +41,9 @@ finance_market_accounting ─> finance_cn_accounting / finance_hk_accounting
 finance_testkit ────────────> finance_cn_testkit / finance_hk_testkit
 finance_track_capabilities ─> isolated CN/HK setup shells
 
-finance_core + evidence + listing + series + provenance
-              └────────────> finance_strategy (Designing; consumes feature,
-                              risk, rule, and execution receipts)
+finance_core + listing + provenance
+              └────────────> finance_strategy (Experimental evidence packet;
+                              consumes feature, risk, rule, and execution facts)
 ```
 
 The diagram shows dependency direction from foundation to consumer.
@@ -68,19 +68,25 @@ decoding and composes calendar arithmetic for explicit statement-period shapes,
 so every consumer sees the same exact facts and period rules. No core package or core
 test may depend on testkit or a provider adapter.
 
-`finance_strategy` is currently a design-only provider-neutral functional core
-for the resolved completed-daily-bar `CG-SWING` workflow. It evaluates
-versioned hypotheses and folds planned-versus-observed transitions over exact
-receipts; it does not own feature arithmetic, sizing, market rules, execution,
-providers, or Pi. Its directory intentionally has no `gleam.toml` until the
-reviewed first implementation slice begins.
+`finance_strategy` is an Experimental provider-neutral functional core for the
+resolved completed-daily-bar `CG-SWING` workflow. It packages versioned
+hypothesis data, projects per-input compatibility, round-trips exact evidence
+receipts, validates LLM/user plan declarations, and folds
+planned-versus-observed structural history. It deliberately emits no setup,
+trade, recommendation, or plan-acceptance decision; the LLM owns those. It does
+not own feature arithmetic, sizing, market rules, execution, providers, or Pi.
 
 `finance_ohlcv` composes core, calendar arithmetic, exact series/math, and
-canonical observations. It retains source lexemes beside normalized decimals,
-validates geometry and ordering, collapses only exact duplicates, and keeps
-provider pagination completeness separate from evidence-backed calendar-gap
-classification. The Alpaca adapter is its first US acquisition seam; IEX/SIP,
-credentials, symbol-as-of identity, raw adjustment, and rights remain explicit.
+canonical observations. Its `CG-MARKET-DATA` information contract preserves
+known, unknown, not-obtained, conflicting, decode-failure, mechanical-check,
+timing, quantity, rights, interrupted-acquisition, and available-operation
+facts in a typed packet; none is an aggregate correctness or workflow verdict.
+The stricter legacy `Bar`/`Batch` projection retains source lexemes beside
+normalized decimals, validates geometry and ordering for requested
+calculations, collapses only exact duplicates, and keeps provider pagination
+completeness separate from evidence-backed calendar-gap classification. The
+Alpaca adapter is its first US acquisition seam; IEX/SIP, credentials,
+symbol-as-of identity, raw adjustment, and sourced rights remain explicit.
 `finance_quote` is the smaller provider-neutral latest-quote contract. It
 preserves exact price and size lexemes, market codes, source time, currency, and
 canonical observation metadata, while refusing to infer consolidation,
