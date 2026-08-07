@@ -15,6 +15,14 @@ directory and is an independent Gleam project. Its local `README.md` becomes the
 detailed design document; this roadmap retains only the proposal, priority,
 dependencies, and delivery status.
 
+As of 2026-08-07, the catalog has 129 unique named `pi_*` proposals and 27
+matching implementation directories (20.9%). The repository has 36 plugin
+directories in total because nine reference, setup, and workflow slices do not
+map one-to-one to an R1 proposal. These are breadth counts, not completion
+counts: many directories intentionally implement only one Experimental slice.
+The operational breakdown and next breadth item are recorded in
+[`R2.md`](R2.md#catalog-breadth-snapshot).
+
 ## Proposal lifecycle
 
 Use these states when work begins:
@@ -100,19 +108,23 @@ reinterpret source evidence.
 | Trader workflow | Required decision loop | Current roadmap coverage | Steering gap |
 | --- | --- | --- | --- |
 | Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Quote, calendar/rules, order-book, tape, alerts, paper brokers, and compliance are proposed or narrow slices. | **Weakest.** No licensed, freshness-bounded intraday stream, shared order/fill model, fast trade-plan tool, or latency/execution-quality acceptance gate. Daily bars must not be presented as a day-trading surface. |
-| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, and shared-replay slices now compose in seeded and bundled-tool CN/HK/US journeys using a nine-receipt catalog: exact bundled OHLCV copies plus indicator, risk, rule, execution, source-declared sector/regime, bounded catalyst, exact task-time, and point-in-time universe/candidate observations. The US candidate row is decoded from exact scripted Alpaca asset bytes; CN/HK remain synthetic. An opt-in configured-tutor journey proves LLM-owned plan, preflight, monitor, replay, review, journal, same-session state restoration/linking, and exact journal plus workbench-state recovery from a distinct Pi session. | **Best next workflow.** Add a thin read-only universe acquisition shell over caller-selected Alpaca environment/status/exchange filters, then extend provider/track and remaining task evidence; professional sufficiency and broader workflow coverage remain incomplete. |
-| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | US primary-source and exact-fact slices are strongest; valuation, quality, actions, portfolio, thesis, news, and reports are proposed. | Statement breadth, segments, debt, governance/capital allocation, dividend history, peer/industry context, and CN/HK primary-document depth are incomplete. Narrow vendor facts are not an investor dossier. |
-| Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core now supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. | Provider-backed universe/action truth, thin Pi research/backtest shells, advanced requested statistics, intraday/derivatives/portfolio interaction, and any LLM conclusion about edge or deployability remain incremental. |
+| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, and shared-replay slices now compose in seeded and bundled-tool CN/HK/US journeys using a nine-receipt catalog: exact bundled OHLCV copies plus indicator, risk, rule, execution, source-declared sector/regime, bounded catalyst, exact task-time, and point-in-time universe/candidate observations. The US journey now invokes the bundled `stock_universe` Alpaca acquisition shell and binds its exact result hashes to the candidate receipt; CN/HK universe rows remain synthetic. An opt-in configured-tutor journey proves LLM-owned plan, preflight, monitor, replay, review, journal, same-session state restoration/linking, and exact journal plus workbench-state recovery from a distinct Pi session. | **Strongest current vertical; no more depth before breadth.** Session 17 makes `pi_stock_technicals` the next active shell, followed by sources, trade plan, order simulator, and dataset inspection. Extend swing/provider depth only on a concrete workflow trigger. |
+| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | US primary-source and exact-fact slices are strongest; valuation, quality, actions, portfolio, thesis, news, and reports are proposed. | `CG-FUNDAMENTAL` is first in the tutor queue and blocks investor-workbench design, not raw company-profile, action, earnings-date, or primary-source adapters. Narrow vendor facts remain short of a dossier. |
+| Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core now supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. | Session 17 ranks dataset inspection, `pi_quant_research`, and completed-daily `pi_backtest` at 5, 8, and 9. Corporate actions/historical membership are the highest-leverage missing source facts; edge/deployability remain LLM conclusions. |
 
 The following decisions bind later proposals:
 
-- The LLM owns every research and trade decision. Finance libraries and plugins
-  provide compact typed facts, explicit calculations, compatibility/readiness
-  states, provenance, and workflow history; they never emit a buy/sell verdict,
-  setup qualification, plan acceptance/rejection, recommendation, or hidden
-  score. Structural validation, deterministic formula evaluation, and safety or
-  authorization enforcement remain allowed, but must be rendered as the exact
-  facts and constraints the LLM needs rather than a substituted market opinion.
+- The LLM owns every query and every research or trade decision. It chooses the
+  tool, information request, inputs, formula, parameters, drill-down, operation
+  order, interpretation, and next action. Finance libraries and plugins are
+  neutral information surfaces: they return compact typed facts, evidence,
+  explicitly requested calculations, provenance, workflow history, available
+  operations, and exact failures or unknowns. They never decide what should be
+  queried, what evidence is sufficient or correct, which alternative should be
+  preferred, or whether a setup, plan, result, or trade is acceptable. Runtime
+  decoding, deterministic calculation, and effect authorization only report
+  what occurred or why an operation could not run; they are not market or
+  workflow verdicts.
 - Professional workflow fit is a release criterion, not presentation polish.
   Each workbench starts from the persona's recurring day-to-day loop, preserves
   context across interruptions, makes the routine path short, groups exceptions
@@ -148,6 +160,34 @@ The following decisions bind later proposals:
 - Readiness is track-specific. A workflow is not supported on a track until its
   identity, calendar/rules, source rights, time resolution, and required data
   quality pass that workflow's acceptance gate.
+
+### Portfolio steering — Session 17
+
+[Course Session 17](../trading-course/sessions/17_product_plugin_portfolio_steering_20260807.md)
+is the canonical implementation-priority review. It finds the architecture and
+swing proof deep enough, switches delivery to breadth-first thin shells, and
+sets this immediate queue:
+
+1. `pi_stock_technicals`;
+2. `pi_finance_sources`;
+3. `pi_trade_plan`;
+4. `pi_order_simulator`;
+5. `pi_finance_dataset`.
+
+Every target follows the same explicit loop: controlling tutor specification →
+detailed `plugins/<name>/README.md` design → independent Gleam implementation →
+proportional verification → ledger closeout and promotion of exactly one next
+target. The current target is `pi_stock_technicals`; its tutor specification is
+Sessions 12 and 17, so its next action is the detailed plugin design. The tutor
+queue is `CG-FUNDAMENTAL`, then `CG-PORTFOLIO`, then full `CG-DAY` only after a
+licensed intraday source exists.
+
+Depth resumes only for a named professional-task information gap, inefficient
+LLM context, a missing shared receipt needed by two consumers, a risky effect
+boundary, a lossy provider representation, or a track fact required by a
+selected workflow. Exhaustive variants, universal provider coverage, repeated
+acceptance, general requests for more tests, and plugin correctness verdicts do
+not qualify.
 
 ### Course-demand gates
 
@@ -470,9 +510,11 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
   receipts; the Gleam builder composes indicator-request, risk-request,
   track-owned rule-projection, execution semantic, source-declared
   sector/regime, bounded catalyst, exact task-time, and point-in-time
-  universe/candidate receipts. The US row is decoded by the actual Alpaca asset
-  adapter over exact scripted bytes; CN/HK rows remain synthetic. All nine
-  hashes are attached on each track. Provider authentication remains false and
+  universe/candidate receipts. The US row is acquired by the actual bundled
+  `stock_universe` plugin over exact scripted Alpaca bytes, and its source and
+  universe hashes are matched to the candidate receipt; CN/HK rows remain
+  synthetic. All nine hashes are attached on each track. Provider
+  authentication remains false and
   non-authenticating rule projection hashes remain explicit. No
   plugin decision field exists. The acceptance fixtures retain exact context,
   task-time, universe/candidate, and exception facts but do not claim provider
@@ -527,7 +569,7 @@ finance-plugin rules above apply to every phase file.
 | --- | --- | --- | --- |
 | **R0 — Trustworthy substrate and implemented baseline** | [`R0.md`](R0.md) | Shared finance packages, dependency laws, completed arbitrations, Experimental vertical slices, and the current depth gaps. | Establish what is real and reusable before counting trader-facing breadth. |
 | **R1 — Finance capability catalog** | [`R1.md`](R1.md) | Foundation/trust, market data, CN/HK/US research, fundamentals, valuation, trader workbenches, events, macro, portfolio, backtest, and execution proposals. | Keep the complete capability map while thin workbenches compose shared engines instead of cloning them. |
-| **R2 — Delivery and trader-workflow convergence** | [`R2.md`](R2.md) | Active delivery ledger, F0–F6 delivery, T0–T4 four-trader acceptance, CN0–CN4, and the next swing-trader sprint. | Keep state, blockers, next artifacts and forbidden claims explicit; choose implementation order from trader decision loops and stop at every open course gate before design. |
+| **R2 — Delivery and trader-workflow convergence** | [`R2.md`](R2.md) | Active delivery ledger, Session 17 breadth queue/scorecard, F0–F6 delivery, T0–T4 four-trader acceptance, and CN0–CN4. | Keep exactly one next target and its tutor-spec → detailed design → implementation → verification loop explicit; deepen only on a named Session 17 trigger. |
 | **R3 — Provider policy and open decisions** | [`R3.md`](R3.md) | Candidate/accepted providers, entitlement and source cautions, and unresolved product/data decisions. | Resolve provider and policy choices without creating invisible fallback chains. |
 
 Read phases in order for a full audit. They are categories, not permission to

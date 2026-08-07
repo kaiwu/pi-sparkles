@@ -52,6 +52,9 @@ repository currently contains:
   page projection, without changing or synthesizing bars;
 - an exact US latest best-bid-and-ask slice in `us_quote`, using explicit
   Alpaca IEX/SIP selection and the provider-neutral `finance_quote` envelope;
+- an information-only `stock_screener` acquisition slice that returns bounded
+  exact Alpaca US-equity asset-master rows and content hashes for explicit
+  paper/live, status, and exchange inputs, without screening or ranking;
 - a network-free `stock_research_report` compositor that validates exact
   Alpaca/SEC receipts and renders a deterministic US source-fact brief;
 - a track-safe `watchlist` workflow plugin with exact listing keys, bounded
@@ -319,6 +322,7 @@ HKEX configuration applies only to the HK disclosure plugin.
 | `us_ohlcv_gaps` | None | None | Composes copied Alpaca/calendar/listing/status receipts locally; performs no environment lookup or runtime provider request. |
 | `us_quote` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-quote/0.1`; feed entitlement and recency depend on the requested IEX/SIP feed and account. |
 | `us_ohlcv` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-ohlcv/0.1`; feed entitlement still depends on the Alpaca account and requested IEX/SIP feed. |
+| `stock_screener` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-screener/0.1`; `stock_universe` uses the explicitly selected paper/live Trading API environment and returns provider rows without interpreting capability flags. |
 
 The three SEC plugins share one fair-access identity. Alpaca credentials are a
 separate authority and never enable SEC tools or `finance_symbols`.
@@ -474,6 +478,7 @@ pi-sparkles/
 │   ├── sec_xbrl/                 exact SEC XBRL concept and fact evidence
 │   ├── stock_fundamentals/       audited direct-fact normalization
 │   ├── stock_research_report/    deterministic cited US receipt composition
+│   ├── stock_screener/           exact Alpaca US asset-universe information
 │   ├── swing_workbench/          LLM-owned branch-persistent swing context
 │   ├── trade_journal/            LLM-owned durable local journal information
 │   ├── watchlist/                track-safe branch-persistent workflow state

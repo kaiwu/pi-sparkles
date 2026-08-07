@@ -641,6 +641,30 @@ describe("automated LLM-owned swing acceptance lane", () => {
           "qualified",
         );
         if (spec.track === "us") {
+          expect(spec.receipts.universeCandidate).toMatchObject({
+            sourceTool: "stock_universe",
+          });
+          const bundledUniverseResult = JSON.parse(
+            spec.receipts.universeCandidate.sourceResultPayload,
+          );
+          expect(bundledUniverseResult).toMatchObject({
+            track: "us",
+            provider: "alpaca",
+            decisionOwner: "llm",
+            pluginDecisionFields: [],
+            rows: [
+              {
+                symbol: "AAPL",
+                providerMembership: "provider_returned_row",
+              },
+            ],
+          });
+          expect(bundledUniverseResult.sourceReceipt).toBe(
+            universeCandidate.observation.value.source_receipt,
+          );
+          expect(bundledUniverseResult.universeReceipt).toBe(
+            universeCandidate.observation.value.universe_receipt,
+          );
           expect(universeCandidate.observation.value).toMatchObject({
             query_scope:
               "https://paper-api.alpaca.markets/v2/assets?status=active&asset_class=us_equity&exchange=NASDAQ",

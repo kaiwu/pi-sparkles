@@ -14,6 +14,9 @@ const hkPage =
 const usPage =
   '{"bars":{"AAPL":[{"c":205.1000,"h":206.20,"l":202.80,"n":510000,"o":203.0000,"t":"2026-08-03T04:00:00Z","v":50100000,"vw":204.5000},{"c":206.2500,"h":207.10,"l":204.60,"n":520000,"o":205.2000,"t":"2026-08-04T04:00:00Z","v":48900000,"vw":205.9000},{"c":204.9000,"h":207.00,"l":204.20,"n":505000,"o":206.3000,"t":"2026-08-05T04:00:00Z","v":47500000,"vw":205.4000},{"c":208.4000,"h":209.00,"l":204.70,"n":540000,"o":205.0000,"t":"2026-08-06T04:00:00Z","v":53000000,"vw":207.1000},{"c":210.1500,"h":211.00,"l":207.90,"n":560000,"o":208.5000,"t":"2026-08-07T04:00:00Z","v":55000000,"vw":209.7000}]},"next_page_token":null}';
 
+const usUniversePage =
+  '[{"id":"b0b6dd9d-8b9b-48a9-ba46-b9d54906e415","class":"us_equity","exchange":"NASDAQ","symbol":"AAPL","name":"Apple Inc. Common Stock","status":"active","tradable":true,"marginable":true,"shortable":true,"easy_to_borrow":true,"fractionable":true,"attributes":["has_options"]}]';
+
 const specs = {
   cn: {
     artifact: "cn_ohlcv",
@@ -58,6 +61,17 @@ const specs = {
   },
 };
 
+const universeSpec = {
+  artifact: "stock_screener",
+  toolName: "stock_universe",
+  input: {
+    environment: "paper",
+    status: "active",
+    exchange: "NASDAQ",
+    maximumAssets: 1000,
+  },
+};
+
 export async function loadBundledMarketReceipts() {
   const originalFetch = globalThis.fetch;
   const originalNow = Date.now;
@@ -78,6 +92,15 @@ export async function loadBundledMarketReceipts() {
       const url = new URL(String(input));
       const headers = new Headers(init?.headers);
       requests.push({ url: url.toString(), headers });
+      if (url.hostname === "paper-api.alpaca.markets") {
+        return new Response(usUniversePage, {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "x-request-id": "acceptance-us-universe",
+          },
+        });
+      }
       if (url.hostname === "data.alpaca.markets") {
         return new Response(usPage, {
           status: 200,
@@ -109,7 +132,14 @@ export async function loadBundledMarketReceipts() {
       const details = await executeBundledTool(spec);
       copies[track] = copyReceipt(track, spec.toolName, details);
     }
-    invariant(requests.length === 3, "Expected one provider request per track");
+    copies.usUniverse = copyUniverse(
+      universeSpec.toolName,
+      await executeBundledTool(universeSpec),
+    );
+    invariant(
+      requests.length === 4,
+      "Expected one market request per track plus one US universe request",
+    );
     invariant(
       requests.every(({ headers }) =>
         headers.get("user-agent")?.includes("acceptance@example.test"),
@@ -122,6 +152,65 @@ export async function loadBundledMarketReceipts() {
     Date.now = originalNow;
     restoreEnvironment(savedEnvironment);
   }
+}
+
+function copyUniverse(toolName, details) {
+  invariant(details.track === "us", `${toolName} changed the requested track`);
+  invariant(details.rows.length === 1, `${toolName} did not return one row`);
+  invariant(
+    details.rows[0].symbol === "AAPL",
+    `${toolName} changed the provider universe row`,
+  );
+  invariant(
+    details.decisionOwner === "llm" &&
+      details.pluginDecisionFields.length === 0,
+    `${toolName} returned plugin-owned decision fields`,
+  );
+  invariant(
+    details.sourceReceipt === sha256(usUniversePage),
+    `${toolName} source receipt does not bind the exact response`,
+  );
+  invariant(
+    details.universeReceipt ===
+      sha256(`${details.sourceReference}\n${usUniversePage}`),
+    `${toolName} universe receipt does not bind its request and response`,
+  );
+  const sourceResultPayload = JSON.stringify(details);
+  invariant(
+    !sourceResultPayload.includes("acceptance-secret-key"),
+    `${toolName} leaked a fixture credential`,
+  );
+  return {
+    sourceTool: toolName,
+    sourceResultPayload,
+    sourceResultContentHash: sha256(sourceResultPayload),
+    sourceReceipt: details.sourceReceipt,
+    universeReceipt: details.universeReceipt,
+  };
+}
+
+export function verifyBundledUniverseCopy(copy, candidateCopy) {
+  invariant(
+    copy.sourceTool === "stock_universe",
+    "Unexpected bundled universe source tool",
+  );
+  invariant(
+    sha256(copy.sourceResultPayload) === copy.sourceResultContentHash,
+    "Bundled universe result content hash changed",
+  );
+  const details = JSON.parse(copy.sourceResultPayload);
+  invariant(details.track === "us", "Bundled universe result track changed");
+  invariant(
+    details.sourceReceipt === copy.sourceReceipt &&
+      details.universeReceipt === copy.universeReceipt,
+    "Bundled universe receipt handles changed",
+  );
+  const candidate = JSON.parse(candidateCopy.payload).payload.observation.value;
+  invariant(
+    candidate.source_receipt === copy.sourceReceipt &&
+      candidate.universe_receipt === copy.universeReceipt,
+    "Universe candidate does not copy the bundled tool receipts",
+  );
 }
 
 async function executeBundledTool(spec) {

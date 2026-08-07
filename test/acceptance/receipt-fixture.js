@@ -7,6 +7,7 @@ import {
 import {
   loadBundledMarketReceipts,
   verifyBundledMarketCopy,
+  verifyBundledUniverseCopy,
 } from "./provider-market-fixture.js";
 
 export async function loadReceiptFixture({ build = false } = {}) {
@@ -39,6 +40,13 @@ export async function loadReceiptFixture({ build = false } = {}) {
       "universeCandidate",
     ]) {
       verifyReceiptCopy(name, receipts[name]);
+    }
+    if (track === "us") {
+      Object.assign(receipts.universeCandidate, markets.usUniverse);
+      verifyBundledUniverseCopy(
+        receipts.universeCandidate,
+        receipts.universeCandidate,
+      );
     }
   }
   return fixture;
