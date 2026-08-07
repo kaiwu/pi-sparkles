@@ -204,6 +204,30 @@ bun run test:pi -- pi_sparkles_hello
 defaults to `/home/kaiwu/Documents/github/pi-mono` in this workspace and falls
 back to the installed Pi when the source checkout is not hydrated.
 
+The deterministic swing acceptance lane drives the real bundled workbench and
+journal tool interfaces with fixed caller/LLM-authored fixtures on all three
+tracks. A scripted acceptance transport invokes the actual bundled CN/HK/US
+OHLCV tools and copies their exact content-bound result and market-owned gap
+receipt. A test-only Gleam builder composes indicator-request, risk-request,
+effective-rule, and execution-result receipts over that copied market digest;
+the execution receipt retains every compatible daily-bar ordering branch.
+These are exact scripted response bytes, not authenticated live-provider
+responses, and effective-rule content hashes are not provider signatures. The
+opt-in tutor lane additionally uses Pi's configured default model to inspect
+the same bounded catalog and make thirteen ordered tool calls. The model
+independently selects content-bound plan, preflight, monitor, replay, and review
+operations, carries the selected plan hash through each record, and persists a
+matching LLM-attributed journal declaration. A fresh second Pi process reopens
+the native session and must return the exact revision-8 snapshot from eight
+persisted extension events. The lane enables no built-in tools, uses temporary
+private session and journal storage, and is excluded from `bun run test`
+because it makes real model calls:
+
+```sh
+bun run test:acceptance -- swing
+bun run test:live:tutor
+```
+
 Live SEC compatibility is an explicit, non-CI lane. It builds and invokes the
 real `sec_edgar`, `sec_xbrl`, and `stock_fundamentals` bundles without an LLM,
 allows only bounded HTTPS GETs to SEC hosts, and requires a real caller contact:
@@ -681,7 +705,9 @@ Commands implemented now:
 | `bun run test:architecture` | enforce functional-core/effect-shell import and FFI boundaries |
 | `bun run test:ffi` | build and run JavaScript binding contracts |
 | `bun run test:artifacts` | build and inspect the generated extension modules |
+| `bun run test:acceptance [-- swing]` | run deterministic CN/HK/US journeys through bundled plugin tools |
 | `bun run test:pi [-- name]` | load artifacts in Pi without invoking a model |
+| `bun run test:live:tutor` | run an opt-in multi-stage bounded journey through Pi's configured LLM and plugin tools |
 | `bun run test:live:sec` | run opt-in bounded compatibility checks against live read-only SEC APIs |
 | `bun run test` | complete repository verification |
 | `bun run clean` | remove generated build, work, and distribution output |
@@ -692,7 +718,7 @@ must never alter Hex or other external state.
 
 ## Test strategy
 
-The repository uses five layers:
+The repository uses seven layers:
 
 1. Pure Gleam tests run on the JavaScript target with Bun.
 2. Architecture tests reject Pi/Promise imports in plugin domain modules,
@@ -701,8 +727,12 @@ The repository uses five layers:
    callbacks, schemas, event results, asynchronous decisions, and failures.
 4. Artifact tests ensure every bundle has a callable default export and a Pi
    directory manifest.
-5. Pi smoke tests ask the real loader to initialize each extension using
+5. Deterministic acceptance tests drive bundled plugin tools through complete
+   declared workflow fixtures without asking a model to select anything.
+6. Pi smoke tests ask the real loader to initialize each extension using
    `--list-models`, which needs no provider credentials.
+7. Explicit live lanes exercise the configured tutor LLM or bounded public
+   provider compatibility. They are never part of ordinary deterministic tests.
 
 Before a release, the matrix should also cover a hydrated Pi source runtime,
 the published Node runtime, and a compiled Pi Bun binary when available.

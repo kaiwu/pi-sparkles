@@ -1,0 +1,46 @@
+# Do not manually edit this file, it is managed by Gleam.
+#
+# This file locks the dependency versions used, to make your build
+# deterministic and to prevent unexpected versions from being included
+# in your application.
+#
+# You should check this file into your source control repository.
+
+packages = [
+  { name = "finance_calendar", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "gleam_stdlib"], source = "local", path = "../../finance/finance_calendar" },
+  { name = "finance_cn_identity", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "finance_listing", "finance_provenance", "finance_track", "gleam_stdlib"], source = "local", path = "../../finance/finance_cn_identity" },
+  { name = "finance_cn_rules", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_cn_identity", "finance_core", "finance_listing", "finance_market_rules", "finance_provenance", "gleam_stdlib"], source = "local", path = "../../finance/finance_cn_rules" },
+  { name = "finance_core", version = "0.1.0", build_tools = ["gleam"], requirements = ["gleam_json", "gleam_stdlib"], source = "local", path = "../../finance/finance_core" },
+  { name = "finance_execution", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "finance_math", "finance_provenance", "finance_track", "gleam_json", "gleam_stdlib"], source = "local", path = "../../finance/finance_execution" },
+  { name = "finance_hk_identity", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "finance_listing", "finance_provenance", "finance_track", "gleam_stdlib"], source = "local", path = "../../finance/finance_hk_identity" },
+  { name = "finance_hk_rules", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "finance_hk_identity", "finance_listing", "finance_market_rules", "finance_provenance", "gleam_stdlib"], source = "local", path = "../../finance/finance_hk_rules" },
+  { name = "finance_indicators", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "finance_math", "finance_ohlcv", "finance_provenance", "finance_track", "gleam_json", "gleam_stdlib"], source = "local", path = "../../finance/finance_indicators" },
+  { name = "finance_listing", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "finance_provenance", "finance_track", "gleam_stdlib"], source = "local", path = "../../finance/finance_listing" },
+  { name = "finance_market_calendar", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_calendar", "finance_core", "finance_provenance", "finance_track", "gleam_stdlib"], source = "local", path = "../../finance/finance_market_calendar" },
+  { name = "finance_market_rules", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "finance_listing", "finance_provenance", "gleam_stdlib"], source = "local", path = "../../finance/finance_market_rules" },
+  { name = "finance_math", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "gleam_stdlib"], source = "local", path = "../../finance/finance_math" },
+  { name = "finance_ohlcv", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_calendar", "finance_core", "finance_listing", "finance_market_calendar", "finance_math", "finance_provenance", "finance_series", "finance_track", "gleam_json", "gleam_stdlib"], source = "local", path = "../../finance/finance_ohlcv" },
+  { name = "finance_provenance", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "gleam_javascript", "gleam_json", "gleam_stdlib"], source = "local", path = "../../finance/finance_provenance" },
+  { name = "finance_risk", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "finance_math", "finance_provenance", "finance_track", "gleam_json", "gleam_stdlib"], source = "local", path = "../../finance/finance_risk" },
+  { name = "finance_series", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "finance_math", "gleam_stdlib"], source = "local", path = "../../finance/finance_series" },
+  { name = "finance_track", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "gleam_json", "gleam_stdlib"], source = "local", path = "../../finance/finance_track" },
+  { name = "finance_us_rules", version = "0.1.0", build_tools = ["gleam"], requirements = ["finance_core", "finance_listing", "finance_track", "gleam_stdlib"], source = "local", path = "../../finance/finance_us_rules" },
+  { name = "gleam_javascript", version = "1.0.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_javascript", source = "hex", outer_checksum = "D542C4B4F40E942F5D3372D524419FA521A7BB92D621AF696CC286E89D882D55" },
+  { name = "gleam_json", version = "3.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_json", source = "hex", outer_checksum = "44FDAA8847BE8FC48CA7A1C089706BD54BADCC4C45B237A992EDDF9F2CDB2836" },
+  { name = "gleam_stdlib", version = "1.0.5", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "CEE5B6C076A85B45F60C585F4316C63EC8B7127C119D5738C3958A9C4D50404E" },
+]
+
+[requirements]
+finance_cn_rules = { path = "../../finance/finance_cn_rules" }
+finance_core = { path = "../../finance/finance_core" }
+finance_execution = { path = "../../finance/finance_execution" }
+finance_hk_rules = { path = "../../finance/finance_hk_rules" }
+finance_indicators = { path = "../../finance/finance_indicators" }
+finance_listing = { path = "../../finance/finance_listing" }
+finance_ohlcv = { path = "../../finance/finance_ohlcv" }
+finance_provenance = { path = "../../finance/finance_provenance" }
+finance_risk = { path = "../../finance/finance_risk" }
+finance_track = { path = "../../finance/finance_track" }
+finance_us_rules = { path = "../../finance/finance_us_rules" }
+gleam_json = { version = ">= 3.1.0 and < 4.0.0" }
+gleam_stdlib = { version = ">= 0.69.0 and < 2.0.0" }

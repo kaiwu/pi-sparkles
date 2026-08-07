@@ -11,7 +11,9 @@
     "test:finance": "bun scripts/check.js && bun test test/finance",
     "test:ffi": "bun scripts/build.js && bun test test/binding",
     "test:artifacts": "bun scripts/build.js && bun test test/artifacts",
+    "test:acceptance": "bun scripts/test-acceptance.js",
     "test:pi": "bun scripts/test-pi.js",
+    "test:live:tutor": "bun scripts/test-live-tutor.js",
     "test:live:sec": "bun scripts/test-live-sec.js",
     "test": "bun scripts/test.js",
     "clean": "bun scripts/clean.js"

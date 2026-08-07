@@ -165,11 +165,35 @@ stage durations. The package has 16 pure tests in total. These fixtures prove
 composition and auditability only: they do not establish provider coverage,
 positive expectancy, professional sufficiency, or whole-product acceptance.
 
+The repository-level deterministic acceptance lane also drives the actual
+bundled `swing_workbench` and `trade_journal` tool interfaces for `cn`, `hk`,
+and `us`, including exact branch restart and local journal reload. Its
+acceptance shell now invokes the actual bundled CN/HK/US OHLCV tools over exact
+scripted response bytes and copies each complete tool result plus its
+market-owned gap receipt. The Gleam fixture builder composes
+indicator-request, risk-request, track-owned effective-rule, and execution
+semantic receipts over those market digests. The provider fixtures remain
+non-live and explicitly non-authenticating, and rule hashes remain content
+hashes rather than provider signatures.
+The opt-in live tutor lane gives the configured Pi model the same bounded US
+receipt catalog and drives thirteen ordered calls through candidate inspection,
+plan, preflight, monitor, replay, review, final snapshot, and journal storage.
+At each decision stage the model independently selects one neutral
+content-bound alternative; the verifier proves the selected hashes, selected
+plan reference, final snapshot, and `llm_declared` journal payload agree while
+the workbench exposes an empty plugin-decision field list. It then starts a
+fresh Pi process with the same native session ID, enables only
+`swing_snapshot`, and verifies exact revision-8 restoration from eight
+contiguous extension events. The live lane makes real model calls and is not
+part of the default suite.
+
 ```sh
 bun run check -- swing_workbench
 bun run test:unit -- swing_workbench
+bun run test:acceptance -- swing
 bun run build -- swing_workbench
 bun run test:pi -- swing_workbench
+bun run test:live:tutor
 ```
 
 ## Non-goals

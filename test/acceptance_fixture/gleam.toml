@@ -1,0 +1,24 @@
+name = "pi_sparkles_acceptance_fixture"
+version = "0.1.0"
+target = "javascript"
+description = "Test-only canonical finance receipt fixtures for acceptance journeys"
+
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+gleam_json = ">= 3.1.0 and < 4.0.0"
+finance_core = { path = "../../finance/finance_core" }
+finance_cn_rules = { path = "../../finance/finance_cn_rules" }
+finance_execution = { path = "../../finance/finance_execution" }
+finance_hk_rules = { path = "../../finance/finance_hk_rules" }
+finance_indicators = { path = "../../finance/finance_indicators" }
+finance_listing = { path = "../../finance/finance_listing" }
+finance_ohlcv = { path = "../../finance/finance_ohlcv" }
+finance_provenance = { path = "../../finance/finance_provenance" }
+finance_risk = { path = "../../finance/finance_risk" }
+finance_track = { path = "../../finance/finance_track" }
+finance_us_rules = { path = "../../finance/finance_us_rules" }
+
+[javascript]
+runtime = "bun"

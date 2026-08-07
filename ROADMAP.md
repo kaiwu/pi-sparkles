@@ -100,7 +100,7 @@ reinterpret source evidence.
 | Trader workflow | Required decision loop | Current roadmap coverage | Steering gap |
 | --- | --- | --- | --- |
 | Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Quote, calendar/rules, order-book, tape, alerts, paper brokers, and compliance are proposed or narrow slices. | **Weakest.** No licensed, freshness-bounded intraday stream, shared order/fill model, fast trade-plan tool, or latency/execution-quality acceptance gate. Daily bars must not be presented as a day-trading surface. |
-| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, and shared-replay slices now compose in seeded offline CN/HK/US journeys. | **Best next workflow.** Replace synthetic acceptance leaves with exact provider/track receipts and exercise the same loop through Pi surfaces; durable cross-session composition, sector/catalyst breadth, and complete provider evidence remain incomplete. |
+| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, and shared-replay slices now compose in seeded and bundled-tool CN/HK/US journeys using exact content-bound receipt copies from the bundled OHLCV tools; an opt-in configured-tutor journey proves LLM-owned plan, preflight, monitor, replay, review, journal, and exact state restoration in a second Pi process. | **Best next workflow.** Add receipt families for sector/regime, catalysts, and exact task-time observations; durable state across distinct Pi sessions, complete provider evidence, and broader professional workflow coverage remain incomplete. |
 | Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | US primary-source and exact-fact slices are strongest; valuation, quality, actions, portfolio, thesis, news, and reports are proposed. | Statement breadth, segments, debt, governance/capital allocation, dividend history, peer/industry context, and CN/HK primary-document depth are incomplete. Narrow vendor facts are not an investor dossier. |
 | Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core now supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. | Provider-backed universe/action truth, thin Pi research/backtest shells, advanced requested statistics, intraday/derivatives/portfolio interaction, and any LLM conclusion about edge or deployability remain incremental. |
 
@@ -451,10 +451,23 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
   plan declarations, and caller-vocabulary review records. It reports exact
   snapshot changes and neutral available operations, replays/forks Pi branch
   events, and locks malformed history. Eleven contract tests plus five seeded
-  CN/HK/US replay/journal acceptance tests, three binding scenarios, artifact
-  verification, and Pi smoke loading cover the first slices; no plugin decision
-  field exists. The acceptance fixtures retain exact task-time and exception
-  facts but do not claim provider completeness or professional sufficiency.
+  CN/HK/US replay/journal acceptance tests, three deterministic bundled-tool
+  journeys, three binding scenarios, artifact verification, and Pi smoke
+  loading cover the reproducible slices. An additional opt-in configured-tutor
+  lane executes thirteen real workbench and journal calls, lets the LLM select
+  content-bound plan, preflight, monitor, replay, and review operations, and
+  verifies their plan-reference lineage plus exact `llm_declared` persistence.
+  It then opens the same native Pi session in a second process, permits only a
+  snapshot call, and verifies byte-equivalent revision-8 state from eight
+  extension events. A test shell invokes the actual bundled CN/HK/US OHLCV
+  tools over exact scripted response bytes and copies their market-owned gap
+  receipts; the Gleam builder composes indicator-request, risk-request,
+  track-owned rule-projection, and execution semantic receipts over those exact
+  digests. Provider authentication remains false and non-authenticating rule
+  projection hashes remain explicit. No
+  plugin decision field exists. The acceptance fixtures retain exact task-time
+  and exception facts but do not claim provider authenticity, completeness, or
+  professional sufficiency.
 
 For a useful answer, ask the advisor to return: persona and holding horizon;
 track/instrument scope; required inputs and permissible freshness; exact formulas
