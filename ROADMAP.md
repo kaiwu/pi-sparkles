@@ -100,9 +100,9 @@ reinterpret source evidence.
 | Trader workflow | Required decision loop | Current roadmap coverage | Steering gap |
 | --- | --- | --- | --- |
 | Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Quote, calendar/rules, order-book, tape, alerts, paper brokers, and compliance are proposed or narrow slices. | **Weakest.** No licensed, freshness-bounded intraday stream, shared order/fill model, fast trade-plan tool, or latency/execution-quality acceptance gate. Daily bars must not be presented as a day-trading surface. |
-| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Daily OHLCV, series/math, screener, technicals, catalysts, alerts, watchlist, and journal exist as separate proposals. | **Best next workflow.** The pieces lack one inspectable signal definition, risk/reward plan, saved workflow state, and end-to-end acceptance test. |
+| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, and shared-replay slices now compose in seeded offline CN/HK/US journeys. | **Best next workflow.** Replace synthetic acceptance leaves with exact provider/track receipts and exercise the same loop through Pi surfaces; durable cross-session composition, sector/catalyst breadth, and complete provider evidence remain incomplete. |
 | Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | US primary-source and exact-fact slices are strongest; valuation, quality, actions, portfolio, thesis, news, and reports are proposed. | Statement breadth, segments, debt, governance/capital allocation, dividend history, peer/industry context, and CN/HK primary-document depth are incomplete. Narrow vendor facts are not an investor dossier. |
-| Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | Math, series, calendars, OHLCV receipts, factor lab, event study, and a thin backtest proposal exist. | Point-in-time universe membership, corporate-action truth, shared strategy/execution semantics, parameter-trial accounting, statistical tests, walk-forward validation, and reproducible dataset manifests are incomplete. |
+| Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core now supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. | Provider-backed universe/action truth, thin Pi research/backtest shells, advanced requested statistics, intraday/derivatives/portfolio interaction, and any LLM conclusion about edge or deployability remain incremental. |
 
 The following decisions bind later proposals:
 
@@ -159,8 +159,10 @@ bar workflow, `CG-MARKET-DATA` for the information-only daily-market-data
 contract, `CG-TECH` for calculation-only technical facts, `CG-RISK` for
 calculation-only risk facts, and the execution-information slice of `CG-DAY`
 for desired instructions, capabilities, explicit simulations,
-lifecycle/fills, and requested calculations. The full intraday workflow part
-of `CG-DAY` and every other gate remain **Open**.
+lifecycle/fills, and requested calculations. `CG-QUANT` is resolved for the
+provider-neutral completed-daily shared-replay information contract. The full
+intraday workflow part of `CG-DAY` and the gates still marked open below remain
+**Open**.
 
 | Gate | Trading-course TOC cross-reference | Finance-advisor deep dive required before design | Applies first to |
 | --- | --- | --- | --- |
@@ -171,7 +173,7 @@ of `CG-DAY` and every other gate remain **Open**.
 | `CG-FUNDAMENTAL` | Phase 3, Weeks 9–12 “Fundamental Analysis” | Define a minimum complete investor dossier, statement/period/segment/debt and cash-flow checks, sector-specific metrics, business quality, governance/management evidence, industry/macro context, valuation methods, sensitivity, and “insufficient evidence” cases. | governance/industry, quality/growth/valuation, fundamentals, and `pi_investor_workbench` |
 | `CG-SWING` **(Resolved — 2026-08-06)** | Phase 4, Week 13 “Swing Trading System” and Week 16 “Strategy Integration” | Walk one complete weekly-to-daily workflow: universe, sector/regime/catalyst context, setup and confirmation, entry/stop/target/expiry, sizing/scaling, monitoring, exits, invalidation and journal review; distinguish required evidence from preferences. | `finance_strategy` completed-daily-bar slice, `pi_swing_workbench`, the next sprint |
 | `CG-DAY` **(Execution-information slice Resolved — 2026-08-07; full intraday workflow Open)** | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Define pre-market, auction, opening-range, intraday and close workflows; permissible data latency; spread/depth/tape use; overtrading controls; order choice; partial/non-fill, gap, latency, impact and queue uncertainty; and track-specific stop/order availability. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench` |
-| `CG-QUANT` | Phase 4, Week 15 “Quantitative Approaches” | Specify the research protocol: falsifiable hypothesis, point-in-time universe/data availability, adjustments, feature/signal versioning, fill/cost model, train/validation/test and walk-forward design, multiple testing, uncertainty/significance, robustness, benchmarks and reproducible run acceptance. | `pi_quant_research`, `pi_backtest`, factor lab and event study |
+| `CG-QUANT` **(Shared-replay information slice Resolved — 2026-08-07)** | Phase 4, Week 15 “Quantitative Approaches” | Specify the research protocol: falsifiable hypothesis, point-in-time universe/data availability, adjustments, feature/signal versioning, fill/cost model, train/validation/test and walk-forward design, multiple testing, uncertainty/significance, robustness, benchmarks and reproducible run acceptance. | `finance_replay`, `pi_quant_research`, `pi_backtest`, factor lab and event study |
 | `CG-PORTFOLIO` | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | Define position/portfolio sizing, diversification versus hidden concentration, correlation regimes, rebalance and cash-flow rules, leverage/liquidity/currency exposure, VaR/CVaR limits, stress tests and drawdown response without false precision. | portfolio, risk, scenarios, attribution and rebalance proposals |
 | `CG-LIVE` | Phase 6, Weeks 21–24+ “Live Trading” | Define readiness evidence for paper-to-micro-live transition, broker/account criteria, size-increase and stop conditions, execution and emotion review, incident handling and rollback; this augments rather than weakens the separate security review. | paper-broker acceptance and any live-broker design |
 
@@ -350,6 +352,46 @@ of `CG-DAY` and every other gate remain **Open**.
   `CG-PORTFOLIO` attribution, and `CG-LIVE` integration remain incremental and
   do not authorize plugin-owned decisions.
 
+#### CG-QUANT shared-replay resolution — 2026-08-07
+
+- **Evidence:** trading-course
+  [Session 16](../trading-course/sessions/16_cg_quant_shared_replay_information_contract_20260807.md),
+  which is the canonical information contract for point-in-time manifests,
+  immutable run definitions, partitions, replay events, trial accounting,
+  requested calculations, comparison, compact context, and reproducibility.
+- **Reviewed scope:** provider-neutral completed-daily, long-only cash-equity
+  replay on separately labelled `cn`, `hk`, and `us` tracks; exact joins to
+  existing feature, strategy, risk, and execution receipts; deterministic
+  ordered-event folding; checkpoints; explicit event/byte/time/session budgets
+  and cancellation; caller-supplied trials and calculations; and portable
+  canonical manifests plus event JSONL.
+- **Controlling boundary:** libraries and plugins expose exact inputs, temporal
+  and source facts, replay events, requested calculations, provenance,
+  unknowns, conflicts, ambiguous branches/orderings, omissions, trial history,
+  compact handles, and neutral available operations. They never choose a
+  hypothesis, universe, feature, policy, parameter, partition, model, branch,
+  benchmark, metric, trial, threshold, interpretation, or next operation. They
+  never label correctness, sufficiency, edge, significance, robustness,
+  validity, readiness, or deployability. The LLM owns every decision.
+- **Accepted mechanics:** an unknown required time produces explicit ambiguous
+  ordering alternatives rather than a fabricated sequence; caller-supplied
+  event order is never silently interpolated, reordered, deduplicated, or
+  netted; failed, cancelled, truncated, duplicate, and unperformed trials stay
+  visible; identical idempotent retries return the original while conflicting
+  retries preserve both hashes; requested calculations retain formula, units,
+  scale, rounding, sample, ordering, benchmark, source receipts, and
+  unavailable operands; checkpoints cannot change a run definition or state.
+- **Initial implementation:** [`finance_replay`](finance/finance_replay/README.md)
+  implements universe/dataset manifests, immutable run and partition
+  definitions, replay events and pure fold/effects, ambiguity facts,
+  checkpoints, trial definitions and append-only ledger, net return,
+  win/loss/tie counts, drawdown series, trade-list projection, run comparison,
+  compact context, reproduction manifests and bounded JSONL, and a local
+  scripted interpreter. Twenty-three deterministic offline tests pass.
+  Intraday replay, shorting/derivatives, portfolio construction, automated
+  search/optimization, advanced statistics, live deployment, provider clients,
+  and Pi shells remain incremental and do not reopen this LLM-only boundary.
+
 #### CG-SWING resolution — 2026-08-06
 
 - **Evidence:** trading-course
@@ -408,9 +450,11 @@ of `CG-DAY` and every other gate remain **Open**.
   strategy receipts, exact generic information facts, immutable opaque LLM/user
   plan declarations, and caller-vocabulary review records. It reports exact
   snapshot changes and neutral available operations, replays/forks Pi branch
-  events, and locks malformed history. Eleven pure tests, three binding
-  scenarios, artifact verification, and Pi smoke loading cover the first slice;
-  no plugin decision field exists.
+  events, and locks malformed history. Eleven contract tests plus five seeded
+  CN/HK/US replay/journal acceptance tests, three binding scenarios, artifact
+  verification, and Pi smoke loading cover the first slices; no plugin decision
+  field exists. The acceptance fixtures retain exact task-time and exception
+  facts but do not claim provider completeness or professional sufficiency.
 
 For a useful answer, ask the advisor to return: persona and holding horizon;
 track/instrument scope; required inputs and permissible freshness; exact formulas

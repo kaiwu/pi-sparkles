@@ -114,6 +114,7 @@ describe("functional architecture", () => {
       "finance_risk",
       "finance_execution",
       "finance_journal",
+      "finance_replay",
       "finance_strategy",
       "finance_quote",
       "finance_table",

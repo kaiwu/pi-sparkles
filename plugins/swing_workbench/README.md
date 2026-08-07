@@ -156,6 +156,15 @@ candidate/plan/review, exact tool-facing JSON, resume, fork, and branch locking.
 The bundled artifact exports Pi's required default factory and smoke-loads
 without a model call.
 
+Five additional seeded acceptance tests compose the workbench test surface with
+the pure `finance_replay` and `finance_journal` contracts. They exercise the
+caller/LLM-declared after-close → plan → preflight → monitor → review sequence
+for `cn`, `hk`, and `us`; exact interruption/resume; replay batch equivalence;
+journal JSONL portability; track-specific exception triage; and mechanical
+stage durations. The package has 16 pure tests in total. These fixtures prove
+composition and auditability only: they do not establish provider coverage,
+positive expectancy, professional sufficiency, or whole-product acceptance.
+
 ```sh
 bun run check -- swing_workbench
 bun run test:unit -- swing_workbench

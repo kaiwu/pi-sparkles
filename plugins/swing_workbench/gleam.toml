@@ -19,6 +19,8 @@ pi_gleam = { path = "../../pi_gleam" }
 
 [dev-dependencies]
 gleeunit = ">= 1.9.0 and < 2.0.0"
+finance_journal = { path = "../../finance/finance_journal" }
+finance_replay = { path = "../../finance/finance_replay" }
 
 [javascript]
 runtime = "bun"

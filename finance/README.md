@@ -56,6 +56,9 @@ finance_core + math + provenance + track
 finance_core + provenance + track
               └────────────> finance_journal (Experimental immutable journal-
                               information and requested-calculation core)
+finance_core + calendar + provenance + track
+              └────────────> finance_replay (Experimental shared replay,
+                              trial, calculation, and reproduction core)
 ```
 
 The diagram shows dependency direction from foundation to consumer.
@@ -136,6 +139,16 @@ comparisons and realized net P&L, compact context, and content-bound receipts.
 It performs no storage or Pi effect and never infers psychology, grades process,
 judges correctness/sufficiency, explains performance, changes risk, recommends,
 or chooses a next operation; the LLM owns all such decisions.
+
+`finance_replay` is the Experimental provider-neutral core authorized by the
+resolved shared-replay slice of `CG-QUANT`. It binds exact universe, dataset,
+feature, strategy, risk, execution, partition, trial, event, checkpoint,
+calculation, comparison, context, and reproduction receipts; folds only the
+caller-supplied event order; exposes unknown-time ambiguity; and provides a
+bounded local scripted interpreter. It never selects a research input or
+policy, chooses among branches or trials, judges correctness/sufficiency,
+labels edge/significance/robustness/deployability, or chooses a next operation;
+the LLM owns every such decision.
 
 `finance_quote` is the smaller provider-neutral latest-quote contract. It
 preserves exact price and size lexemes, market codes, source time, currency, and

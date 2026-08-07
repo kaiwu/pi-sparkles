@@ -33,7 +33,7 @@ The finance foundations include `finance_archive`, `finance_core`, `finance_trac
 `finance_track_capabilities`,
 `finance_provenance`, `finance_http`, `finance_math`, `finance_series`,
 `finance_calendar`, `finance_ohlcv`, `finance_indicators`, `finance_risk`,
-`finance_execution`, `finance_journal`,
+`finance_execution`, `finance_journal`, `finance_replay`,
 `finance_cn_ohlcv`, `finance_hk_ohlcv`, `finance_us_ohlcv`, `finance_table`, and
 `finance_testkit`.
 They are Experimental independent Gleam packages, not Pi plugins. Keep their dependency

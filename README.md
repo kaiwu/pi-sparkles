@@ -14,7 +14,7 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- fifty-five Experimental finance packages, including provider adapters,
+- fifty-six Experimental finance packages, including provider adapters,
   shared track/evidence/rules/document/accounting policy, and isolated CN/HK
   identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,
@@ -399,6 +399,7 @@ pi-sparkles/
 │   ├── finance_ohlcv/
 │   ├── finance_indicators/       calculation-only CG-TECH functional core
 │   ├── finance_journal/          immutable CG-PSYCHOLOGY information core
+│   ├── finance_replay/           shared CG-QUANT replay-information core
 │   ├── finance_risk/             calculation-only CG-RISK functional core
 │   ├── finance_quote/
 │   ├── finance_openfigi/
@@ -497,6 +498,7 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_risk` | Calculation-only planned/gap loss, explicit budgets, independent quantity bounds, supplied-grid projection, requested intersections, heat/cost decompositions, partial expressions, and content-bound receipts; it emits no policy, quantity choice, verdict, authorization, or next operation. |
 | `finance_execution` | Information-only desired instructions, sourced capabilities, explicit visible-depth and daily-bar scenarios, lifecycle/fill folds, requested cost/benchmark/latency calculations, and content-bound receipts; it cannot choose an encoding or branch, judge an outcome, or mutate a broker. |
 | `finance_journal` | Immutable exact attributed journal events, information states, correction/redaction lineage, partial checklists, bounded replay/query/export, requested comparisons and realized net P&L, compact context, and content-bound receipts without psychology/process/trade decisions. |
+| `finance_replay` | Point-in-time universe/dataset manifests, immutable shared run definitions, caller-declared partitions/trials, ordered replay and checkpoints, explicitly requested calculations, aligned comparisons, compact context, reproduction manifests, and bounded scripted execution without research verdicts. |
 | `finance_cn_ohlcv` | CN-only SSE/SZSE/BSE identity, reviewed-calendar, listing/status, and Eastmoney-receipt composition with four typed gap outcomes and fail-closed conflicts. |
 | `finance_hk_ohlcv` | HK-only XHKG identity, reviewed HKEX calendar/half-day evidence, listing/status, and Eastmoney-receipt composition with four typed gap outcomes and fail-closed conflicts. |
 | `finance_us_ohlcv` | US-only exact venue-calendar/listing/status/provider-receipt composition, a pure canonical SHA-256 projection contract, four typed gap outcomes, and fail-closed conflicts. |
