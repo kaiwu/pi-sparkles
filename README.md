@@ -55,6 +55,15 @@ repository currently contains:
 - an information-only `stock_screener` acquisition slice that returns bounded
   exact Alpaca US-equity asset-master rows and content hashes for explicit
   paper/live, status, and exchange inputs, without screening or ranking;
+- a stateless `stock_technicals` calculation shell that returns explicitly
+  requested SMA, Wilder RSI, and Wilder ATR facts plus content-bound receipts
+  over exact caller-supplied series, without interpretation or parameter choice;
+- a stateless `finance_sources` provenance shell that lists caller-supplied
+  receipt facts, inspects one exact receipt and linked assumptions, and exports
+  bounded canonical manifests without source choice, trust, or quality verdicts;
+- a stateless `trade_plan` calculation shell that returns exact long planned
+  loss, independent amount-over-denominator bounds, supplied-grid projections,
+  and only explicitly requested intersections without choosing a quantity;
 - a network-free `stock_research_report` compositor that validates exact
   Alpaca/SEC receipts and renders a deterministic US source-fact brief;
 - a track-safe `watchlist` workflow plugin with exact listing keys, bounded
@@ -323,6 +332,9 @@ HKEX configuration applies only to the HK disclosure plugin.
 | `us_quote` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-quote/0.1`; feed entitlement and recency depend on the requested IEX/SIP feed and account. |
 | `us_ohlcv` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-ohlcv/0.1`; feed entitlement still depends on the Alpaca account and requested IEX/SIP feed. |
 | `stock_screener` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-screener/0.1`; `stock_universe` uses the explicitly selected paper/live Trading API environment and returns provider rows without interpreting capability flags. |
+| `stock_technicals` | None | None | Stateless calculation-only shell over exact caller/LLM-supplied observations and receipts; every formula, parameter, policy, and projection is explicit. |
+| `finance_sources` | None | None | Stateless read-only shell over an exact caller/LLM-supplied provenance catalogue; it performs no hidden capture, fetch, verification, or persistence. |
+| `trade_plan` | None | None | Stateless calculation-only shell over exact caller/LLM-supplied account, policy, price, and trade-unit facts; it performs no account lookup, plan persistence, execution, or quantity choice. |
 
 The three SEC plugins share one fair-access identity. Alpaca credentials are a
 separate authority and never enable SEC tools or `finance_symbols`.
@@ -473,13 +485,16 @@ pi-sparkles/
 │   ├── cn_fundamentals/          exact mainland vendor fundamental slice
 │   ├── hk_fundamentals/          exact Hong Kong vendor fundamental slice
 │   ├── finance_guardrails/       evidence and freshness policy
+│   ├── finance_sources/          exact provenance list/inspect/export facts
 │   ├── finance_symbols/          OpenFIGI v3 identity resolution
 │   ├── sec_edgar/                SEC company and recent filing metadata
 │   ├── sec_xbrl/                 exact SEC XBRL concept and fact evidence
 │   ├── stock_fundamentals/       audited direct-fact normalization
 │   ├── stock_research_report/    deterministic cited US receipt composition
 │   ├── stock_screener/           exact Alpaca US asset-universe information
+│   ├── stock_technicals/          exact LLM-requested SMA/RSI/ATR facts
 │   ├── swing_workbench/          LLM-owned branch-persistent swing context
+│   ├── trade_plan/               exact LLM-requested loss/bound/grid facts
 │   ├── trade_journal/            LLM-owned durable local journal information
 │   ├── watchlist/                track-safe branch-persistent workflow state
 │   ├── us_market_calendar/       official bounded NYSE/Nasdaq 2026 calendar

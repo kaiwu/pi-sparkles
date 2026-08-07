@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 for (const name of [
   "finance_setup",
+  "finance_sources",
   "finance_track_status",
   "cn_setup",
   "cn_disclosures",
@@ -27,7 +28,9 @@ for (const name of [
   "stock_fundamentals",
   "stock_research_report",
   "stock_screener",
+  "stock_technicals",
   "swing_workbench",
+  "trade_plan",
   "trade_journal",
   "watchlist",
   "us_market_calendar",
