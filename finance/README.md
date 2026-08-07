@@ -44,6 +44,9 @@ finance_track_capabilities ─> isolated CN/HK setup shells
 finance_core + listing + provenance
               └────────────> finance_strategy (Experimental evidence packet;
                               consumes feature, risk, rule, and execution facts)
+finance_core + math + ohlcv + provenance + track
+              └────────────> finance_indicators (Experimental calculation and
+                              semantic-receipt core)
 ```
 
 The diagram shows dependency direction from foundation to consumer.
@@ -87,6 +90,16 @@ calculations, collapses only exact duplicates, and keeps provider pagination
 completeness separate from evidence-backed calendar-gap classification. The
 Alpaca adapter is its first US acquisition seam; IEX/SIP, credentials,
 symbol-as-of identity, raw adjustment, and sourced rights remain explicit.
+
+`finance_indicators` is the Experimental calculation-only core authorized by
+the resolved `CG-TECH` contract. Its first slice implements exact SMA, Wilder
+RSI, true range, and Wilder ATR with caller-selected input basis, window, gap,
+parseable-value, seed/convention, and rounding policies. Canonical request and
+semantic-result receipts bind ordered inputs, intermediate values, omissions,
+unknowns, conflicts, evidence roots, and explicitly requested projections. It
+emits no interpretation, readiness, signal, candidate, recommendation, or next
+action; the LLM owns all of those decisions.
+
 `finance_quote` is the smaller provider-neutral latest-quote contract. It
 preserves exact price and size lexemes, market codes, source time, currency, and
 canonical observation metadata, while refusing to infer consolidation,

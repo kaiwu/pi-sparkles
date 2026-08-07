@@ -155,15 +155,16 @@ The canonical local course TOC is
 [`../trading-course/ROADMAP.md`](../trading-course/ROADMAP.md). These references
 name the curriculum topic to deepen; they do not copy its illustrative rules
 into production policy. `CG-SWING` is resolved for the bounded completed-daily-
-bar workflow recorded below, and `CG-MARKET-DATA` is resolved for the
-information-only daily-market-data contract; every other gate remains **Open**.
+bar workflow, `CG-MARKET-DATA` for the information-only daily-market-data
+contract, and `CG-TECH` for calculation-only technical facts; every other gate
+remains **Open**.
 
 | Gate | Trading-course TOC cross-reference | Finance-advisor deep dive required before design | Applies first to |
 | --- | --- | --- | --- |
 | `CG-MARKET-DATA` **(Resolved — 2026-08-07)** | Phase 1, Week 1 “Market Literacy” and Week 2 “Data & Tools” | Define the minimum trustworthy quote/bar/depth fields for each persona; source-time, session, auction, spread, volume and market-depth interpretation; trader-facing data-quality failures; and safe CSV/JSON/XLSX/SQL import expectations. | `pi_finance_dataset`, charts, snapshots, screeners, and later intraday surfaces |
 | `CG-RISK` | Phase 1, Week 3 “Risk Management Foundation” and Phase 5, Week 19 “Advanced Risk Management” | Replace slogans such as “2% rule” and “2:1” with configurable laws: account and portfolio heat, gap/leverage/correlation/liquidity risk, stop distance, lot rounding, scaling, drawdown limits, stress cases, zero-size outcomes, and every constraint the LLM must see when deciding on a proposed plan. | `finance_strategy`, `pi_trade_plan`, `pi_portfolio_risk` |
 | `CG-PSYCHOLOGY` | Phase 1, Week 4 “Market Psychology” and Phase 5, Week 20 “Trading Psychology Mastery” | Specify user-declared bias/emotion/checklist vocabulary, pre-trade and post-trade review, process-adherence scoring, losing/winning-streak review, and boundaries against inferred diagnosis or automatic risk changes. | `pi_trade_journal` and every persona review loop |
-| `CG-TECH` | Phase 2, Weeks 5–8 “Technical Analysis” | Provide exact formulas, seeds, parameters, warm-up, missing-session and corporate-action treatment for SMA/EMA, RSI, MACD, KD9, Bollinger, ATR and VWAP; operational definitions and counterexamples for support/resistance, trend, breakout, gaps, divergence, volume confirmation, patterns and multi-timeframe use. | `finance_indicators`, `pi_stock_technicals`, screeners, charts and alerts |
+| `CG-TECH` **(Resolved — 2026-08-07)** | Phase 2, Weeks 5–8 “Technical Analysis” | Provide exact formulas, seeds, parameters, warm-up, missing-session and corporate-action treatment for SMA/EMA, RSI, MACD, KD9, Bollinger, ATR and VWAP; operational definitions and counterexamples for support/resistance, trend, breakout, gaps, divergence, volume confirmation, patterns and multi-timeframe use. | `finance_indicators`, `pi_stock_technicals`, screeners, charts and alerts |
 | `CG-FUNDAMENTAL` | Phase 3, Weeks 9–12 “Fundamental Analysis” | Define a minimum complete investor dossier, statement/period/segment/debt and cash-flow checks, sector-specific metrics, business quality, governance/management evidence, industry/macro context, valuation methods, sensitivity, and “insufficient evidence” cases. | governance/industry, quality/growth/valuation, fundamentals, and `pi_investor_workbench` |
 | `CG-SWING` **(Resolved — 2026-08-06)** | Phase 4, Week 13 “Swing Trading System” and Week 16 “Strategy Integration” | Walk one complete weekly-to-daily workflow: universe, sector/regime/catalyst context, setup and confirmation, entry/stop/target/expiry, sizing/scaling, monitoring, exits, invalidation and journal review; distinguish required evidence from preferences. | `finance_strategy` completed-daily-bar slice, `pi_swing_workbench`, the next sprint |
 | `CG-DAY` | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Define pre-market, auction, opening-range, intraday and close workflows; permissible data latency; spread/depth/tape use; overtrading controls; order choice; partial/non-fill, gap, latency, impact and queue uncertainty; and track-specific stop/order availability. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench` |
@@ -195,13 +196,43 @@ information-only daily-market-data contract; every other gate remains **Open**.
   host-policy, or unknown authority.
 - **Implementation freedom:** package/type placement is non-blocking. Incremental
   shared and track-owned information contracts may proceed without claiming
-  complete provider or track coverage. `CG-TECH`, `CG-RISK`, `CG-DAY`, and the
-  other adjacent gates still own their formulas and professional decisions.
+  complete provider or track coverage. The resolved `CG-TECH` contract owns
+  indicator calculations; `CG-RISK`, `CG-DAY`, and the other adjacent gates
+  still own their respective facts. The LLM owns all professional decisions.
 - **Initial implementation:** [`finance_ohlcv`](finance/finance_ohlcv/README.md)
   now exposes generic fact states, raw reported-row mechanics, quantity, rights,
   timing comparisons, bounded acquisition-attempt evidence, a typed packet, and
   neutral available operations alongside its existing validated `Bar`/`Batch`
   projection. Fourteen focused offline tests and the full repository suite pass.
+
+#### CG-TECH resolution — 2026-08-07
+
+- **Evidence:** trading-course
+  [Session 12 and its design-closing amendments](../trading-course/sessions/12_cg_tech_indicator_calculations_20260807.md).
+- **Reviewed scope:** versioned daily-bar calculations and relations, exact
+  input projections, seeds, window/gap/rounding/parseable-value policies,
+  warm-up omissions, adjustment and unit facts, intermediate values, source
+  corrections, batch/incremental semantic equivalence, compact requested
+  projections, drill-down operations, and content-bound receipts.
+- **Controlling boundary:** indicator libraries and plugins calculate only what
+  the LLM requests and expose inputs, parameters, alternatives, outputs,
+  provenance, unknowns, conflicts, omissions, and available operations. They
+  never select an indicator or parameter, interpret a value, judge correctness
+  or sufficiency, label readiness/setup/signal/candidate state, rank/recommend,
+  choose a next action, or decide a trade.
+- **Accepted mechanics:** no implicit price basis, imputation, seed, regional
+  convention, gap recovery, rounding, failed-check policy, conflict branch, or
+  summary calculation; unavailable dates remain unperformed expressions rather
+  than whole-request rejection; raw unknown-unit arithmetic may be returned
+  with that unit fact when explicitly requested; semantic-result hashing is
+  non-self-referential and separate from optional execution traces.
+- **Initial implementation:**
+  [`finance_indicators`](finance/finance_indicators/README.md) implements
+  `slot_window_v1` SMA, Wilder RSI, true range, and Wilder ATR with canonical
+  request and semantic-result receipts. Eighteen deterministic offline tests
+  and the full `bun run test` repository suite pass. EMA/MACD, Bollinger, KD,
+  volume relations, other variants, execution traces, and technical primitives
+  remain incremental without reopening the resolved LLM-only boundary.
 
 #### CG-SWING resolution — 2026-08-06
 
@@ -240,9 +271,10 @@ information-only daily-market-data contract; every other gate remains **Open**.
 - **Adjacent dependencies remain blocking where applicable:** the
   `CG-MARKET-DATA` information contract is resolved, but exact track/provider
   composition for daily observation, timing, volume/turnover, source-rights,
-  and import facts remains incremental; indicator formulas, warm-up, and
-  adjustment production belong to `CG-TECH`; position sizing, gap stress,
-  account constraints, and portfolio heat to `CG-RISK`;
+  and import facts remains incremental; the resolved `CG-TECH` calculation
+  contract is implemented only for its first SMA/RSI/ATR slice; position
+  sizing, gap stress, account constraints, and portfolio heat belong to
+  `CG-RISK`;
   executable order support and fill/cost policy to `CG-DAY` and the named
   execution dependency; journal schema and psychology review to
   `CG-PSYCHOLOGY`; and expectancy/backtest claims to `CG-QUANT`. Missing, stale,

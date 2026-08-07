@@ -388,6 +388,7 @@ pi-sparkles/
 │   ├── finance_market_alpaca/
 │   ├── finance_math/
 │   ├── finance_ohlcv/
+│   ├── finance_indicators/       calculation-only CG-TECH functional core
 │   ├── finance_quote/
 │   ├── finance_openfigi/
 │   ├── finance_provenance/
@@ -480,6 +481,7 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_http` | Safe requests, bounded fetch transport, cancellation, retry/`Retry-After`, rate limits, pooling, scheduling, caching, and cassettes. |
 | `finance_math` | Composable exact formula trees plus explicit approximate statistics, regression, risk, cash-flow, and fixed-income policies. |
 | `finance_ohlcv` | Exact raw-plus-normalized OHLCV bars, source-instant/date-anchor and proven/unknown-volume distinctions, canonical observations, strict ordering/exact deduplication, provider-neutral content-bound acquisition receipts, and calendar/listing/status gap classification. |
+| `finance_indicators` | Calculation-only SMA, Wilder RSI, true-range, and Wilder ATR core with explicit input/window/gap/rounding policies, unperformed expressions, and content-bound request/semantic receipts; it emits no interpretation or decision. |
 | `finance_cn_ohlcv` | CN-only SSE/SZSE/BSE identity, reviewed-calendar, listing/status, and Eastmoney-receipt composition with four typed gap outcomes and fail-closed conflicts. |
 | `finance_hk_ohlcv` | HK-only XHKG identity, reviewed HKEX calendar/half-day evidence, listing/status, and Eastmoney-receipt composition with four typed gap outcomes and fail-closed conflicts. |
 | `finance_us_ohlcv` | US-only exact venue-calendar/listing/status/provider-receipt composition, a pure canonical SHA-256 projection contract, four typed gap outcomes, and fail-closed conflicts. |
@@ -489,6 +491,7 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_market_alpaca` | Credentialed bounded US latest-quote and raw-daily stock-bar plans/decoders with explicit IEX/SIP, exact source lexemes, and subscription/redistribution limits. |
 | `finance_sec` | Identified read-only SEC access, normalized CIKs, bounded EDGAR request plans, typed submissions/XBRL facts, lossless numeric lexemes, explicit filing/period resolution, strict Q4/trend derivation, and conservative shared pacing. |
 | `finance_series` | Ordered observations, alignment, as-of joins, returns, windows, resampling, portfolio paths, and analytics. |
+| `finance_strategy` | Evidence-only completed-daily strategy definitions, compatibility facts, plan declarations, and structural history without a setup, acceptance, or trade verdict. |
 | `finance_calendar` | Dates, market calendars, business-day rules, schedules, joint calendars, and day-count conventions. |
 | `finance_table` | Typed tables with validated cells and deterministic Markdown, CSV, and JSON rendering. |
 | `finance_testkit` | Seeded fixtures, scripted clocks/transports, cassette helpers, generators, scenarios, and redaction assertions. |
