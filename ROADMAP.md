@@ -156,18 +156,21 @@ The canonical local course TOC is
 name the curriculum topic to deepen; they do not copy its illustrative rules
 into production policy. `CG-SWING` is resolved for the bounded completed-daily-
 bar workflow, `CG-MARKET-DATA` for the information-only daily-market-data
-contract, and `CG-TECH` for calculation-only technical facts; every other gate
-remains **Open**.
+contract, `CG-TECH` for calculation-only technical facts, `CG-RISK` for
+calculation-only risk facts, and the execution-information slice of `CG-DAY`
+for desired instructions, capabilities, explicit simulations,
+lifecycle/fills, and requested calculations. The full intraday workflow part
+of `CG-DAY` and every other gate remain **Open**.
 
 | Gate | Trading-course TOC cross-reference | Finance-advisor deep dive required before design | Applies first to |
 | --- | --- | --- | --- |
 | `CG-MARKET-DATA` **(Resolved — 2026-08-07)** | Phase 1, Week 1 “Market Literacy” and Week 2 “Data & Tools” | Define the minimum trustworthy quote/bar/depth fields for each persona; source-time, session, auction, spread, volume and market-depth interpretation; trader-facing data-quality failures; and safe CSV/JSON/XLSX/SQL import expectations. | `pi_finance_dataset`, charts, snapshots, screeners, and later intraday surfaces |
-| `CG-RISK` | Phase 1, Week 3 “Risk Management Foundation” and Phase 5, Week 19 “Advanced Risk Management” | Replace slogans such as “2% rule” and “2:1” with configurable laws: account and portfolio heat, gap/leverage/correlation/liquidity risk, stop distance, lot rounding, scaling, drawdown limits, stress cases, zero-size outcomes, and every constraint the LLM must see when deciding on a proposed plan. | `finance_strategy`, `pi_trade_plan`, `pi_portfolio_risk` |
-| `CG-PSYCHOLOGY` | Phase 1, Week 4 “Market Psychology” and Phase 5, Week 20 “Trading Psychology Mastery” | Specify user-declared bias/emotion/checklist vocabulary, pre-trade and post-trade review, process-adherence scoring, losing/winning-streak review, and boundaries against inferred diagnosis or automatic risk changes. | `pi_trade_journal` and every persona review loop |
+| `CG-RISK` **(Resolved — 2026-08-07)** | Phase 1, Week 3 “Risk Management Foundation” and Phase 5, Week 19 “Advanced Risk Management” | Replace slogans such as “2% rule” and “2:1” with configurable laws: account and portfolio heat, gap/leverage/correlation/liquidity risk, stop distance, lot rounding, scaling, drawdown limits, stress cases, zero-size outcomes, and every constraint the LLM must see when deciding on a proposed plan. | `finance_strategy`, `pi_trade_plan`, `pi_portfolio_risk` |
+| `CG-PSYCHOLOGY` **(Journal-information slice Resolved — 2026-08-07)** | Phase 1, Week 4 “Market Psychology” and Phase 5, Week 20 “Trading Psychology Mastery” | Specify user-declared bias/emotion/checklist vocabulary, pre-trade and post-trade review, immutable attribution, requested comparisons/metrics, portable storage, and boundaries against inferred diagnosis, plugin-owned process judgment, or automatic risk changes. | `finance_journal`, `pi_trade_journal`, and every persona review loop |
 | `CG-TECH` **(Resolved — 2026-08-07)** | Phase 2, Weeks 5–8 “Technical Analysis” | Provide exact formulas, seeds, parameters, warm-up, missing-session and corporate-action treatment for SMA/EMA, RSI, MACD, KD9, Bollinger, ATR and VWAP; operational definitions and counterexamples for support/resistance, trend, breakout, gaps, divergence, volume confirmation, patterns and multi-timeframe use. | `finance_indicators`, `pi_stock_technicals`, screeners, charts and alerts |
 | `CG-FUNDAMENTAL` | Phase 3, Weeks 9–12 “Fundamental Analysis” | Define a minimum complete investor dossier, statement/period/segment/debt and cash-flow checks, sector-specific metrics, business quality, governance/management evidence, industry/macro context, valuation methods, sensitivity, and “insufficient evidence” cases. | governance/industry, quality/growth/valuation, fundamentals, and `pi_investor_workbench` |
 | `CG-SWING` **(Resolved — 2026-08-06)** | Phase 4, Week 13 “Swing Trading System” and Week 16 “Strategy Integration” | Walk one complete weekly-to-daily workflow: universe, sector/regime/catalyst context, setup and confirmation, entry/stop/target/expiry, sizing/scaling, monitoring, exits, invalidation and journal review; distinguish required evidence from preferences. | `finance_strategy` completed-daily-bar slice, `pi_swing_workbench`, the next sprint |
-| `CG-DAY` | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Define pre-market, auction, opening-range, intraday and close workflows; permissible data latency; spread/depth/tape use; overtrading controls; order choice; partial/non-fill, gap, latency, impact and queue uncertainty; and track-specific stop/order availability. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench` |
+| `CG-DAY` **(Execution-information slice Resolved — 2026-08-07; full intraday workflow Open)** | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Define pre-market, auction, opening-range, intraday and close workflows; permissible data latency; spread/depth/tape use; overtrading controls; order choice; partial/non-fill, gap, latency, impact and queue uncertainty; and track-specific stop/order availability. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench` |
 | `CG-QUANT` | Phase 4, Week 15 “Quantitative Approaches” | Specify the research protocol: falsifiable hypothesis, point-in-time universe/data availability, adjustments, feature/signal versioning, fill/cost model, train/validation/test and walk-forward design, multiple testing, uncertainty/significance, robustness, benchmarks and reproducible run acceptance. | `pi_quant_research`, `pi_backtest`, factor lab and event study |
 | `CG-PORTFOLIO` | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | Define position/portfolio sizing, diversification versus hidden concentration, correlation regimes, rebalance and cash-flow rules, leverage/liquidity/currency exposure, VaR/CVaR limits, stress tests and drawdown response without false precision. | portfolio, risk, scenarios, attribution and rebalance proposals |
 | `CG-LIVE` | Phase 6, Weeks 21–24+ “Live Trading” | Define readiness evidence for paper-to-micro-live transition, broker/account criteria, size-increase and stop conditions, execution and emotion review, incident handling and rollback; this augments rather than weakens the separate security review. | paper-broker acceptance and any live-broker design |
@@ -197,8 +200,9 @@ remains **Open**.
 - **Implementation freedom:** package/type placement is non-blocking. Incremental
   shared and track-owned information contracts may proceed without claiming
   complete provider or track coverage. The resolved `CG-TECH` contract owns
-  indicator calculations; `CG-RISK`, `CG-DAY`, and the other adjacent gates
-  still own their respective facts. The LLM owns all professional decisions.
+  indicator calculations; the resolved `CG-RISK` contract owns risk
+  calculations; `CG-DAY` and the other adjacent gates still own their
+  respective facts. The LLM owns all professional decisions.
 - **Initial implementation:** [`finance_ohlcv`](finance/finance_ohlcv/README.md)
   now exposes generic fact states, raw reported-row mechanics, quantity, rights,
   timing comparisons, bounded acquisition-attempt evidence, a typed packet, and
@@ -234,6 +238,118 @@ remains **Open**.
   volume relations, other variants, execution traces, and technical primitives
   remain incremental without reopening the resolved LLM-only boundary.
 
+#### CG-RISK resolution — 2026-08-07
+
+- **Evidence:** trading-course
+  [Session 13](../trading-course/sessions/13_cg_risk_calculation_contract_20260807.md),
+  which supersedes Sessions 02, 05, and 10/10A/10B wherever they assigned a
+  risk policy, scenario, quantity, sufficiency judgment, or next action to a
+  plugin.
+- **Reviewed scope:** long-only cash equities on completed-daily planning for
+  separately labelled `cn`, `hk`, and `us` legs: exact account/position/plan
+  facts, explicitly selected budgets and scenarios, per-constraint quantity
+  bounds, supplied trade-unit grids, requested intersections, gap loss, costs,
+  portfolio heat, FX seams, unknown/conflicting branches, compact operations,
+  and content-bound receipts.
+- **Controlling boundary:** risk libraries and plugins expose supported
+  calculations and preserve their exact inputs, intermediate values, outputs,
+  provenance, unknowns, conflicts, omissions, alternatives, and available
+  operations. They never choose a policy, threshold, scenario, quantity,
+  sufficiency/correctness judgment, plan status, authorization, recommendation,
+  or next operation; the LLM owns every such decision.
+- **Accepted mechanics:** negative/zero loss and remaining-budget values are
+  returned without a verdict; every requested bound remains independent;
+  intersection occurs only for an explicit bound list; unknown grid, FX, cost,
+  or scenario operands leave other calculations available; market-rule,
+  account, scenario, and cost facts remain source-separated; semantic hashing
+  is non-self-referential and separate from optional execution traces.
+- **Initial implementation:** [`finance_risk`](finance/finance_risk/README.md)
+  implements sourced information states, exact planned/gap loss and explicit
+  fraction budgets, generic independent quantity bounds, supplied-grid
+  projection, requested intersections, single-currency planned-stop heat,
+  partial cost decompositions, and canonical request/semantic receipts. Twenty
+  deterministic offline tests and the full repository suite pass. Shorts,
+  derivatives, margin liquidation, cross-currency aggregation, scaling,
+  tiered costs, correlation/liquidity stress, VaR/CVaR, drawdown schedules,
+  intraday risk, and execution integration remain incremental.
+
+#### CG-DAY execution-information resolution — 2026-08-07
+
+- **Evidence:** trading-course
+  [Session 14](../trading-course/sessions/14_cg_day_execution_information_contract_20260807.md),
+  which resolves the bounded execution-information slice while explicitly
+  leaving the complete professional intraday loop open.
+- **Reviewed scope:** long-only cash equities on separately labelled `cn`,
+  `hk`, and `us` tracks: desired instructions, sourced broker/account/exchange
+  capabilities, session comparisons, explicit daily-bar/depth/scenario models,
+  unknown queue and remainder facts, ordered lifecycle/fill receipts, requested
+  aggregate/cost/benchmark/latency calculations, compact operations, and
+  content-bound receipts. Daily swing use does not claim intraday sequence.
+- **Controlling boundary:** execution libraries and plugins expose exact facts,
+  labelled model branches, external broker states, requested calculations,
+  provenance, unknowns, conflicts, omissions, alternatives, and available
+  operations. They never select an order or broker encoding, transform to a
+  fallback, predict a fill, choose a branch/benchmark/threshold, judge
+  correctness or sufficiency, recommend a response, decide the next operation,
+  or authorize a trade. The LLM owns every such decision.
+- **Accepted mechanics:** desired instructions and broker-native encodings are
+  distinct; depth snapshots do not prove queue or hidden size; daily bars emit
+  compatible paths rather than a fill; partial remainders stay unknown beyond
+  the scenario window; broker rejection text remains an external fact;
+  cancel/fill races retain every event; unknown cost or clock operands leave
+  known calculations available; semantic hashes are non-self-referential and
+  batch/incremental folds are equivalent for equal ordered events.
+- **Initial implementation:**
+  [`finance_execution`](finance/finance_execution/README.md) implements sourced
+  facts and desired capabilities, session comparisons,
+  `visible_depth_sweep_v1`, `bar_possible_paths_v1`, exact fill aggregation,
+  lifecycle folding, requested spread/slippage/shortfall/cost/latency
+  calculations, and canonical request/semantic receipts. Twenty-four
+  deterministic offline tests pass. Additional models, provider/broker
+  adapters, `pi_order_simulator`, licensed intraday data, full day-workflow
+  behavior, journal composition, and all mutation remain separate. The
+  `CG-PSYCHOLOGY` journal-information slice is resolved below; it does not
+  complete the day-trader workflow.
+
+#### CG-PSYCHOLOGY journal-information resolution — 2026-08-07
+
+- **Evidence:** trading-course
+  [Session 15](../trading-course/sessions/15_cg_psychology_journal_information_contract_20260807.md),
+  which is the canonical contract for attributed declarations, checklists,
+  immutable journal events, local-first portability, requested calculations,
+  compact context, corrections, redaction metadata, and failure behavior.
+- **Reviewed scope:** exact user, LLM, imported, provider, broker, system, and
+  calculated attribution; open declaration vocabulary; versioned partial
+  checklists; append-only correction/redaction lineage; point-in-time views;
+  JSONL storage/query/export/import effects; explicitly requested
+  plan-observation comparison and long-cash realized net P&L; and compact
+  resumable context for `cn`, `hk`, and `us` journal records.
+- **Controlling boundary:** journal libraries and plugins preserve exact events,
+  privacy, identity, provenance, unknowns, conflicts, omissions, calculations
+  explicitly requested by the LLM, and neutral available operations. They never
+  infer psychology, diagnose, grade process or discipline, judge correctness or
+  sufficiency, explain performance causally, select a review policy, change
+  risk, recommend a response, authorize a trade, or choose the next operation.
+  The LLM owns every interpretation and decision.
+- **Accepted mechanics:** authorship never changes in a projection; corrections
+  and redactions append rather than rewrite history; same idempotency key plus
+  identical semantic content returns the original event; private prose is
+  omitted from compact context and ordinary queries unless explicitly
+  requested; storage capability and security facts remain distinct; exact
+  cross-track/listing identity is never inferred from a symbol; and export
+  privacy is caller-selected rather than plugin policy.
+- **Initial implementation:**
+  [`finance_journal`](finance/finance_journal/README.md) implements immutable
+  events, information states, replay/query/export, checklist receipts,
+  comparisons, realized net P&L, and compact context with twenty offline tests.
+  [`trade_journal`](plugins/trade_journal/README.md) supplies the thin Pi shell
+  and bounded local-first JSONL backend with five plugin tests and four binding
+  scenarios; artifact verification, installed-Pi smoke loading, and the full
+  repository suite pass. Pagination continuations, partial import, more requested metrics,
+  deletion, databases, persona templates, `CG-QUANT` statistics,
+  `CG-PORTFOLIO` attribution, and `CG-LIVE` integration remain incremental and
+  do not authorize plugin-owned decisions.
+
 #### CG-SWING resolution — 2026-08-06
 
 - **Evidence:** trading-course
@@ -248,8 +364,8 @@ remains **Open**.
   definition data, evidence compatibility projection, receipt JSON, LLM/user
   plan declarations, and structural workflow history. It deliberately has no
   aggregate evaluation or decision type.
-  [`pi_swing_workbench`](plugins/swing_workbench/README.md) remains the thin Pi
-  evidence compositor. Neither owns indicator arithmetic, sizing, provider
+  [`pi_swing_workbench`](plugins/swing_workbench/README.md) is now an
+  Experimental thin Pi evidence/context compositor. Neither owns indicator arithmetic, sizing, provider
   access, market rules, fill simulation, journal storage, or the LLM's decision.
 - **Accepted corrections:** planned closures are absent from ordered trading-
   session series; no synthetic prices or volume are inserted; price-dependent
@@ -268,19 +384,33 @@ remains **Open**.
   `CG-JOURNAL` is not registered here. Provider omission and incomplete
   evidence remain distinct compatibility facts, never a semantic rejection of
   the security.
-- **Adjacent dependencies remain blocking where applicable:** the
+- **Adjacent inputs remain incremental rather than plugin-design blockers:** the
   `CG-MARKET-DATA` information contract is resolved, but exact track/provider
   composition for daily observation, timing, volume/turnover, source-rights,
   and import facts remains incremental; the resolved `CG-TECH` calculation
   contract is implemented only for its first SMA/RSI/ATR slice; position
-  sizing, gap stress, account constraints, and portfolio heat belong to
-  `CG-RISK`;
-  executable order support and fill/cost policy to `CG-DAY` and the named
-  execution dependency; journal schema and psychology review to
-  `CG-PSYCHOLOGY`; and expectancy/backtest claims to `CG-QUANT`. Missing, stale,
+  sizing, gap stress, account constraints, and portfolio heat now use the
+  resolved `CG-RISK` contract and its initial `finance_risk` calculation slice;
+  the initial execution-information seam is now available, while exact
+  track/account support, additional fill/cost models, and all executable order
+  behavior remain incremental; the resolved journal-information contract and
+  initial durable shell can now be referenced by event ID, while broader
+  psychology/review templates remain incremental; and expectancy/backtest
+  claims belong to `CG-QUANT`. The workbench
+  can preserve exact supplied receipts and information states before those
+  families are broad or complete because it never decides their correctness or
+  sufficiency. Missing, stale,
   late, conflicting, declared-only, and unsupported dependencies remain named
   facts. Optional confirmation/ranking omissions stay visibly optional; no
   readiness label authorizes or rejects the LLM's plan.
+- **Initial workbench implementation:** the network-free
+  [`swing_workbench`](plugins/swing_workbench/README.md) attaches canonical
+  strategy receipts, exact generic information facts, immutable opaque LLM/user
+  plan declarations, and caller-vocabulary review records. It reports exact
+  snapshot changes and neutral available operations, replays/forks Pi branch
+  events, and locks malformed history. Eleven pure tests, three binding
+  scenarios, artifact verification, and Pi smoke loading cover the first slice;
+  no plugin decision field exists.
 
 For a useful answer, ask the advisor to return: persona and holding horizon;
 track/instrument scope; required inputs and permissible freshness; exact formulas

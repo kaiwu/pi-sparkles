@@ -47,6 +47,15 @@ finance_core + listing + provenance
 finance_core + math + ohlcv + provenance + track
               └────────────> finance_indicators (Experimental calculation and
                               semantic-receipt core)
+finance_core + math + provenance + track
+              └────────────> finance_risk (Experimental calculation and
+                              semantic-receipt core)
+finance_core + math + provenance + track
+              └────────────> finance_execution (Experimental execution-
+                              information and semantic-receipt core)
+finance_core + provenance + track
+              └────────────> finance_journal (Experimental immutable journal-
+                              information and requested-calculation core)
 ```
 
 The diagram shows dependency direction from foundation to consumer.
@@ -99,6 +108,34 @@ semantic-result receipts bind ordered inputs, intermediate values, omissions,
 unknowns, conflicts, evidence roots, and explicitly requested projections. It
 emits no interpretation, readiness, signal, candidate, recommendation, or next
 action; the LLM owns all of those decisions.
+
+`finance_risk` is the Experimental calculation-only core authorized by the
+resolved `CG-RISK` contract. Its first long-only completed-daily slice preserves
+sourced account, plan, market-rule, scenario, position, and cost fact states;
+calculates only explicitly requested planned/gap loss, budget, quantity-bound,
+grid, intersection, heat, remaining-budget, and cost expressions; and binds
+them into non-self-referential request and semantic receipts. It has no policy
+defaults and emits no selected quantity, plan status, recommendation,
+authorization, or next operation; the LLM owns all such decisions.
+
+`finance_execution` is the Experimental information/calculation core authorized
+by the resolved execution-information slice of `CG-DAY`. It keeps desired
+instructions separate from sourced broker capabilities, runs only explicitly
+selected visible-depth or daily-bar scenario models, preserves ordered
+lifecycle and fill leaves, calculates requested fill/cost/benchmark/latency
+expressions, and emits content-bound receipts. It has no broker encoding or
+fallback choice, fill prediction, correctness/sufficiency judgment, workflow
+decision, ambient effect, or mutation authority; the LLM owns every decision.
+
+`finance_journal` is the Experimental information core authorized by the
+resolved journal-information slice of `CG-PSYCHOLOGY`. It preserves exact
+attribution, open declaration vocabulary, explicit information states,
+immutable corrections/redactions, point-in-time replay, partial checklist
+answers, caller-selected privacy projections, requested plan-observation
+comparisons and realized net P&L, compact context, and content-bound receipts.
+It performs no storage or Pi effect and never infers psychology, grades process,
+judges correctness/sufficiency, explains performance, changes risk, recommends,
+or chooses a next operation; the LLM owns all such decisions.
 
 `finance_quote` is the smaller provider-neutral latest-quote contract. It
 preserves exact price and size lexemes, market codes, source time, currency, and

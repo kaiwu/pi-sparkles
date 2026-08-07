@@ -14,7 +14,7 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- fifty Experimental finance packages, including provider adapters,
+- fifty-five Experimental finance packages, including provider adapters,
   shared track/evidence/rules/document/accounting policy, and isolated CN/HK
   identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,
@@ -57,6 +57,14 @@ repository currently contains:
 - a track-safe `watchlist` workflow plugin with exact listing keys, bounded
   notes/tags/thesis links, branch-replayed versioned events, and deterministic
   snapshots;
+- a network-free `swing_workbench` workflow-context plugin that retains exact
+  strategy receipts, information-state changes, opaque LLM/user plan
+  declarations, and review facts across the active session branch without
+  making any decision;
+- a local-first `trade_journal` information plugin over the pure
+  `finance_journal` core, with immutable attributed events, idempotent bounded
+  JSONL storage, explicit private-payload retrieval, requested comparisons and
+  realized net P&L, and no plugin-owned psychology, process, or trade decision;
 - `hello`, a reference command and typed tool;
 - `safety_gate`, a reference result-bearing event handler with asynchronous UI;
 - `lifecycle`, a reference for typed state restoration and safe cleanup;
@@ -371,6 +379,7 @@ pi-sparkles/
 │   ├── finance_document_attachment/
 │   ├── finance_eastmoney/
 │   ├── finance_evidence/
+│   ├── finance_execution/        information-only CG-DAY execution core
 │   ├── finance_hk_accounting/
 │   ├── finance_hk_calendar/
 │   ├── finance_hk_documents/
@@ -389,6 +398,8 @@ pi-sparkles/
 │   ├── finance_math/
 │   ├── finance_ohlcv/
 │   ├── finance_indicators/       calculation-only CG-TECH functional core
+│   ├── finance_journal/          immutable CG-PSYCHOLOGY information core
+│   ├── finance_risk/             calculation-only CG-RISK functional core
 │   ├── finance_quote/
 │   ├── finance_openfigi/
 │   ├── finance_provenance/
@@ -427,7 +438,8 @@ pi-sparkles/
 │   ├── sec_xbrl/                 exact SEC XBRL concept and fact evidence
 │   ├── stock_fundamentals/       audited direct-fact normalization
 │   ├── stock_research_report/    deterministic cited US receipt composition
-│   ├── swing_workbench/          design-only professional swing daily loop
+│   ├── swing_workbench/          LLM-owned branch-persistent swing context
+│   ├── trade_journal/            LLM-owned durable local journal information
 │   ├── watchlist/                track-safe branch-persistent workflow state
 │   ├── us_market_calendar/       official bounded NYSE/Nasdaq 2026 calendar
 │   ├── us_market_rules/          current venue-explicit US quote increments
@@ -482,6 +494,9 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_math` | Composable exact formula trees plus explicit approximate statistics, regression, risk, cash-flow, and fixed-income policies. |
 | `finance_ohlcv` | Exact raw-plus-normalized OHLCV bars, source-instant/date-anchor and proven/unknown-volume distinctions, canonical observations, strict ordering/exact deduplication, provider-neutral content-bound acquisition receipts, and calendar/listing/status gap classification. |
 | `finance_indicators` | Calculation-only SMA, Wilder RSI, true-range, and Wilder ATR core with explicit input/window/gap/rounding policies, unperformed expressions, and content-bound request/semantic receipts; it emits no interpretation or decision. |
+| `finance_risk` | Calculation-only planned/gap loss, explicit budgets, independent quantity bounds, supplied-grid projection, requested intersections, heat/cost decompositions, partial expressions, and content-bound receipts; it emits no policy, quantity choice, verdict, authorization, or next operation. |
+| `finance_execution` | Information-only desired instructions, sourced capabilities, explicit visible-depth and daily-bar scenarios, lifecycle/fill folds, requested cost/benchmark/latency calculations, and content-bound receipts; it cannot choose an encoding or branch, judge an outcome, or mutate a broker. |
+| `finance_journal` | Immutable exact attributed journal events, information states, correction/redaction lineage, partial checklists, bounded replay/query/export, requested comparisons and realized net P&L, compact context, and content-bound receipts without psychology/process/trade decisions. |
 | `finance_cn_ohlcv` | CN-only SSE/SZSE/BSE identity, reviewed-calendar, listing/status, and Eastmoney-receipt composition with four typed gap outcomes and fail-closed conflicts. |
 | `finance_hk_ohlcv` | HK-only XHKG identity, reviewed HKEX calendar/half-day evidence, listing/status, and Eastmoney-receipt composition with four typed gap outcomes and fail-closed conflicts. |
 | `finance_us_ohlcv` | US-only exact venue-calendar/listing/status/provider-receipt composition, a pure canonical SHA-256 projection contract, four typed gap outcomes, and fail-closed conflicts. |

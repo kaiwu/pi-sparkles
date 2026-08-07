@@ -110,6 +110,11 @@ describe("functional architecture", () => {
       "finance_math",
       "finance_series",
       "finance_ohlcv",
+      "finance_indicators",
+      "finance_risk",
+      "finance_execution",
+      "finance_journal",
+      "finance_strategy",
       "finance_quote",
       "finance_table",
     ]) {

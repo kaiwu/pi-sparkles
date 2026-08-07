@@ -26,6 +26,8 @@ for (const name of [
   "sec_xbrl",
   "stock_fundamentals",
   "stock_research_report",
+  "swing_workbench",
+  "trade_journal",
   "watchlist",
   "us_market_calendar",
   "us_market_rules",

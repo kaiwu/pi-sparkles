@@ -1,289 +1,160 @@
 # pi_sparkles_swing_workbench
 
-Status: **Designing — CG-SWING shell; implementation prerequisites open**
+Status: **Experimental — network-free, LLM-owned workflow-context slice**
 
-`swing_workbench` is the thin Pi workflow for a completed-daily-bar swing
-trader. It assembles exact identity, daily data, feature, event, market-rule,
-risk, execution-capability, watchlist, and journal receipts around the pure
-[`finance_strategy`](../../finance/finance_strategy/README.md) contract. It
-does not own any of those engines.
+`swing_workbench` is a thin Pi shell for retaining exact completed-daily swing
+workflow information across a session branch. It attaches canonical
+[`finance_strategy`](../../finance/finance_strategy/README.md) evidence,
+caller-supplied information states, opaque LLM/user plan declarations, and
+observations or review facts. It does not acquire market data, run an indicator,
+calculate risk, simulate an order, or decide what any fact means.
 
-The design derives from the resolved `CG-SWING` trading-course
+The contract derives from the resolved `CG-SWING` trading-course
 [Session 10 with the 10A and 10B addenda](../../../trading-course/sessions/10_cg_swing_daily_workflow_20260425.md).
-It is a design document only: no Gleam project is created until the prerequisite
-typed contracts listed below are implementable.
+The controlling rule is simpler than any workflow convention: the LLM owns
+every interpretation, policy, candidate choice, plan, and next operation. The
+plugin only preserves and efficiently exposes the exact information supplied
+to it.
 
-## User stories
+## Implemented Pi surface
 
-A trader can:
-
-- inspect which facts and capabilities are present, missing, stale, late,
-  conflicting, declared-only, or unsupported for one exact listing, track,
-  session, account profile, and broker profile;
-- scan a point-in-time universe and receive compact per-candidate evidence
-  packets without a plugin qualifying, rejecting, ranking, or recommending a
-  candidate;
-- inspect every predicate, optional confirmation, ranking fact, assumption,
-  source cutoff, and evidence link;
-- save a read-only entry/invalidation/target/expiry intent before any order;
-- attach risk and execution-readiness receipts without treating the plan as an
-  order;
-- monitor the saved definition and plan using new dated observations;
-- compare planned and observed actions, including an unfilled entry, gap-through
-  stop, or unknown stop/target ordering;
-- judge process adherence separately from profit and loss.
-
-The workbench never says that a setup is safe, guaranteed, optimal, or proven
-profitable. It also never decides whether the setup should be traded; the LLM
-owns every research and trade decision.
-
-## Professional daily rhythm
-
-The primary interface follows the trader's routine instead of exposing a menu
-of finance functions:
-
-1. **After the close — scan and triage.** Show what changed, which candidates
-   gained or lost evidence, which inputs became false, stale, late, conflicting,
-   or unavailable, and the few exceptions needing inspection. Preserve the
-   rest in a compact working set without a plugin-level candidate verdict.
-2. **Plan the next session.** Drill from a candidate into its predicate evidence
-   and create the entry, invalidation, target, expiry, and monitoring intent
-   without retyping identity, strategy, or source context.
-3. **Before the next open — preflight.** Revalidate freshness, corporate events,
-   market/account rules, risk, and executable-order support. Highlight only
-   changes from the saved plan; block on material conflicts.
-4. **While holding — monitor by exception.** Lead with invalidation, stop/target,
-   gap, event, stale-data, and expiry changes. Do not make the trader reread the
-   original dossier on every check.
-5. **After exit and periodically — review.** Reuse the immutable plan and
-   observed events, ask only for facts the system cannot know, and separate
-   process adherence from outcome.
-
-`/swing` with no sub-action resumes the next legal step for the active branch.
-It leads with “needs attention,” “changed since last review,” and “next action,”
-then offers evidence drill-down. Expert users retain direct tools, stable JSON,
-and batch candidate triage; convenience never suppresses a blocker or source.
-
-Workflow acceptance includes task-time and interruption tests: a trader must be
-able to resume a saved working set without reconstructing context, inspect why a
-candidate changed state in one drill-down, and complete the routine path without
-copying identifiers or evidence between tools.
-
-## Proposed Pi surface
-
-| Surface | Contract |
+| Surface | Current contract |
 | --- | --- |
-| `/swing` | resume the active daily loop; lead with changed/attention/next items, then expose status, exact context, blockers, and evidence drill-down |
-| `swing_candidates` | assemble a bounded caller-supplied point-in-time universe into per-candidate predicate/dependency facts and evidence roots; return no verdict or hidden score |
-| `swing_plan` | save an immutable plan declaration authored by the LLM or user beside supplied risk, market-rule, and execution-capability facts; never accept or authorize it |
-| `swing_review` | fold observed price/bar/expiry/exit and supplied journal facts against the saved definition and declaration without deciding process quality or the next action |
+| `/swing [workflow-id]` | Show a compact summary for all branch workflows or one exact ID, followed by the neutral statement that the LLM chooses every interpretation and operation |
+| `swing_candidates` | Attach one canonical `finance_strategy` receipt and bounded caller-supplied facts; report exact mechanical changes from the prior snapshot |
+| `swing_plan` | Attach one immutable, content-bound, non-executable plan declaration authored by the LLM or user, with exact risk/rule/execution receipt references |
+| `swing_review` | Append a content-bound observation or review record using caller vocabulary and exact evidence references |
+| `swing_snapshot` | Export deterministic structured state for all workflows or one exact workflow, including receipt payloads, changes, declarations, review records, and neutral available operations |
 
-The root module will eventually export
-`extension(api: pi.ExtensionApi) -> Promise(Nil)`. The Pi/Promise layer decodes
-inputs, obtains explicit capabilities, invokes pure domain modules, renders
-bounded results, and records typed custom-session events. No business policy
-belongs in the shell or JavaScript FFI.
+The root module exports
+`extension(api: pi.ExtensionApi) -> Promise(Nil)`. The Pi/Promise shell decodes
+bounded inputs, appends custom events, restores the active branch, and renders
+results. Pi cannot autonomously invoke another plugin's tools, so composition is
+through explicit versioned JSON receipts supplied by the agent.
 
-Pi cannot autonomously call another plugin's tools. `/swing` therefore provides
-bounded orchestration guidance and custom data; the agent performs explicit
-tool calls. Composition is through stable versioned JSON receipts rather than
-an assumed in-process plugin registry.
+## Decision boundary
 
-## Planned package surface
+The plugin has no setup, candidate, plan, process-quality, correctness,
+sufficiency, or trade decision type. Structured snapshots state
+`decisionOwner: "llm"` and `pluginDecisionFields: []`.
 
-| Module | Responsibility |
-| --- | --- |
-| `pi_sparkles_swing_workbench` | Pi/Promise effect shell and surface registration only |
-| `pi_sparkles_swing_workbench/decode` | bounded runtime decoding into typed receipt inputs |
-| `pi_sparkles_swing_workbench/domain` | pure working-set, preflight, next-action and workflow composition laws |
-| `pi_sparkles_swing_workbench/state` | pure versioned custom-event replay and branch projection |
-| `pi_sparkles_swing_workbench/render` | deterministic attention/change/next summaries and evidence drill-down |
+It may perform only structural mechanics needed to retain exact information:
 
-The first custom-data schema will include stable events for working-set
-selection, candidate evidence attachment, immutable plan attachment,
-observation attachment, expiry/exit attachment, and review attachment. Every
-event carries its schema version, workflow ID, exact track/listing key,
-strategy version, receipt hashes, event time, and predecessor revision. Payload
-bounds and redaction rules are part of decoding, not rendering conventions.
+- decode a canonical `finance_strategy` evidence receipt;
+- verify a supplied SHA-256 content binding;
+- keep the exact `cn`, `hk`, or `us` track and complete listing key;
+- enforce workflow identity, event revision, count, and input bounds;
+- compare facts by exact typed equality and report added, changed, unchanged,
+  or removed;
+- replay the active session branch exactly;
+- expose a neutral list of available operations.
 
-## Workflow
+Those mechanics do not establish that evidence is correct, trustworthy,
+sufficient, usable, current enough, professionally appropriate, or actionable.
+They do not qualify or reject a setup, rank a candidate, accept a plan, select a
+quantity, recommend an order encoding, judge a review, or choose the next
+operation.
 
-```text
-exact listing + active track
-          |
-          v
-capability facts -----------------------> missing/stale/late/conflict details
-          |
-          v
-point-in-time universe + completed daily receipts
-          |
-          v
-versioned feature/event receipts --> finance_strategy evidence packet
-                                          /                    \
-                                         v                      v
-                                  risk facts          rule/execution facts
-                                          \                    /
-                                           v                  v
-                                      LLM interpretation
-                                               |
-                                  LLM/user plan declaration
-                                               |
-                                  observe / expire / record
-                                               |
-                                               v
-                               planned-versus-observed facts
-```
+## Information model
 
-Each arrow preserves the exact `cn`, `hk`, or `us` track and complete listing
-key. No step may resolve, substitute, or relabel a provider, calendar, venue,
-currency, account, or broker profile silently.
+A candidate snapshot contains one exact strategy evidence receipt plus bounded
+facts. Each fact has a caller-assigned role (`required`, `optional`, `ranking`,
+or `context`), an exact detail string, receipt references, and one of these
+states:
 
-## Required inputs
+- `known`
+- `unknown`
+- `not_obtained`
+- `conflicting`
+- `decode_failure`
+- `declared`
+- `unsupported`
+- `stale`
+- `late`
 
-The shell accepts bounded, versioned receipts rather than loose prose or bare
-numbers:
+These are retained information labels, not plugin conclusions. A false
+predicate inside the strategy receipt remains distinct from absent or late
+evidence. Missing market-data, indicator, risk, rule, execution, sector,
+catalyst, or journal coverage can therefore be attached explicitly without
+blocking this shell or being silently omitted.
 
-- validated active-track context and exact listing identities;
-- point-in-time universe membership and eligibility facts;
-- canonical completed-daily OHLCV acquisition and gap receipts;
-- feature receipts from the future reviewed `finance_indicators` slice;
-- dated event/catalyst evidence where selected by the definition;
-- exact calendar, listing/status, tick, lot, fee/tax, resale, and other required
-  market-rule receipts;
-- strategy definition and prior transition receipt;
-- account-scoped risk result from the future trade-plan/risk contract;
-- exchange and broker execution-capability receipt;
-- optional watchlist/alert handles and journal-schema receipt.
+The plan payload is opaque user/LLM data. Its hash, source strategy receipt,
+origin, receipt references, and creation time are retained exactly. Attaching
+the same plan is idempotent; a different replacement is rejected structurally
+so a declaration cannot be silently rewritten. A plan is never an order or an
+authorization.
 
-An input is incompatible when its track, listing, session, definition version,
-source cutoff, adjustment basis, unit, or evidence hash disagrees with another
-required input. Incompatibility returns all detected conflicts as typed facts;
-the shell never chooses a favored receipt or converts those facts into a
-candidate decision.
-
-## Capability preflight
-
-Preflight reports each dependency as `Ready`, `Missing(reason)`, `Stale(reason)`,
-`Late(known_at)`, `Conflicting(reason)`, `Declared(value)`, or
-`Unsupported(scope)`. `Ready` means only that the exact expected receipt is
-present and compatible; it is not a candidate verdict or authorization. The LLM
-interprets the complete packet and owns the resulting decision.
-
-Open prerequisites are:
-
-- `CG-MARKET-DATA` for minimum completed-daily receipts, freshness,
-  volume/turnover semantics, source rights, and trader-facing quality states;
-- `CG-TECH` for exact indicator and adjustment-production receipts;
-- `CG-RISK` and `pi_trade_plan` for account-scoped size, gap, notional, heat,
-  rounding, and fee-reserve decisions;
-- `CG-DAY`, `finance_execution`, and broker capability input for order support
-  and fill/cost semantics;
-- `CG-PSYCHOLOGY` and `journal_schema` for durable pre/post-trade review fields;
-- sector/regime and catalyst providers when a selected definition makes them
-  required rather than optional context.
-
-Missing predicate, size, or executable-order dependencies remain prominent
-facts and are never silently omitted. Missing optional confirmation or ranking
-evidence remains explicitly `Unknown`. No compatibility or warning field can
-authorize, reject, or recommend a plan.
+Review records preserve caller-selected `recordKind` vocabulary. They may refer
+to the attached plan and any evidence receipts, but the plugin does not infer
+adherence, discipline, bias, emotion, outcome quality, or a response.
 
 ## State and lifecycle
 
-The plugin stores only immutable workflow events and exact receipt references in
-Pi custom session data. It does not copy provider datasets or treat session data
-as cross-session durable storage.
+State is a strict contiguous event log in Pi custom session data:
 
-- reload re-registers surfaces without duplicating events;
-- resume replays a strictly versioned, contiguous event stream;
-- fork inherits only the branch history supplied by Pi and then diverges;
-- branch changes rebuild the visible workflow from that branch;
-- malformed, unknown-version, hash-mismatched, or non-contiguous events lock
-  mutation and return a repair/export report;
-- compaction does not replace structured state with summary prose;
-- shutdown performs no network write, order submission, or hidden persistence.
+- `candidate_attached`
+- `plan_attached`
+- `review_attached`
 
-Changing a definition version does not rewrite an existing evidence packet or
-plan declaration. The LLM starts a new evidence snapshot whose relationship to
-the previous one is explicit.
+Resume replays the current branch. A fork inherits only the events Pi supplies
+for that branch and then diverges. A session-tree change rebuilds the projection
+from the new active branch. Malformed JSON, unknown schema/version, invalid
+content binding, an impossible transition, or a revision gap locks mutation on
+that branch instead of overwriting history.
 
-## Rendering and budgets
+This slice provides no user-owned cross-session durable storage. It makes no
+network request, reads no credential, performs no filesystem write, submits no
+order, and runs no background monitor.
 
-Candidate output is ordered deterministically and bounded by caller-visible
-limits. A result shows:
+## Package surface
 
-- track, exact listing, signal session, evaluation cutoff and strategy version;
-- per-predicate true/false/unknown observation and compatibility details, with
-  no aggregate state;
-- optional confirmations/ranking with `Present`, `Unknown`, or `Conflicting`;
-- desired plan values separately from supported executable order fields;
-- readiness gaps and the plugin/tool responsible for supplying each receipt;
-- source, freshness, adjustment basis, units, entitlement and evidence links;
-- omitted-row counts and a continuation/export path when a table is truncated.
+| Module | Responsibility |
+| --- | --- |
+| `pi_sparkles_swing_workbench` | Pi/Promise registration, branch restoration, event append, and notification shell |
+| `pi_sparkles_swing_workbench/decode` | bounded runtime decoding into typed inputs |
+| `pi_sparkles_swing_workbench/domain` | pure content binding, information facts, declarations, review records, and exact fact changes |
+| `pi_sparkles_swing_workbench/state` | pure versioned workflow transitions, event encoding/decoding, and replay |
+| `pi_sparkles_swing_workbench/render` | deterministic summaries and structured snapshots with neutral available operations |
+| `pi_sparkles_swing_workbench/effect/store` | generic mutable cell only; no business logic |
 
-Charts, when later composed, are views over the same typed receipts and always
-retain a structured-data fallback. The workbench performs no hidden second
-calculation for display.
+## Current bounds
 
-Initial limits must be explicit for candidate count, evidence roots per
-candidate, transition count, serialized custom-data bytes, and rendered rows.
-Exceeding a limit returns a typed partial/too-large result; it does not discard
-evidence silently.
+- 50 workflows per active branch;
+- 20 candidate snapshots per workflow;
+- 100 review records per workflow;
+- revision 10,000 maximum;
+- 64 facts per candidate snapshot;
+- 64 receipt references per fact or receipt-reference collection;
+- 200,000 characters for a canonical strategy receipt;
+- 20,000 characters for a plan or review payload;
+- 1,000 characters for a fact detail.
 
-## Permissions and trust boundary
+Exceeding a bound or supplying an invalid hash rejects that requested mutation.
+It does not discard another workflow or reinterpret the input.
 
-The first slice is read-only and non-interactive except for explicit Pi command
-and tool calls. It has no credential environment variables and no direct
-network, filesystem, or broker access. A plan is not an order. Paper or live
-execution requires a separate installed plugin, an exact LLM-authored draft,
-explicit user authorization, and its own safety gates.
+## Professional workflow fit
 
-Provider content, journal prose, and imported labels are untrusted data. They
-cannot alter tool policy, track identity, risk limits, execution permissions,
-or system instructions.
+The stored context can support the daily rhythm from the course—after-close
+inspection, LLM-authored planning, next-session comparison, monitoring facts,
+and post-exit review—without embedding that rhythm as a plugin state machine.
+`/swing` and `swing_snapshot` expose exact facts, changes, and available
+operations; the LLM decides which workflow matters and which operation, if any,
+to request.
 
-## Acceptance journeys
+Additional provider receipts, indicator variants, risk expressions, execution
+models, sector/catalyst context, alerts, and journal schemas can be composed
+incrementally. Their absence limits available information but does not require
+the workbench to know correctness or make a fallback decision.
 
-Seeded offline tests must cover at least:
+## Verification
 
-1. a completed-session packet exposing all true predicate facts beside a risk
-   receipt whose proposed size changes under gap exposure, without a plugin
-   verdict;
-2. a complete packet retaining a false RSI observation without converting it
-   into rejection;
-3. an LLM-authored entry declaration expiring with no entry observation after a
-   gap above its ceiling;
-4. a later session opening through the desired stop without claiming a stop-
-   price fill;
-5. a daily bar touching target and stop and returning `UnknownOrdering`;
-6. true setup-predicate facts beside an explicit unsupported mapping for the
-   desired stop order;
-7. missing gap-stress/account policy remaining a named missing dependency;
-8. missing adjustment provenance, incomplete pagination, stale evidence,
-   provider gap, insufficient warm-up, and ambiguous identity remaining
-   distinct compatibility facts;
-9. the same symbol on a conflicting track being preserved as a mismatch without
-   fallback or a plugin verdict;
-10. losing and profitable outcomes shown beside the immutable plan and observed
-    actions so the LLM can review process quality.
-
-Pure tests cover the workflow fold and compatibility laws. Later implementation
-also requires FFI input contracts, artifact default export, Pi load/reload/
-resume/fork tests, malformed-state locking, rendering bounds, and architecture
-checks. Provider plugin unit tests remain fixture-only.
-
-## Implementation boundary
-
-This README graduates only the `CG-SWING` interaction design. Implementation
-must begin with the network-free receipt preflight, compatibility rendering,
-and pure workflow transitions. Candidate acquisition, indicator arithmetic,
-sizing, and execution remain unavailable until their own gates and packages
-are ready. No later prerequisite authorizes adding a plugin-owned research or
-trade decision.
-
-When implementation starts, the directory gains its independent `gleam.toml`,
-`src/`, `test/`, and package version. Hex will distribute reviewed Gleam/FFI
-source, not `dist/`; users build the Pi adapter and bundle through the root Bun
-tasks. The exact commands will be:
+The package has deterministic offline coverage for receipt/hash binding,
+information-state preservation, fact deltas, track isolation, immutable plans,
+review references, replay/revision failures, deterministic no-decision
+snapshots, and malformed histories. Binding tests cover attachment of a
+candidate/plan/review, exact tool-facing JSON, resume, fork, and branch locking.
+The bundled artifact exports Pi's required default factory and smoke-loads
+without a model call.
 
 ```sh
 bun run check -- swing_workbench
@@ -292,18 +163,16 @@ bun run build -- swing_workbench
 bun run test:pi -- swing_workbench
 ```
 
-No Pi, binding, or provider version is claimed tested while this remains
-design-only.
-
 ## Non-goals
 
-- No provider client, symbol resolver, calendar, indicator engine, sector model,
-  news classifier, risk calculator, fee table, or fill simulator.
-- No intraday/day-trading surface, short selling, options, futures, FX, crypto,
-  leverage default, autonomous monitoring, paper order, or live order.
-- No hidden score that collapses required predicates and optional evidence.
-- No setup qualification/rejection, plan acceptance, ranking verdict, buy/sell
-  decision, or next-action decision; those belong to the LLM.
-- No inferred psychology, edge, confidence, suitability, or recommendation.
-- No silent replacement of unknown data with model knowledge, cached prose,
-  another track, a looser timeframe, or a different provider.
+- No provider client, identity resolver, calendar, indicator engine, sector or
+  news model, risk calculator, fee table, fill simulator, journal database, or
+  cross-session store.
+- No plugin-owned readiness, correctness, sufficiency, candidate, rank,
+  recommendation, next-action, plan, order, or trade decision.
+- No autonomous monitoring, paper order, live order, broker fallback, or hidden
+  policy default.
+- No inferred psychology, diagnosis, confidence, edge, expectancy,
+  suitability, process score, or automatic risk change.
+- No silent replacement of unknown information with model knowledge, cached
+  prose, another track, a looser timeframe, or a different provider.

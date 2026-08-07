@@ -127,22 +127,21 @@ The focused suite has 13 passing tests. The complete repository `bun run test`
 suite, including all package checks/tests, architecture/FFI/artifact layers,
 plugin builds, and Pi smoke-loads, passed on 2026-08-07.
 
-## Open gates before breadth
+## Incremental input contracts before breadth
 
-- `CG-MARKET-DATA`: minimum completed-daily observation, source rights,
-  freshness, volume/turnover semantics, and trader-facing quality contract;
-- `CG-TECH`: formula, seed, warm-up, volume, missing-session, and adjustment
-  production contracts;
-- `CG-RISK`: account risk, gap stress, position sizing, notional, portfolio heat,
-  fee reserve, and zero-size policy;
-- `CG-DAY` and `finance_execution`: exact order/fill/cost and broker capability
-  evidence;
-- `CG-PSYCHOLOGY` and `journal_schema`: pre/post-trade checklist and durable
-  review vocabulary;
+- resolved `CG-MARKET-DATA`, `CG-TECH`, and `CG-RISK` information/calculation
+  contracts have initial slices whose provider/variant breadth remains
+  incremental;
+- the execution-information slice of `CG-DAY` and `finance_execution` provides
+  exact selected-model order/fill/cost and capability facts, while the full
+  intraday workflow remains open;
+- the resolved `CG-PSYCHOLOGY` journal-information contract and
+  `finance_journal`/`trade_journal` first slices provide durable event handles,
+  attributed declarations, checklist facts, and requested review calculations;
 - `CG-QUANT`: backtest protocol and any expectancy or robustness claim.
 
-These gates constrain which facts can be supplied; they do not authorize a
-plugin to take over the LLM's decision.
+Coverage gaps constrain which facts can be supplied; they do not authorize a
+plugin to take over the LLM's decision or judge correctness.
 
 ## Non-goals
 
