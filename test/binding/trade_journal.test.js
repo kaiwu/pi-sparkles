@@ -93,6 +93,13 @@ describe("LLM-owned local journal boundary", () => {
       expect(first.details.revision).toBe(1);
       expect(first.details.decision_owner).toBe("llm");
       expect(first.details.plugin_decision_fields).toEqual([]);
+      expect(first.content[0].text).toContain("journal-main");
+      expect(first.content[0].text).toContain("workflow-1");
+      expect(first.content[0].text).toContain("event-1");
+      expect(first.content[0].text).toContain(
+        first.details.event.canonical_content_hash,
+      );
+      expect(first.content[0].text).not.toContain("private prose");
       expect(first.details.storage_capabilities.backend).toBe("local_jsonl_v1");
       expect(first.details.storage_capabilities.encryption_at_rest.state).toBe(
         "not_obtained",
@@ -125,17 +132,27 @@ describe("LLM-owned local journal boundary", () => {
         search(path, false),
       );
       expect(omitted.details.events[0]).toMatchObject({
+        journal_id: "journal-main",
         event_id: "event-1",
+        workflow_id: "workflow-1",
         privacy: "private",
         payload_omitted: true,
       });
       expect(JSON.stringify(omitted.details)).not.toContain("private prose");
+      expect(omitted.content[0].text).toContain("journal-main");
+      expect(omitted.content[0].text).toContain("workflow-1");
+      expect(omitted.content[0].text).toContain("event-1");
+      expect(omitted.content[0].text).toContain(
+        omitted.details.events[0].canonical_content_hash,
+      );
+      expect(omitted.content[0].text).not.toContain("private prose");
 
       const explicit = await execute(
         instance.tools.get("journal_search"),
         search(path, true),
       );
       expect(JSON.stringify(explicit.details)).toContain("private prose");
+      expect(explicit.content[0].text).toContain("private prose");
 
       const context = await execute(instance.tools.get("journal_context"), {
         journalPath: path,

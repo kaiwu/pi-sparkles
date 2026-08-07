@@ -261,10 +261,7 @@ fn append_entry(
               )
             Ok(#(same, state.AlreadyStored(stored))) ->
               tool.text_result(
-                "Journal event already stored event="
-                  <> event.event_id(stored)
-                  <> " revision="
-                  <> string.inspect(state.revision(same)),
+                render.stored_text(same, stored, "already_stored"),
                 render.stored_json(
                   same,
                   stored,
@@ -319,10 +316,7 @@ fn persist_append(
   case outcome {
     local_file.Replaced(bytes) ->
       tool.text_result(
-        "Journal event stored event="
-          <> event.event_id(stored)
-          <> " revision="
-          <> string.inspect(state.revision(next)),
+        render.stored_text(next, stored, "stored"),
         render.stored_json(next, stored, "stored", bytes, path),
       )
       |> promise.resolve
@@ -388,12 +382,7 @@ fn search(
           ),
         )
       tool.text_result(
-        "Journal query matched="
-          <> string.inspect(state.matched_count(result))
-          <> " returned="
-          <> string.inspect(result |> state.query_events |> list.length)
-          <> " omitted="
-          <> string.inspect(state.query_omitted_count(result)),
+        render.search_text(value, result, include_private),
         render.search_json(value, result, include_private),
       )
       |> promise.resolve

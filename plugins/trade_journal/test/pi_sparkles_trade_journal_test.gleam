@@ -155,6 +155,29 @@ pub fn explicit_private_search_projection_returns_exact_event_test() {
   rendered |> string.contains("canonical_content_hash") |> should.be_true
 }
 
+pub fn model_search_text_exposes_exact_selected_event_handle_test() {
+  let assert Ok(value) = domain.build_event(exact_entry())
+  let assert Ok(#(journal, _)) = state.append(state.empty(), value)
+  let result = state.query(journal, state.Query(None, [], [], [], True, 10))
+  let rendered = render.search_text(journal, result, False)
+  rendered |> string.contains("journal-main") |> should.be_true
+  rendered |> string.contains("workflow-1") |> should.be_true
+  rendered |> string.contains("event-1") |> should.be_true
+  rendered |> string.contains("canonical_content_hash") |> should.be_true
+  rendered |> string.contains("user prose") |> should.be_false
+}
+
+pub fn model_storage_text_exposes_exact_durable_handle_test() {
+  let assert Ok(value) = domain.build_event(exact_entry())
+  let assert Ok(#(journal, _)) = state.append(state.empty(), value)
+  let rendered = render.stored_text(journal, value, "stored")
+  rendered |> string.contains("journal-main") |> should.be_true
+  rendered |> string.contains("workflow-1") |> should.be_true
+  rendered |> string.contains("event-1") |> should.be_true
+  rendered |> string.contains("canonical_content_hash") |> should.be_true
+  rendered |> string.contains("user prose") |> should.be_false
+}
+
 fn exact_entry() -> domain.EntryData {
   domain.EntryData(
     "journal-main",

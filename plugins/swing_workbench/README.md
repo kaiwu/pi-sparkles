@@ -6,8 +6,10 @@ Status: **Experimental — network-free, LLM-owned workflow-context slice**
 workflow information across a session branch. It attaches canonical
 [`finance_strategy`](../../finance/finance_strategy/README.md) evidence,
 caller-supplied information states, opaque LLM/user plan declarations, and
-observations or review facts. It does not acquire market data, run an indicator,
-calculate risk, simulate an order, or decide what any fact means.
+observations or review facts. It can also retain an exact external journal
+event handle without reading or interpreting that event. It does not acquire
+market data, run an indicator, calculate risk, simulate an order, or decide
+what any fact means.
 
 The contract derives from the resolved `CG-SWING` trading-course
 [Session 10 with the 10A and 10B addenda](../../../trading-course/sessions/10_cg_swing_daily_workflow_20260425.md).
@@ -24,7 +26,10 @@ to it.
 | `swing_candidates` | Attach one canonical `finance_strategy` receipt and bounded caller-supplied facts; report exact mechanical changes from the prior snapshot |
 | `swing_plan` | Attach one immutable, content-bound, non-executable plan declaration authored by the LLM or user, with exact risk/rule/execution receipt references |
 | `swing_review` | Append a content-bound observation or review record using caller vocabulary and exact evidence references |
+| `swing_journal_link` | Attach one caller-selected `(workflow, journal, event, relation)` handle with its canonical content hash and attachment time; never read, trust, select, or interpret the event |
 | `swing_snapshot` | Export deterministic structured state for all workflows or one exact workflow, including receipt payloads, changes, declarations, review records, and neutral available operations |
+| `swing_state_export` | Write a canonical SHA-256-bound reconstruction log for all workflows or one exact workflow to a new caller-selected local file; identical retries are idempotent and different existing content is a conflict |
+| `swing_state_import` | Load one caller-selected file with an exact expected hash into an empty branch; reconstruct its information state without choosing merge, overwrite, interpretation, or a next operation |
 
 The root module exports
 `extension(api: pi.ExtensionApi) -> Promise(Nil)`. The Pi/Promise shell decodes
@@ -44,9 +49,13 @@ It may perform only structural mechanics needed to retain exact information:
 - verify a supplied SHA-256 content binding;
 - keep the exact `cn`, `hk`, or `us` track and complete listing key;
 - enforce workflow identity, event revision, count, and input bounds;
+- retain caller-selected external journal/event IDs, relation vocabulary, and
+  canonical content hashes exactly;
 - compare facts by exact typed equality and report added, changed, unchanged,
   or removed;
 - replay the active session branch exactly;
+- construct, verify, and replay a canonical portable event log selected by the
+  caller;
 - expose a neutral list of available operations.
 
 Those mechanics do not establish that evidence is correct, trustworthy,
@@ -95,6 +104,7 @@ State is a strict contiguous event log in Pi custom session data:
 - `candidate_attached`
 - `plan_attached`
 - `review_attached`
+- `journal_reference_attached`
 
 Resume replays the current branch. A fork inherits only the events Pi supplies
 for that branch and then diverges. A session-tree change rebuilds the projection
@@ -102,9 +112,21 @@ from the new active branch. Malformed JSON, unknown schema/version, invalid
 content binding, an impossible transition, or a revision gap locks mutation on
 that branch instead of overwriting history.
 
-This slice provides no user-owned cross-session durable storage. It makes no
-network request, reads no credential, performs no filesystem write, submits no
-order, and runs no background monitor.
+`swing_state_export` makes the selected projection portable as a deterministic
+contiguous reconstruction log. Export creates a mode-0600 local file through a
+bounded atomic effect. It never overwrites different existing content; an
+exact lost-ack retry returns `already_stored`. Import requires the exact
+canonical content hash and an empty target branch. It never merges or replaces
+branch state; an exact retry returns `already_imported`. The imported revision
+is the portable log revision, while `sourceRevision` retains the source branch
+revision. For an exact-workflow export these can differ because unrelated
+workflow events are intentionally absent.
+
+Journal references remain external handles: `trade_journal` can resolve them
+from caller-selected local JSONL in another Pi session. This plugin makes no
+network request, reads no credential, submits no order, and runs no background
+monitor. Portable JSON is user-owned plaintext; ownership, encryption, access
+control, backup, and synchronization remain `not_obtained` facts.
 
 ## Package surface
 
@@ -114,20 +136,24 @@ order, and runs no background monitor.
 | `pi_sparkles_swing_workbench/decode` | bounded runtime decoding into typed inputs |
 | `pi_sparkles_swing_workbench/domain` | pure content binding, information facts, declarations, review records, and exact fact changes |
 | `pi_sparkles_swing_workbench/state` | pure versioned workflow transitions, event encoding/decoding, and replay |
+| `pi_sparkles_swing_workbench/portable` | pure canonical selection, reconstruction-log receipt, hash verification, and replay metadata |
 | `pi_sparkles_swing_workbench/render` | deterministic summaries and structured snapshots with neutral available operations |
 | `pi_sparkles_swing_workbench/effect/store` | generic mutable cell only; no business logic |
+| `pi_sparkles_swing_workbench/effect/portable_file_ffi` | generic bounded local read, lock, compare/create, and atomic replacement effects only |
 
 ## Current bounds
 
 - 50 workflows per active branch;
 - 20 candidate snapshots per workflow;
 - 100 review records per workflow;
+- 100 external journal event references per workflow;
 - revision 10,000 maximum;
 - 64 facts per candidate snapshot;
 - 64 receipt references per fact or receipt-reference collection;
 - 200,000 characters for a canonical strategy receipt;
 - 20,000 characters for a plan or review payload;
 - 1,000 characters for a fact detail.
+- caller-selected portable-file bounds from 1 byte through 100,000,000 bytes.
 
 Exceeding a bound or supplying an invalid hash rejects that requested mutation.
 It does not discard another workflow or reinterpret the input.
@@ -142,9 +168,12 @@ operations; the LLM decides which workflow matters and which operation, if any,
 to request.
 
 Additional provider receipts, indicator variants, risk expressions, execution
-models, sector/catalyst context, alerts, and journal schemas can be composed
-incrementally. Their absence limits available information but does not require
-the workbench to know correctness or make a fallback decision.
+models, alerts, and journal schemas can be composed incrementally. The current
+acceptance catalog now includes exact sector/regime, catalyst, task-time, and
+point-in-time universe/candidate observation families on all three tracks.
+Their breadth remains incremental;
+an absent family limits available information but does not require the
+workbench to know correctness or make a fallback decision.
 
 ## Verification
 
@@ -152,7 +181,8 @@ The package has deterministic offline coverage for receipt/hash binding,
 information-state preservation, fact deltas, track isolation, immutable plans,
 review references, replay/revision failures, deterministic no-decision
 snapshots, and malformed histories. Binding tests cover attachment of a
-candidate/plan/review, exact tool-facing JSON, resume, fork, and branch locking.
+candidate/plan/review, exact tool-facing JSON, resume, fork, branch locking,
+portable-file conflict behavior, and restoration in a distinct plugin instance.
 The bundled artifact exports Pi's required default factory and smoke-loads
 without a model call.
 
@@ -161,7 +191,7 @@ the pure `finance_replay` and `finance_journal` contracts. They exercise the
 caller/LLM-declared after-close → plan → preflight → monitor → review sequence
 for `cn`, `hk`, and `us`; exact interruption/resume; replay batch equivalence;
 journal JSONL portability; track-specific exception triage; and mechanical
-stage durations. The package has 16 pure tests in total. These fixtures prove
+stage durations. The package has 20 pure tests in total. These fixtures prove
 composition and auditability only: they do not establish provider coverage,
 positive expectancy, professional sufficiency, or whole-product acceptance.
 
@@ -171,21 +201,37 @@ and `us`, including exact branch restart and local journal reload. Its
 acceptance shell now invokes the actual bundled CN/HK/US OHLCV tools over exact
 scripted response bytes and copies each complete tool result plus its
 market-owned gap receipt. The Gleam fixture builder composes
-indicator-request, risk-request, track-owned effective-rule, and execution
-semantic receipts over those market digests. The provider fixtures remain
-non-live and explicitly non-authenticating, and rule hashes remain content
-hashes rather than provider signatures.
+indicator-request, risk-request, track-owned effective-rule, execution
+semantic, sector/regime, catalyst, exact task-time, and point-in-time
+universe/candidate receipts. The expanded nine-receipt catalog is attached and
+content-hash verified on each track. Provider fixtures remain non-live and
+explicitly non-authenticating, and rule
+hashes remain content hashes rather than provider signatures.
+The US universe/candidate receipt is built from the actual
+`finance_market_alpaca` asset decoder over exact scripted response bytes and
+retains every provider asset field. CN/HK universe rows remain synthetic.
+The deterministic lane also attaches the three exact stored journal event
+handles to each workbench, replays revision 8 from five workflow events plus
+three reference events, and verifies a fresh journal plugin instance can find
+the same events by workflow ID. It passes three track journeys with 173
+assertions.
+
 The opt-in live tutor lane gives the configured Pi model the same bounded US
 receipt catalog and drives thirteen ordered calls through candidate inspection,
 plan, preflight, monitor, replay, review, final snapshot, and journal storage.
 At each decision stage the model independently selects one neutral
 content-bound alternative; the verifier proves the selected hashes, selected
-plan reference, final snapshot, and `llm_declared` journal payload agree while
-the workbench exposes an empty plugin-decision field list. It then starts a
-fresh Pi process with the same native session ID, enables only
-`swing_snapshot`, and verifies exact revision-8 restoration from eight
-contiguous extension events. The live lane makes real model calls and is not
-part of the default suite.
+plan reference, all nine catalog hashes, final snapshot, and `llm_declared`
+journal payload agree while the workbench exposes an empty plugin-decision
+field list. A fresh Pi process with the same native session ID first verifies
+exact revision-8 restoration, then attaches the stored journal handle and
+verifies revision 9 from nine contiguous extension events, then writes the
+caller-selected portable file. A third process uses a distinct Pi session ID,
+recovers the journal handle, imports the exact expected portable hash into its
+empty branch, and verifies an identical revision-9 snapshot. These 21 calls
+prove caller-selected cross-session state reconstruction without giving the
+plugin a restore, merge, interpretation, or operation decision.
+The live lane makes real model calls and is not part of the default suite.
 
 ```sh
 bun run check -- swing_workbench
@@ -200,7 +246,7 @@ bun run test:live:tutor
 
 - No provider client, identity resolver, calendar, indicator engine, sector or
   news model, risk calculator, fee table, fill simulator, journal database, or
-  cross-session store.
+  managed/synchronized/encrypted storage service.
 - No plugin-owned readiness, correctness, sufficiency, candidate, rank,
   recommendation, next-action, plan, order, or trade decision.
 - No autonomous monitoring, paper order, live order, broker fallback, or hidden

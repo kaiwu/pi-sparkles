@@ -29,6 +29,11 @@ regular-session daily bars for the existing `cn`, `hk`, and `us` tracks:
   parameters, required predicates, optional confirmations/ranking, and
   lifecycle declarations;
 - exact listing/session/evaluation-cutoff context;
+- content-bound sector/regime, catalyst, task-time, and point-in-time universe
+  candidate observation receipts that preserve source-declared labels and
+  structured row fields,
+  bounded query populations, exact clocks/cutoffs, exclusions, and
+  unknown/conflicting states without interpretation;
 - upstream dependency readiness that keeps `Declared` separate from verified
   `Ready` evidence;
 - feature receipts retaining formula version, parameters, warm-up, input-series
@@ -54,6 +59,7 @@ authenticated a fill.
 | `finance_strategy/definition` | immutable definition data, semantic version, scope, predicates, requirements, lifecycle policy, and canonical hash |
 | `finance_strategy/evidence` | typed dependency and feature receipts, caller-declaration separation, validation, and canonical wire values |
 | `finance_strategy/receipt` | evidence-only compatibility projection, ordered evidence roots, definition/input hashes, and versioned JSON |
+| `finance_strategy/context_receipt` | source-declared sector/regime labels, bounded catalyst snapshots, exact task clocks, point-in-time universe candidate rows, information states, and canonical content hashes |
 | `finance_strategy/plan` | exact LLM/user plan declaration; never sizing approval or executable order |
 | `finance_strategy/transition` | total structural fold over declarations and later observations |
 | `finance_strategy/rsi_reversal` | executable data constructor for the reviewed example hypothesis |
@@ -113,6 +119,9 @@ Deterministic offline tests cover:
 - caller declarations never becoming verified dependencies;
 - exact JSON round-trip of listing, track, session, cutoff, adjustment basis,
   units, observations, hashes, and ordered evidence roots;
+- point-in-time universe query/row identity, source-declared membership and
+  exclusion reasons, cutoffs, unknowns, and conflicts without rank or
+  qualification;
 - plan-shape validation without risk or execution acceptance;
 - fill-before-plan, context mismatch, backward time, expiry, gap-through-stop,
   and stop/target ambiguity transition laws.
@@ -123,7 +132,7 @@ Run:
 bunx gleam test
 ```
 
-The focused suite has 13 passing tests. The complete repository `bun run test`
+The focused suite has 20 passing tests. The complete repository `bun run test`
 suite, including all package checks/tests, architecture/FFI/artifact layers,
 plugin builds, and Pi smoke-loads, passed on 2026-08-07.
 
@@ -145,7 +154,8 @@ plugin to take over the LLM's decision or judge correctness.
 
 ## Non-goals
 
-- No quote, OHLCV, corporate-action, news, sector, account, or broker fetching.
+- No quote, OHLCV, corporate-action, news, sector, account, or broker fetching;
+  context receipts only preserve caller-supplied or upstream source data.
 - No indicator arithmetic, risk sizing, fee table, fill simulation, portfolio
   optimization, prediction, recommendation, or autonomous execution.
 - No aggregate strategy state, candidate ranking score, buy/sell claim, plan

@@ -8,7 +8,17 @@ import { loadReceiptFixture } from "../test/acceptance/receipt-fixture.js";
 
 const maximumDurationMs = 300_000;
 const maximumOutputBytes = 10_000_000;
-const receiptNames = ["market", "indicator", "risk", "rule", "execution"];
+const receiptNames = [
+  "market",
+  "indicator",
+  "risk",
+  "rule",
+  "execution",
+  "sectorRegime",
+  "catalyst",
+  "taskTime",
+  "universeCandidate",
+];
 
 if (import.meta.main) {
   try {
@@ -43,11 +53,17 @@ async function main() {
 
   const directory = mkdtempSync(join(tmpdir(), "pi-sparkles-live-tutor-"));
   const journalPath = join(directory, "journal.jsonl");
+  const portablePath = join(directory, "swing-workbench.json");
   const sessionDirectory = join(directory, "sessions");
   const sessionId = "pi-sparkles-live-tutor-acceptance";
+  const distinctSessionId = "pi-sparkles-live-tutor-durable-journal";
   const startedAt = Date.now();
   try {
-    const fixture = liveFixture(journalPath, receiptFixture.tracks.us);
+    const fixture = liveFixture(
+      journalPath,
+      portablePath,
+      receiptFixture.tracks.us,
+    );
     const execution = await executePi(pi, livePrompt(fixture), {
       sessionDirectory,
       sessionId,
@@ -55,19 +71,41 @@ async function main() {
         "swing_candidates,swing_snapshot,swing_plan,swing_review,journal_entry",
     });
     const result = inspectExecution(execution.stdout, fixture, journalPath);
-    const resumeExecution = await executePi(pi, resumePrompt(fixture), {
-      sessionDirectory,
-      sessionId,
-      tools: "swing_snapshot",
-    });
+    const resumeExecution = await executePi(
+      pi,
+      resumePrompt(fixture, result.journalEvent),
+      {
+        sessionDirectory,
+        sessionId,
+        tools: "swing_snapshot,swing_journal_link,swing_state_export",
+      },
+    );
     const resumed = inspectResume(
       resumeExecution.stdout,
       fixture,
       result.snapshot,
+      result.journalEvent,
     );
     const persistedSession = inspectPersistedSession(
       sessionDirectory,
       sessionId,
+    );
+    const distinctExecution = await executePi(
+      pi,
+      distinctSessionPrompt(fixture, resumed.portableExport),
+      {
+        sessionDirectory,
+        sessionId: distinctSessionId,
+        tools:
+          "journal_context,journal_search,swing_state_import,swing_snapshot",
+      },
+    );
+    const durable = inspectDistinctSession(
+      distinctExecution.stdout,
+      fixture,
+      result.journalEvent,
+      resumed.portableExport,
+      resumed.snapshot,
     );
     console.log(
       JSON.stringify(
@@ -90,9 +128,26 @@ async function main() {
             toolCalls: resumed.toolCalls,
             revision: resumed.snapshot.revision,
             pluginDecisionFields: resumed.snapshot.pluginDecisionFields,
-            exactSnapshotMatch: true,
+            preLinkSnapshotMatch: true,
+            journalLinkStored: true,
+            portableStateStored: true,
+            portableContentHash:
+              resumed.portableExport.canonicalContentHash,
             sessionId,
             persistedCustomEntries: persistedSession.customEntries,
+          },
+          distinctSession: {
+            configuredModel: durable.model,
+            toolCalls: durable.toolCalls,
+            sessionId: distinctSessionId,
+            journalId: durable.journalId,
+            workflowId: durable.workflowId,
+            eventId: durable.eventId,
+            canonicalContentHash: durable.canonicalContentHash,
+            portableContentHash: durable.portableContentHash,
+            restoredRevision: durable.restoredRevision,
+            exactPortableSnapshot: true,
+            pluginDecisionFields: durable.pluginDecisionFields,
           },
         },
         null,
@@ -104,7 +159,7 @@ async function main() {
   }
 }
 
-function liveFixture(journalPath, receiptSet) {
+function liveFixture(journalPath, portablePath, receiptSet) {
   const definitionHash = sha256("live-tutor-swing-definition-v1");
   const context = {
     listing: {
@@ -321,6 +376,15 @@ function liveFixture(journalPath, receiptSet) {
       ],
       idempotencyKey: "live-tutor-us-aapl-decision-1",
     },
+    journalLink: {
+      workflowId,
+      relation: "llm_review_declaration",
+      attachedAtUnixMs: 1786203005000,
+    },
+    portable: {
+      portablePath,
+      maximumPortableBytes: 10_000_000,
+    },
   };
 }
 
@@ -371,6 +435,38 @@ function candidateInput({
       detail:
         "exact semantic receipt retains stop-first, target-first, and unknown-ordering branches",
       receiptReferences: [receiptReferences.execution],
+    },
+    {
+      factId: "context.sector_regime",
+      role: "context",
+      state: "known",
+      detail:
+        "exact source-declared sector and regime labels; no plugin interpretation",
+      receiptReferences: [receiptReferences.sectorRegime],
+    },
+    {
+      factId: "context.catalyst",
+      role: "context",
+      state: "known",
+      detail:
+        "bounded catalyst query with exact source status and timing information",
+      receiptReferences: [receiptReferences.catalyst],
+    },
+    {
+      factId: "context.task_time",
+      role: "context",
+      state: "known",
+      detail:
+        "exact stage clocks and observation states without freshness or lateness labels",
+      receiptReferences: [receiptReferences.taskTime],
+    },
+    {
+      factId: "context.universe_candidate",
+      role: "context",
+      state: "known",
+      detail:
+        "exact point-in-time source-declared universe row without ranking or qualification",
+      receiptReferences: [receiptReferences.universeCandidate],
     },
     {
       factId: "workflow.stage",
@@ -460,12 +556,57 @@ function livePrompt(fixture) {
   ].join("\n");
 }
 
-function resumePrompt(fixture) {
+function resumePrompt(fixture, journalEvent) {
+  const link = {
+    ...fixture.journalLink,
+    journalId: journalEvent.payload.journal_id,
+    eventId: journalEvent.payload.event_id,
+    canonicalContentHash: journalEvent.canonical_content_hash,
+  };
   return [
     "This is the second process of the bounded information-only acceptance journey.",
     "The plugins still never decide correctness, sufficiency, interpretation, or next action. The prior extension state must come only from the reopened Pi session.",
-    `Call swing_snapshot exactly once with ${JSON.stringify({ workflowId: fixture.workflowId })}.`,
-    `Then answer with only this compact JSON object, replacing the integer resumedRevision with the exact returned revision: ${JSON.stringify({ decisionOwner: "llm", workflowId: fixture.workflowId, resumedRevision: 0 })}`,
+    `1. Call swing_snapshot exactly once with ${JSON.stringify({ workflowId: fixture.workflowId })}.`,
+    `2. Call swing_journal_link exactly once with this exact content-bound journal handle: ${JSON.stringify(link)}.`,
+    `3. Call swing_snapshot exactly once again with ${JSON.stringify({ workflowId: fixture.workflowId })}.`,
+    `4. Call swing_state_export exactly once with this exact caller-selected destination: ${JSON.stringify(fixture.portable)}.`,
+    `5. Answer with only this compact JSON object, replacing the integer resumedRevision with the exact final returned revision: ${JSON.stringify({ decisionOwner: "llm", workflowId: fixture.workflowId, resumedRevision: 0 })}`,
+  ].join("\n");
+}
+
+function distinctSessionPrompt(fixture, portableExport) {
+  const contextInput = {
+    journalPath: fixture.journal.journalPath,
+    journalId: fixture.journal.journalId,
+    includeSuperseded: true,
+    maximumJournalBytes: fixture.journal.maximumJournalBytes,
+  };
+  const searchInput = {
+    journalPath: fixture.journal.journalPath,
+    journalId: fixture.journal.journalId,
+    workflowId: fixture.workflowId,
+    eventKinds: ["declaration"],
+    attributionKinds: ["llm_declared"],
+    privacyClassifications: ["private"],
+    includeSuperseded: true,
+    includePrivatePayloads: true,
+    maximumEvents: 10,
+    maximumJournalBytes: fixture.journal.maximumJournalBytes,
+  };
+  const importInput = {
+    portablePath: fixture.portable.portablePath,
+    expectedContentHash: portableExport.canonicalContentHash,
+    expectedCurrentRevision: 0,
+    maximumPortableBytes: fixture.portable.maximumPortableBytes,
+  };
+  return [
+    "This is a distinct Pi session with no prior workbench branch state.",
+    "The journal and workbench tools only provide or restore exact caller-selected information. You are the LLM and own every interpretation and operation choice.",
+    `1. Call journal_context exactly once with ${JSON.stringify(contextInput)}.`,
+    `2. Call journal_search exactly once with ${JSON.stringify(searchInput)}.`,
+    `3. Call swing_state_import exactly once with ${JSON.stringify(importInput)}.`,
+    `4. Call swing_snapshot exactly once with ${JSON.stringify({ workflowId: fixture.workflowId })}.`,
+    `5. Answer with only one compact JSON object containing exactly these keys: decisionOwner set to llm; journalId from canonical_event.payload.journal_id; workflowId from canonical_event.payload.scope.workflow_id; eventId from canonical_event.payload.event_id; canonicalContentHash from the outer canonical_event.canonical_content_hash; portableContentHash from the import result canonicalContentHash; and restoredRevision from the final snapshot revision. Do not use payload.semantic_content_hash.`,
   ].join("\n");
 }
 
@@ -582,6 +723,7 @@ function inspectExecution(stdout, fixture, journalPath) {
   const workflow = snapshot.workflows[0];
   invariant(workflow.snapshots.length === 3, "Expected three candidate stages");
   invariant(workflow.reviewRecords.length === 4, "Expected four stage records");
+  const journalEvent = journal.event;
   const selectedPlan = selectedChoice(
     fixture.planChoices,
     workflow.plan.planPayload,
@@ -688,10 +830,11 @@ function inspectExecution(stdout, fixture, journalPath) {
     ),
     pluginDecisionFields: snapshot.pluginDecisionFields,
     journalAttribution: envelope.payload.attribution.kind,
+    journalEvent,
   };
 }
 
-function inspectResume(stdout, fixture, expectedSnapshot) {
+function inspectResume(stdout, fixture, expectedSnapshot, journalEvent) {
   const events = stdout
     .split("\n")
     .filter((line) => line.trim() !== "")
@@ -699,26 +842,62 @@ function inspectResume(stdout, fixture, expectedSnapshot) {
   const executions = events.filter(
     (event) => event.type === "tool_execution_end",
   );
+  const expectedTools = [
+    "swing_snapshot",
+    "swing_journal_link",
+    "swing_snapshot",
+    "swing_state_export",
+  ];
   invariant(
-    executions.length === 1,
-    "Resume process made unexpected tool calls",
+    JSON.stringify(executions.map((event) => event.toolName)) ===
+      JSON.stringify(expectedTools),
+    `Resume process made unexpected tool calls: ${executions.map((event) => event.toolName).join(", ")}`,
   );
+  for (const execution of executions) {
+    invariant(
+      execution.result?.isError !== true,
+      `Resumed ${execution.toolName} returned an error`,
+    );
+  }
+  const restored = executions[0].result.details;
+  const linked = executions[1].result.details;
+  const snapshot = executions[2].result.details;
+  const portableExport = executions[3].result.details;
   invariant(
-    executions[0].toolName === "swing_snapshot",
-    "Resume process did not inspect the swing snapshot",
-  );
-  invariant(
-    executions[0].result?.isError !== true,
-    "Resumed swing snapshot returned an error",
-  );
-  const snapshot = executions[0].result.details;
-  invariant(
-    JSON.stringify(snapshot) === JSON.stringify(expectedSnapshot),
+    JSON.stringify(restored) === JSON.stringify(expectedSnapshot),
     "Second Pi process did not restore the exact workbench snapshot",
+  );
+  invariant(snapshot.revision === 9, "Journal link did not advance revision 9");
+  const expectedReference = {
+    workflowId: fixture.workflowId,
+    journalId: journalEvent.payload.journal_id,
+    eventId: journalEvent.payload.event_id,
+    canonicalContentHash: journalEvent.canonical_content_hash,
+    relation: fixture.journalLink.relation,
+    attachedAtUnixMs: fixture.journalLink.attachedAtUnixMs,
+  };
+  invariant(
+    JSON.stringify(linked.journalEventReferences) ===
+      JSON.stringify([expectedReference]),
+    "Journal link tool changed the durable event handle",
+  );
+  invariant(
+    JSON.stringify(snapshot.workflows[0].journalEventReferences) ===
+      JSON.stringify([expectedReference]),
+    "Final resumed snapshot lost the durable journal handle",
   );
   invariant(
     snapshot.pluginDecisionFields.length === 0,
     "Resumed snapshot exposed plugin decision fields",
+  );
+  invariant(
+    portableExport.outcome === "stored" &&
+      portableExport.sourceRevision === 9 &&
+      portableExport.portableRevision === 9 &&
+      JSON.stringify(portableExport.workflowIds) ===
+        JSON.stringify([fixture.workflowId]) &&
+      portableExport.pluginDecisionFields.length === 0,
+    "Second process did not export the exact linked workbench state",
   );
   const finalText = events
     .filter(
@@ -747,8 +926,132 @@ function inspectResume(stdout, fixture, expectedSnapshot) {
     model: modelMessage
       ? `${modelMessage.provider}/${modelMessage.model}`
       : "configured-default",
-    toolCalls: ["swing_snapshot"],
+    toolCalls: expectedTools,
     snapshot,
+    portableExport: {
+      canonicalContentHash: portableExport.canonicalContentHash,
+      sourceRevision: portableExport.sourceRevision,
+      portableRevision: portableExport.portableRevision,
+      workflowIds: portableExport.workflowIds,
+    },
+  };
+}
+
+function inspectDistinctSession(
+  stdout,
+  fixture,
+  expectedEvent,
+  portableExport,
+  expectedSnapshot,
+) {
+  const events = stdout
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line, index) => parseEvent(line, index));
+  const executions = events.filter(
+    (event) => event.type === "tool_execution_end",
+  );
+  const expectedTools = [
+    "journal_context",
+    "journal_search",
+    "swing_state_import",
+    "swing_snapshot",
+  ];
+  invariant(
+    JSON.stringify(executions.map((event) => event.toolName)) ===
+      JSON.stringify(expectedTools),
+    "Distinct session made unexpected tool calls",
+  );
+  for (const execution of executions) {
+    invariant(
+      execution.result?.isError !== true,
+      `Distinct-session ${execution.toolName} failed`,
+    );
+  }
+  const context = executions[0].result.details;
+  const search = executions[1].result.details;
+  const imported = executions[2].result.details;
+  const snapshot = executions[3].result.details;
+  invariant(
+    context.payload.journal_id === fixture.journal.journalId &&
+      context.payload.event_count === 1,
+    "Distinct session did not load the exact durable journal",
+  );
+  invariant(search.matched_count === 1, "Distinct journal query was not exact");
+  invariant(
+    Array.isArray(search.plugin_decision_fields) &&
+      search.plugin_decision_fields.length === 0,
+    "Distinct journal query exposed plugin decision fields",
+  );
+  const event = search.events[0]?.canonical_event;
+  invariant(event, "Distinct journal query returned no canonical event");
+  invariant(
+    JSON.stringify(event) === JSON.stringify(expectedEvent),
+    "Distinct session journal event differs from the stored event",
+  );
+  invariant(
+    event.payload.scope.workflow_id === fixture.workflowId,
+    "Durable journal event lost the workflow ID",
+  );
+  invariant(
+    imported.outcome === "imported" &&
+      imported.canonicalContentHash === portableExport.canonicalContentHash &&
+      imported.sourceRevision === 9 &&
+      imported.portableRevision === 9 &&
+      imported.pluginDecisionFields.length === 0,
+    "Distinct session did not import the exact portable workbench state",
+  );
+  invariant(
+    JSON.stringify(imported.snapshot) === JSON.stringify(expectedSnapshot) &&
+      JSON.stringify(snapshot) === JSON.stringify(expectedSnapshot),
+    "Distinct session did not reconstruct the exact linked workbench snapshot",
+  );
+
+  const finalText = events
+    .filter(
+      (event) =>
+        event.type === "message_end" && event.message?.role === "assistant",
+    )
+    .flatMap((event) => event.message.content ?? [])
+    .filter((content) => content.type === "text")
+    .at(-1)?.text;
+  invariant(finalText, "Distinct session produced no final declaration");
+  const declaration = parseAssistantDeclaration(finalText).value;
+  const declaredJournalId = declaration.journalId ?? declaration.journal_id;
+  const declaredWorkflowId = declaration.workflowId ?? declaration.workflow_id;
+  const declaredEventId = declaration.eventId ?? declaration.event_id;
+  const declaredHash =
+    declaration.canonicalContentHash ?? declaration.canonical_content_hash;
+  const declaredPortableHash =
+    declaration.portableContentHash ?? declaration.portable_content_hash;
+  const declaredRevision =
+    declaration.restoredRevision ?? declaration.restored_revision;
+  invariant(
+    declaration.decisionOwner === "llm" &&
+      declaredJournalId === event.payload.journal_id &&
+      declaredWorkflowId === event.payload.scope.workflow_id &&
+      declaredEventId === event.payload.event_id &&
+      declaredHash === event.canonical_content_hash &&
+      declaredPortableHash === portableExport.canonicalContentHash &&
+      declaredRevision === snapshot.revision,
+    `Distinct-session declaration did not copy the durable handles exactly: ${JSON.stringify(declaration)}`,
+  );
+  const modelMessage = events.find(
+    (event) =>
+      event.type === "message_end" && event.message?.role === "assistant",
+  )?.message;
+  return {
+    model: modelMessage
+      ? `${modelMessage.provider}/${modelMessage.model}`
+      : "configured-default",
+    toolCalls: expectedTools,
+    journalId: event.payload.journal_id,
+    workflowId: event.payload.scope.workflow_id,
+    eventId: event.payload.event_id,
+    canonicalContentHash: event.canonical_content_hash,
+    portableContentHash: portableExport.canonicalContentHash,
+    restoredRevision: snapshot.revision,
+    pluginDecisionFields: imported.pluginDecisionFields,
   };
 }
 
@@ -768,10 +1071,10 @@ function inspectPersistedSession(directory, sessionId) {
       entry.type === "custom" &&
       entry.customType === "pi_sparkles_swing_workbench.event.v1",
   );
-  invariant(custom.length === 8, "Persisted workbench event count changed");
+  invariant(custom.length === 9, "Persisted workbench event count changed");
   invariant(
     JSON.stringify(custom.map((entry) => JSON.parse(entry.data).revision)) ===
-      JSON.stringify([1, 2, 3, 4, 5, 6, 7, 8]),
+      JSON.stringify([1, 2, 3, 4, 5, 6, 7, 8, 9]),
     "Persisted workbench revisions are not contiguous",
   );
   return { customEntries: custom.length };

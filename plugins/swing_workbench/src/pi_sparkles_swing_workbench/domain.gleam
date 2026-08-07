@@ -102,6 +102,19 @@ pub opaque type ReviewRecord {
   )
 }
 
+/// A content-bound handle to an event in caller-selected durable journal
+/// storage. The relation is caller vocabulary and is never interpreted here.
+pub opaque type JournalEventReference {
+  JournalEventReference(
+    workflow_id: String,
+    journal_id: String,
+    event_id: String,
+    canonical_content_hash: Sha256,
+    relation: String,
+    attached_at: time.Instant,
+  )
+}
+
 pub type ChangeKind {
   AddedFact
   ChangedFact
@@ -228,6 +241,28 @@ pub fn review_record(
     plan_reference,
     evidence_values,
     observed_at_value,
+  ))
+}
+
+pub fn journal_event_reference(
+  workflow_id workflow_id_value: String,
+  journal_id journal_id_value: String,
+  event_id event_id_value: String,
+  canonical_content_hash content_hash_value: Sha256,
+  relation relation_value: String,
+  attached_at attached_at_value: time.Instant,
+) -> Result(JournalEventReference, DomainError) {
+  use _ <- result.try(valid_text(workflow_id_value, "workflow_id"))
+  use _ <- result.try(valid_text(journal_id_value, "journal_id"))
+  use _ <- result.try(valid_text(event_id_value, "journal_event_id"))
+  use _ <- result.try(valid_text(relation_value, "journal_relation"))
+  Ok(JournalEventReference(
+    workflow_id_value,
+    journal_id_value,
+    event_id_value,
+    content_hash_value,
+    relation_value,
+    attached_at_value,
   ))
 }
 
@@ -458,6 +493,30 @@ pub fn review_evidence_references(value: ReviewRecord) -> List(Sha256) {
 
 pub fn observed_at(value: ReviewRecord) -> time.Instant {
   value.observed_at
+}
+
+pub fn journal_workflow_id(value: JournalEventReference) -> String {
+  value.workflow_id
+}
+
+pub fn journal_id(value: JournalEventReference) -> String {
+  value.journal_id
+}
+
+pub fn journal_event_id(value: JournalEventReference) -> String {
+  value.event_id
+}
+
+pub fn journal_event_content_hash(value: JournalEventReference) -> Sha256 {
+  value.canonical_content_hash
+}
+
+pub fn journal_relation(value: JournalEventReference) -> String {
+  value.relation
+}
+
+pub fn journal_attached_at(value: JournalEventReference) -> time.Instant {
+  value.attached_at
 }
 
 pub fn change_fact_id(value: FactChange) -> String {

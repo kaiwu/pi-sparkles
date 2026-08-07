@@ -59,8 +59,9 @@ repository currently contains:
   snapshots;
 - a network-free `swing_workbench` workflow-context plugin that retains exact
   strategy receipts, information-state changes, opaque LLM/user plan
-  declarations, and review facts across the active session branch without
-  making any decision;
+  declarations, review facts, and caller-selected durable journal event handles
+  across the active session branch, with content-bound caller-selected local
+  export/import and no plugin decision;
 - a local-first `trade_journal` information plugin over the pure
   `finance_journal` core, with immutable attributed events, idempotent bounded
   JSONL storage, explicit private-payload retrieval, requested comparisons and
@@ -209,8 +210,12 @@ journal tool interfaces with fixed caller/LLM-authored fixtures on all three
 tracks. A scripted acceptance transport invokes the actual bundled CN/HK/US
 OHLCV tools and copies their exact content-bound result and market-owned gap
 receipt. A test-only Gleam builder composes indicator-request, risk-request,
-effective-rule, and execution-result receipts over that copied market digest;
-the execution receipt retains every compatible daily-bar ordering branch.
+effective-rule, execution-result, source-declared sector/regime, bounded
+catalyst, exact task-time, and point-in-time universe/candidate receipts; the US
+candidate row is decoded by the actual Alpaca asset adapter from exact scripted
+bytes. The execution receipt retains every compatible daily-bar ordering
+branch. All nine hashes are attached on each track without a plugin
+interpretation or operation choice.
 These are exact scripted response bytes, not authenticated live-provider
 responses, and effective-rule content hashes are not provider signatures. The
 opt-in tutor lane additionally uses Pi's configured default model to inspect
@@ -218,10 +223,16 @@ the same bounded catalog and make thirteen ordered tool calls. The model
 independently selects content-bound plan, preflight, monitor, replay, and review
 operations, carries the selected plan hash through each record, and persists a
 matching LLM-attributed journal declaration. A fresh second Pi process reopens
-the native session and must return the exact revision-8 snapshot from eight
-persisted extension events. The lane enables no built-in tools, uses temporary
-private session and journal storage, and is excluded from `bun run test`
-because it makes real model calls:
+the native session, must return the exact revision-8 snapshot, attaches the
+canonical journal handle, and verifies revision 9 from nine persisted extension
+events, then writes a caller-selected canonical state file. A third process
+with a distinct Pi session recovers the exact journal tuple, imports the exact
+expected portable hash into an empty branch, and reconstructs the identical
+revision-9 snapshot. The 21-call proof leaves every restore, merge,
+interpretation, and operation choice outside the plugins. The lane enables no
+built-in tools, uses temporary private session, journal, and portable storage,
+and is excluded from
+`bun run test` because it makes real model calls:
 
 ```sh
 bun run test:acceptance -- swing
@@ -529,10 +540,10 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_quote` | Exact raw-plus-normalized bid/ask prices and sizes, provider market codes, canonical observations, and explicitly unverified provider size units. |
 | `finance_openfigi` | OpenFIGI v3 access, mapping/search plans, pagination, decoding, authenticated/anonymous rate profiles, and a bounded shared runtime. |
 | `finance_eastmoney` | Bounded public-web SSE/SZSE/BSE/HK quote and raw daily-history plans/decoders with exact source lexemes, explicit caller identity, unknown service level, and unknown redistribution. |
-| `finance_market_alpaca` | Credentialed bounded US latest-quote and raw-daily stock-bar plans/decoders with explicit IEX/SIP, exact source lexemes, and subscription/redistribution limits. |
+| `finance_market_alpaca` | Credentialed bounded US latest-quote, raw-daily stock-bar, and caller-filtered asset-master plans/decoders with explicit origins/IEX/SIP, exact provider rows, and subscription/redistribution limits. |
 | `finance_sec` | Identified read-only SEC access, normalized CIKs, bounded EDGAR request plans, typed submissions/XBRL facts, lossless numeric lexemes, explicit filing/period resolution, strict Q4/trend derivation, and conservative shared pacing. |
 | `finance_series` | Ordered observations, alignment, as-of joins, returns, windows, resampling, portfolio paths, and analytics. |
-| `finance_strategy` | Evidence-only completed-daily strategy definitions, compatibility facts, plan declarations, and structural history without a setup, acceptance, or trade verdict. |
+| `finance_strategy` | Evidence-only completed-daily strategy definitions, compatibility facts, source-declared sector/regime and catalyst context, exact task-time and point-in-time universe/candidate observations, plan declarations, and structural history without a setup, acceptance, or trade verdict. |
 | `finance_calendar` | Dates, market calendars, business-day rules, schedules, joint calendars, and day-count conventions. |
 | `finance_table` | Typed tables with validated cells and deterministic Markdown, CSV, and JSON rendering. |
 | `finance_testkit` | Seeded fixtures, scripted clocks/transports, cassette helpers, generators, scenarios, and redaction assertions. |

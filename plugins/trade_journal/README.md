@@ -18,17 +18,22 @@ The routine path is intentionally short:
 1. `/journal <path>` or `journal_context` loads compact counts and stable drill
    operations without prose.
 2. `journal_search` retrieves a bounded exact working set. Private payloads are
-   omitted unless the caller explicitly requests them.
+   omitted unless the caller explicitly requests them. The model-visible text
+   contains the same selected canonical event projections and stable handles,
+   rather than only a result count.
 3. `journal_entry` appends a user/LLM declaration, observation reference,
    checklist response, review conclusion, correction, redaction, or marker.
-   `trade_review` is the review-conclusion-specific entry surface.
+   Its model-visible result includes the exact journal ID, workflow ID, event
+   ID, canonical content hash, outcome, and revision. `trade_review` is the
+   review-conclusion-specific entry surface.
 4. `journal_compare` and `journal_stats` perform only the comparison or realized
    net-P&L calculation explicitly requested by the LLM.
 5. `journal_export` and `journal_import` move canonical events without changing
    attribution, identity, privacy, hashes, or correction lineage.
 
-Swing and other workbenches may retain journal event IDs. They do not copy the
-payload or treat branch-local state as durable journal storage.
+Swing and other workbenches may retain journal IDs, workflow IDs, event IDs,
+caller-selected relation labels, and canonical content hashes. They do not
+copy the payload or treat branch-local state as durable journal storage.
 
 ## Commands and tools
 
@@ -36,9 +41,9 @@ payload or treat branch-local state as durable journal storage.
 | --- | --- |
 | `/journal <local-jsonl-path>` | Compact revision/event counts; never payload prose |
 | `journal_context` | Content-bound compact context, omission counts, and neutral available operations |
-| `journal_entry` | One exact immutable attributed event with expected revision and idempotency key |
+| `journal_entry` | One exact immutable attributed event with expected revision and idempotency key; the compact model-visible result carries its canonical durable handle |
 | `trade_review` | The same append contract restricted structurally to `review_conclusion` |
-| `journal_search` | Explicit kind/author/privacy/workflow filters and result/byte bounds |
+| `journal_search` | Explicit kind/author/privacy/workflow filters and result/byte bounds; selected exact handles/events are present in both model text and structured details |
 | `journal_compare` | Requested exact equality or decimal delta over supplied plan/observation states |
 | `journal_stats` | Requested `long_cash_realized_net_pnl_v1` over exact fill/cost lexemes |
 | `journal_export` | Caller-selected privacy/supersession JSONL projection; writes no destination |
@@ -108,8 +113,8 @@ bun run test:pi -- trade_journal
 bun test test/binding/trade_journal.test.js
 ```
 
-The first slice has five plugin pure tests, twenty `finance_journal` core tests,
-four binding scenarios with thirty assertions, functional-architecture checks,
+The first slice has seven plugin pure tests, twenty `finance_journal` core tests,
+four binding scenarios, functional-architecture checks,
 artifact verification, and Pi smoke loading. Tests use temporary local files;
 they perform no live network call, real sleep, ambient credential access, or
 shared mutable cache.

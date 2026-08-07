@@ -171,6 +171,11 @@ function evidence(spec) {
     risk: spec.receipts.risk.canonicalContentHash,
     rule: spec.receipts.rule.canonicalContentHash,
     execution: spec.receipts.execution.canonicalContentHash,
+    sectorRegime: spec.receipts.sectorRegime.canonicalContentHash,
+    catalyst: spec.receipts.catalyst.canonicalContentHash,
+    taskTime: spec.receipts.taskTime.canonicalContentHash,
+    universeCandidate:
+      spec.receipts.universeCandidate.canonicalContentHash,
     trackException: spec.receipts.market.canonicalContentHash,
   };
 }
@@ -208,6 +213,34 @@ function candidateInput(spec, stage, strategyPayload, receipts) {
           "risk calculation not obtained at after-close inspection",
           [],
         ),
+        fact(
+          "context.sector_regime",
+          "context",
+          "known",
+          "source-declared sector and regime labels",
+          [receipts.sectorRegime],
+        ),
+        fact(
+          "context.catalyst",
+          "context",
+          "known",
+          "bounded source event query with exact timing state",
+          [receipts.catalyst],
+        ),
+        fact(
+          "context.task_time",
+          "context",
+          "known",
+          "exact task clocks without timing interpretation",
+          [receipts.taskTime],
+        ),
+        fact(
+          "context.universe_candidate",
+          "context",
+          "known",
+          "point-in-time source-declared universe membership row",
+          [receipts.universeCandidate],
+        ),
       ],
     };
   }
@@ -230,6 +263,13 @@ function candidateInput(spec, stage, strategyPayload, receipts) {
           "daily bar ordering branches not yet observed",
           [receipts.execution],
         ),
+        fact(
+          "context.task_time",
+          "context",
+          "known",
+          "exact preflight task clock retained in the task-time receipt",
+          [receipts.taskTime],
+        ),
         trackException(spec, receipts),
       ],
     };
@@ -251,6 +291,27 @@ function candidateInput(spec, stage, strategyPayload, receipts) {
         "conflicting",
         "all compatible stop-first, target-first, and unknown-ordering alternatives retained in the exact execution receipt",
         [receipts.execution],
+      ),
+      fact(
+        "context.sector_regime",
+        "context",
+        "known",
+        "same source-declared context retained during monitoring",
+        [receipts.sectorRegime],
+      ),
+      fact(
+        "context.catalyst",
+        "context",
+        "known",
+        "same bounded catalyst query retained during monitoring",
+        [receipts.catalyst],
+      ),
+      fact(
+        "context.task_time",
+        "context",
+        "known",
+        "monitor task clock retains that no newer observation was supplied",
+        [receipts.taskTime],
       ),
       trackException(spec, receipts),
       fact(
@@ -408,6 +469,7 @@ async function runJourney(spec) {
 
 async function persistJournal(spec, journey, path) {
   const instance = await journalHarness();
+  const storedEvents = [];
   const events = [
     journalEntry({
       spec,
@@ -463,7 +525,9 @@ async function persistJournal(spec, journey, path) {
     );
     expect(result.details.outcome).toBe("stored");
     expect(result.details.revision).toBe(index + 1);
+    storedEvents.push(result.details.event);
   }
+  return storedEvents;
 }
 
 describe("automated LLM-owned swing acceptance lane", () => {
@@ -529,11 +593,123 @@ describe("automated LLM-owned swing acceptance lane", () => {
           JSON.parse(spec.receipts.execution.payload).payload.branches[0].value
             .branches,
         ).toHaveLength(3);
-        expect(workflow.snapshots[2].facts[2]).toMatchObject({
+        const sectorRegime = JSON.parse(
+          spec.receipts.sectorRegime.payload,
+        ).payload;
+        expect(sectorRegime).toMatchObject({
+          schema: "pi-sparkles/sector-regime-observation",
+          listing: { track: spec.track },
+          sector: { state: "known" },
+          regime: { state: "known" },
+        });
+        const catalyst = JSON.parse(spec.receipts.catalyst.payload).payload;
+        expect(catalyst).toMatchObject({
+          schema: "pi-sparkles/catalyst-observation",
+          listing: { track: spec.track },
+          snapshot: { state: "known" },
+        });
+        expect(catalyst.snapshot.value.events).toHaveLength(1);
+        expect(catalyst.snapshot.value.events[0]).not.toHaveProperty("impact");
+        const taskTime = JSON.parse(spec.receipts.taskTime.payload).payload;
+        expect(taskTime).toMatchObject({
+          schema: "pi-sparkles/task-time-observation",
+          listing: { track: spec.track },
+        });
+        expect(taskTime.observations).toHaveLength(4);
+        expect(taskTime.observations[2].context_as_of).toMatchObject({
+          state: "not_obtained",
+          reason: "newer observation not supplied",
+        });
+        const universeCandidate = JSON.parse(
+          spec.receipts.universeCandidate.payload,
+        ).payload;
+        expect(universeCandidate).toMatchObject({
+          schema: "pi-sparkles/universe-candidate-observation",
+          listing: { track: spec.track },
+          observation: {
+            state: "known",
+            value: {
+              source_declared_membership:
+                spec.track === "us"
+                  ? "provider_returned_row"
+                  : "source_declared_included",
+            },
+          },
+        });
+        expect(universeCandidate.observation.value).not.toHaveProperty("rank");
+        expect(universeCandidate.observation.value).not.toHaveProperty(
+          "qualified",
+        );
+        if (spec.track === "us") {
+          expect(universeCandidate.observation.value).toMatchObject({
+            query_scope:
+              "https://paper-api.alpaca.markets/v2/assets?status=active&asset_class=us_equity&exchange=NASDAQ",
+            source: { provider: "alpaca", kind: "licensed_vendor" },
+          });
+          expect(universeCandidate.observation.value.source_fields).toEqual(
+            expect.arrayContaining([
+              { name: "status", value: "active" },
+              { name: "tradable", value: "True" },
+              { name: "fractionable", value: "True" },
+            ]),
+          );
+        }
+        const attachedHashes = workflow.snapshots.flatMap((snapshot) =>
+          snapshot.facts.flatMap((fact) => fact.receiptReferences),
+        );
+        for (const name of [
+          "sectorRegime",
+          "catalyst",
+          "taskTime",
+          "universeCandidate",
+        ]) {
+          expect(attachedHashes).toContain(journey.receipts[name]);
+        }
+        expect(workflow.snapshots[2].facts[5]).toMatchObject({
           factId: "track.exception",
           state: spec.exceptionState,
           detail: spec.exceptionDetail,
         });
+
+        const storedEvents = await persistJournal(spec, journey, path);
+        const relations = [
+          "after_close_observation",
+          "llm_plan_declaration",
+          "llm_review_declaration",
+        ];
+        for (const [index, event] of storedEvents.entries()) {
+          const linked = await execute(
+            journey.instance.tools.get("swing_journal_link"),
+            {
+              workflowId: journey.workflowId,
+              journalId: event.payload.journal_id,
+              eventId: event.payload.event_id,
+              canonicalContentHash: event.canonical_content_hash,
+              relation: relations[index],
+              attachedAtUnixMs: 1700 + index,
+            },
+            `${journey.workflowId}:journal-link:${index}`,
+          );
+          expect(linked.details.journalEventReferences).toHaveLength(index + 1);
+        }
+        const linkedSnapshot = await execute(
+          journey.instance.tools.get("swing_snapshot"),
+          { workflowId: journey.workflowId },
+          `${journey.workflowId}:linked-snapshot`,
+        );
+        expect(linkedSnapshot.details.revision).toBe(8);
+        expect(
+          linkedSnapshot.details.workflows[0].journalEventReferences,
+        ).toEqual(
+          storedEvents.map((event, index) => ({
+            workflowId: journey.workflowId,
+            journalId: event.payload.journal_id,
+            eventId: event.payload.event_id,
+            canonicalContentHash: event.canonical_content_hash,
+            relation: relations[index],
+            attachedAtUnixMs: 1700 + index,
+          })),
+        );
 
         const restarted = await swingHarness([...journey.instance.entries]);
         await restarted.handlers.get("session_start")(
@@ -545,9 +721,8 @@ describe("automated LLM-owned swing acceptance lane", () => {
           { workflowId: journey.workflowId },
           `${journey.workflowId}:resumed-snapshot`,
         );
-        expect(resumed.details).toEqual(journey.snapshot.details);
+        expect(resumed.details).toEqual(linkedSnapshot.details);
 
-        await persistJournal(spec, journey, path);
         const persisted = readFileSync(path, "utf8");
         expect(persisted.split("\n").filter(Boolean)).toHaveLength(3);
         const restartedJournal = await journalHarness();
@@ -566,6 +741,38 @@ describe("automated LLM-owned swing acceptance lane", () => {
           event_count: 3,
           omitted_counts: { private_payloads: 3 },
         });
+        const durableSearch = await execute(
+          restartedJournal.tools.get("journal_search"),
+          {
+            journalPath: path,
+            journalId: `journal-${spec.track}-${spec.symbol}`,
+            workflowId: journey.workflowId,
+            eventKinds: [],
+            attributionKinds: [],
+            privacyClassifications: [],
+            includeSuperseded: true,
+            includePrivatePayloads: true,
+            maximumEvents: 10,
+            maximumJournalBytes: 1_000_000,
+          },
+          `${journey.workflowId}:journal-search`,
+        );
+        expect(durableSearch.details).toMatchObject({
+          decision_owner: "llm",
+          matched_count: 3,
+          plugin_decision_fields: [],
+        });
+        expect(
+          durableSearch.details.events.map(
+            ({ canonical_event }) => canonical_event,
+          ),
+        ).toEqual(storedEvents);
+        expect(
+          durableSearch.details.events.map(
+            ({ canonical_event }) =>
+              canonical_event.payload.scope.workflow_id,
+          ),
+        ).toEqual(Array(3).fill(journey.workflowId));
 
         const eventTimes = [
           workflow.snapshots[0].attachedAtUnixMs,
@@ -580,7 +787,7 @@ describe("automated LLM-owned swing acceptance lane", () => {
         ).toEqual([100, 100, 200, 200]);
 
         const encoded = JSON.stringify({
-          swing: journey.snapshot.details,
+          swing: linkedSnapshot.details,
           journal: context.details,
         });
         for (const forbidden of [

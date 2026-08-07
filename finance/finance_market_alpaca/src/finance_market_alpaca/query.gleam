@@ -10,6 +10,29 @@ pub type Feed {
   Sip
 }
 
+/// The caller-selected Alpaca Trading API environment for read-only asset
+/// discovery. No environment is a fallback for another.
+pub type TradingEnvironment {
+  Paper
+  Live
+}
+
+pub type AssetStatusFilter {
+  Active
+  Inactive
+  AllStatuses
+}
+
+pub type AssetExchange {
+  Amex
+  Arca
+  Bats
+  Nyse
+  Nasdaq
+  NyseArca
+  Otc
+}
+
 pub opaque type DailyBarsQuery {
   DailyBarsQuery(
     symbol: String,
@@ -27,12 +50,22 @@ pub opaque type LatestQuoteQuery {
   LatestQuoteQuery(symbol: String, feed: Feed)
 }
 
+pub opaque type AssetUniverseQuery {
+  AssetUniverseQuery(
+    environment: TradingEnvironment,
+    status: AssetStatusFilter,
+    exchange: AssetExchange,
+    maximum_assets: Int,
+  )
+}
+
 pub type QueryError {
   InvalidSymbol
   InvalidDateRange
   InvalidPageSize
   InvalidMaximumPages
   InvalidMaximumBars
+  InvalidMaximumAssets
 }
 
 pub fn daily_bars(
@@ -78,6 +111,67 @@ pub fn latest_quote(
   case valid_symbol(symbol) {
     True -> Ok(LatestQuoteQuery(symbol, feed))
     False -> Error(InvalidSymbol)
+  }
+}
+
+pub fn asset_universe(
+  environment environment_value: TradingEnvironment,
+  status status_value: AssetStatusFilter,
+  exchange exchange_value: AssetExchange,
+  maximum_assets maximum_asset_count: Int,
+) -> Result(AssetUniverseQuery, QueryError) {
+  case maximum_asset_count >= 1 && maximum_asset_count <= 20_000 {
+    True ->
+      Ok(AssetUniverseQuery(
+        environment_value,
+        status_value,
+        exchange_value,
+        maximum_asset_count,
+      ))
+    False -> Error(InvalidMaximumAssets)
+  }
+}
+
+pub fn asset_environment(value: AssetUniverseQuery) -> TradingEnvironment {
+  value.environment
+}
+
+pub fn asset_status(value: AssetUniverseQuery) -> AssetStatusFilter {
+  value.status
+}
+
+pub fn asset_exchange(value: AssetUniverseQuery) -> AssetExchange {
+  value.exchange
+}
+
+pub fn maximum_assets(value: AssetUniverseQuery) -> Int {
+  value.maximum_assets
+}
+
+pub fn trading_origin(value: TradingEnvironment) -> String {
+  case value {
+    Paper -> "https://paper-api.alpaca.markets"
+    Live -> "https://api.alpaca.markets"
+  }
+}
+
+pub fn asset_status_name(value: AssetStatusFilter) -> String {
+  case value {
+    Active -> "active"
+    Inactive -> "inactive"
+    AllStatuses -> "all"
+  }
+}
+
+pub fn asset_exchange_name(value: AssetExchange) -> String {
+  case value {
+    Amex -> "AMEX"
+    Arca -> "ARCA"
+    Bats -> "BATS"
+    Nyse -> "NYSE"
+    Nasdaq -> "NASDAQ"
+    NyseArca -> "NYSEARCA"
+    Otc -> "OTC"
   }
 }
 
@@ -141,6 +235,16 @@ pub fn daily_bars_source_reference(value: DailyBarsQuery) -> String {
   <> feed_name(feed(value))
   <> "&currency=USD&sort=asc&asof="
   <> date_text(as_of_date(value))
+}
+
+/// Stable evidence reference for the exact read-only asset-universe request.
+/// Alpaca exposes no historical as-of parameter on this endpoint.
+pub fn asset_universe_source_reference(value: AssetUniverseQuery) -> String {
+  trading_origin(asset_environment(value))
+  <> "/v2/assets?status="
+  <> asset_status_name(asset_status(value))
+  <> "&asset_class=us_equity&exchange="
+  <> asset_exchange_name(asset_exchange(value))
 }
 
 pub fn date_text(value: Date) -> String {

@@ -41,8 +41,36 @@ pub type ReviewInput {
   )
 }
 
+pub type JournalLinkInput {
+  JournalLinkInput(
+    workflow_id: String,
+    journal_id: String,
+    event_id: String,
+    canonical_content_hash: identity.Sha256,
+    relation: String,
+    attached_at: time.Instant,
+  )
+}
+
 pub type SnapshotInput {
   SnapshotInput(workflow_id: Option(String))
+}
+
+pub type PortableExportInput {
+  PortableExportInput(
+    path: String,
+    workflow_id: Option(String),
+    maximum_bytes: Int,
+  )
+}
+
+pub type PortableImportInput {
+  PortableImportInput(
+    path: String,
+    expected_content_hash: identity.Sha256,
+    expected_current_revision: Int,
+    maximum_bytes: Int,
+  )
 }
 
 pub fn candidate_decoder() -> decode.Decoder(CandidateInput) {
@@ -120,6 +148,23 @@ pub fn review_decoder() -> decode.Decoder(ReviewInput) {
   ))
 }
 
+pub fn journal_link_decoder() -> decode.Decoder(JournalLinkInput) {
+  use workflow_id <- decode.field("workflowId", decode.string)
+  use journal_id <- decode.field("journalId", decode.string)
+  use event_id <- decode.field("eventId", decode.string)
+  use content_hash <- decode.field("canonicalContentHash", sha_decoder())
+  use relation <- decode.field("relation", decode.string)
+  use attached_at <- decode.field("attachedAtUnixMs", instant_decoder())
+  decode.success(JournalLinkInput(
+    workflow_id,
+    journal_id,
+    event_id,
+    content_hash,
+    relation,
+    attached_at,
+  ))
+}
+
 pub fn snapshot_decoder() -> decode.Decoder(SnapshotInput) {
   use workflow_id <- decode.optional_field(
     "workflowId",
@@ -127,6 +172,30 @@ pub fn snapshot_decoder() -> decode.Decoder(SnapshotInput) {
     decode.optional(decode.string),
   )
   decode.success(SnapshotInput(workflow_id))
+}
+
+pub fn portable_export_decoder() -> decode.Decoder(PortableExportInput) {
+  use path <- decode.field("portablePath", decode.string)
+  use workflow_id <- decode.optional_field(
+    "workflowId",
+    None,
+    decode.optional(decode.string),
+  )
+  use maximum_bytes <- decode.field("maximumPortableBytes", decode.int)
+  decode.success(PortableExportInput(path, workflow_id, maximum_bytes))
+}
+
+pub fn portable_import_decoder() -> decode.Decoder(PortableImportInput) {
+  use path <- decode.field("portablePath", decode.string)
+  use content_hash <- decode.field("expectedContentHash", sha_decoder())
+  use expected_revision <- decode.field("expectedCurrentRevision", decode.int)
+  use maximum_bytes <- decode.field("maximumPortableBytes", decode.int)
+  decode.success(PortableImportInput(
+    path,
+    content_hash,
+    expected_revision,
+    maximum_bytes,
+  ))
 }
 
 fn fact_decoder() -> decode.Decoder(domain.FactInput) {

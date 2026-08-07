@@ -1,5 +1,6 @@
 import finance_cn_rules/official as cn_rules
 import finance_core/decimal
+import finance_core/identifier
 import finance_core/source
 import finance_core/time.{type Date, type Instant}
 import finance_execution/calculation as execution_calculation
@@ -11,6 +12,9 @@ import finance_hk_rules/official as hk_rules
 import finance_indicators/model as indicator_model
 import finance_indicators/receipt as indicator_receipt
 import finance_listing/effective
+import finance_listing/listing
+import finance_market_alpaca/assets as alpaca_assets
+import finance_market_alpaca/query as alpaca_query
 import finance_ohlcv/acquisition_receipt
 import finance_provenance/hash
 import finance_provenance/identity.{type EvidenceId, type Sha256}
@@ -18,8 +22,10 @@ import finance_risk/bound
 import finance_risk/calculation as risk_calculation
 import finance_risk/receipt as risk_receipt
 import finance_risk/request as risk_request
+import finance_strategy/context_receipt
 import finance_track.{type Track}
 import finance_us_rules/official as us_rules
+import gleam/bool
 import gleam/int
 import gleam/json.{type Json}
 import gleam/list
@@ -126,6 +132,21 @@ fn track_json(spec: Spec, market: ReceiptCopy) -> Json {
   let indicator = indicator_request_receipt(spec, market)
   let risk = risk_request_receipt(spec, market, indicator, rule)
   let execution = execution_request_receipt(spec, market, risk, rule)
+  let sector_regime = sector_regime_receipt(spec, market)
+  let catalyst = catalyst_receipt(spec)
+  let universe_candidate = universe_candidate_receipt(spec)
+  let task_time =
+    task_time_receipt(
+      spec,
+      market,
+      indicator,
+      risk,
+      rule,
+      execution,
+      sector_regime,
+      catalyst,
+      universe_candidate,
+    )
   json.object([
     #("track", json.string(finance_track.name(spec.track))),
     #("symbol", json.string(spec.symbol)),
@@ -138,7 +159,361 @@ fn track_json(spec: Spec, market: ReceiptCopy) -> Json {
     #("risk", receipt_json(risk)),
     #("rule", receipt_json(rule)),
     #("execution", receipt_json(execution)),
+    #("sectorRegime", receipt_json(sector_regime)),
+    #("catalyst", receipt_json(catalyst)),
+    #("taskTime", receipt_json(task_time)),
+    #("universeCandidate", receipt_json(universe_candidate)),
   ])
+}
+
+fn sector_regime_receipt(spec: Spec, market: ReceiptCopy) -> ReceiptCopy {
+  let sector_source_receipt =
+    sha(finance_track.name(spec.track) <> ":sector-classification-source")
+  let regime_source_receipt =
+    sha(finance_track.name(spec.track) <> ":regime-classification-source")
+  let assert Ok(sector) =
+    context_receipt.classification(
+      "acceptance-fixture-sector-v1",
+      sector_label(spec.track),
+      instant(1_786_092_000_000),
+      instant(1_786_092_200_000),
+      timezone(spec.timezone),
+      fixture_source(
+        "fixture://" <> finance_track.name(spec.track) <> "/sector",
+      ),
+      sector_source_receipt,
+    )
+  let assert Ok(regime) =
+    context_receipt.classification(
+      "acceptance-fixture-regime-v1",
+      "source-declared-sideways",
+      instant(1_786_092_000_000),
+      instant(1_786_092_200_000),
+      timezone(spec.timezone),
+      fixture_source(
+        "fixture://" <> finance_track.name(spec.track) <> "/regime",
+      ),
+      regime_source_receipt,
+    )
+  let assert Ok(value) =
+    context_receipt.sector_regime_receipt(
+      listing_key(spec),
+      context_receipt.Known(sector),
+      context_receipt.Known(regime),
+      instant(1_786_092_300_000),
+      [
+        evidence_root(sector_source_receipt),
+        evidence_root(regime_source_receipt),
+        evidence_root(content_hash(market)),
+      ],
+      [
+        "classification labels are synthetic source declarations",
+        "no regime interpretation or workflow action is supplied",
+      ],
+    )
+  context_copy(value)
+}
+
+fn catalyst_receipt(spec: Spec) -> ReceiptCopy {
+  let source_receipt =
+    sha(finance_track.name(spec.track) <> ":catalyst-source-row")
+  let assert Ok(event) =
+    context_receipt.catalyst_event(
+      "fixture-" <> finance_track.name(spec.track) <> "-event-1",
+      "earnings_calendar",
+      "Synthetic scheduled issuer event",
+      "source_declared_scheduled",
+      context_receipt.Known(instant(1_788_184_800_000)),
+      context_receipt.Unknown("publication timestamp absent from fixture row"),
+      timezone(spec.timezone),
+      fixture_source(
+        "fixture://" <> finance_track.name(spec.track) <> "/catalyst",
+      ),
+      source_receipt,
+      [],
+    )
+  let assert Ok(snapshot) =
+    context_receipt.catalyst_snapshot(
+      "exact listing; 2026-08-07 through 2026-08-31; earnings calendar",
+      [event],
+    )
+  let assert Ok(value) =
+    context_receipt.catalyst_receipt(
+      listing_key(spec),
+      context_receipt.Known(snapshot),
+      instant(1_786_092_300_000),
+      [evidence_root(source_receipt)],
+      [
+        "synthetic bounded query result only",
+        "no event impact sentiment importance or action is supplied",
+      ],
+    )
+  context_copy(value)
+}
+
+fn universe_candidate_receipt(spec: Spec) -> ReceiptCopy {
+  case spec.track {
+    finance_track.Us -> alpaca_universe_candidate_receipt(spec)
+    finance_track.Cn | finance_track.Hk ->
+      synthetic_universe_candidate_receipt(spec)
+  }
+}
+
+fn synthetic_universe_candidate_receipt(spec: Spec) -> ReceiptCopy {
+  let track = finance_track.name(spec.track)
+  let source_receipt = sha(track <> ":universe-source-row")
+  let universe_receipt = sha(track <> ":point-in-time-universe-snapshot")
+  let assert Ok(observation) =
+    context_receipt.universe_candidate_observation(
+      "fixture-" <> track <> "-point-in-time-universe",
+      "2026-08-07.1",
+      "track="
+        <> track
+        <> "; as_of=2026-08-07; source-declared eligible/liquid predicate",
+      "fixture-" <> track <> "-row-" <> spec.symbol,
+      "source_declared_included",
+      ["source row returned by the bounded point-in-time query"],
+      [],
+      instant(1_786_092_000_000),
+      instant(1_786_092_300_000),
+      instant(1_786_092_400_000),
+      timezone(spec.timezone),
+      fixture_source("fixture://" <> track <> "/universe"),
+      source_receipt,
+      universe_receipt,
+      [evidence_root(source_receipt), evidence_root(universe_receipt)],
+    )
+  let assert Ok(value) =
+    context_receipt.universe_candidate_receipt(
+      listing_key(spec),
+      context_receipt.Known(observation),
+      instant(1_786_092_500_000),
+      [
+        "synthetic source-declared membership from one bounded query",
+        "no complete-population proof rank qualification selection or action is supplied",
+      ],
+    )
+  context_copy(value)
+}
+
+fn alpaca_universe_candidate_receipt(spec: Spec) -> ReceiptCopy {
+  let assert Ok(plan) =
+    alpaca_query.asset_universe(
+      alpaca_query.Paper,
+      alpaca_query.Active,
+      alpaca_query.Nasdaq,
+      1000,
+    )
+  let body = alpaca_asset_fixture()
+  let assert Ok(snapshot) = alpaca_assets.decode_snapshot(body, for: plan)
+  let assert [asset] = alpaca_assets.rows(snapshot)
+  let assert True = alpaca_assets.symbol(asset) == spec.symbol
+  let reference = alpaca_query.asset_universe_source_reference(plan)
+  let source_receipt = sha(body)
+  let universe_receipt = sha(reference <> "\n" <> body)
+  let source_fields = [
+    provider_field("asset_id", alpaca_assets.id(asset)),
+    provider_field("class", alpaca_assets.asset_class(asset)),
+    provider_field("exchange", alpaca_assets.exchange(asset)),
+    provider_field("symbol", alpaca_assets.symbol(asset)),
+    provider_field("name", alpaca_assets.name(asset)),
+    provider_field("status", alpaca_assets.status(asset)),
+    provider_field("tradable", bool.to_string(alpaca_assets.tradable(asset))),
+    provider_field(
+      "marginable",
+      bool.to_string(alpaca_assets.marginable(asset)),
+    ),
+    provider_field("shortable", bool.to_string(alpaca_assets.shortable(asset))),
+    provider_field(
+      "easy_to_borrow",
+      bool.to_string(alpaca_assets.easy_to_borrow(asset)),
+    ),
+    provider_field(
+      "fractionable",
+      bool.to_string(alpaca_assets.fractionable(asset)),
+    ),
+    provider_field(
+      "attributes",
+      alpaca_assets.attributes(asset)
+        |> json.array(json.string)
+        |> json.to_string,
+    ),
+  ]
+  let assert Ok(observation) =
+    context_receipt.universe_candidate_observation(
+      "alpaca-us-equity-active-NASDAQ",
+      "alpaca-assets-v2",
+      reference,
+      alpaca_assets.id(asset),
+      "provider_returned_row",
+      [],
+      source_fields,
+      instant(1_786_092_400_000),
+      instant(1_786_092_400_000),
+      instant(1_786_092_400_000),
+      timezone(spec.timezone),
+      alpaca_source(reference),
+      source_receipt,
+      universe_receipt,
+      [evidence_root(source_receipt), evidence_root(universe_receipt)],
+    )
+  let assert Ok(value) =
+    context_receipt.universe_candidate_receipt(
+      listing_key(spec),
+      context_receipt.Known(observation),
+      instant(1_786_092_500_000),
+      [
+        "decoded from exact scripted Alpaca asset response bytes",
+        "content hashes are not provider signatures and the endpoint has no historical as-of parameter",
+        "provider asset fields do not prove authoritative listing identity eligibility rank selection or action",
+      ],
+    )
+  context_copy(value)
+}
+
+fn provider_field(name: String, value: String) -> context_receipt.SourceField {
+  let assert Ok(value) = context_receipt.source_field(name, value)
+  value
+}
+
+fn alpaca_asset_fixture() -> String {
+  "[{\"id\":\"b0b6dd9d-8b9b-48a9-ba46-b9d54906e415\",\"class\":\"us_equity\",\"exchange\":\"NASDAQ\",\"symbol\":\"AAPL\",\"name\":\"Apple Inc. Common Stock\",\"status\":\"active\",\"tradable\":true,\"marginable\":true,\"shortable\":true,\"easy_to_borrow\":true,\"fractionable\":true,\"attributes\":[\"has_options\"]}]"
+}
+
+fn task_time_receipt(
+  spec: Spec,
+  market: ReceiptCopy,
+  indicator: ReceiptCopy,
+  risk: ReceiptCopy,
+  rule: ReceiptCopy,
+  execution: ReceiptCopy,
+  sector_regime: ReceiptCopy,
+  catalyst: ReceiptCopy,
+  universe_candidate: ReceiptCopy,
+) -> ReceiptCopy {
+  let roots =
+    [
+      market,
+      indicator,
+      risk,
+      rule,
+      execution,
+      sector_regime,
+      catalyst,
+      universe_candidate,
+    ]
+    |> list.map(fn(value) { evidence_root(content_hash(value)) })
+  let assert Ok(after_close) =
+    task_time_observation(
+      spec,
+      "after-close",
+      "after_close",
+      1_786_093_200_000,
+      context_receipt.Known(instant(1_786_092_000_000)),
+      context_receipt.Known(instant(1_786_092_300_000)),
+      roots,
+    )
+  let assert Ok(preflight) =
+    task_time_observation(
+      spec,
+      "preflight",
+      "preflight",
+      1_786_174_200_000,
+      context_receipt.Known(instant(1_786_092_000_000)),
+      context_receipt.Known(instant(1_786_092_300_000)),
+      roots,
+    )
+  let assert Ok(monitor) =
+    task_time_observation(
+      spec,
+      "monitor",
+      "monitor",
+      1_786_203_000_000,
+      context_receipt.NotObtained("newer observation not supplied"),
+      context_receipt.Known(instant(1_786_092_300_000)),
+      roots,
+    )
+  let assert Ok(review) =
+    task_time_observation(
+      spec,
+      "review",
+      "review",
+      1_786_203_003_000,
+      context_receipt.Known(instant(1_786_092_000_000)),
+      context_receipt.Known(instant(1_786_092_300_000)),
+      roots,
+    )
+  let assert Ok(value) =
+    context_receipt.task_time_receipt(
+      listing_key(spec),
+      [after_close, preflight, monitor, review],
+      [
+        "exact clocks only",
+        "no freshness lateness deadline or next-operation label is supplied",
+      ],
+    )
+  context_copy(value)
+}
+
+fn task_time_observation(
+  spec: Spec,
+  suffix: String,
+  stage: String,
+  requested_at: Int,
+  context_as_of: context_receipt.Information(Instant),
+  source_cutoff: context_receipt.Information(Instant),
+  roots: List(EvidenceId),
+) -> Result(context_receipt.TaskTimeObservation, context_receipt.ContextError) {
+  context_receipt.task_time_observation(
+    "fixture-" <> finance_track.name(spec.track) <> "-" <> suffix,
+    stage,
+    instant(requested_at),
+    context_as_of,
+    source_cutoff,
+    instant(requested_at + 1),
+    timezone(spec.timezone),
+    roots,
+  )
+}
+
+fn context_copy(value: context_receipt.Receipt) -> ReceiptCopy {
+  ReceiptCopy(
+    context_receipt.schema(value),
+    context_receipt.encode(value),
+    context_receipt.canonical_content_hash(value),
+    "envelope_payload_sha256",
+  )
+}
+
+fn sector_label(track: Track) -> String {
+  case track {
+    finance_track.Cn -> "Banks"
+    finance_track.Hk -> "Interactive Media & Services"
+    finance_track.Us -> "Technology Hardware, Storage & Peripherals"
+  }
+}
+
+fn listing_key(spec: Spec) -> listing.Key {
+  let assert Ok(instrument_id) = identifier.instrument_id(spec.instrument_id)
+  let assert Ok(symbol) = identifier.symbol(spec.symbol)
+  let assert Ok(mic) = identifier.mic(spec.mic)
+  listing.new(spec.track, instrument_id, symbol, mic)
+}
+
+fn fixture_source(reference: String) -> source.SourceRef {
+  let assert Ok(value) =
+    source.new("acceptance_fixture", reference, source.Synthetic)
+  value
+}
+
+fn alpaca_source(reference: String) -> source.SourceRef {
+  let assert Ok(value) = source.new("alpaca", reference, source.LicensedVendor)
+  value
+}
+
+fn timezone(value: String) -> time.Timezone {
+  let assert Ok(value) = time.timezone(value)
+  value
 }
 
 fn bundled_market_receipt(spec: Spec, content_hash: Sha256) -> ReceiptCopy {

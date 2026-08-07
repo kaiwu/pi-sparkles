@@ -28,7 +28,16 @@ export async function loadReceiptFixture({ build = false } = {}) {
   for (const [track, receipts] of Object.entries(fixture.tracks)) {
     receipts.market = markets[track];
     verifyBundledMarketCopy(track, receipts.market);
-    for (const name of ["indicator", "risk", "rule", "execution"]) {
+    for (const name of [
+      "indicator",
+      "risk",
+      "rule",
+      "execution",
+      "sectorRegime",
+      "catalyst",
+      "taskTime",
+      "universeCandidate",
+    ]) {
       verifyReceiptCopy(name, receipts[name]);
     }
   }

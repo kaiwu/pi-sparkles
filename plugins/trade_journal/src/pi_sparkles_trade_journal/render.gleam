@@ -5,7 +5,7 @@ import finance_journal/state
 import finance_provenance/identity
 import gleam/json
 import gleam/list
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/string
 
 pub fn compact_text(value: state.State) -> String {
@@ -69,6 +69,66 @@ pub fn search_json(
       ),
     ),
   ])
+}
+
+pub fn search_text(
+  value: state.State,
+  result: state.QueryResult,
+  include_private_payloads: Bool,
+) -> String {
+  json.object([
+    #("schema", json.string("pi-sparkles/journal-search-model-context")),
+    #("schema_version", json.int(1)),
+    #("decision_owner", json.string("llm")),
+    #("revision", value |> state.revision |> json.int),
+    #("matched_count", result |> state.matched_count |> json.int),
+    #("omitted_count", result |> state.query_omitted_count |> json.int),
+    #(
+      "events",
+      result
+        |> state.query_events
+        |> json.array(fn(value) {
+          event_projection(value, include_private_payloads)
+        }),
+    ),
+    #(
+      "plugin_decision_fields",
+      json.array([], fn(value) { json.string(value) }),
+    ),
+  ])
+  |> json.to_string
+}
+
+pub fn stored_text(
+  value: state.State,
+  stored: event.Event,
+  outcome: String,
+) -> String {
+  json.object([
+    #("schema", json.string("pi-sparkles/journal-event-handle")),
+    #("schema_version", json.int(1)),
+    #("outcome", json.string(outcome)),
+    #("revision", value |> state.revision |> json.int),
+    #("journal_id", stored |> event.journal_id |> json.string),
+    #("event_id", stored |> event.event_id |> json.string),
+    #(
+      "workflow_id",
+      stored |> event.scope |> event.workflow_id |> optional_string,
+    ),
+    #(
+      "canonical_content_hash",
+      stored
+        |> event.canonical_content_hash
+        |> identity.sha256_value
+        |> json.string,
+    ),
+    #("decision_owner", json.string("llm")),
+    #(
+      "plugin_decision_fields",
+      json.array([], fn(value) { json.string(value) }),
+    ),
+  ])
+  |> json.to_string
 }
 
 pub fn stored_json(
@@ -198,7 +258,12 @@ fn event_projection(value: event.Event, include_private: Bool) -> json.Json {
   case event.privacy(value), include_private {
     event.Private, False ->
       json.object([
+        #("journal_id", value |> event.journal_id |> json.string),
         #("event_id", value |> event.event_id |> json.string),
+        #(
+          "workflow_id",
+          value |> event.scope |> event.workflow_id |> optional_string,
+        ),
         #("event_kind", value |> event.kind |> event.kind_name |> json.string),
         #("privacy", json.string("private")),
         #("payload_omitted", json.bool(True)),
@@ -215,6 +280,13 @@ fn event_projection(value: event.Event, include_private: Bool) -> json.Json {
         #("payload_omitted", json.bool(False)),
         #("canonical_event", event.as_json(value)),
       ])
+  }
+}
+
+fn optional_string(value: Option(String)) -> json.Json {
+  case value {
+    Some(value) -> json.string(value)
+    None -> json.null()
   }
 }
 

@@ -1,6 +1,7 @@
 import finance_core/time
 import finance_http/request
 import finance_market_alpaca
+import finance_market_alpaca/assets
 import finance_market_alpaca/bars
 import finance_market_alpaca/query
 import finance_market_alpaca/quotes
@@ -86,6 +87,67 @@ pub fn latest_quote_request_has_explicit_feed_and_small_response_budget_test() {
   request.safe_key(value)
   |> string.contains("secret-key")
   |> should.be_false
+}
+
+pub fn asset_universe_request_keeps_environment_filters_and_budget_explicit_test() {
+  let plan = asset_plan(2)
+  query.asset_universe_source_reference(plan)
+  |> should.equal(
+    "https://paper-api.alpaca.markets/v2/assets?status=active&asset_class=us_equity&exchange=NASDAQ",
+  )
+  let assert Ok(value) = provider_request.asset_universe(access(), plan)
+  request.origin(value)
+  |> should.equal(query.trading_origin(query.Paper))
+  request.path(value) |> should.equal(provider_request.assets_path)
+  request.maximum_response_bytes(value) |> should.equal(15_000_000)
+  [
+    request.QueryParameter("status", "active", request.Public),
+    request.QueryParameter("asset_class", "us_equity", request.Public),
+    request.QueryParameter("exchange", "NASDAQ", request.Public),
+  ]
+  |> list.all(fn(expected) { request.query(value) |> list.contains(expected) })
+  |> should.be_true
+  request.safe_key(value)
+  |> string.contains("secret-key")
+  |> should.be_false
+
+  query.asset_universe(query.Live, query.AllStatuses, query.Nyse, 0)
+  |> should.equal(Error(query.InvalidMaximumAssets))
+}
+
+pub fn asset_snapshot_preserves_provider_rows_flags_order_and_discrepancies_test() {
+  let assert Ok(snapshot) =
+    assets.decode_snapshot(asset_fixture(), for: asset_plan(2))
+  let assert [first, second] = assets.rows(snapshot)
+  assets.id(first) |> should.equal("asset-aapl")
+  assets.asset_class(first) |> should.equal("us_equity")
+  assets.exchange(first) |> should.equal("NASDAQ")
+  assets.symbol(first) |> should.equal("AAPL")
+  assets.name(first) |> should.equal("Apple Inc. Common Stock")
+  assets.status(first) |> should.equal("active")
+  assets.tradable(first) |> should.be_true
+  assets.marginable(first) |> should.be_true
+  assets.shortable(first) |> should.be_true
+  assets.easy_to_borrow(first) |> should.be_true
+  assets.fractionable(first) |> should.be_true
+  assets.attributes(first) |> should.equal(["has_options"])
+
+  // The active request and inactive returned row remain visible together. The
+  // decoder does not decide whether the row is usable or discard it.
+  assets.symbol(second) |> should.equal("MSFT")
+  assets.status(second) |> should.equal("inactive")
+  assets.tradable(second) |> should.be_false
+  assets.attributes(second) |> should.equal([])
+}
+
+pub fn asset_snapshot_rejects_only_malformed_or_over_budget_structure_test() {
+  assets.decode_snapshot(asset_fixture(), for: asset_plan(1))
+  |> should.equal(Error(assets.TooManyAssets(1, 2)))
+  assets.decode_snapshot(
+    string.replace(asset_fixture(), "\"tradable\":true", "\"tradable\":\"yes\""),
+    for: asset_plan(2),
+  )
+  |> should.be_error
 }
 
 pub fn quote_decoder_preserves_exact_tokens_and_market_codes_test() {
@@ -182,6 +244,17 @@ fn plan(feed: query.Feed) -> query.DailyBarsQuery {
   value
 }
 
+fn asset_plan(maximum_assets: Int) -> query.AssetUniverseQuery {
+  let assert Ok(value) =
+    query.asset_universe(
+      query.Paper,
+      query.Active,
+      query.Nasdaq,
+      maximum_assets,
+    )
+  value
+}
+
 fn civil(year: Int, month: Int, day: Int) -> time.Date {
   let assert Ok(value) = time.date(year, month, day)
   value
@@ -197,4 +270,8 @@ fn reversed_fixture() -> String {
 
 fn quote_fixture() -> String {
   "{\"quotes\":{\"AAPL\":{\"ap\":189.1200,\"as\":4,\"ax\":\"V\",\"bp\":189.1000,\"bs\":7,\"bx\":\"V\",\"c\":[\"R\"],\"t\":\"2024-08-06T19:59:59.123456789Z\",\"z\":\"C\"}}}"
+}
+
+fn asset_fixture() -> String {
+  "[{\"id\":\"asset-aapl\",\"class\":\"us_equity\",\"exchange\":\"NASDAQ\",\"symbol\":\"AAPL\",\"name\":\"Apple Inc. Common Stock\",\"status\":\"active\",\"tradable\":true,\"marginable\":true,\"shortable\":true,\"easy_to_borrow\":true,\"fractionable\":true,\"attributes\":[\"has_options\"]},{\"id\":\"asset-msft\",\"class\":\"us_equity\",\"exchange\":\"NASDAQ\",\"symbol\":\"MSFT\",\"name\":\"Microsoft Corporation Common Stock\",\"status\":\"inactive\",\"tradable\":false,\"marginable\":false,\"shortable\":false,\"easy_to_borrow\":false,\"fractionable\":false}]"
 }

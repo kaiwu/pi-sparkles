@@ -7,8 +7,8 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import pi_sparkles_swing_workbench/domain.{
-  type CandidateSnapshot, type EvidenceFact, type FactChange, type PlanRecord,
-  type ReviewRecord,
+  type CandidateSnapshot, type EvidenceFact, type FactChange,
+  type JournalEventReference, type PlanRecord, type ReviewRecord,
 }
 
 pub const schema_version = 1
@@ -18,6 +18,8 @@ const maximum_workflows = 50
 const maximum_snapshots_per_workflow = 20
 
 const maximum_reviews_per_workflow = 100
+
+const maximum_journal_references_per_workflow = 100
 
 const maximum_revision = 10_000
 
@@ -30,6 +32,7 @@ pub opaque type Workflow {
     snapshots: List(CandidateSnapshot),
     plan: Option(PlanRecord),
     reviews: List(ReviewRecord),
+    journal_references: List(JournalEventReference),
   )
 }
 
@@ -42,12 +45,15 @@ pub type Change {
   PlanStored(plan: PlanRecord)
   PlanUnchanged(plan: PlanRecord)
   ReviewStored(review: ReviewRecord)
+  JournalReferenceStored(reference: JournalEventReference)
+  JournalReferenceUnchanged(reference: JournalEventReference)
 }
 
 pub type MutationEvent {
   CandidateEvent(revision: Int, snapshot: CandidateSnapshot)
   PlanEvent(revision: Int, plan: PlanRecord)
   ReviewEvent(revision: Int, review: ReviewRecord)
+  JournalReferenceEvent(revision: Int, reference: JournalEventReference)
 }
 
 pub type StateError {
@@ -61,6 +67,12 @@ pub type StateError {
   PlanAlreadyAttached
   PlanReferenceMismatch
   DuplicateReviewId(record_id: String)
+  TooManyJournalReferences(workflow_id: String)
+  JournalReferenceConflict(
+    journal_id: String,
+    event_id: String,
+    relation: String,
+  )
 }
 
 pub type ReplayError {
@@ -91,6 +103,7 @@ pub fn attach_candidate(
               domain.definition_version(snapshot),
               [snapshot],
               None,
+              [],
               [],
             )
           next_state(
@@ -212,6 +225,69 @@ pub fn attach_review(
   }
 }
 
+pub fn attach_journal_reference(
+  state: State,
+  reference: JournalEventReference,
+) -> Result(#(State, Change), StateError) {
+  let workflow_id = domain.journal_workflow_id(reference)
+  case find_workflow(state.workflows, workflow_id) {
+    None -> Error(WorkflowNotFound(workflow_id))
+    Some(workflow) -> {
+      let existing =
+        find_journal_reference(workflow.journal_references, reference)
+      case existing {
+        Some(existing) ->
+          case existing == reference {
+            True -> Ok(#(state, JournalReferenceUnchanged(existing)))
+            False ->
+              Error(JournalReferenceConflict(
+                domain.journal_id(reference),
+                domain.journal_event_id(reference),
+                domain.journal_relation(reference),
+              ))
+          }
+        None ->
+          case
+            list.length(workflow.journal_references)
+            >= maximum_journal_references_per_workflow
+          {
+            True -> Error(TooManyJournalReferences(workflow_id))
+            False -> {
+              let updated =
+                Workflow(
+                  ..workflow,
+                  journal_references: list.append(workflow.journal_references, [
+                    reference,
+                  ]),
+                )
+              next_state(
+                state,
+                replace_workflow(state.workflows, updated),
+                JournalReferenceStored(reference),
+              )
+            }
+          }
+      }
+    }
+  }
+}
+
+fn find_journal_reference(
+  values: List(JournalEventReference),
+  requested: JournalEventReference,
+) -> Option(JournalEventReference) {
+  case
+    list.find(values, fn(value) {
+      domain.journal_id(value) == domain.journal_id(requested)
+      && domain.journal_event_id(value) == domain.journal_event_id(requested)
+      && domain.journal_relation(value) == domain.journal_relation(requested)
+    })
+  {
+    Ok(value) -> Some(value)
+    Error(_) -> None
+  }
+}
+
 fn review_plan_matches(plan: Option(PlanRecord), review: ReviewRecord) -> Bool {
   case domain.plan_receipt_reference(review), plan {
     None, _ -> True
@@ -246,6 +322,13 @@ pub fn event_for_review(state: State, review: ReviewRecord) -> MutationEvent {
   ReviewEvent(state.revision, review)
 }
 
+pub fn event_for_journal_reference(
+  state: State,
+  reference: JournalEventReference,
+) -> MutationEvent {
+  JournalReferenceEvent(state.revision, reference)
+}
+
 pub fn encode_event(value: MutationEvent) -> String {
   value |> event_json |> json.to_string
 }
@@ -277,10 +360,14 @@ fn replay_loop(
             CandidateEvent(_, snapshot) -> attach_candidate(state, snapshot)
             PlanEvent(_, plan) -> attach_plan(state, plan)
             ReviewEvent(_, review) -> attach_review(state, review)
+            JournalReferenceEvent(_, reference) ->
+              attach_journal_reference(state, reference)
           }
           case applied {
             Error(error) -> Error(InvalidEvent(error))
-            Ok(#(_next, PlanUnchanged(_))) -> Error(EventDidNotMutate)
+            Ok(#(_next, PlanUnchanged(_)))
+            | Ok(#(_next, JournalReferenceUnchanged(_))) ->
+              Error(EventDidNotMutate)
             Ok(#(next, _)) -> replay_loop(rest, next)
           }
         }
@@ -293,7 +380,8 @@ fn event_revision(value: MutationEvent) -> Int {
   case value {
     CandidateEvent(revision, _)
     | PlanEvent(revision, _)
-    | ReviewEvent(revision, _) -> revision
+    | ReviewEvent(revision, _)
+    | JournalReferenceEvent(revision, _) -> revision
   }
 }
 
@@ -323,6 +411,14 @@ fn event_json(value: MutationEvent) -> json.Json {
         #("revision", json.int(revision)),
         #("review", review_json(review)),
       ])
+    JournalReferenceEvent(revision, reference) ->
+      json.object([
+        #("schema", json.string("pi_sparkles_swing_workbench_event")),
+        #("schema_version", json.int(schema_version)),
+        #("event_type", json.string("journal_reference_attached")),
+        #("revision", json.int(revision)),
+        #("journal_reference", journal_reference_json(reference)),
+      ])
   }
 }
 
@@ -350,6 +446,13 @@ fn event_decoder() -> decode.Decoder(MutationEvent) {
         "review_attached" -> {
           use review <- decode.field("review", review_decoder())
           decode.success(ReviewEvent(revision, review))
+        }
+        "journal_reference_attached" -> {
+          use reference <- decode.field(
+            "journal_reference",
+            journal_reference_decoder(),
+          )
+          decode.success(JournalReferenceEvent(revision, reference))
         }
         _ -> decode.failure(placeholder_event(), "known swing event type")
       }
@@ -564,6 +667,49 @@ fn review_decoder() -> decode.Decoder(ReviewRecord) {
   }
 }
 
+pub fn journal_reference_json(value: JournalEventReference) -> json.Json {
+  json.object([
+    #("workflow_id", json.string(domain.journal_workflow_id(value))),
+    #("journal_id", json.string(domain.journal_id(value))),
+    #("event_id", json.string(domain.journal_event_id(value))),
+    #(
+      "canonical_content_hash",
+      value
+        |> domain.journal_event_content_hash
+        |> identity.sha256_value
+        |> json.string,
+    ),
+    #("relation", json.string(domain.journal_relation(value))),
+    #(
+      "attached_at_unix_ms",
+      value |> domain.journal_attached_at |> time.unix_milliseconds |> json.int,
+    ),
+  ])
+}
+
+fn journal_reference_decoder() -> decode.Decoder(JournalEventReference) {
+  use workflow_id <- decode.field("workflow_id", decode.string)
+  use journal_id <- decode.field("journal_id", decode.string)
+  use event_id <- decode.field("event_id", decode.string)
+  use content_hash <- decode.field("canonical_content_hash", sha_decoder())
+  use relation <- decode.field("relation", decode.string)
+  use attached_at <- decode.field("attached_at_unix_ms", instant_decoder())
+  case
+    domain.journal_event_reference(
+      workflow_id,
+      journal_id,
+      event_id,
+      content_hash,
+      relation,
+      attached_at,
+    )
+  {
+    Ok(value) -> decode.success(value)
+    Error(_) ->
+      decode.failure(placeholder_journal_reference(), "journal reference")
+  }
+}
+
 fn role_decoder() -> decode.Decoder(domain.FactRole) {
   decode.string
   |> decode.then(fn(value) {
@@ -674,6 +820,60 @@ pub fn selected_workflows(
   }
 }
 
+/// Build a deterministic, contiguous reconstruction log for the supplied
+/// workflows. This preserves their exact final information state while making
+/// no claim about the original cross-workflow event interleaving.
+pub fn canonical_event_log(workflows: List(Workflow)) -> List(String) {
+  workflows
+  |> list.flat_map(workflow_events)
+  |> encode_reindexed_events(1, [])
+}
+
+fn workflow_events(workflow: Workflow) -> List(MutationEvent) {
+  let candidates =
+    workflow.snapshots
+    |> list.map(fn(value) { CandidateEvent(0, value) })
+  let plan = case workflow.plan {
+    None -> []
+    Some(value) -> [PlanEvent(0, value)]
+  }
+  let reviews =
+    workflow.reviews
+    |> list.map(fn(value) { ReviewEvent(0, value) })
+  let journal_references =
+    workflow.journal_references
+    |> list.map(fn(value) { JournalReferenceEvent(0, value) })
+  list.append(
+    candidates,
+    list.append(plan, list.append(reviews, journal_references)),
+  )
+}
+
+fn encode_reindexed_events(
+  events: List(MutationEvent),
+  revision: Int,
+  reversed: List(String),
+) -> List(String) {
+  case events {
+    [] -> list.reverse(reversed)
+    [event, ..rest] ->
+      encode_reindexed_events(rest, revision + 1, [
+        event |> with_revision(revision) |> encode_event,
+        ..reversed
+      ])
+  }
+}
+
+fn with_revision(value: MutationEvent, revision: Int) -> MutationEvent {
+  case value {
+    CandidateEvent(_, candidate) -> CandidateEvent(revision, candidate)
+    PlanEvent(_, plan) -> PlanEvent(revision, plan)
+    ReviewEvent(_, review) -> ReviewEvent(revision, review)
+    JournalReferenceEvent(_, reference) ->
+      JournalReferenceEvent(revision, reference)
+  }
+}
+
 pub fn workflow_id(value: Workflow) -> String {
   value.workflow_id
 }
@@ -719,6 +919,10 @@ pub fn reviews(value: Workflow) -> List(ReviewRecord) {
   value.reviews
 }
 
+pub fn journal_references(value: Workflow) -> List(JournalEventReference) {
+  value.journal_references
+}
+
 pub fn maximum_workflow_count() -> Int {
   maximum_workflows
 }
@@ -729,6 +933,10 @@ pub fn maximum_snapshots() -> Int {
 
 pub fn maximum_reviews() -> Int {
   maximum_reviews_per_workflow
+}
+
+pub fn maximum_journal_references() -> Int {
+  maximum_journal_references_per_workflow
 }
 
 pub fn maximum_event_revision() -> Int {
@@ -756,6 +964,19 @@ fn placeholder_plan() -> PlanRecord {
       [],
       [],
       [],
+      placeholder_instant(),
+    )
+  value
+}
+
+fn placeholder_journal_reference() -> JournalEventReference {
+  let assert Ok(value) =
+    domain.journal_event_reference(
+      "placeholder",
+      "placeholder",
+      "placeholder",
+      placeholder_strategy_hash(),
+      "placeholder",
       placeholder_instant(),
     )
   value

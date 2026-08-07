@@ -1,4 +1,6 @@
+import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
+import gleam/int
 import gleam/javascript/promise.{type Promise}
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -14,8 +16,10 @@ import pi/ui
 import pi_sparkles_swing_workbench/decode as input_decode
 import pi_sparkles_swing_workbench/domain
 import pi_sparkles_swing_workbench/effect/store
+import pi_sparkles_swing_workbench/portable
 import pi_sparkles_swing_workbench/render
 import pi_sparkles_swing_workbench/state
+import pi_sparkles_swing_workbench_portable_file as portable_file
 
 const event_entry_type = "pi_sparkles_swing_workbench.event.v1"
 
@@ -108,10 +112,27 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
 
   tool.register(
     api,
+    "swing_journal_link",
+    "Attach durable journal event reference",
+    "Attach an exact journal ID, event ID, canonical event hash, and caller-named relation to an existing workflow; this tool does not read, trust, interpret, or select the journal event",
+    "Supply the handle returned by trade_journal after the LLM or caller chooses to retain that relation",
+    tool.parameters(journal_link_schema(), input_decode.journal_link_decoder()),
+    tool.Sequential,
+    fn(_id, input, _signal, _updates, _ctx) {
+      case current(runtime) {
+        Error(message) -> tool.reject(message)
+        Ok(state_value) ->
+          attach_journal_reference(api, runtime, state_value, input)
+      }
+    },
+  )
+
+  tool.register(
+    api,
     "swing_snapshot",
     "Export swing workflow facts",
     "Return a deterministic versioned snapshot of all branch workflows or one exact workflow, including receipt payloads, changes, declarations, review facts, and neutral available operations",
-    "This is session-branch state, not cross-session durable storage or a workflow verdict",
+    "This is the current branch projection, not a workflow verdict; use swing_state_export only when the LLM or caller chooses an exact portable selection and path",
     tool.parameters(snapshot_schema(), input_decode.snapshot_decoder()),
     tool.Parallel,
     fn(_id, input, _signal, _updates, _ctx) {
@@ -131,6 +152,46 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
               )
               |> promise.resolve
           }
+      }
+    },
+  )
+
+  tool.register(
+    api,
+    "swing_state_export",
+    "Persist caller-selected swing state",
+    "Write a canonical content-bound reconstruction log for all workflows or one exact workflow to a new caller-selected local file; exact retries are idempotent and differing existing content is a conflict",
+    "The LLM or caller chooses the path and workflow selection; this tool never selects storage, overwrites a different file, interprets state, or chooses a later operation",
+    tool.parameters(
+      portable_export_schema(),
+      input_decode.portable_export_decoder(),
+    ),
+    tool.Sequential,
+    fn(_id, input, signal, _updates, _ctx) {
+      case current(runtime) {
+        Error(message) -> tool.reject(message)
+        Ok(state_value) ->
+          export_portable(state_value, input, raw.dynamic(signal))
+      }
+    },
+  )
+
+  tool.register(
+    api,
+    "swing_state_import",
+    "Restore caller-selected swing state",
+    "Load one exact content-bound workbench reconstruction log from a caller-selected local file into an empty branch; identical retries are idempotent and merge or overwrite is never selected",
+    "Supply the exact canonical hash returned by swing_state_export and expectedCurrentRevision=0; the LLM or caller chooses whether and what to restore",
+    tool.parameters(
+      portable_import_schema(),
+      input_decode.portable_import_decoder(),
+    ),
+    tool.Sequential,
+    fn(_id, input, signal, _updates, _ctx) {
+      case current(runtime) {
+        Error(message) -> tool.reject(message)
+        Ok(state_value) ->
+          import_portable(api, runtime, state_value, input, raw.dynamic(signal))
       }
     },
   )
@@ -185,9 +246,37 @@ fn review_schema() -> schema.Schema {
   ])
 }
 
+fn journal_link_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("workflowId", bounded_string(1, 200)),
+    schema.Required("journalId", bounded_string(1, 200)),
+    schema.Required("eventId", bounded_string(1, 200)),
+    schema.Required("canonicalContentHash", bounded_string(64, 64)),
+    schema.Required("relation", bounded_string(1, 200)),
+    schema.Required("attachedAtUnixMs", schema.integer()),
+  ])
+}
+
 fn snapshot_schema() -> schema.Schema {
   schema.object([
     schema.Optional("workflowId", schema.nullable(bounded_string(1, 200))),
+  ])
+}
+
+fn portable_export_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("portablePath", bounded_string(1, 4096)),
+    schema.Optional("workflowId", schema.nullable(bounded_string(1, 200))),
+    schema.Required("maximumPortableBytes", bounded_integer(1, 100_000_000)),
+  ])
+}
+
+fn portable_import_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("portablePath", bounded_string(1, 4096)),
+    schema.Required("expectedContentHash", bounded_string(64, 64)),
+    schema.Required("expectedCurrentRevision", bounded_integer(0, 0)),
+    schema.Required("maximumPortableBytes", bounded_integer(1, 100_000_000)),
   ])
 }
 
@@ -224,6 +313,11 @@ fn hash_array_schema() -> schema.Schema {
 
 fn bounded_string(minimum: Int, maximum: Int) -> schema.Schema {
   schema.string() |> schema.with_string_length(minimum, maximum)
+}
+
+fn bounded_integer(minimum: Int, maximum: Int) -> schema.Schema {
+  schema.integer()
+  |> schema.with_number_range(minimum |> int.to_float, maximum |> int.to_float)
 }
 
 fn attach_candidate(
@@ -374,6 +468,332 @@ fn attach_review(
   }
 }
 
+fn attach_journal_reference(
+  api: pi.ExtensionApi,
+  runtime: store.Store(Option(Result(state.State, String))),
+  state_value: state.State,
+  input: input_decode.JournalLinkInput,
+) -> Promise(tool.ToolResult) {
+  let input_decode.JournalLinkInput(
+    workflow_id,
+    journal_id,
+    event_id,
+    content_hash,
+    relation,
+    attached_at,
+  ) = input
+  case
+    domain.journal_event_reference(
+      workflow_id,
+      journal_id,
+      event_id,
+      content_hash,
+      relation,
+      attached_at,
+    )
+  {
+    Error(error) ->
+      tool.reject(
+        "Swing journal reference rejected mechanically: "
+        <> string.inspect(error),
+      )
+    Ok(reference) ->
+      case state.attach_journal_reference(state_value, reference) {
+        Error(error) -> reject_state(error)
+        Ok(#(next, state.JournalReferenceStored(_))) -> {
+          persist_journal_reference(api, runtime, next, reference)
+          workflow_result(next, workflow_id, "Journal event reference attached")
+        }
+        Ok(#(next, state.JournalReferenceUnchanged(_))) ->
+          workflow_result(
+            next,
+            workflow_id,
+            "Identical journal event reference already attached",
+          )
+        Ok(#(_, _)) -> tool.reject("Unexpected journal reference transition")
+      }
+  }
+}
+
+fn export_portable(
+  state_value: state.State,
+  input: input_decode.PortableExportInput,
+  signal: Dynamic,
+) -> Promise(tool.ToolResult) {
+  let input_decode.PortableExportInput(path, selected, maximum_bytes) = input
+  case state.selected_workflows(state_value, selected) {
+    Error(error) ->
+      tool.reject(
+        "Swing portable export selection failed: " <> string.inspect(error),
+      )
+    Ok(workflows) -> {
+      let selection = case selected {
+        None -> portable.AllWorkflows
+        Some(id) -> portable.ExactWorkflow(id)
+      }
+      case portable.build(state_value, workflows, selection) {
+        Error(error) ->
+          tool.reject(
+            "Swing portable export rejected mechanically: "
+            <> string.inspect(error),
+          )
+        Ok(bundle) -> {
+          let replacement = portable.encode(bundle)
+          use read_outcome <- promise.await(portable_file.read(
+            path,
+            maximum_bytes,
+            signal,
+          ))
+          case read_outcome {
+            portable_file.Missing ->
+              persist_portable_export(
+                path,
+                replacement,
+                maximum_bytes,
+                signal,
+                state_value,
+                bundle,
+              )
+            portable_file.Loaded(existing, bytes) ->
+              case existing == replacement {
+                True ->
+                  portable_export_result(bundle, path, "already_stored", bytes)
+                False ->
+                  portable_conflict_result(
+                    "export",
+                    "destination_exists_with_different_content",
+                    state.revision(state_value),
+                    bytes,
+                  )
+              }
+            portable_file.ReadCancelled ->
+              tool.reject("Swing portable export read cancelled")
+            portable_file.ReadTooLarge(received, maximum) ->
+              tool.reject(
+                "Swing portable destination exceeds byte bound received="
+                <> string.inspect(received)
+                <> " maximum="
+                <> string.inspect(maximum),
+              )
+            portable_file.ReadFailure(code) ->
+              tool.reject("Swing portable storage read failed code=" <> code)
+            portable_file.InvalidReadResult ->
+              tool.reject(
+                "Swing portable storage returned an invalid read result",
+              )
+          }
+        }
+      }
+    }
+  }
+}
+
+fn persist_portable_export(
+  path: String,
+  replacement: String,
+  maximum_bytes: Int,
+  signal: Dynamic,
+  state_value: state.State,
+  bundle: portable.Bundle,
+) -> Promise(tool.ToolResult) {
+  use outcome <- promise.await(portable_file.replace(
+    path,
+    "",
+    replacement,
+    maximum_bytes,
+    signal,
+  ))
+  case outcome {
+    portable_file.Replaced(bytes) ->
+      portable_export_result(bundle, path, "stored", bytes)
+    portable_file.StorageChanged(bytes) ->
+      portable_conflict_result(
+        "export",
+        "destination_changed_after_read",
+        state.revision(state_value),
+        bytes,
+      )
+    portable_file.StorageBusy ->
+      portable_conflict_result(
+        "export",
+        "exclusive_storage_lock_busy",
+        state.revision(state_value),
+        0,
+      )
+    portable_file.ReplaceCancelled ->
+      tool.reject("Swing portable export cancelled")
+    portable_file.ReplacementTooLarge(received, maximum) ->
+      tool.reject(
+        "Swing portable export exceeds byte bound received="
+        <> string.inspect(received)
+        <> " maximum="
+        <> string.inspect(maximum),
+      )
+    portable_file.ReplaceFailure(code) ->
+      tool.reject("Swing portable storage replace failed code=" <> code)
+    portable_file.InvalidReplaceResult ->
+      tool.reject("Swing portable storage returned an invalid replace result")
+  }
+}
+
+fn portable_export_result(
+  bundle: portable.Bundle,
+  path: String,
+  outcome: String,
+  bytes: Int,
+) -> Promise(tool.ToolResult) {
+  tool.text_result(
+    render.portable_result_text("export", outcome, path, bundle),
+    render.portable_export_json(bundle, path, outcome, bytes),
+  )
+  |> promise.resolve
+}
+
+fn import_portable(
+  api: pi.ExtensionApi,
+  runtime: store.Store(Option(Result(state.State, String))),
+  state_value: state.State,
+  input: input_decode.PortableImportInput,
+  signal: Dynamic,
+) -> Promise(tool.ToolResult) {
+  let input_decode.PortableImportInput(
+    path,
+    expected_hash,
+    expected_revision,
+    maximum_bytes,
+  ) = input
+  use read_outcome <- promise.await(portable_file.read(
+    path,
+    maximum_bytes,
+    signal,
+  ))
+  case read_outcome {
+    portable_file.Missing ->
+      tool.reject("Swing portable import source is missing")
+    portable_file.Loaded(text, bytes) ->
+      case portable.decode_bundle(text, expected_hash) {
+        Error(error) ->
+          tool.reject(
+            "Swing portable import rejected mechanically: "
+            <> string.inspect(error),
+          )
+        Ok(bundle) ->
+          apply_portable_import(
+            api,
+            runtime,
+            state_value,
+            bundle,
+            path,
+            bytes,
+            expected_revision,
+          )
+      }
+    portable_file.ReadCancelled ->
+      tool.reject("Swing portable import read cancelled")
+    portable_file.ReadTooLarge(received, maximum) ->
+      tool.reject(
+        "Swing portable source exceeds byte bound received="
+        <> string.inspect(received)
+        <> " maximum="
+        <> string.inspect(maximum),
+      )
+    portable_file.ReadFailure(code) ->
+      tool.reject("Swing portable storage read failed code=" <> code)
+    portable_file.InvalidReadResult ->
+      tool.reject("Swing portable storage returned an invalid read result")
+  }
+}
+
+fn apply_portable_import(
+  api: pi.ExtensionApi,
+  runtime: store.Store(Option(Result(state.State, String))),
+  current_state: state.State,
+  bundle: portable.Bundle,
+  path: String,
+  bytes: Int,
+  expected_revision: Int,
+) -> Promise(tool.ToolResult) {
+  let events = portable.events(bundle)
+  let exact_retry =
+    state.canonical_event_log(state.workflows(current_state)) == events
+  case exact_retry {
+    True ->
+      portable_import_result(
+        bundle,
+        current_state,
+        path,
+        "already_imported",
+        bytes,
+      )
+    False ->
+      case
+        state.revision(current_state) == expected_revision,
+        expected_revision == 0,
+        state.workflows(current_state) == []
+      {
+        False, _, _ ->
+          portable_conflict_result(
+            "import",
+            "expected_current_revision_mismatch",
+            state.revision(current_state),
+            bytes,
+          )
+        _, False, _ | _, _, False ->
+          portable_conflict_result(
+            "import",
+            "target_branch_is_not_empty",
+            state.revision(current_state),
+            bytes,
+          )
+        True, True, True ->
+          case state.replay(events) {
+            Error(error) ->
+              tool.reject(
+                "Swing portable reconstruction failed: "
+                <> string.inspect(error),
+              )
+            Ok(restored) -> {
+              list.each(events, fn(value) { append_event(value, api) })
+              store.write(runtime, Some(Ok(restored)))
+              portable_import_result(bundle, restored, path, "imported", bytes)
+            }
+          }
+      }
+  }
+}
+
+fn portable_import_result(
+  bundle: portable.Bundle,
+  restored: state.State,
+  path: String,
+  outcome: String,
+  bytes: Int,
+) -> Promise(tool.ToolResult) {
+  tool.text_result(
+    render.portable_result_text("import", outcome, path, bundle),
+    render.portable_import_json(bundle, restored, path, outcome, bytes),
+  )
+  |> promise.resolve
+}
+
+fn portable_conflict_result(
+  operation: String,
+  reason: String,
+  revision: Int,
+  bytes: Int,
+) -> Promise(tool.ToolResult) {
+  tool.text_result(
+    "Swing portable storage conflict operation="
+      <> operation
+      <> " reason="
+      <> reason
+      <> " current_revision="
+      <> string.inspect(revision),
+    render.portable_conflict_json(operation, reason, revision, bytes),
+  )
+  |> promise.resolve
+}
+
 fn workflow_result(
   state_value: state.State,
   workflow_id: String,
@@ -423,6 +843,18 @@ fn persist_review(
   review: domain.ReviewRecord,
 ) -> Nil {
   state.event_for_review(next, review)
+  |> state.encode_event
+  |> append_event(api)
+  store.write(runtime, Some(Ok(next)))
+}
+
+fn persist_journal_reference(
+  api: pi.ExtensionApi,
+  runtime: store.Store(Option(Result(state.State, String))),
+  next: state.State,
+  reference: domain.JournalEventReference,
+) -> Nil {
+  state.event_for_journal_reference(next, reference)
   |> state.encode_event
   |> append_event(api)
   store.write(runtime, Some(Ok(next)))

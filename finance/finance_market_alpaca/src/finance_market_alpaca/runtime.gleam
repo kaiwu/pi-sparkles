@@ -7,6 +7,7 @@ import finance_http/response.{type Response}
 import finance_http/retry
 import finance_http/scheduler
 import finance_http/transport.{type Cancellation, type TransportError}
+import finance_market_alpaca/query
 import finance_market_alpaca/request as provider_request
 import gleam/javascript/promise.{type Promise}
 import gleam/result
@@ -68,10 +69,19 @@ pub fn send(
   cancellation cancellation: Cancellation,
 ) -> Promise(Result(Response, SendError)) {
   case
-    request.origin(request_value) == provider_request.origin
-    && {
-      request.path(request_value) == provider_request.bars_path
-      || request.path(request_value) == provider_request.latest_quotes_path
+    {
+      request.origin(request_value) == provider_request.origin
+      && {
+        request.path(request_value) == provider_request.bars_path
+        || request.path(request_value) == provider_request.latest_quotes_path
+      }
+    }
+    || {
+      {
+        request.origin(request_value) == query.trading_origin(query.Paper)
+        || request.origin(request_value) == query.trading_origin(query.Live)
+      }
+      && request.path(request_value) == provider_request.assets_path
     }
   {
     False -> promise.resolve(Error(UnexpectedTarget))

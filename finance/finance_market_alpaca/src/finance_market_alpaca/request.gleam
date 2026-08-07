@@ -1,7 +1,9 @@
 import finance_core/time
 import finance_http/request
 import finance_market_alpaca.{type Access}
-import finance_market_alpaca/query.{type DailyBarsQuery, type LatestQuoteQuery}
+import finance_market_alpaca/query.{
+  type AssetUniverseQuery, type DailyBarsQuery, type LatestQuoteQuery,
+}
 import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -12,6 +14,8 @@ pub const origin = "https://data.alpaca.markets"
 pub const bars_path = "/v2/stocks/bars"
 
 pub const latest_quotes_path = "/v2/stocks/quotes/latest"
+
+pub const assets_path = "/v2/assets"
 
 pub type RequestError {
   InvalidPageLimit
@@ -118,6 +122,48 @@ pub fn latest_quote(
     query.feed_name(query.quote_feed(plan)),
   ))
   use value <- result.try(public_query(value, "currency", "USD"))
+  finance_market_alpaca.authorize(access, value)
+  |> result.map_error(InvalidAccess)
+}
+
+pub fn asset_universe(
+  access: Access,
+  plan: AssetUniverseQuery,
+) -> Result(request.Request, RequestError) {
+  let assert Ok(timeout) = time.duration(15_000)
+  use base <- result.try(
+    request.new(
+      request.Get,
+      query.trading_origin(query.asset_environment(plan)),
+      assets_path,
+      None,
+    )
+    |> result.map_error(InvalidHttp),
+  )
+  use bounded <- result.try(
+    request.with_limits(
+      base,
+      timeout: timeout,
+      maximum_response_bytes: 15_000_000,
+    )
+    |> result.map_error(InvalidHttp),
+  )
+  use accepted <- result.try(public_header(
+    bounded,
+    "Accept",
+    "application/json",
+  ))
+  use value <- result.try(public_query(
+    accepted,
+    "status",
+    query.asset_status_name(query.asset_status(plan)),
+  ))
+  use value <- result.try(public_query(value, "asset_class", "us_equity"))
+  use value <- result.try(public_query(
+    value,
+    "exchange",
+    query.asset_exchange_name(query.asset_exchange(plan)),
+  ))
   finance_market_alpaca.authorize(access, value)
   |> result.map_error(InvalidAccess)
 }

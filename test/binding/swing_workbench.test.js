@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { resolve } from "node:path";
 
 const artifact = resolve(
@@ -218,14 +221,35 @@ describe("LLM-owned swing workbench boundary", () => {
       evidenceReferences: [executionHash],
     });
 
+    const journalEventHash = sha256("canonical journal event");
+    const journalLink = {
+      workflowId: "wf-aapl",
+      journalId: "journal-aapl",
+      eventId: "journal-event-review-1",
+      canonicalContentHash: journalEventHash,
+      relation: "llm_review_declaration",
+      attachedAtUnixMs: 330,
+    };
+    const linked = await execute(
+      instance.tools.get("swing_journal_link"),
+      journalLink,
+    );
+    expect(linked.details.journalEventReferences).toEqual([journalLink]);
+    const unchanged = await execute(
+      instance.tools.get("swing_journal_link"),
+      journalLink,
+    );
+    expect(unchanged.details.journalEventReferences).toEqual([journalLink]);
+
     const snapshot = await execute(
       instance.tools.get("swing_snapshot"),
       {},
     );
     expect(snapshot.details).toMatchObject({
-      revision: 3,
+      revision: 4,
       persistence: "session_branch_versioned_event_log",
-      crossSessionPersistence: "not_provided",
+      crossSessionPersistence:
+        "caller_selected_portable_event_log_and_external_journal_references",
       decisionOwner: "llm",
       pluginDecisionFields: [],
     });
@@ -241,11 +265,12 @@ describe("LLM-owned swing workbench boundary", () => {
     ]) {
       expect(JSON.stringify(snapshot.details)).not.toContain(`\"${forbidden}\"`);
     }
-    expect(instance.entries).toHaveLength(3);
+    expect(instance.entries).toHaveLength(4);
     expect(instance.entries.map(({ data }) => JSON.parse(data).revision)).toEqual([
       1,
       2,
       3,
+      4,
     ]);
   });
 
@@ -307,5 +332,134 @@ describe("LLM-owned swing workbench boundary", () => {
       execute(instance.tools.get("swing_candidates"), candidateInput()),
     ).rejects.toThrow("mutation is disabled");
     expect(entries).toHaveLength(1);
+  });
+
+  test("exports exact portable state and restores it in a distinct instance", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "pi-swing-portable-"));
+    const path = join(directory, "workbench.json");
+    try {
+      const source = await harness();
+      await source.handlers.get("session_start")(
+        { type: "session_start", reason: "startup" },
+        context(source.entries),
+      );
+      const candidate = candidateInput();
+      await execute(source.tools.get("swing_candidates"), candidate);
+      const reviewPayload = "caller-selected observation";
+      await execute(source.tools.get("swing_review"), {
+        workflowId: "wf-aapl",
+        recordId: "observation-1",
+        recordKind: "observation",
+        payloadHash: sha256(reviewPayload),
+        payload: reviewPayload,
+        evidenceReferences: [],
+        observedAtUnixMs: 320,
+      });
+      const journalLink = {
+        workflowId: "wf-aapl",
+        journalId: "journal-aapl",
+        eventId: "event-observation-1",
+        canonicalContentHash: sha256("journal-event"),
+        relation: "observation_reference",
+        attachedAtUnixMs: 330,
+      };
+      await execute(source.tools.get("swing_journal_link"), journalLink);
+      const sourceSnapshot = await execute(
+        source.tools.get("swing_snapshot"),
+        {},
+      );
+
+      const exportInput = {
+        portablePath: path,
+        maximumPortableBytes: 1_000_000,
+      };
+      const exported = await execute(
+        source.tools.get("swing_state_export"),
+        exportInput,
+      );
+      expect(exported.details).toMatchObject({
+        operation: "export",
+        outcome: "stored",
+        sourceRevision: 3,
+        portableRevision: 3,
+        workflowIds: ["wf-aapl"],
+        decisionOwner: "llm",
+        pluginDecisionFields: [],
+      });
+      expect(exported.details.storageCapabilities).toMatchObject({
+        backend: "local_canonical_json_v1",
+        atomic_create: true,
+        overwrite: false,
+        merge: false,
+      });
+      expect(exported.content[0].text).toContain(
+        exported.details.canonicalContentHash,
+      );
+      expect(readFileSync(path, "utf8").endsWith("\n")).toBe(true);
+
+      const retry = await execute(
+        source.tools.get("swing_state_export"),
+        exportInput,
+      );
+      expect(retry.details.outcome).toBe("already_stored");
+
+      await execute(source.tools.get("swing_review"), {
+        workflowId: "wf-aapl",
+        recordId: "observation-2",
+        recordKind: "observation",
+        payloadHash: sha256("new state"),
+        payload: "new state",
+        evidenceReferences: [],
+        observedAtUnixMs: 340,
+      });
+      const conflict = await execute(
+        source.tools.get("swing_state_export"),
+        exportInput,
+      );
+      expect(conflict.details).toMatchObject({
+        operation: "export",
+        outcome: "conflict",
+        reason: "destination_exists_with_different_content",
+        currentRevision: 4,
+        pluginDecisionFields: [],
+      });
+
+      const target = await harness();
+      await target.handlers.get("session_start")(
+        { type: "session_start", reason: "startup" },
+        context(target.entries),
+      );
+      const importInput = {
+        portablePath: path,
+        expectedContentHash: exported.details.canonicalContentHash,
+        expectedCurrentRevision: 0,
+        maximumPortableBytes: 1_000_000,
+      };
+      const imported = await execute(
+        target.tools.get("swing_state_import"),
+        importInput,
+      );
+      expect(imported.details).toMatchObject({
+        operation: "import",
+        outcome: "imported",
+        canonicalContentHash: exported.details.canonicalContentHash,
+        sourceRevision: 3,
+        portableRevision: 3,
+        workflowIds: ["wf-aapl"],
+        decisionOwner: "llm",
+        pluginDecisionFields: [],
+      });
+      expect(imported.details.snapshot).toEqual(sourceSnapshot.details);
+      expect(target.entries).toHaveLength(3);
+
+      const importRetry = await execute(
+        target.tools.get("swing_state_import"),
+        importInput,
+      );
+      expect(importRetry.details.outcome).toBe("already_imported");
+      expect(target.entries).toHaveLength(3);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

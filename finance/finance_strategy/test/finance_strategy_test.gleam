@@ -1,8 +1,10 @@
 import finance_core/identifier
+import finance_core/source
 import finance_core/time
 import finance_listing/listing
 import finance_provenance/identity
 import finance_strategy
+import finance_strategy/context_receipt
 import finance_strategy/definition
 import finance_strategy/evidence
 import finance_strategy/plan
@@ -22,6 +24,284 @@ pub fn main() -> Nil {
 
 pub fn package_is_experimental_test() {
   finance_strategy.status() |> should.equal(finance_strategy.Experimental)
+}
+
+pub fn sector_and_regime_receipt_preserves_source_labels_without_a_verdict_test() {
+  let assert Ok(sector) =
+    context_receipt.classification(
+      "GICS-2023",
+      "Technology Hardware, Storage & Peripherals",
+      instant(100),
+      instant(110),
+      timezone(),
+      fixture_source("sector-source"),
+      root_hash("a"),
+    )
+  let assert Ok(regime) =
+    context_receipt.classification(
+      "fixture-provider-v1",
+      "source-declared-range-bound",
+      instant(100),
+      instant(111),
+      timezone(),
+      fixture_source("regime-source"),
+      root_hash("b"),
+    )
+  let assert Ok(value) =
+    context_receipt.sector_regime_receipt(
+      listing(),
+      context_receipt.Known(sector),
+      context_receipt.Known(regime),
+      instant(120),
+      [root("a"), root("b")],
+      ["labels are copied from synthetic acceptance sources"],
+    )
+  context_receipt.family(value)
+  |> should.equal(context_receipt.SectorRegime)
+  context_receipt.verify(value) |> should.be_true
+  let encoded = context_receipt.encode(value)
+  encoded
+  |> string.contains("source-declared-range-bound")
+  |> should.be_true
+  encoded |> string.contains("\"decision\"") |> should.be_false
+  encoded |> string.contains("\"score\"") |> should.be_false
+  encoded |> string.contains("\"recommendation\"") |> should.be_false
+}
+
+pub fn context_information_keeps_unknown_and_conflicting_states_exact_test() {
+  let assert Ok(first) =
+    context_receipt.classification(
+      "provider-a",
+      "label-a",
+      instant(100),
+      instant(110),
+      timezone(),
+      fixture_source("provider-a"),
+      root_hash("a"),
+    )
+  let assert Ok(second) =
+    context_receipt.classification(
+      "provider-b",
+      "label-b",
+      instant(100),
+      instant(110),
+      timezone(),
+      fixture_source("provider-b"),
+      root_hash("b"),
+    )
+  let assert Ok(value) =
+    context_receipt.sector_regime_receipt(
+      listing(),
+      context_receipt.Unknown("sector source was not supplied"),
+      context_receipt.Conflicting(
+        [first, second],
+        "sources retain different labels",
+      ),
+      instant(120),
+      [],
+      [],
+    )
+  let encoded = context_receipt.encode(value)
+  encoded |> string.contains("\"state\":\"unknown\"") |> should.be_true
+  encoded
+  |> string.contains("\"state\":\"conflicting\"")
+  |> should.be_true
+
+  context_receipt.sector_regime_receipt(
+    listing(),
+    context_receipt.Unknown("not supplied"),
+    context_receipt.Conflicting([], "no alternatives"),
+    instant(120),
+    [],
+    [],
+  )
+  |> should.equal(Error(context_receipt.InvalidInformation("regime")))
+}
+
+pub fn catalyst_receipt_preserves_query_event_time_and_lineage_test() {
+  let assert Ok(event) =
+    context_receipt.catalyst_event(
+      "fixture-event-1",
+      "earnings_calendar",
+      "Synthetic scheduled earnings event",
+      "source_declared_scheduled",
+      context_receipt.Known(instant(200)),
+      context_receipt.Unknown("publication time absent from source row"),
+      timezone(),
+      fixture_source("catalyst-source"),
+      root_hash("c"),
+      [root_hash("d")],
+    )
+  let assert Ok(snapshot) =
+    context_receipt.catalyst_snapshot(
+      "fixture calendar query from 2026-08-07 through 2026-08-31",
+      [event],
+    )
+  let assert Ok(value) =
+    context_receipt.catalyst_receipt(
+      listing(),
+      context_receipt.Known(snapshot),
+      instant(210),
+      [root("c")],
+      ["synthetic source row only"],
+    )
+  context_receipt.schema(value)
+  |> should.equal("finance_strategy/catalyst_observation_receipt")
+  let encoded = context_receipt.encode(value)
+  encoded |> string.contains("earnings_calendar") |> should.be_true
+  encoded |> string.contains("source_declared_scheduled") |> should.be_true
+  encoded |> string.contains("publication time absent") |> should.be_true
+  encoded |> string.contains("\"impact\"") |> should.be_false
+  encoded |> string.contains("\"sentiment\"") |> should.be_false
+  context_receipt.verify(value) |> should.be_true
+}
+
+pub fn task_time_receipt_reports_exact_clocks_without_timing_labels_test() {
+  let assert Ok(after_close) =
+    context_receipt.task_time_observation(
+      "fixture-after-close",
+      "after_close",
+      instant(300),
+      context_receipt.Known(instant(280)),
+      context_receipt.Known(instant(290)),
+      instant(301),
+      timezone(),
+      [root("1")],
+    )
+  let assert Ok(monitor) =
+    context_receipt.task_time_observation(
+      "fixture-monitor",
+      "monitor",
+      instant(500),
+      context_receipt.NotObtained("newer observation not supplied"),
+      context_receipt.Known(instant(490)),
+      instant(501),
+      timezone(),
+      [root("2")],
+    )
+  let assert Ok(value) =
+    context_receipt.task_time_receipt(listing(), [after_close, monitor], [
+      "timestamps are facts for LLM interpretation",
+    ])
+  let encoded = context_receipt.encode(value)
+  encoded |> string.contains("\"requested_at_unix_ms\":300") |> should.be_true
+  encoded |> string.contains("newer observation not supplied") |> should.be_true
+  encoded |> string.contains("\"fresh\"") |> should.be_false
+  encoded |> string.contains("\"stale\"") |> should.be_false
+  encoded |> string.contains("\"late\"") |> should.be_false
+  context_receipt.verify(value) |> should.be_true
+
+  context_receipt.task_time_receipt(listing(), [], [])
+  |> should.equal(Error(context_receipt.EmptyTaskTimes))
+}
+
+pub fn universe_candidate_receipt_preserves_point_in_time_source_row_test() {
+  let assert Ok(observation) =
+    universe_observation(
+      "fixture-row-600000",
+      "source_declared_included",
+      ["source reports all requested fields present"],
+      "c",
+    )
+  let assert Ok(value) =
+    context_receipt.universe_candidate_receipt(
+      listing(),
+      context_receipt.Known(observation),
+      instant(230),
+      ["one copied source row; not a complete population proof"],
+    )
+  context_receipt.family(value)
+  |> should.equal(context_receipt.UniverseCandidate)
+  context_receipt.schema(value)
+  |> should.equal("finance_strategy/universe_candidate_observation_receipt")
+  let encoded = context_receipt.encode(value)
+  encoded |> string.contains("fixture-universe-cn-liquid-v1") |> should.be_true
+  encoded |> string.contains("source_declared_included") |> should.be_true
+  encoded |> string.contains("\"source_cutoff_unix_ms\":205") |> should.be_true
+  encoded |> string.contains("\"rank\"") |> should.be_false
+  encoded |> string.contains("\"qualified\"") |> should.be_false
+  encoded |> string.contains("\"selected\"") |> should.be_false
+  encoded |> string.contains("\"recommendation\"") |> should.be_false
+  context_receipt.verify(value) |> should.be_true
+}
+
+pub fn universe_candidate_receipt_keeps_exclusion_and_conflict_as_source_data_test() {
+  let assert Ok(included) =
+    universe_observation(
+      "fixture-row-a",
+      "source_declared_included",
+      ["source label A"],
+      "a",
+    )
+  let assert Ok(excluded) =
+    universe_observation(
+      "fixture-row-b",
+      "source_declared_excluded",
+      ["source reports insufficient warmup rows"],
+      "b",
+    )
+  let assert Ok(value) =
+    context_receipt.universe_candidate_receipt(
+      listing(),
+      context_receipt.Conflicting(
+        [included, excluded],
+        "two supplied source snapshots retain different membership labels",
+      ),
+      instant(230),
+      [],
+    )
+  let encoded = context_receipt.encode(value)
+  encoded |> string.contains("\"state\":\"conflicting\"") |> should.be_true
+  encoded |> string.contains("source_declared_excluded") |> should.be_true
+  encoded |> string.contains("insufficient warmup rows") |> should.be_true
+  encoded |> string.contains("\"decision\"") |> should.be_false
+  context_receipt.verify(value) |> should.be_true
+
+  let assert Ok(unknown) =
+    context_receipt.universe_candidate_receipt(
+      listing(),
+      context_receipt.NotObtained(
+        "point-in-time universe source was not supplied",
+      ),
+      instant(230),
+      [],
+    )
+  context_receipt.encode(unknown)
+  |> string.contains("point-in-time universe source was not supplied")
+  |> should.be_true
+}
+
+pub fn universe_candidate_receipt_validates_source_text_without_interpreting_it_test() {
+  context_receipt.universe_candidate_observation(
+    "fixture-universe-cn-liquid-v1",
+    "2026-08-07.1",
+    "track=cn; as_of=2026-08-07; source predicate copied exactly",
+    "fixture-row-invalid",
+    "source_declared_included",
+    [" leading whitespace is not canonical"],
+    [],
+    instant(200),
+    instant(205),
+    instant(210),
+    timezone(),
+    fixture_source("universe-source"),
+    root_hash("c"),
+    root_hash("d"),
+    [],
+  )
+  |> should.equal(
+    Error(context_receipt.InvalidText("universe.source_declared_reasons")),
+  )
+
+  context_receipt.universe_candidate_receipt(
+    listing(),
+    context_receipt.Conflicting([], "no source rows"),
+    instant(230),
+    [],
+  )
+  |> should.equal(
+    Error(context_receipt.InvalidInformation("universe.observation")),
+  )
 }
 
 pub fn rsi_definition_is_versioned_data_not_a_decision_test() {
@@ -402,6 +682,36 @@ fn packet(
   packet_with_context(context(all_dependencies(), 200, 300), features)
 }
 
+fn universe_observation(
+  row_id: String,
+  membership: String,
+  reasons: List(String),
+  hash_digit: String,
+) -> Result(
+  context_receipt.UniverseCandidateObservation,
+  context_receipt.ContextError,
+) {
+  let assert Ok(status) =
+    context_receipt.source_field("provider_status", membership)
+  context_receipt.universe_candidate_observation(
+    "fixture-universe-cn-liquid-v1",
+    "2026-08-07.1",
+    "track=cn; as_of=2026-08-07; source predicate copied exactly",
+    row_id,
+    membership,
+    reasons,
+    [status],
+    instant(200),
+    instant(205),
+    instant(210),
+    timezone(),
+    fixture_source("universe-source"),
+    root_hash(hash_digit),
+    root_hash("d"),
+    [root(hash_digit)],
+  )
+}
+
 fn packet_with_context(
   context: evidence.EvaluationContext,
   features: List(evidence.FeatureReceipt),
@@ -678,5 +988,16 @@ fn civil(year: Int, month: Int, day: Int) -> time.Date {
 
 fn instant(milliseconds: Int) -> time.Instant {
   let assert Ok(value) = time.instant(milliseconds)
+  value
+}
+
+fn timezone() -> time.Timezone {
+  let assert Ok(value) = time.timezone("America/New_York")
+  value
+}
+
+fn fixture_source(reference: String) -> source.SourceRef {
+  let assert Ok(value) =
+    source.new("acceptance_fixture", reference, source.Synthetic)
   value
 }

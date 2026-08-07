@@ -7,13 +7,19 @@ scripted response bytes, copies their complete result and market-owned gap
 receipt, and passes those exact digests into this package. The package then uses
 the real pure APIs rather than hashes of descriptive labels:
 
-- the copied market-owned OHLCV digest as the root for every dependent receipt;
+- the copied market-owned OHLCV digest as the root for market-derived receipts;
 - `finance_indicators` and `finance_risk` request envelopes selected by the
   caller/LLM fixture;
 - effective rule projections constructed from the track-owned CN, HK, and US
   rule packages; and
 - a `finance_execution` semantic receipt retaining stop-first, target-first,
-  and unknown-ordering daily-bar branches.
+  and unknown-ordering daily-bar branches;
+- `finance_strategy` sector/regime observations that retain exact synthetic
+  source declarations without deriving a classification;
+- a bounded catalyst-query observation retaining source event status,
+  occurrence/publication information states, and lineage; and
+- four exact task-time observations for after-close, preflight, monitor, and
+  review, with no freshness, lateness, or workflow verdict.
 
 Every copy includes its payload, canonical content hash, schema, and integrity
 meaning. The acceptance shell independently recalculates every market receipt
