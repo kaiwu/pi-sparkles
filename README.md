@@ -98,6 +98,17 @@ repository currently contains:
   explicit process-date range, preserving numeric lexemes, identity
   transitions, duplicates, pagination, unknowns, and page hashes without venue
   authentication, adjustment, impact, or completeness claims;
+- a read-only `finance_news` US source slice that retrieves bounded
+  Alpaca/Benzinga article metadata for one exact symbol and UTC interval,
+  preserving provider IDs, exact created/updated times, symbol associations,
+  pagination, rights, and page hashes while withholding summaries, bodies, and
+  image URLs and making no event, sentiment, impact, catalyst, or absence claim;
+- a read-only `portfolio` import/inspection shell that strictly decodes one
+  bounded caller-owned CSV or JSON file into immutable session-local snapshot
+  facts, preserving information states, exact identity/currency legs,
+  conflicts, truncation, reconciliation, privacy, and paged row drill-down
+  without broker access, durable storage, automatic aggregation, review, or
+  rebalance decisions;
 - a stateless `portfolio_risk` calculation shell over exact supplied account
   and `cn`/`hk`/`us` position facts, with explicit long-only single-currency
   exposure, weight, signed heat, denominator, partiality, contribution,
@@ -393,6 +404,7 @@ plugins; it never enables CN or US source access.
 | `us_ohlcv` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-ohlcv/0.1`; feed entitlement still depends on the Alpaca account and requested IEX/SIP feed. |
 | `stock_screener` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-screener/0.1`; `stock_universe` uses the explicitly selected paper/live Trading API environment and returns provider rows without interpreting capability flags. |
 | `stock_corporate_actions` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-corporate-actions/0.1`; the first slice fixes `region=us`, explicit Alpaca process-date/data-quality/action-type filters, and caller-visible page/action budgets. |
+| `finance_news` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-finance-news/0.1`; the first slice fixes `track=us`, one exact symbol, an inclusive UTC interval, ascending provider-update order, and caller-visible page/article budgets. |
 | `company_profile` | `TWELVE_DATA_API_KEY` (**credential**) | None | Requires caller subscription access to Twelve Data `/profile` and `/statistics`; the first slice fixes `country=US`, requires an exact supported MIC, preserves Nasdaq segment MICs, and makes no automatic retry or fallback. |
 | `stock_technicals` | None | None | Stateless calculation-only shell over exact caller/LLM-supplied observations and receipts; every formula, parameter, policy, and projection is explicit. |
 | `finance_sources` | None | None | Stateless read-only shell over an exact caller/LLM-supplied provenance catalogue; it performs no hidden capture, fetch, verification, or persistence. |
@@ -560,6 +572,7 @@ pi-sparkles/
 │   ├── cn_fundamentals/          exact mainland vendor fundamental slice
 │   ├── hk_fundamentals/          exact Hong Kong vendor fundamental slice
 │   ├── order_simulator/          exact completed-daily compatible bar paths
+│   ├── portfolio/                bounded local snapshot import and inspection
 │   ├── portfolio_risk/           exact supplied portfolio exposure/heat facts
 │   ├── macro_fred/               exact point-in-time FRED source facts
 │   ├── investor_workbench/       exact supplied dossier/metric/valuation facts
@@ -575,6 +588,7 @@ pi-sparkles/
 │   ├── stock_fundamentals/       audited direct-fact normalization
 │   ├── stock_corporate_actions/  exact bounded Alpaca US action facts
 │   ├── stock_earnings_calendar/  exact HKEX result-related meeting dates
+│   ├── finance_news/              exact bounded Alpaca/Benzinga US news metadata
 │   ├── stock_research_report/    deterministic cited US receipt composition
 │   ├── stock_screener/           exact Alpaca US asset-universe information
 │   ├── stock_technicals/          exact LLM-requested SMA/RSI/ATR facts

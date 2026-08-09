@@ -15,8 +15,8 @@ directory and is an independent Gleam project. Its local `README.md` becomes the
 detailed design document; this roadmap retains only the proposal, priority,
 dependencies, and delivery status.
 
-As of 2026-08-09, the catalog has 129 unique named `pi_*` proposals and 43
-matching implementation directories (33.3%). The repository has 52 plugin
+As of 2026-08-09, the catalog has 129 unique named `pi_*` proposals and 45
+matching implementation directories (34.9%). The repository has 54 plugin
 directories in total because nine reference, setup, and workflow slices do not
 map one-to-one to an R1 proposal. These are breadth counts, not completion
 counts: many directories intentionally implement only one Experimental slice.
@@ -108,8 +108,8 @@ reinterpret source evidence.
 | Trader workflow | Required decision loop | Current roadmap coverage | Steering gap |
 | --- | --- | --- | --- |
 | Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Quote, calendar/rules, order-book, tape, alerts, paper brokers, and compliance are proposed or narrow slices. | **Weakest.** No licensed, freshness-bounded intraday stream, shared order/fill model, fast trade-plan tool, or latency/execution-quality acceptance gate. Daily bars must not be presented as a day-trading surface. |
-| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, shared-replay, exact-predicate screener, shared exact-calendar, quant-research, backtest, deterministic-chart, HK result-related board-meeting-date, US corporate-action source, explicit portfolio exposure/heat calculation, and point-in-time FRED source slices now compose around explicit facts. The source adapters preserve their timing and completeness limits, and portfolio/macro judgment stays LLM-owned. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 14 are complete. Extend swing/provider depth only on a concrete workflow trigger. |
-| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | Session 19 and the Experimental `pi_investor_workbench` provide a caller-supplied 16-section evidence-state container, exact identity/statement/review facts, requested mechanical metrics, and assumption-explicit valuation bridges. `pi_company_profile` adds one bounded Twelve Data US profile/share snapshot, and `pi_cn_stock_sector_concept` adds one exact CAPCO 2025-H2 mainland classification row with its four distinct date facts and source receipt. | Rank-18 dated news/catalyst facts are active. The profile source's unnamed vendor labels and CAPCO's half-year-labelled publication must not be converted into cross-taxonomy mappings or per-listing validity intervals; none of these slices decides evidence sufficiency, business quality, thesis, target price, recommendation, impact, or action. |
+| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, shared-replay, exact-predicate screener, shared exact-calendar, quant-research, backtest, deterministic-chart, HK result-related board-meeting-date, US corporate-action source, explicit portfolio exposure/heat calculation, point-in-time FRED, and exact Alpaca/Benzinga US news-metadata slices now compose around explicit facts. The source adapters preserve their timing and completeness limits, and portfolio/macro/news judgment stays LLM-owned. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 19 are complete. Extend swing/provider depth only on a concrete workflow trigger. |
+| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | Session 19 and the Experimental `pi_investor_workbench` provide a caller-supplied 16-section evidence-state container, exact identity/statement/review facts, requested mechanical metrics, and assumption-explicit valuation bridges. `pi_company_profile`, `pi_cn_stock_sector_concept`, and `pi_finance_news` add bounded profile, classification, and vendor-news facts. The Experimental Session 21 `pi_portfolio` slice adds bounded raw import/inspection. | Rank 19's import slice is complete; durable/full portfolio review remains gated. The source and import slices must not be converted into venue/identity proof, verified events, impact/catalyst, portfolio sufficiency, thesis, target-price, recommendation, rebalance, or action judgments. |
 | Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. `finance_dataset`, `stock_screener`, `finance_calendar`, `quant_research`, `backtest`, `finance_charts`, and `macro_fred` expose exact dataset/vintage, point-in-time predicate, session/closure, hypothesis/ledger, requested-metric, run-comparison, replay, reproduction, deterministic-view, and bounded macro-source inputs. | Ranks 5 through 14 are complete. Historical membership remains a high-leverage missing quant source fact; edge/deployability remain LLM conclusions. |
 
 The following decisions bind later proposals:
@@ -191,6 +191,10 @@ sets this immediate queue:
 16. `pi_company_profile` — Experimental US source slice complete 2026-08-09.
 17. `pi_cn_stock_sector_concept` — Experimental CAPCO source slice complete
     2026-08-09.
+18. `pi_finance_news` — Experimental Alpaca/Benzinga US metadata slice complete
+    2026-08-09.
+19. `pi_portfolio` — Experimental bounded local import/inspection slice complete
+    2026-08-09.
 
 Every target follows the same explicit loop: controlling tutor specification →
 detailed `plugins/<name>/README.md` design → independent Gleam implementation →
@@ -229,9 +233,13 @@ response hashes, explicit credits, and no classification or investment
 judgment. Rank 17 completed one exact CAPCO 2025-H2 stock-code classification
 row with content-hash-bound source evidence, distinct taxonomy/result/
 publication/retrieval dates, published level limits, and no inferred MIC or
-membership-validity interval. Exactly one next item is active: rank-18 dated
-news/catalyst source facts. Full portfolio workflow
-and full `CG-DAY` remain gated as recorded below.
+membership-validity interval. Rank 18 completed one bounded Alpaca/Benzinga US
+article-metadata source slice with exact symbol association, source timestamps,
+pagination, rights, and content-bound page receipts while withholding article
+material and making no event, sentiment, impact, catalyst, or absence claim.
+Exactly one next item is active: rank-19 `pi_portfolio`, Designing the bounded
+raw import/inspection slice authorized by Session 21 in response to
+`/tmp/QA04.md`. Full portfolio review and full `CG-DAY` remain gated.
 
 Depth resumes only for a named professional-task information gap, inefficient
 LLM context, a missing shared receipt needed by two consumers, a risky effect
@@ -265,7 +273,7 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
 | `CG-SWING` **(Resolved — 2026-08-06)** | Phase 4, Week 13 “Swing Trading System” and Week 16 “Strategy Integration” | Walk one complete weekly-to-daily workflow: universe, sector/regime/catalyst context, setup and confirmation, entry/stop/target/expiry, sizing/scaling, monitoring, exits, invalidation and journal review; distinguish required evidence from preferences. | `finance_strategy` completed-daily-bar slice, `pi_swing_workbench`, the next sprint |
 | `CG-DAY` **(Execution-information slice Resolved — 2026-08-07; full intraday workflow Open)** | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Define pre-market, auction, opening-range, intraday and close workflows; permissible data latency; spread/depth/tape use; overtrading controls; order choice; partial/non-fill, gap, latency, impact and queue uncertainty; and track-specific stop/order availability. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench` |
 | `CG-QUANT` **(Shared-replay information slice Resolved — 2026-08-07)** | Phase 4, Week 15 “Quantitative Approaches” | Specify the research protocol: falsifiable hypothesis, point-in-time universe/data availability, adjustments, feature/signal versioning, fill/cost model, train/validation/test and walk-forward design, multiple testing, uncertainty/significance, robustness, benchmarks and reproducible run acceptance. | `finance_replay`, `pi_quant_research`, `pi_backtest`, factor lab and event study |
-| `CG-PORTFOLIO` **(Light calculation slice Resolved — 2026-08-09; full workflow Open)** | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | The resolved slice defines exact long-only single-currency exposure, weight, signed heat, selected denominators, contributions, partiality, temporal coherence, duplication, reconciliation, and the LLM judgment boundary. Full portfolio construction/review must still define diversification, correlation regimes, rebalance/cash-flow rules, leverage/liquidity/currency exposure, VaR/CVaR, stress, and drawdown response without false precision. | `pi_portfolio_risk` light slice; later portfolio, scenarios, attribution and rebalance proposals |
+| `CG-PORTFOLIO` **(Light calculation and raw import/inspection slices Resolved — 2026-08-09; full review Open)** | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | Sessions 18 and 21 define exact supplied-fact risk calculations plus bounded caller-file snapshot/account/position identity, information states, currencies, reconciliation, source time, privacy, and compact drill-down. Durable comparison, broker retrieval, FX aggregation, diversification, correlation regimes, rebalance/cash-flow rules, leverage/liquidity/currency analysis, VaR/CVaR, stress, attribution, and drawdown response remain later depth without false precision. | `pi_portfolio_risk`; rank-19 `pi_portfolio` import slice; later scenarios, attribution and rebalance proposals |
 | `CG-LIVE` | Phase 6, Weeks 21–24+ “Live Trading” | Define readiness evidence for paper-to-micro-live transition, broker/account criteria, size-increase and stop conditions, execution and emotion review, incident handling and rollback; this augments rather than weakens the separate security review. | paper-broker acceptance and any live-broker design |
 
 #### CG-MARKET-DATA resolution — 2026-08-07
@@ -511,6 +519,33 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
   liquidity, stress, VaR/CVaR, optimization, and rebalancing remain outside the
   resolved slice.
 
+#### CG-PORTFOLIO raw import/inspection resolution — 2026-08-09
+
+- **Evidence:** trading-course
+  [Session 21](../trading-course/sessions/21_cg_portfolio_import_inspection_contract_20260809.md),
+  written in response to `/tmp/QA04.md` and independently authorizing the
+  rank-19 import slice before full portfolio review.
+- **Reviewed scope:** strict bounded local CSV/JSON decoding into immutable
+  snapshot/account/position facts; explicit null/blank/absent/unavailable/
+  decode-failure states; exact track/listing/currency/time/source lexemes;
+  duplicate/conflict and unsupported-row preservation; privacy redaction;
+  per-currency mechanical values and reconciliation; compact summary and
+  bounded row drill-down.
+- **Controlling boundary:** the source file and content hash authenticate no
+  broker or fact. The implementation infers no track, listing, currency, FX,
+  aggregation, portfolio sufficiency, review conclusion, recommendation,
+  rebalance, or next operation. Its bounded in-memory lookup is session-local
+  only and satisfies the drill-down contract without durable storage.
+- **Initial implementation:** [`portfolio`](plugins/portfolio/README.md)
+  registers `portfolio_import`, `portfolio_summary`, and
+  `portfolio_positions`. Eight pure tests and seven bundled-boundary scenarios
+  cover decoding, budgets, identity, information states, conflicts,
+  reconciliation, regular-file/UTF-8/symlink safety, cancellation, privacy,
+  idempotence, ephemeral lookup, and no writes; warnings-as-errors,
+  architecture, artifact, installed-Pi, and full-regression gates pass. Broker
+  retrieval, durable comparison, FX aggregation, full review, optimization,
+  attribution, and rebalance remain outside this resolved slice.
+
 #### CG-FUNDAMENTAL minimum dossier resolution — 2026-08-09
 
 - **Evidence:** trading-course
@@ -558,6 +593,33 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
   remain later slices. Five adapter tests, five plugin tests, two synthetic-PDF
   boundary tests, and five bundled scenarios cover the implemented contract;
   architecture, artifact, installed-Pi smoke, and full-regression gates pass.
+
+#### Alpaca/Benzinga news metadata source contract — 2026-08-09
+
+- **Evidence:** Alpaca's current News API reference, historical-news source
+  description, and terms were reviewed before implementation. The reference
+  exposes bounded symbol/time filtering, ascending `updated_at` ordering,
+  pagination, and content inclusion controls; Alpaca identifies Benzinga as the
+  current source.
+- **Reviewed scope:** one exact caller-declared US symbol and inclusive UTC
+  interval, provider article ID, headline, author, exact created/updated time
+  lexemes, canonical URL, all provider symbol associations, exact
+  `source=benzinga`, pagination, request ID when supplied, response length and
+  SHA-256 hash, and whether withheld content classes existed.
+- **Controlling boundary:** the slice returns metadata only. It does not return
+  summaries, bodies, or image URLs; authenticate a listing or venue; infer a
+  correction lineage; deduplicate or cluster; verify an event; score sentiment
+  or impact; classify a catalyst; claim absence or completeness; recommend; or
+  choose a next operation. Rights are declared as local personal/noncommercial
+  use, with redistribution requiring the caller to establish permission.
+- **Initial implementation:**
+  [`finance_market_alpaca`](finance/finance_market_alpaca/README.md) owns the
+  exact bounded request and fail-closed decoder.
+  [`finance_news`](plugins/finance_news/README.md) registers only
+  `finance_news`, enforces pagination/article budgets and cancellation, and
+  emits content-bound page receipts. Seventeen adapter tests, four pure plugin
+  tests, six bundled-boundary scenarios, architecture, artifact, and installed-
+  Pi gates plus full repository regression cover the implemented contract.
 
 #### CG-SWING resolution — 2026-08-06
 
@@ -703,6 +765,6 @@ Read phases in order for a full audit. They are categories, not permission to
 skip dependencies: an item in a later file still depends on all applicable R0
 contracts, track-specific evidence gates, and course-demand stops. New detailed
 proposals go in the appropriate phase file and must be linked from this index if
-they change a phase's scope. [`R2.md`](R2.md#active-delivery-ledger--2026-08-07)
+they change a phase's scope. [`R2.md`](R2.md#active-delivery-ledger--2026-08-09)
 is the active work ledger; the other files should not grow duplicate status
 lists.

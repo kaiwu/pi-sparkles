@@ -4,11 +4,12 @@ import finance_market_alpaca
 import finance_market_alpaca/assets
 import finance_market_alpaca/bars
 import finance_market_alpaca/corporate_actions
+import finance_market_alpaca/news
 import finance_market_alpaca/query
 import finance_market_alpaca/quotes
 import finance_market_alpaca/request as provider_request
 import gleam/list
-import gleam/option.{Some}
+import gleam/option.{None, Some}
 import gleam/string
 import gleeunit
 import gleeunit/should
@@ -88,6 +89,94 @@ pub fn latest_quote_request_has_explicit_feed_and_small_response_budget_test() {
   request.safe_key(value)
   |> string.contains("secret-key")
   |> should.be_false
+}
+
+pub fn news_query_requires_exact_utc_range_symbol_and_budgets_test() {
+  let assert Ok(value) =
+    news.query(
+      "AAPL",
+      "2026-07-01T00:00:00Z",
+      "2026-07-31T23:59:59.999Z",
+      50,
+      2,
+      80,
+    )
+  value.symbol |> should.equal("AAPL")
+  value.maximum_articles |> should.equal(80)
+
+  news.query("aapl", "2026-07-01T00:00:00Z", "2026-07-02T00:00:00Z", 50, 2, 80)
+  |> should.equal(Error(news.InvalidSymbol))
+  news.query(
+    "AAPL",
+    "2026-07-01T00:00:00+08:00",
+    "2026-07-02T00:00:00Z",
+    50,
+    2,
+    80,
+  )
+  |> should.equal(Error(news.InvalidStartTimestamp))
+  news.query("AAPL", "2026-01-01T00:00:00Z", "2026-02-02T00:00:00Z", 50, 2, 80)
+  |> should.equal(Error(news.RangeTooLarge))
+}
+
+pub fn news_request_is_metadata_only_ascending_bounded_and_secret_test() {
+  let plan = news_plan()
+  let assert Ok(value) = provider_request.news(access(), plan, 20, Some("next"))
+  request.path(value) |> should.equal(provider_request.news_path)
+  request.maximum_response_bytes(value) |> should.equal(2_000_000)
+  [
+    request.QueryParameter("start", plan.start_at, request.Public),
+    request.QueryParameter("end", plan.end_at, request.Public),
+    request.QueryParameter("sort", "asc", request.Public),
+    request.QueryParameter("symbols", "AAPL", request.Public),
+    request.QueryParameter("limit", "20", request.Public),
+    request.QueryParameter("include_content", "false", request.Public),
+    request.QueryParameter("exclude_contentless", "false", request.Public),
+    request.QueryParameter("page_token", "next", request.Public),
+  ]
+  |> list.all(fn(expected) { request.query(value) |> list.contains(expected) })
+  |> should.be_true
+  request.safe_key(value)
+  |> string.contains("secret-key")
+  |> should.be_false
+}
+
+pub fn news_decoder_preserves_metadata_and_withholds_text_payload_shape_test() {
+  let body =
+    "{\"news\":[{\"id\":101,\"headline\":\"Exact headline\",\"summary\":\"Licensed summary\",\"author\":\"Benzinga Newsdesk\",\"created_at\":\"2026-07-02T10:00:00.123456Z\",\"updated_at\":\"2026-07-02T10:01:00Z\",\"url\":\"https://www.benzinga.com/news/101\",\"symbols\":[\"AAPL\",\"MSFT\"],\"source\":\"benzinga\",\"images\":[{\"size\":\"small\",\"url\":\"https://example.test/image\"}]}],\"next_page_token\":null}"
+  let assert Ok(page) = news.decode_page(body, news_plan(), 10)
+  let assert [article] = page.articles
+  article.id |> should.equal(101)
+  article.headline |> should.equal("Exact headline")
+  article.created_at |> should.equal("2026-07-02T10:00:00.123456Z")
+  article.summary_present |> should.be_true
+  article.content_present |> should.be_false
+  article.image_count |> should.equal(1)
+  page.next_page_token |> should.equal(None)
+}
+
+pub fn news_decoder_fails_closed_on_source_identity_order_and_shape_test() {
+  let wrong_source =
+    "{\"news\":[{\"id\":101,\"headline\":\"Exact headline\",\"author\":\"Desk\",\"created_at\":\"2026-07-02T10:00:00Z\",\"updated_at\":\"2026-07-02T10:01:00Z\",\"url\":\"https://example.test/101\",\"symbols\":[\"AAPL\"],\"source\":\"unknown\"}],\"next_page_token\":null}"
+  news.decode_page(wrong_source, news_plan(), 10)
+  |> should.equal(Error(news.UnexpectedSource(101, "unknown")))
+
+  let missing_symbol =
+    string.replace(wrong_source, "\"AAPL\"", "\"MSFT\"")
+    |> string.replace("\"unknown\"", "\"benzinga\"")
+  news.decode_page(missing_symbol, news_plan(), 10)
+  |> should.equal(Error(news.MissingQuerySymbol(101)))
+
+  let unknown_shape =
+    string.replace(
+      string.replace(wrong_source, "\"unknown\"", "\"benzinga\""),
+      "\"next_page_token\":null",
+      "\"next_page_token\":null,\"unexpected\":true",
+    )
+  case news.decode_page(unknown_shape, news_plan(), 10) {
+    Error(news.InvalidJson(_)) -> Nil
+    _ -> should.fail()
+  }
 }
 
 pub fn asset_universe_request_keeps_environment_filters_and_budget_explicit_test() {
@@ -388,6 +477,19 @@ fn asset_plan(maximum_assets: Int) -> query.AssetUniverseQuery {
       query.Active,
       query.Nasdaq,
       maximum_assets,
+    )
+  value
+}
+
+fn news_plan() -> news.Query {
+  let assert Ok(value) =
+    news.query(
+      "AAPL",
+      "2026-07-01T00:00:00Z",
+      "2026-07-31T23:59:59.999Z",
+      50,
+      2,
+      80,
     )
   value
 }

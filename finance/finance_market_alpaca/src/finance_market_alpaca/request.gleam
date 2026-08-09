@@ -4,6 +4,7 @@ import finance_market_alpaca.{type Access}
 import finance_market_alpaca/corporate_actions.{
   type Query as CorporateActionsQuery,
 }
+import finance_market_alpaca/news.{type Query as NewsQuery}
 import finance_market_alpaca/query.{
   type AssetUniverseQuery, type DailyBarsQuery, type LatestQuoteQuery,
 }
@@ -22,6 +23,8 @@ pub const latest_quotes_path = "/v2/stocks/quotes/latest"
 pub const assets_path = "/v2/assets"
 
 pub const corporate_actions_path = "/v1/corporate-actions"
+
+pub const news_path = "/v1beta1/news"
 
 pub type RequestError {
   InvalidPageLimit
@@ -230,6 +233,50 @@ pub fn corporate_actions(
     corporate_actions.data_quality_name(plan.data_quality),
   ))
   use value <- result.try(public_query(value, "sort", "asc"))
+  use value <- result.try(case page_token {
+    None -> Ok(value)
+    Some(token) -> public_query(value, "page_token", token)
+  })
+  finance_market_alpaca.authorize(access, value)
+  |> result.map_error(InvalidAccess)
+}
+
+pub fn news(
+  access: Access,
+  plan: NewsQuery,
+  page_limit page_limit: Int,
+  page_token page_token: Option(String),
+) -> Result(request.Request, RequestError) {
+  use Nil <- result.try(case page_limit >= 1 && page_limit <= plan.page_size {
+    True -> Ok(Nil)
+    False -> Error(InvalidPageLimit)
+  })
+  use Nil <- result.try(validate_page_token(page_token))
+  let assert Ok(timeout) = time.duration(15_000)
+  use base <- result.try(
+    request.new(request.Get, origin, news_path, None)
+    |> result.map_error(InvalidHttp),
+  )
+  use bounded <- result.try(
+    request.with_limits(
+      base,
+      timeout: timeout,
+      maximum_response_bytes: 2_000_000,
+    )
+    |> result.map_error(InvalidHttp),
+  )
+  use value <- result.try(public_header(bounded, "Accept", "application/json"))
+  use value <- result.try(public_query(value, "start", plan.start_at))
+  use value <- result.try(public_query(value, "end", plan.end_at))
+  use value <- result.try(public_query(value, "sort", "asc"))
+  use value <- result.try(public_query(value, "symbols", plan.symbol))
+  use value <- result.try(public_query(
+    value,
+    "limit",
+    int.to_string(page_limit),
+  ))
+  use value <- result.try(public_query(value, "include_content", "false"))
+  use value <- result.try(public_query(value, "exclude_contentless", "false"))
   use value <- result.try(case page_token {
     None -> Ok(value)
     Some(token) -> public_query(value, "page_token", token)

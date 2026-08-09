@@ -3,8 +3,8 @@
 Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `finance_market_alpaca` is a credentialed, read-only adapter for Alpaca's US
-historical stock-bars, latest stock-quotes, asset-master, and current v1
-corporate-actions endpoints. The bars
+historical stock-bars, latest stock-quotes, asset-master, current v1
+corporate-actions, and v1beta1 news endpoints. The bars
 slice supports one exact symbol, `1Day`, ascending order, USD prices, and `raw`
 adjustment only. The quote slice supports one exact symbol, USD, and an explicit
 feed. The asset slice exposes provider rows for one caller-selected paper/live
@@ -40,11 +40,20 @@ unrequested or unsupported returned action group, and does not treat `process_da
 effective date, announcement time, or correction time. Alpaca warns that action
 creation can be delayed; successful retrieval is not a completeness claim.
 
+The news slice requires one uppercase symbol, a canonical UTC interval no wider
+than 31 days, and explicit page/article budgets. Requests force ascending
+update-time order and `include_content=false`. The decoder retains exact
+headline, author, timestamp, URL, and symbol-association metadata, requires the
+currently documented `benzinga` source, checks exact query-symbol correlation,
+and rejects response-shape, time-order, or pagination drift. The consuming
+shell does not export article summaries, bodies, or image URLs.
+
 Provider decision for the initial US OHLCV slice:
 
 - endpoint: <https://docs.alpaca.markets/us/reference/stockbars>;
 - corporate-actions endpoint:
   <https://docs.alpaca.markets/us/reference/corporateactions-1>;
+- news endpoint: <https://docs.alpaca.markets/us/reference/news-3>;
 - asset endpoint: <https://docs.alpaca.markets/us/reference/get-v2-assets-1>;
 - feed scope: IEX is exchange-specific and SIP is consolidated US-exchange
   coverage; they are never presented as equivalent;
@@ -61,7 +70,7 @@ Provider decision for the initial US OHLCV slice:
 - adjustment: raw only; splits, dividends, spin-offs, and combined provider
   adjustments remain later contracts.
 
-The focused suite has 13 passing tests. This package does not import Pi, choose
+The focused suite has 17 passing tests. This package does not import Pi, choose
 a default feed or trading environment, cache data, fall back between origins,
 classify absent sessions, infer a primary listing venue, rank an asset, or claim
 real-time coverage.
