@@ -2,6 +2,8 @@ import finance_authority_snapshot/artifact
 import finance_core/source
 import finance_core/time
 import finance_hkex
+import finance_hkex/board_meeting
+import finance_hkex/board_meeting_runtime
 import finance_hkex/current_security_reference
 import finance_hkex/discovery_runtime
 import finance_hkex/full_list
@@ -257,6 +259,79 @@ pub fn recent_listing_decoder_rejects_header_and_duplicate_drift_test() {
   |> should.equal(Error(recent_listing.DuplicateCode("03308")))
 }
 
+pub fn board_meeting_request_runtime_and_decoder_preserve_raw_rows_test() {
+  let assert Ok(access) =
+    finance_hkex.access("pi-sparkles/0.1", "research@example.com")
+  let assert Ok(request_value) =
+    request.board_meetings(access, finance_hkex.MainBoard)
+  let assert Ok(page) =
+    board_meeting.decode(board_meeting_fixture(), finance_hkex.MainBoard)
+  let assert [first, second] = page.events
+
+  http_request.method(request_value) |> should.equal(http_request.Get)
+  http_request.origin(request_value)
+  |> should.equal("https://www3.hkexnews.hk")
+  http_request.path(request_value)
+  |> should.equal("/reports/bmn/ebmn.htm")
+  http_request.maximum_response_bytes(request_value) |> should.equal(2_000_000)
+  time.duration_milliseconds(http_request.timeout(request_value))
+  |> should.equal(30_000)
+  board_meeting_runtime.new(access) |> should.be_ok
+  time.date_parts(page.page_date) |> should.equal(#(2026, 8, 6))
+  page.board |> should.equal(finance_hkex.MainBoard)
+  first.source_code |> should.equal("743")
+  first.code |> should.equal("00743")
+  first.short_name |> should.equal("ASIA CEMENT CH")
+  first.purpose |> should.equal("INT RES/DIV")
+  first.period |> should.equal("6-MTH-ENDED30/06/26")
+  second.source_code |> should.equal("80016")
+  second.code |> should.equal("80016")
+}
+
+pub fn board_meeting_capture_binds_scope_and_page_content_test() {
+  let fixture = board_meeting_fixture()
+  let changed = string.replace(fixture, "INT RES/DIV", "DIVIDEND")
+  let assert Ok(response_value) = html_response(fixture)
+  let assert Ok(changed_response) = html_response(changed)
+  let assert Ok(captured) =
+    board_meeting.capture(finance_hkex.MainBoard, response_value, instant(1000))
+  let assert Ok(changed_capture) =
+    board_meeting.capture(
+      finance_hkex.MainBoard,
+      changed_response,
+      instant(1000),
+    )
+
+  captured.source_reference
+  |> should.equal("https://www3.hkexnews.hk/reports/bmn/ebmn.htm")
+  captured.response_byte_length |> should.equal(string.byte_size(fixture))
+  captured.content_sha256 |> string.length |> should.equal(64)
+  captured.canonical_digest |> string.length |> should.equal(64)
+  captured.canonical_digest
+  |> should.not_equal(changed_capture.canonical_digest)
+}
+
+pub fn board_meeting_decoder_rejects_semantic_and_header_drift_test() {
+  board_meeting.decode(
+    board_meeting_fixture()
+      |> string.replace("This list may not be exhaustive", "Complete list"),
+    finance_hkex.MainBoard,
+  )
+  |> should.equal(Error(board_meeting.InvalidEnvelope))
+  board_meeting.decode(
+    board_meeting_fixture()
+      |> string.replace(">Purpose</font>", ">Agenda</font>"),
+    finance_hkex.MainBoard,
+  )
+  |> should.equal(Error(board_meeting.HeaderMismatch))
+  board_meeting.decode(
+    board_meeting_fixture()
+      |> string.replace("07/08/2026", "2026-08-07"),
+    finance_hkex.MainBoard,
+  )
+  |> should.equal(Error(board_meeting.InvalidEventRow))
+}
+
 pub fn current_security_reference_binds_exact_response_and_unknown_claims_test() {
   let fixture =
     "pi_sparkles({\"more\":\"1\",\"stockInfo\":[{\"stockId\":7609,\"code\":\"00700\",\"name\":\"TENCENT\"}]});"
@@ -404,6 +479,52 @@ fn recent_listing_fixture(action: String) -> String {
   <> recent_listing_row("30/07/2026", "ZJ INNOLIGHT", "03308", action)
   <> "</tbody></table>* Being the tentative date of&nbsp;listing / traded"
   <> "<p class=\"loadMore__timetag\">Updated 06 Aug 2026</p></html>"
+}
+
+fn board_meeting_fixture() -> String {
+  "<html><span id=\"Title2\">Board Meeting Notifications</span>"
+  <> "<font class=textfont><br/>Date : 06/08/2026<br/><br/>"
+  <> "The following table is a consolidated list of board meeting dates<br/>announced by listed issuers.  This list may not be exhaustive<br/>and is for reference only."
+  <> "<br/>Note: only the start date of the board meeting will be updated</font>"
+  <> "<table class=textfont><tr><td><font>BM Date</font></td>"
+  <> "<td><font></font></td><td><font>Stock Short Name<td><font>&nbsp;Code</font></td>"
+  <> "<td><font>Purpose</font></td><td><font>Period</font></td></font></td></tr>"
+  <> board_meeting_row(
+    "07/08/2026",
+    "ASIA CEMENT CH",
+    "743",
+    "INT RES/DIV",
+    "6-MTH-ENDED30/06/26",
+  )
+  <> board_meeting_row(
+    "10/09/2026",
+    "SHK PPT-R",
+    "80016",
+    "FIN RES/DIV",
+    "Y.E.30/06/26",
+  )
+  <> "</table></html>"
+}
+
+fn board_meeting_row(
+  date: String,
+  name: String,
+  code: String,
+  purpose: String,
+  period: String,
+) -> String {
+  "<tr><td width=75 valign=top><font>"
+  <> date
+  <> "</font></td><td width=30 valign=top align=right><font></font></td>"
+  <> "<td width=120 valign=top><font>"
+  <> name
+  <> "</font></td><td width=50 valign=top><font>&nbsp;"
+  <> code
+  <> "</font></td><td width=140 valign=top><font>"
+  <> purpose
+  <> "</font></td><td valign=top><font>"
+  <> period
+  <> "</font></td></tr>"
 }
 
 fn recent_listing_header(value: String) -> String {

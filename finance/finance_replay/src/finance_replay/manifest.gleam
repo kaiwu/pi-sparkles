@@ -898,7 +898,7 @@ fn provenance_decoder() -> decode.Decoder(Provenance) {
 
 fn membership_state_json(value: MembershipState) -> json.Json {
   case value {
-    MembershipKnown -> tagged("known")
+    MembershipKnown -> json.object([#("state", json.string("known"))])
     MembershipUnknown(reason) ->
       json.object([
         #("state", json.string("unknown")),
@@ -1094,8 +1094,32 @@ pub fn dataset_digest(value: DatasetManifest) -> Sha256 {
   value.digest
 }
 
+pub fn dataset_manifest_id(value: DatasetManifest) -> String {
+  value.manifest_id
+}
+
+pub fn dataset_version(value: DatasetManifest) -> String {
+  value.version
+}
+
+pub fn dataset_provider(value: DatasetManifest) -> String {
+  value.provider
+}
+
+pub fn dataset_source(value: DatasetManifest) -> String {
+  value.source
+}
+
+pub fn dataset_coverage(value: DatasetManifest) -> Interval {
+  value.coverage
+}
+
 pub fn dataset_observations(value: DatasetManifest) -> List(ObservationHandle) {
   value.observations
+}
+
+pub fn dataset_limitations(value: DatasetManifest) -> List(String) {
+  value.limitations
 }
 
 pub fn dataset_track(value: DatasetManifest) -> Track {

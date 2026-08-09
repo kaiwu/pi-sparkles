@@ -52,9 +52,10 @@ repository currently contains:
   page projection, without changing or synthesizing bars;
 - an exact US latest best-bid-and-ask slice in `us_quote`, using explicit
   Alpaca IEX/SIP selection and the provider-neutral `finance_quote` envelope;
-- an information-only `stock_screener` acquisition slice that returns bounded
-  exact Alpaca US-equity asset-master rows and content hashes for explicit
-  paper/live, status, and exchange inputs, without screening or ranking;
+- a `stock_screener` package that preserves its bounded Alpaca US asset-master
+  acquisition and adds a stateless cross-track `screen` calculation over exact
+  caller-supplied universe/dataset manifests and decimal predicate facts,
+  returning matched, not-matched, and unresolved relations without ranking;
 - a stateless `stock_technicals` calculation shell that returns explicitly
   requested SMA, Wilder RSI, and Wilder ATR facts plus content-bound receipts
   over exact caller-supplied series, without interpretation or parameter choice;
@@ -64,6 +65,39 @@ repository currently contains:
 - a stateless `trade_plan` calculation shell that returns exact long planned
   loss, independent amount-over-denominator bounds, supplied-grid projections,
   and only explicitly requested intersections without choosing a quantity;
+- a stateless `order_simulator` execution-information shell that returns every
+  compatible `bar_possible_paths_v1` fill/non-fill branch for one exact desired
+  limit order and supplied completed-daily bar, without predicting a fill;
+- a stateless `finance_dataset` inspection shell that verifies exact canonical
+  `finance_replay` dataset manifests, summarizes fact states and supplied
+  `finance_ohlcv` omissions, drills exact listing/date metadata, and pages every
+  supplied vintage without choosing a source, correction, cutoff, or repair;
+- a stateless shared `finance_calendar` shell that inspects exact 2026
+  CN/HK/US venue sessions and ordered local phases, pages published full
+  closures without calling weekends holidays, and finds the next covered open
+  date without venue or track fallback, scheduling, alerts, or decisions;
+- a stateless `quant_research` shell that reconstructs exact caller-declared
+  `finance_replay` trial ledgers, runs only the explicitly requested core
+  metric, and mechanically compares two canonical run definitions and supplied
+  outputs without search, optimization, significance claims, or a preferred run;
+- a stateless `backtest` shell that verifies canonical run definitions and
+  ordered event scripts, executes the bounded completed-daily
+  `finance_replay` interpreter, pages only retained events, and exports
+  definition-bound reproduction manifests plus bounded event JSONL without a
+  queue, storage effect, parameter search, or research verdict;
+- a stateless `finance_charts` view shell that validates exact cross-track
+  completed-daily OHLCV, already-calculated indicator, trade, gap, adjustment,
+  unit, cutoff, and receipt facts, then returns a deterministic PNG plus exact
+  structured and `finance_table` fallbacks without analytics or interpretation;
+- a read-only `stock_earnings_calendar` HK source slice that captures the exact
+  Main Board or GEM Board Meeting Notifications page and returns result-related
+  issuer-announced meeting start dates while retaining excluded exact-code rows
+  and refusing to call a meeting date a publication timestamp;
+- a read-only `stock_corporate_actions` US source slice that retrieves exact
+  Alpaca cash/stock dividends, forward/reverse splits, and name changes over an
+  explicit process-date range, preserving numeric lexemes, identity
+  transitions, duplicates, pagination, unknowns, and page hashes without venue
+  authentication, adjustment, impact, or completeness claims;
 - a network-free `stock_research_report` compositor that validates exact
   Alpaca/SEC receipts and renders a deterministic US source-fact brief;
 - a track-safe `watchlist` workflow plugin with exact listing keys, bounded
@@ -309,6 +343,7 @@ Eastmoney access, and neither configuration is accepted as HKEX or US authority.
 | Plugin | Required variables | Optional variables | Notes |
 | --- | --- | --- | --- |
 | `hk_disclosures` | `HKEX_USER_AGENT_CONTACT` | `HKEX_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-disclosures/0.1`; the same identity covers its HKEXnews searches, HKEX Full List workbook, and rolling current-two-week listing-event page. |
+| `stock_earnings_calendar` | `HKEX_USER_AGENT_CONTACT` | `HKEX_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-earnings-calendar/0.1`; the first slice reads only the exact HKEX Main Board or GEM Board Meeting Notifications page selected by the caller. |
 | `hk_market_data` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-market-data/0.1`. |
 | `hk_fundamentals` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-fundamentals/0.1`. |
 | `hk_ohlcv` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-ohlcv/0.1`. |
@@ -317,7 +352,8 @@ Eastmoney access, and neither configuration is accepted as HKEX or US authority.
 
 Eastmoney variables are shared at the provider layer across CN and HK, but a
 configured caller identity never permits cross-track fallback or relabelling.
-HKEX configuration applies only to the HK disclosure plugin.
+HKEX configuration applies only to the HK disclosure and earnings-calendar
+plugins; it never enables CN or US source access.
 
 ### US track
 
@@ -332,9 +368,16 @@ HKEX configuration applies only to the HK disclosure plugin.
 | `us_quote` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-quote/0.1`; feed entitlement and recency depend on the requested IEX/SIP feed and account. |
 | `us_ohlcv` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-ohlcv/0.1`; feed entitlement still depends on the Alpaca account and requested IEX/SIP feed. |
 | `stock_screener` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-screener/0.1`; `stock_universe` uses the explicitly selected paper/live Trading API environment and returns provider rows without interpreting capability flags. |
+| `stock_corporate_actions` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-corporate-actions/0.1`; the first slice fixes `region=us`, explicit Alpaca process-date/data-quality/action-type filters, and caller-visible page/action budgets. |
 | `stock_technicals` | None | None | Stateless calculation-only shell over exact caller/LLM-supplied observations and receipts; every formula, parameter, policy, and projection is explicit. |
 | `finance_sources` | None | None | Stateless read-only shell over an exact caller/LLM-supplied provenance catalogue; it performs no hidden capture, fetch, verification, or persistence. |
 | `trade_plan` | None | None | Stateless calculation-only shell over exact caller/LLM-supplied account, policy, price, and trade-unit facts; it performs no account lookup, plan persistence, execution, or quantity choice. |
+| `order_simulator` | None | None | Stateless simulation-only shell over one exact desired instruction, caller-supplied completed-daily bar and capability fact; it performs no provider, broker, persistence, paper, or live mutation effect. |
+| `finance_dataset` | None | None | Stateless read-only shell over one exact caller-supplied canonical dataset manifest, OHLCV gap projection, and receipt-root list; it performs no registry lookup, fetch, storage, vintage choice, or data repair. |
+| `finance_calendar` | None | None | Stateless read-only shell over the source-reviewed 2026 SSE/SZSE/BSE/HKEX/NYSE/Nasdaq calendar datasets; it performs no fetch, venue inference, sibling-track fallback, scheduling, alerting, or trading decision. |
+| `quant_research` | None | None | Stateless research-information shell over exact caller-supplied hypotheses, trial events, metric operands, canonical run definitions, and output receipts; it performs no fetch, persistence, search, optimization, model training, statistical conclusion, or deployment decision. |
+| `backtest` | None | None | Stateless local scripted-replay shell over exact caller-supplied canonical run definitions, events, budgets, cancellation, and reproduction metadata; it performs no fetch, queue, persistence, hidden clock/randomness, parameter search, verdict, or deployment decision. |
+| `finance_charts` | None | None | Stateless local view shell over exact caller-supplied OHLCV, already-calculated indicators, trades, gaps, and source context; it returns deterministic PNG and structured/table fallbacks without fetching, calculating, interpreting, or deciding. |
 
 The three SEC plugins share one fair-access identity. Alpaca credentials are a
 separate authority and never enable SEC tools or `finance_symbols`.
@@ -480,16 +523,24 @@ pi-sparkles/
 │   ├── hk_ohlcv_gaps/            network-free HK missing-row evidence join
 │   ├── hk_market_rules/          dated official HKEX rule profile
 │   ├── hk_setup/                 isolated Hong Kong capability preflight
+│   ├── finance_calendar/         exact cross-track session/holiday inspection
+│   ├── finance_charts/           deterministic PNG plus exact table/data view
+│   ├── finance_dataset/          exact manifest/observation/vintage inspection
 │   ├── finance_setup/            capability/configuration preflight
 │   ├── finance_track_status/     visible cn/hk/us state and switching
 │   ├── cn_fundamentals/          exact mainland vendor fundamental slice
 │   ├── hk_fundamentals/          exact Hong Kong vendor fundamental slice
+│   ├── order_simulator/          exact completed-daily compatible bar paths
+│   ├── quant_research/            exact trial, metric, and run-difference facts
+│   ├── backtest/                  bounded exact replay and reproduction export
 │   ├── finance_guardrails/       evidence and freshness policy
 │   ├── finance_sources/          exact provenance list/inspect/export facts
 │   ├── finance_symbols/          OpenFIGI v3 identity resolution
 │   ├── sec_edgar/                SEC company and recent filing metadata
 │   ├── sec_xbrl/                 exact SEC XBRL concept and fact evidence
 │   ├── stock_fundamentals/       audited direct-fact normalization
+│   ├── stock_corporate_actions/  exact bounded Alpaca US action facts
+│   ├── stock_earnings_calendar/  exact HKEX result-related meeting dates
 │   ├── stock_research_report/    deterministic cited US receipt composition
 │   ├── stock_screener/           exact Alpaca US asset-universe information
 │   ├── stock_technicals/          exact LLM-requested SMA/RSI/ATR facts

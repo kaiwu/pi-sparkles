@@ -74,6 +74,8 @@ pub fn send(
       && {
         request.path(request_value) == provider_request.bars_path
         || request.path(request_value) == provider_request.latest_quotes_path
+        || request.path(request_value)
+        == provider_request.corporate_actions_path
       }
     }
     || {

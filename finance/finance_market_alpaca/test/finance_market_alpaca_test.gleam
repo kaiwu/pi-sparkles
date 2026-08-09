@@ -3,6 +3,7 @@ import finance_http/request
 import finance_market_alpaca
 import finance_market_alpaca/assets
 import finance_market_alpaca/bars
+import finance_market_alpaca/corporate_actions
 import finance_market_alpaca/query
 import finance_market_alpaca/quotes
 import finance_market_alpaca/request as provider_request
@@ -218,6 +219,142 @@ pub fn decoder_rejects_symbol_range_order_and_page_overflow_test() {
   |> should.be_error
 }
 
+pub fn corporate_actions_query_and_request_are_exact_us_process_date_scope_test() {
+  corporate_actions.query(
+    "aapl",
+    "037833100",
+    civil(2024, 8, 1),
+    civil(2024, 8, 5),
+    [corporate_actions.CashDividendType],
+    corporate_actions.Complete,
+    100,
+    2,
+    200,
+  )
+  |> should.equal(Error(corporate_actions.InvalidSymbol))
+  corporate_actions.query(
+    "AAPL",
+    "037833100",
+    civil(2024, 8, 1),
+    civil(2024, 8, 5),
+    [
+      corporate_actions.CashDividendType,
+      corporate_actions.CashDividendType,
+    ],
+    corporate_actions.Complete,
+    100,
+    2,
+    200,
+  )
+  |> should.equal(
+    Error(corporate_actions.DuplicateType(corporate_actions.CashDividendType)),
+  )
+
+  let plan = corporate_plan(corporate_actions.All)
+  let assert Ok(value) =
+    provider_request.corporate_actions(access(), plan, 5, Some("page-two"))
+  request.origin(value) |> should.equal(provider_request.origin)
+  request.path(value) |> should.equal(provider_request.corporate_actions_path)
+  request.maximum_response_bytes(value) |> should.equal(5_000_000)
+  [
+    request.QueryParameter("symbols", "AAPL", request.Public),
+    request.QueryParameter("cusips", "037833100", request.Public),
+    request.QueryParameter(
+      "types",
+      "cash_dividend,stock_dividend,forward_split,reverse_split,name_change",
+      request.Public,
+    ),
+    request.QueryParameter("region", "us", request.Public),
+    request.QueryParameter("start", "2024-08-01", request.Public),
+    request.QueryParameter("end", "2024-08-05", request.Public),
+    request.QueryParameter("limit", "5", request.Public),
+    request.QueryParameter("data_quality", "all", request.Public),
+    request.QueryParameter("sort", "asc", request.Public),
+    request.QueryParameter("page_token", "page-two", request.Public),
+  ]
+  |> list.all(fn(expected) { request.query(value) |> list.contains(expected) })
+  |> should.be_true
+}
+
+pub fn corporate_actions_decoder_preserves_source_fields_and_numeric_lexemes_test() {
+  let assert Ok(page) =
+    corporate_actions.decode_page(
+      corporate_actions_fixture(),
+      corporate_plan(corporate_actions.All),
+      5,
+    )
+  page.next_page_token |> should.equal(Some("next-actions"))
+  let assert [cash] = page.cash_dividends
+  cash.id |> should.equal("cash-1")
+  cash.rate |> should.equal(Some("0.2400"))
+  cash.currency |> should.equal(Some("USD"))
+  cash.due_bill_on_date |> should.equal(Some("2024-08-01"))
+  let assert [stock] = page.stock_dividends
+  stock.rate |> should.equal(Some("0.050"))
+  let assert [forward] = page.forward_splits
+  forward.old_rate |> should.equal(Some("1"))
+  forward.new_rate |> should.equal(Some("4.000"))
+  let assert [reverse] = page.reverse_splits
+  reverse.symbol |> should.equal(Some("AAPL"))
+  reverse.new_symbol |> should.equal(Some("APLC"))
+  reverse.old_cusip |> should.equal(Some("037833100"))
+  reverse.new_cusip |> should.equal(Some("037833209"))
+  let assert [name_change] = page.name_changes
+  name_change.old_symbol |> should.equal(Some("AAPL"))
+  name_change.new_symbol |> should.equal(Some("APPL"))
+  name_change.currency |> should.equal(Some(""))
+}
+
+pub fn corporate_actions_decoder_rejects_drift_scope_and_budget_violations_test() {
+  let fixture = corporate_actions_fixture()
+  corporate_actions.decode_page(
+    fixture,
+    corporate_plan(corporate_actions.All),
+    4,
+  )
+  |> should.equal(Error(corporate_actions.TooManyActions(4, 5)))
+  corporate_actions.decode_page(fixture, cash_only_corporate_plan(), 5)
+  |> should.equal(
+    Error(corporate_actions.UnexpectedActionType(
+      corporate_actions.StockDividendType,
+    )),
+  )
+  corporate_actions.decode_page(
+    string.replace(fixture, "2024-08-01", "2024-8-1"),
+    corporate_plan(corporate_actions.All),
+    5,
+  )
+  |> should.be_error
+  corporate_actions.decode_page(
+    string.replace(fixture, "0.2400", "\"0.2400\""),
+    corporate_plan(corporate_actions.All),
+    5,
+  )
+  |> should.be_error
+  corporate_actions.decode_page(
+    string.replace(fixture, "2024-08-05", "2024-08-06"),
+    corporate_plan(corporate_actions.All),
+    5,
+  )
+  |> should.equal(Error(corporate_actions.ProcessDateOutsideRange))
+  corporate_actions.decode_page(
+    string.replace(fixture, "name_changes", "cash_mergers"),
+    corporate_plan(corporate_actions.All),
+    5,
+  )
+  |> should.be_error
+  corporate_actions.decode_page(
+    string.replace(
+      fixture,
+      "{\"corporate_actions\":",
+      "{\"metadata\":{},\"corporate_actions\":",
+    ),
+    corporate_plan(corporate_actions.All),
+    5,
+  )
+  |> should.be_error
+}
+
 fn access() -> finance_market_alpaca.Access {
   let assert Ok(value) =
     finance_market_alpaca.access(
@@ -255,6 +392,46 @@ fn asset_plan(maximum_assets: Int) -> query.AssetUniverseQuery {
   value
 }
 
+fn corporate_plan(
+  data_quality: corporate_actions.DataQuality,
+) -> corporate_actions.Query {
+  let assert Ok(value) =
+    corporate_actions.query(
+      "AAPL",
+      "037833100",
+      civil(2024, 8, 1),
+      civil(2024, 8, 5),
+      [
+        corporate_actions.CashDividendType,
+        corporate_actions.StockDividendType,
+        corporate_actions.ForwardSplitType,
+        corporate_actions.ReverseSplitType,
+        corporate_actions.NameChangeType,
+      ],
+      data_quality,
+      100,
+      2,
+      200,
+    )
+  value
+}
+
+fn cash_only_corporate_plan() -> corporate_actions.Query {
+  let assert Ok(value) =
+    corporate_actions.query(
+      "AAPL",
+      "037833100",
+      civil(2024, 8, 1),
+      civil(2024, 8, 5),
+      [corporate_actions.CashDividendType],
+      corporate_actions.Complete,
+      100,
+      2,
+      200,
+    )
+  value
+}
+
 fn civil(year: Int, month: Int, day: Int) -> time.Date {
   let assert Ok(value) = time.date(year, month, day)
   value
@@ -274,4 +451,8 @@ fn quote_fixture() -> String {
 
 fn asset_fixture() -> String {
   "[{\"id\":\"asset-aapl\",\"class\":\"us_equity\",\"exchange\":\"NASDAQ\",\"symbol\":\"AAPL\",\"name\":\"Apple Inc. Common Stock\",\"status\":\"active\",\"tradable\":true,\"marginable\":true,\"shortable\":true,\"easy_to_borrow\":true,\"fractionable\":true,\"attributes\":[\"has_options\"]},{\"id\":\"asset-msft\",\"class\":\"us_equity\",\"exchange\":\"NASDAQ\",\"symbol\":\"MSFT\",\"name\":\"Microsoft Corporation Common Stock\",\"status\":\"inactive\",\"tradable\":false,\"marginable\":false,\"shortable\":false,\"easy_to_borrow\":false,\"fractionable\":false}]"
+}
+
+fn corporate_actions_fixture() -> String {
+  "{\"corporate_actions\":{\"cash_dividends\":[{\"id\":\"cash-1\",\"symbol\":\"AAPL\",\"cusip\":\"037833100\",\"isin\":\"US0378331005\",\"rate\":0.2400,\"special\":false,\"foreign\":false,\"process_date\":\"2024-08-01\",\"ex_date\":\"2024-08-01\",\"record_date\":\"2024-08-02\",\"payable_date\":\"2024-08-08\",\"due_bill_on_date\":\"2024-08-01\",\"due_bill_off_date\":null,\"currency\":\"USD\",\"sub_type\":null}],\"stock_dividends\":[{\"id\":\"stock-1\",\"symbol\":\"AAPL\",\"cusip\":\"037833100\",\"rate\":0.050,\"process_date\":\"2024-08-02\",\"ex_date\":\"2024-08-02\"}],\"forward_splits\":[{\"id\":\"forward-1\",\"symbol\":\"AAPL\",\"cusip\":\"037833100\",\"old_rate\":1,\"new_rate\":4.000,\"process_date\":\"2024-08-03\",\"ex_date\":\"2024-08-03\"}],\"reverse_splits\":[{\"id\":\"reverse-1\",\"symbol\":\"AAPL\",\"new_symbol\":\"APLC\",\"old_cusip\":\"037833100\",\"new_cusip\":\"037833209\",\"old_rate\":10,\"new_rate\":1,\"process_date\":\"2024-08-04\",\"ex_date\":\"2024-08-04\"}],\"name_changes\":[{\"id\":\"name-1\",\"old_symbol\":\"AAPL\",\"new_symbol\":\"APPL\",\"old_cusip\":\"037833100\",\"new_cusip\":\"037833308\",\"process_date\":\"2024-08-05\",\"currency\":\"\"}]},\"next_page_token\":\"next-actions\"}"
 }

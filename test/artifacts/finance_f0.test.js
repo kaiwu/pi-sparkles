@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 
 for (const name of [
+  "backtest",
   "finance_setup",
+  "finance_calendar",
+  "finance_charts",
+  "finance_dataset",
   "finance_sources",
   "finance_track_status",
   "cn_setup",
@@ -21,11 +25,15 @@ for (const name of [
   "hk_ohlcv_gaps",
   "hk_fundamentals",
   "hk_market_rules",
+  "order_simulator",
+  "quant_research",
   "finance_guardrails",
   "finance_symbols",
   "sec_edgar",
   "sec_xbrl",
   "stock_fundamentals",
+  "stock_corporate_actions",
+  "stock_earnings_calendar",
   "stock_research_report",
   "stock_screener",
   "stock_technicals",

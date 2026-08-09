@@ -15,8 +15,10 @@ import pi
 import pi/raw
 import pi/schema
 import pi/tool
+import pi_sparkles_stock_screener/decode as screen_decode
 import pi_sparkles_stock_screener/domain
 import pi_sparkles_stock_screener/effect/environment
+import pi_sparkles_stock_screener/screen
 
 type Provider {
   Ready(access: finance_market_alpaca.Access, runtime: runtime.Runtime)
@@ -91,7 +93,28 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
       }
     },
   )
+  register_screen(api)
   promise.resolve(Nil)
+}
+
+fn register_screen(api: pi.ExtensionApi) -> Nil {
+  tool.register(
+    api,
+    "screen",
+    "Calculate exact caller-defined stock predicates",
+    "Verify caller-supplied canonical universe and dataset manifests, then calculate exact field-versus-constant decimal predicates over bounded dated rows with matched, not-matched, and unresolved facts and stable caller-selected paging",
+    "Supply every manifest, row, fact, receipt, predicate, relation policy, and page explicitly; the LLM alone interprets the mechanical relation and chooses any next operation",
+    tool.parameters(screen_schema(), screen_decode.screen()),
+    tool.Parallel,
+    fn(_id, input, _signal, _updates, _ctx) {
+      case screen.run(input) {
+        Ok(value) ->
+          tool.text_result(value.summary, value.details)
+          |> promise.resolve
+        Error(error) -> tool.reject(screen.error_message(error))
+      }
+    },
+  )
 }
 
 fn provider() -> Provider {
@@ -196,4 +219,185 @@ fn input_decoder() -> decode.Decoder(domain.Input) {
       decode.failure(placeholder, "valid exact Alpaca asset-universe input")
     }
   }
+}
+
+fn screen_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("context", screen_context_schema()),
+    schema.Required(
+      "predicates",
+      schema.array(predicate_schema()) |> schema.with_array_length(1, 20),
+    ),
+    schema.Required(
+      "rows",
+      schema.array(screen_row_schema()) |> schema.with_array_length(1, 2000),
+    ),
+    schema.Required(
+      "relation",
+      schema.object([
+        schema.Required(
+          "matchPolicy",
+          schema.string_enum(["all_predicates_observed_true_v1"]),
+        ),
+        schema.Required(
+          "unresolvedPolicy",
+          schema.string_enum(["preserve_unresolved_separately_v1"]),
+        ),
+      ]),
+    ),
+    schema.Required(
+      "page",
+      schema.object([
+        schema.Required(
+          "partition",
+          schema.string_enum([
+            "matched",
+            "not_matched",
+            "unresolved",
+            "all",
+          ]),
+        ),
+        schema.Required("offset", bounded_integer(0.0, 2000.0)),
+        schema.Required("limit", bounded_integer(1.0, 200.0)),
+      ]),
+    ),
+  ])
+}
+
+fn screen_context_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("instructionRef", hash_schema()),
+    schema.Required("track", schema.string_enum(["cn", "hk", "us"])),
+    schema.Required("dateStart", date_schema()),
+    schema.Required("dateEnd", date_schema()),
+    schema.Required(
+      "sourceCutoffUnixMilliseconds",
+      bounded_integer(0.0, 9_007_199_254_740_991.0),
+    ),
+    schema.Required("universe", canonical_manifest_schema("universe")),
+    schema.Required("dataset", canonical_manifest_schema("dataset")),
+    schema.Required(
+      "technicalReceiptRoots",
+      schema.array(hash_schema()) |> schema.with_array_length(0, 10_000),
+    ),
+  ])
+}
+
+fn canonical_manifest_schema(kind: String) -> schema.Schema {
+  schema.object([
+    schema.Required(
+      "manifestJson",
+      bounded_string(1, 10_000_000)
+        |> schema.described(
+          "Exact canonical finance_replay " <> kind <> " envelope bytes",
+        ),
+    ),
+    schema.Required("manifestHash", hash_schema()),
+  ])
+}
+
+fn predicate_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("id", bounded_string(1, 200)),
+    schema.Required(
+      "leftOperand",
+      schema.object([
+        schema.Required("kind", schema.string_enum(["field"])),
+        schema.Required("field", bounded_string(1, 200)),
+        schema.Required("unit", bounded_string(1, 200)),
+      ]),
+    ),
+    schema.Required(
+      "operator",
+      schema.string_enum([
+        "greater_than",
+        "greater_than_or_equal",
+        "less_than",
+        "less_than_or_equal",
+        "equal",
+        "not_equal",
+      ]),
+    ),
+    schema.Required(
+      "rightOperand",
+      schema.object([
+        schema.Required("kind", schema.string_enum(["constant"])),
+        schema.Required("raw", bounded_string(1, 4000)),
+        schema.Required("unit", bounded_string(1, 200)),
+      ]),
+    ),
+  ])
+}
+
+fn screen_row_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("listingId", bounded_string(1, 2000)),
+    schema.Required("mic", bounded_string(1, 50)),
+    schema.Required("observationDate", date_schema()),
+    schema.Required("observationId", bounded_string(1, 2000)),
+    schema.Required(
+      "values",
+      schema.array(screen_value_schema()) |> schema.with_array_length(0, 100),
+    ),
+  ])
+}
+
+fn screen_value_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("field", bounded_string(1, 200)),
+    schema.Required("unit", bounded_string(1, 200)),
+    schema.Required(
+      "sourceKind",
+      schema.string_enum(["dataset_observation", "technical_receipt"]),
+    ),
+    schema.Required(
+      "knownAtUnixMilliseconds",
+      bounded_integer(0.0, 9_007_199_254_740_991.0),
+    ),
+    schema.Required(
+      "evidenceRoots",
+      schema.array(hash_schema()) |> schema.with_array_length(1, 10_000),
+    ),
+    schema.Required("fact", screen_fact_schema()),
+  ])
+}
+
+fn screen_fact_schema() -> schema.Schema {
+  schema.object([
+    schema.Required(
+      "state",
+      schema.string_enum([
+        "known",
+        "unknown",
+        "not_obtained",
+        "not_applicable",
+        "decode_failure",
+        "conflicting",
+      ]),
+    ),
+    schema.Optional("raw", schema.nullable(bounded_string(1, 4000))),
+    schema.Optional("reason", schema.nullable(bounded_string(1, 2000))),
+    schema.Required(
+      "alternatives",
+      schema.array(bounded_string(1, 4000)) |> schema.with_array_length(0, 20),
+    ),
+  ])
+}
+
+fn date_schema() -> schema.Schema {
+  schema.string()
+  |> schema.with_string_length(10, 10)
+  |> schema.described("Canonical Gregorian YYYY-MM-DD")
+}
+
+fn hash_schema() -> schema.Schema {
+  schema.string() |> schema.with_string_length(64, 64)
+}
+
+fn bounded_string(minimum: Int, maximum: Int) -> schema.Schema {
+  schema.string() |> schema.with_string_length(minimum, maximum)
+}
+
+fn bounded_integer(minimum: Float, maximum: Float) -> schema.Schema {
+  schema.integer() |> schema.with_number_range(minimum, maximum)
 }

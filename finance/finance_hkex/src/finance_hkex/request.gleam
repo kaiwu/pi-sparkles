@@ -1,5 +1,5 @@
 import finance_core/time
-import finance_hkex.{type Access, type DocumentRef}
+import finance_hkex.{type Access, type Board, type DocumentRef}
 import finance_hkex/security_search.{type Query as SecurityQuery}
 import finance_hkex/title_search.{type Plan}
 import finance_http/request
@@ -13,6 +13,12 @@ pub const securities_origin = "https://www.hkex.com.hk"
 pub const full_list_path = "/eng/services/trading/securities/securitieslists/ListOfSecurities.xlsx"
 
 pub const recent_listings_path = "/Services/Trading/Securities/Trading-News/Newly-Listed-Securities"
+
+pub const board_meeting_origin = "https://www3.hkexnews.hk"
+
+pub const main_board_meetings_path = "/reports/bmn/ebmn.htm"
+
+pub const gem_board_meetings_path = "/reports/bmn/ebmngem.htm"
 
 pub const security_prefix_path = "/search/prefix.do"
 
@@ -72,6 +78,39 @@ pub fn recent_listings(
       accepted,
       timeout: timeout,
       maximum_response_bytes: 4_000_000,
+    )
+    |> result.map_error(InvalidHttp),
+  )
+  finance_hkex.authorize(access, bounded) |> result.map_error(InvalidAccess)
+}
+
+pub fn board_meetings(
+  access: Access,
+  board: Board,
+) -> Result(request.Request, RequestError) {
+  let assert Ok(timeout) = time.duration(30_000)
+  let path = case board {
+    finance_hkex.MainBoard -> main_board_meetings_path
+    finance_hkex.Gem -> gem_board_meetings_path
+  }
+  use base <- result.try(
+    request.new(request.Get, board_meeting_origin, path, None)
+    |> result.map_error(InvalidHttp),
+  )
+  use accepted <- result.try(
+    request.with_header(
+      base,
+      name: "Accept",
+      value: "text/html, application/xhtml+xml;q=0.9",
+      sensitivity: request.Public,
+    )
+    |> result.map_error(InvalidHttp),
+  )
+  use bounded <- result.try(
+    request.with_limits(
+      accepted,
+      timeout: timeout,
+      maximum_response_bytes: 2_000_000,
     )
     |> result.map_error(InvalidHttp),
   )

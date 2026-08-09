@@ -5,6 +5,10 @@ Experimental read-only adapter for [HKEXnews](https://www.hkexnews.hk/) and the
 It supports the public current-security prefix lookup, listed-company
 title-search page, exact PDF documents, and the official current Full List of
 Securities XLSX, plus HKEX's rolling current-two-week newly-listed/traded page.
+It also captures the separate Main Board and GEM Board Meeting Notifications
+pages, preserving the page date and every raw meeting date, short name, printed
+code, purpose, and period row. The normalized five-digit code is additive; the
+printed code remains controlling source data.
 Discovery, documents, the workbook, and recent listings use separate
 path-allowlisted runtimes. Security JSONP must use the pinned callback before
 JSON decoding; title-search and recent-listing HTML must satisfy fixture-tested
@@ -65,3 +69,8 @@ route is therefore bounded read-only local analysis only; redistribution,
 commercial products, and unrestricted caching remain unapproved.
 
 Normal tests use constructed responses and never make live requests.
+
+Board Meeting Notifications are explicitly non-exhaustive reference pages. A
+row proves only an issuer-announced board-meeting start date with its raw
+purpose and period. It is not an earnings publication timestamp, and a missing
+row is not proof that no meeting or results publication exists.

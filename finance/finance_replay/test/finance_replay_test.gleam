@@ -40,6 +40,14 @@ pub fn universe_and_dataset_manifests_round_trip_without_track_substitution_test
   |> should.equal(Ok(dataset))
   manifest.universe_track(universe) |> should.equal(finance_track.Cn)
   manifest.dataset_track(dataset) |> should.equal(finance_track.Cn)
+  manifest.dataset_manifest_id(dataset) |> should.equal("dataset-cn")
+  manifest.dataset_version(dataset) |> should.equal("1")
+  manifest.dataset_provider(dataset) |> should.equal("scripted")
+  manifest.dataset_source(dataset) |> should.equal("fixture")
+  manifest.dataset_coverage(dataset)
+  |> should.equal(manifest.Interval(date(2026, 1, 1), date(2026, 6, 30)))
+  manifest.dataset_limitations(dataset)
+  |> should.equal(["completed daily observations"])
 }
 
 pub fn partition_round_trip_and_reports_gap_mechanically_test() {
@@ -402,9 +410,31 @@ fn universe_manifest() -> manifest.UniverseManifest {
       sha("universe-source"),
       manifest.CallerDeclared,
       ["ten explicitly selected listings in the production fixture"],
-      [],
+      [known_membership()],
     )
   value
+}
+
+fn known_membership() -> manifest.Membership {
+  let assert Ok(interval) = manifest.open_interval(date(2020, 1, 1), None)
+  manifest.Membership(
+    "listing-cn-1",
+    "XSHG",
+    finance_track.Cn,
+    fact.Known("600000"),
+    fact.Known(interval),
+    interval,
+    fact.Known("common_stock"),
+    fact.Known(interval),
+    date(2020, 1, 1),
+    fact.NotApplicable("open membership"),
+    fact.Known(instant(80)),
+    fact.Known(instant(90)),
+    instant(100),
+    sha("membership-source"),
+    [],
+    manifest.MembershipKnown,
+  )
 }
 
 fn dataset_manifest() -> manifest.DatasetManifest {

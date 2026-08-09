@@ -64,6 +64,7 @@ const specs = {
 const universeSpec = {
   artifact: "stock_screener",
   toolName: "stock_universe",
+  registeredTools: ["stock_universe", "screen"],
   input: {
     environment: "paper",
     status: "active",
@@ -225,7 +226,12 @@ async function executeBundledTool(spec) {
     `${pathToFileURL(artifact).href}?provider-copy=${retrievedAtUnixMs}-${spec.artifact}`
   );
   await module.default(api);
-  invariant(tools.size === 1, `${spec.artifact} registered unexpected tools`);
+  const registeredTools = [...tools.keys()];
+  const expectedTools = spec.registeredTools ?? [spec.toolName];
+  invariant(
+    JSON.stringify(registeredTools) === JSON.stringify(expectedTools),
+    `${spec.artifact} registered unexpected tools`,
+  );
   const tool = tools.get(spec.toolName);
   invariant(tool, `${spec.artifact} did not register ${spec.toolName}`);
   const result = await tool.execute(

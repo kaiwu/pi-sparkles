@@ -1,10 +1,14 @@
 import finance_core/time
 import finance_http/request
 import finance_market_alpaca.{type Access}
+import finance_market_alpaca/corporate_actions.{
+  type Query as CorporateActionsQuery,
+}
 import finance_market_alpaca/query.{
   type AssetUniverseQuery, type DailyBarsQuery, type LatestQuoteQuery,
 }
 import gleam/int
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
@@ -16,6 +20,8 @@ pub const bars_path = "/v2/stocks/bars"
 pub const latest_quotes_path = "/v2/stocks/quotes/latest"
 
 pub const assets_path = "/v2/assets"
+
+pub const corporate_actions_path = "/v1/corporate-actions"
 
 pub type RequestError {
   InvalidPageLimit
@@ -164,6 +170,70 @@ pub fn asset_universe(
     "exchange",
     query.asset_exchange_name(query.asset_exchange(plan)),
   ))
+  finance_market_alpaca.authorize(access, value)
+  |> result.map_error(InvalidAccess)
+}
+
+pub fn corporate_actions(
+  access: Access,
+  plan: CorporateActionsQuery,
+  page_limit page_limit: Int,
+  page_token page_token: Option(String),
+) -> Result(request.Request, RequestError) {
+  use Nil <- result.try(case page_limit >= 1 && page_limit <= plan.page_size {
+    True -> Ok(Nil)
+    False -> Error(InvalidPageLimit)
+  })
+  use Nil <- result.try(validate_page_token(page_token))
+  let assert Ok(timeout) = time.duration(15_000)
+  use base <- result.try(
+    request.new(request.Get, origin, corporate_actions_path, None)
+    |> result.map_error(InvalidHttp),
+  )
+  use bounded <- result.try(
+    request.with_limits(
+      base,
+      timeout: timeout,
+      maximum_response_bytes: 5_000_000,
+    )
+    |> result.map_error(InvalidHttp),
+  )
+  use value <- result.try(public_header(bounded, "Accept", "application/json"))
+  use value <- result.try(public_query(value, "symbols", plan.symbol))
+  use value <- result.try(public_query(value, "cusips", plan.cusip))
+  use value <- result.try(public_query(
+    value,
+    "types",
+    plan.types
+      |> list.map(corporate_actions.action_type_name)
+      |> string.join(","),
+  ))
+  use value <- result.try(public_query(value, "region", "us"))
+  use value <- result.try(public_query(
+    value,
+    "start",
+    corporate_actions.date_text(plan.start_date),
+  ))
+  use value <- result.try(public_query(
+    value,
+    "end",
+    corporate_actions.date_text(plan.end_date),
+  ))
+  use value <- result.try(public_query(
+    value,
+    "limit",
+    int.to_string(page_limit),
+  ))
+  use value <- result.try(public_query(
+    value,
+    "data_quality",
+    corporate_actions.data_quality_name(plan.data_quality),
+  ))
+  use value <- result.try(public_query(value, "sort", "asc"))
+  use value <- result.try(case page_token {
+    None -> Ok(value)
+    Some(token) -> public_query(value, "page_token", token)
+  })
   finance_market_alpaca.authorize(access, value)
   |> result.map_error(InvalidAccess)
 }

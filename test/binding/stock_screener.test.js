@@ -67,7 +67,7 @@ async function execute(tool, maximumAssets = 10) {
 describe("stock universe Alpaca boundary", () => {
   test("copies bounded asset-master rows and makes no screening decision", async () => {
     const tools = await harness();
-    expect([...tools.keys()]).toEqual(["stock_universe"]);
+    expect([...tools.keys()]).toEqual(["stock_universe", "screen"]);
 
     const result = await execute(tools.get("stock_universe"));
     const sourceReference =
@@ -130,7 +130,243 @@ describe("stock universe Alpaca boundary", () => {
       "over-budget asset array",
     );
   });
+
+  test("calculates exact predicates and preserves unresolved rows without fetching", async () => {
+    const tools = await harness();
+    const { universe, dataset, observationHashes } = canonicalManifests();
+    const base = {
+      context: {
+        instructionRef: sha256("screen instruction"),
+        track: "us",
+        dateStart: "2026-02-01",
+        dateEnd: "2026-02-28",
+        sourceCutoffUnixMilliseconds: 1000,
+        universe,
+        dataset,
+        technicalReceiptRoots: [],
+      },
+      predicates: [
+        {
+          id: "close-above-10",
+          leftOperand: { kind: "field", field: "close", unit: "price" },
+          operator: "greater_than",
+          rightOperand: { kind: "constant", raw: "10", unit: "price" },
+        },
+      ],
+      rows: [
+        screenRow("listing:A", "obs-a", observationHashes["obs-a"], {
+          state: "known",
+          raw: "12.00",
+          alternatives: [],
+        }),
+        screenRow("listing:B", "obs-b", observationHashes["obs-b"], {
+          state: "known",
+          raw: "8",
+          alternatives: [],
+        }),
+        screenRow("listing:C", "obs-c", observationHashes["obs-c"], {
+          state: "unknown",
+          reason: "provider field absent",
+          alternatives: [],
+        }),
+      ],
+      relation: {
+        matchPolicy: "all_predicates_observed_true_v1",
+        unresolvedPolicy: "preserve_unresolved_separately_v1",
+      },
+      page: { partition: "all", offset: 0, limit: 10 },
+    };
+
+    const first = await tools
+      .get("screen")
+      .execute(
+        "screen-query",
+        base,
+        new AbortController().signal,
+        undefined,
+        { hasUI: false, ui: {} },
+      );
+    expect(first.details.relationCounts).toEqual({
+      matched: 1,
+      notMatched: 1,
+      unresolved: 1,
+      total: 3,
+    });
+    expect(first.details.rows.map((row) => row.relation)).toEqual([
+      "matched",
+      "not_matched",
+      "unresolved",
+    ]);
+    expect(first.details.rows[0].predicateFacts[0].fact).toMatchObject({
+      state: "observed_true",
+      raw: "12.00",
+      normalized: "12",
+    });
+    expect(first.details.rows[2].predicateFacts[0].fact).toEqual({
+      state: "unavailable",
+      reason: "unknown:provider field absent",
+    });
+    expect(first.details.decisionOwner).toBe("llm");
+    expect(first.details.pluginDecisionFields).toEqual([]);
+    expect(requests).toHaveLength(0);
+
+    const second = await tools
+      .get("screen")
+      .execute(
+        "screen-query-unresolved",
+        { ...base, page: { partition: "unresolved", offset: 0, limit: 10 } },
+        new AbortController().signal,
+        undefined,
+        { hasUI: false, ui: {} },
+      );
+    expect(second.details.rows).toHaveLength(1);
+    expect(second.details.rows[0].listingId).toBe("listing:C");
+    expect(second.details.requestReceiptHandle).toBe(
+      first.details.requestReceiptHandle,
+    );
+    expect(second.details.semanticReceiptHandle).toBe(
+      first.details.semanticReceiptHandle,
+    );
+  });
 });
+
+function screenRow(listingId, observationId, evidenceRoot, fact) {
+  return {
+    listingId,
+    mic: "XNAS",
+    observationDate: "2026-02-24",
+    observationId,
+    values: [
+      {
+        field: "close",
+        unit: "price",
+        sourceKind: "dataset_observation",
+        knownAtUnixMilliseconds: 500,
+        evidenceRoots: [evidenceRoot],
+        fact,
+      },
+    ],
+  };
+}
+
+function canonicalManifests() {
+  const date = (year, month, day) => ({ year, month, day });
+  const start = date(2026, 2, 1);
+  const end = date(2026, 2, 28);
+  const listingStart = date(2020, 1, 1);
+  const observationDate = date(2026, 2, 24);
+  const observationHashes = {
+    "obs-a": sha256("obs-a"),
+    "obs-b": sha256("obs-b"),
+    "obs-c": sha256("obs-c"),
+  };
+  const memberships = ["A", "B", "C"].map((suffix) => ({
+    listing_id: `listing:${suffix}`,
+    mic: "XNAS",
+    track: "us",
+    symbol: { state: "known", value: suffix },
+    symbol_interval: {
+      state: "known",
+      value: { start: listingStart, end: null },
+    },
+    listing_interval: { start: listingStart, end: null },
+    security_class: { state: "known", value: "common_stock" },
+    status_interval: {
+      state: "known",
+      value: { start: listingStart, end: null },
+    },
+    membership_effective: listingStart,
+    membership_end: { state: "not_applicable", reason: "open membership" },
+    publication_time: { state: "known", value: 90 },
+    knowledge_time: { state: "known", value: 100 },
+    retrieval_time_unix_ms: 200,
+    source_receipt: sha256(`membership:${suffix}`),
+    correction_lineage: [],
+    state: { state: "known" },
+  }));
+  const universeContent = {
+    schema: "finance_replay_universe_manifest",
+    schema_version: 1,
+    decision_owner: "llm",
+    manifest_id: "universe-us",
+    version: "1.0.0",
+    track: "us",
+    definition_kind: { kind: "exact_enumerated" },
+    as_of_time_unix_ms: 900,
+    coverage: { start, end },
+    source_receipt: sha256("universe-source"),
+    provenance: "caller_declared",
+    limitations: ["fixture point-in-time membership"],
+    memberships,
+    plugin_decision_fields: [],
+  };
+  const universeHash = sha256(JSON.stringify(universeContent));
+  const observations = ["a", "b", "c"].map((suffix) => {
+    const id = `obs-${suffix}`;
+    return {
+      observation_id: id,
+      listing_id: `listing:${suffix.toUpperCase()}`,
+      mic: "XNAS",
+      track: "us",
+      observation_date: observationDate,
+      observation_time: { state: "known", value: 300 },
+      publication_time: { state: "known", value: 310 },
+      availability_time: { state: "known", value: 320 },
+      knowledge_time: { state: "known", value: 330 },
+      retrieval_time_unix_ms: 400,
+      source_cutoff: { state: "known", value: 1000 },
+      correction_vintage: { state: "known", value: "original" },
+      correction_lineage: [],
+      session_type: { state: "known", value: "regular_full" },
+      calendar_ref: { state: "known", value: sha256("calendar") },
+      status_ref: { state: "known", value: sha256("status") },
+      unit: { state: "known", value: "price" },
+      currency: { state: "known", value: "USD" },
+      scale: { state: "known", value: 4 },
+      timezone: { state: "known", value: "America/New_York" },
+      adjustment_basis: { state: "known", value: "raw" },
+      quantity_semantics: { state: "known", value: "shares" },
+      entitlement: { state: "known", value: "fixture-access" },
+      licence: { state: "unknown", reason: "terms not supplied" },
+      state: { state: "known", value: "reported" },
+      content_hash: observationHashes[id],
+      corporate_action_refs: [],
+      transformation_refs: [],
+    };
+  });
+  const datasetContent = {
+    schema: "finance_replay_dataset_manifest",
+    schema_version: 1,
+    decision_owner: "llm",
+    manifest_id: "dataset-us",
+    version: "1.0.0",
+    provider: "fixture-provider",
+    source_or_import_provenance: "fixture://daily-bars",
+    track: "us",
+    coverage: { start, end },
+    observations,
+    limitations: ["fixture observations"],
+    plugin_decision_fields: [],
+  };
+  const datasetHash = sha256(JSON.stringify(datasetContent));
+  return {
+    universe: {
+      manifestJson: JSON.stringify({
+        payload: { content: universeContent, content_hash: universeHash },
+        canonical_content_hash: universeHash,
+      }),
+      manifestHash: universeHash,
+    },
+    dataset: {
+      manifestJson: JSON.stringify({
+        payload: { content: datasetContent, content_hash: datasetHash },
+        canonical_content_hash: datasetHash,
+      }),
+      manifestHash: datasetHash,
+    },
+    observationHashes,
+  };
+}
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");

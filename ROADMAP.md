@@ -15,8 +15,8 @@ directory and is an independent Gleam project. Its local `README.md` becomes the
 detailed design document; this roadmap retains only the proposal, priority,
 dependencies, and delivery status.
 
-As of 2026-08-07, the catalog has 129 unique named `pi_*` proposals and 30
-matching implementation directories (23.3%). The repository has 39 plugin
+As of 2026-08-09, the catalog has 129 unique named `pi_*` proposals and 38
+matching implementation directories (29.5%). The repository has 47 plugin
 directories in total because nine reference, setup, and workflow slices do not
 map one-to-one to an R1 proposal. These are breadth counts, not completion
 counts: many directories intentionally implement only one Experimental slice.
@@ -108,9 +108,9 @@ reinterpret source evidence.
 | Trader workflow | Required decision loop | Current roadmap coverage | Steering gap |
 | --- | --- | --- | --- |
 | Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Quote, calendar/rules, order-book, tape, alerts, paper brokers, and compliance are proposed or narrow slices. | **Weakest.** No licensed, freshness-bounded intraday stream, shared order/fill model, fast trade-plan tool, or latency/execution-quality acceptance gate. Daily bars must not be presented as a day-trading surface. |
-| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, and shared-replay slices now compose in seeded and bundled-tool CN/HK/US journeys using a nine-receipt catalog: exact bundled OHLCV copies plus indicator, risk, rule, execution, source-declared sector/regime, bounded catalyst, exact task-time, and point-in-time universe/candidate observations. The US journey now invokes the bundled `stock_universe` Alpaca acquisition shell and binds its exact result hashes to the candidate receipt; CN/HK universe rows remain synthetic. The stateless `stock_technicals`, `finance_sources`, and `trade_plan` shells expose exact calculations and provenance inspection separately. An opt-in configured-tutor journey proves LLM-owned plan, preflight, monitor, replay, review, journal, same-session state restoration/linking, and exact journal plus workbench-state recovery from a distinct Pi session. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 3 are complete; `pi_order_simulator` is the sole current shell, followed by dataset inspection. Extend swing/provider depth only on a concrete workflow trigger. |
+| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, shared-replay, exact-predicate screener, shared exact-calendar, quant-research, backtest, deterministic-chart, HK result-related board-meeting-date, and US corporate-action source slices now compose around explicit facts. The two event adapters preserve their source timing and completeness limits. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 12 are complete; rank-13 `pi_portfolio_risk` is paused at light `CG-PORTFOLIO`. Extend swing/provider depth only on a concrete workflow trigger. |
 | Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | US primary-source and exact-fact slices are strongest; valuation, quality, actions, portfolio, thesis, news, and reports are proposed. | `CG-FUNDAMENTAL` is first in the tutor queue and blocks investor-workbench design, not raw company-profile, action, earnings-date, or primary-source adapters. Narrow vendor facts remain short of a dossier. |
-| Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core now supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. | Session 17 ranks dataset inspection, `pi_quant_research`, and completed-daily `pi_backtest` at 5, 8, and 9. Corporate actions/historical membership are the highest-leverage missing source facts; edge/deployability remain LLM conclusions. |
+| Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. `finance_dataset`, `stock_screener`, `finance_calendar`, `quant_research`, `backtest`, and `finance_charts` expose exact dataset/vintage, point-in-time predicate, session/closure, hypothesis/ledger, requested-metric, run-comparison, replay, reproduction, and deterministic-view inputs. | Ranks 5 through 11 are complete. Corporate actions/historical membership remain the highest-leverage missing quant source facts; edge/deployability remain LLM conclusions. |
 
 The following decisions bind later proposals:
 
@@ -171,20 +171,42 @@ sets this immediate queue:
 1. `pi_stock_technicals` — Experimental thin shell complete 2026-08-07;
 2. `pi_finance_sources` — Experimental thin shell complete 2026-08-07;
 3. `pi_trade_plan` — Experimental thin shell complete 2026-08-07;
-4. `pi_order_simulator` — sole current target;
-5. `pi_finance_dataset`.
+4. `pi_order_simulator` — Experimental thin shell complete 2026-08-08;
+5. `pi_finance_dataset` — Experimental thin shell complete 2026-08-08.
+6. `pi_stock_screener` predicate increment — Experimental complete 2026-08-08.
+7. `pi_finance_calendar` — Experimental thin shell complete 2026-08-08.
+8. `pi_quant_research` — Experimental thin shell complete 2026-08-08.
+9. `pi_backtest` — Experimental thin shell complete 2026-08-08.
+10. `pi_finance_charts` — Experimental thin shell complete 2026-08-08.
+11. `pi_stock_earnings_calendar` — Experimental HK source slice complete
+    2026-08-08.
+12. `pi_stock_corporate_actions` — Experimental US source slice complete
+    2026-08-09.
 
 Every target follows the same explicit loop: controlling tutor specification →
 detailed `plugins/<name>/README.md` design → independent Gleam implementation →
 proportional verification → ledger closeout and promotion of exactly one next
 target. Rank 1 `pi_stock_technicals` completed that loop with its detailed
 design, Experimental implementation, focused/bundled verification, installed-Pi
-smoke, and full repository regression. Ranks 2 and 3 completed the same loop
-with stateless `finance_provenance` and `finance_risk` shells. The current target
-is now `pi_order_simulator`; Sessions 14 and 17 plus the implemented
-`finance_execution` contract supply its tutor/core specification, so its next
-action is detailed plugin design. The tutor queue is `CG-FUNDAMENTAL`, then
-`CG-PORTFOLIO`, then full `CG-DAY` only after a licensed intraday source exists.
+smoke, and full repository regression. Ranks 2 through 5 completed the same
+loop with stateless `finance_provenance`, `finance_risk`, `finance_execution`,
+and canonical dataset-inspection shells. Rank 6 then completed the same loop
+with exact manifest binding, six caller-supplied decimal operators, explicit
+matched/not-matched/unresolved facts, stable paging receipts, and no built-in
+screen or rank. Rank 7 then completed the same loop with exact track/MIC
+selection, ordered venue-local phases, stable published-holiday paging, bounded
+next-session facts, and no scheduling or fallback. Rank 8 then completed the
+same loop with exact hypothesis hashes, complete trial-ledger reconstruction,
+requested core metrics, canonical run comparison, and no research verdict. Rank
+9 then completed exact budgeted/cancellable replay, retained-event paging, and
+canonical definition-bound reproduction export. Rank 10 completed deterministic
+PNG projection with exact structured/table fallback and no analytics. Rank 11
+completed a bounded HKEX Main Board/GEM result-related board-meeting-date slice
+without publication-time or completeness claims. Rank 12 completed an exact
+bounded Alpaca US corporate-action source slice without venue, effective-date,
+adjustment, impact, or completeness claims. Exactly one next item is selected:
+rank-13 `pi_portfolio_risk`, paused at light `CG-PORTFOLIO` with its expert
+request in `/tmp/QA01.md`. Full `CG-DAY` remains later and licensed-data gated.
 
 Depth resumes only for a named professional-task information gap, inefficient
 LLM context, a missing shared receipt needed by two consumers, a risky effect

@@ -9,6 +9,11 @@ pub type Status {
   Experimental
 }
 
+pub type Board {
+  MainBoard
+  Gem
+}
+
 pub opaque type Access {
   Access(user_agent: String)
 }
