@@ -17,6 +17,8 @@ finance_core ─┬─> finance_provenance
               ├─> finance_http ─┬─> finance_openfigi
               │                 ├─> finance_sec
               │                 ├─> finance_fred
+              │                 ├─> finance_twelve_data
+              │                 ├─> finance_capco
               │                 ├─> finance_eastmoney
               │                 ├─> finance_market_alpaca
               │                 └─> finance_testkit
@@ -74,7 +76,8 @@ The authority contract validates track-scoped source ownership, official links,
 operational access, redistribution, and limitations without embedding any
 market's registry in the shared package.
 `finance_testkit` depends on core and HTTP. `finance_openfigi`, `finance_sec`,
-`finance_fred`, `finance_eastmoney`, and `finance_market_alpaca` remain reusable outside Pi and share the HTTP policies
+`finance_fred`, `finance_twelve_data`, `finance_capco`, `finance_eastmoney`, and
+`finance_market_alpaca` remain reusable outside Pi and share the HTTP policies
 rather than implementing plugin-local fetch stacks. Eastmoney's public-web
 adapter is local-analysis-only with unknown latency, service level, and
 redistribution; it preserves exact quote scaling and raw daily-bar lexemes
@@ -219,11 +222,23 @@ apply the pure same-period and same-filing proof before formula evaluation.
 query, raw-level response semantics, strict complete-range bound, exact source
 lexemes, and point-in-time envelope echoes. It has no search, transformation,
 release-calendar, forecast, interpretation, or Pi layer.
+`finance_twelve_data` validates the caller's per-user API key and exact US
+symbol/MIC query, sends the same scope to both profile and statistics endpoints,
+preserves exact count lexemes and nulls, serializes the two credit-bearing
+requests, and performs no retry, MIC relabelling, fallback, or profile judgment.
+`finance_capco` fixes one reviewed public CAPCO result page and its 2025-H2 PDF,
+requires the exact response length and SHA-256 before bounded PDF.js extraction,
+and parses only the requested six-digit stock-code row. It keeps the guideline
+effective date, half-year result label, publication date, and retrieval instant
+separate; publishes only the source's 门类, 大类, and manufacturing 次类; and
+does not infer MIC, per-company validity, 中类, cross-taxonomy mappings, or
+redistribution permission.
 
 Later plugins should be selected
 only after their provider adapters have endpoint, authentication, entitlement,
 licence, pacing, pagination, and cache designs comparable to
-`finance_openfigi`, `finance_sec`, and `finance_fred`.
+`finance_openfigi`, `finance_sec`, `finance_fred`, `finance_twelve_data`, and
+`finance_capco`.
 
 ## Completed 0.1 foundation
 

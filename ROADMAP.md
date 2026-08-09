@@ -15,8 +15,8 @@ directory and is an independent Gleam project. Its local `README.md` becomes the
 detailed design document; this roadmap retains only the proposal, priority,
 dependencies, and delivery status.
 
-As of 2026-08-09, the catalog has 129 unique named `pi_*` proposals and 41
-matching implementation directories (31.8%). The repository has 50 plugin
+As of 2026-08-09, the catalog has 129 unique named `pi_*` proposals and 43
+matching implementation directories (33.3%). The repository has 52 plugin
 directories in total because nine reference, setup, and workflow slices do not
 map one-to-one to an R1 proposal. These are breadth counts, not completion
 counts: many directories intentionally implement only one Experimental slice.
@@ -109,7 +109,7 @@ reinterpret source evidence.
 | --- | --- | --- | --- |
 | Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Quote, calendar/rules, order-book, tape, alerts, paper brokers, and compliance are proposed or narrow slices. | **Weakest.** No licensed, freshness-bounded intraday stream, shared order/fill model, fast trade-plan tool, or latency/execution-quality acceptance gate. Daily bars must not be presented as a day-trading surface. |
 | Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, shared-replay, exact-predicate screener, shared exact-calendar, quant-research, backtest, deterministic-chart, HK result-related board-meeting-date, US corporate-action source, explicit portfolio exposure/heat calculation, and point-in-time FRED source slices now compose around explicit facts. The source adapters preserve their timing and completeness limits, and portfolio/macro judgment stays LLM-owned. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 14 are complete. Extend swing/provider depth only on a concrete workflow trigger. |
-| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | Session 19 and the Experimental `pi_investor_workbench` now provide a caller-supplied 16-section evidence-state container, exact identity/statement/review facts, requested mechanical metrics, and assumption-explicit valuation bridges. US primary-source slices and FRED can supply separately labelled inputs, but company profiles, governance/industry extraction, peers, monitoring, portfolio composition, and deeper valuation remain proposed. | Rank-16 `pi_company_profile` is the active raw source lane. The dossier plugin does not decide evidence sufficiency, reviewability, quality, thesis, target price, recommendation, or action. |
+| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | Session 19 and the Experimental `pi_investor_workbench` provide a caller-supplied 16-section evidence-state container, exact identity/statement/review facts, requested mechanical metrics, and assumption-explicit valuation bridges. `pi_company_profile` adds one bounded Twelve Data US profile/share snapshot, and `pi_cn_stock_sector_concept` adds one exact CAPCO 2025-H2 mainland classification row with its four distinct date facts and source receipt. | Rank-18 dated news/catalyst facts are active. The profile source's unnamed vendor labels and CAPCO's half-year-labelled publication must not be converted into cross-taxonomy mappings or per-listing validity intervals; none of these slices decides evidence sufficiency, business quality, thesis, target price, recommendation, impact, or action. |
 | Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. `finance_dataset`, `stock_screener`, `finance_calendar`, `quant_research`, `backtest`, `finance_charts`, and `macro_fred` expose exact dataset/vintage, point-in-time predicate, session/closure, hypothesis/ledger, requested-metric, run-comparison, replay, reproduction, deterministic-view, and bounded macro-source inputs. | Ranks 5 through 14 are complete. Historical membership remains a high-leverage missing quant source fact; edge/deployability remain LLM conclusions. |
 
 The following decisions bind later proposals:
@@ -186,6 +186,11 @@ sets this immediate queue:
     2026-08-09.
 14. `pi_macro_fred` — Experimental credentialed source slice complete
     2026-08-09.
+15. `pi_investor_workbench` — Experimental minimum dossier slice complete
+    2026-08-09.
+16. `pi_company_profile` — Experimental US source slice complete 2026-08-09.
+17. `pi_cn_stock_sector_concept` — Experimental CAPCO source slice complete
+    2026-08-09.
 
 Every target follows the same explicit loop: controlling tutor specification →
 detailed `plugins/<name>/README.md` design → independent Gleam implementation →
@@ -214,11 +219,18 @@ heat, partiality, contribution, temporal, reconciliation, and receipt facts,
 without a portfolio judgment. Rank 14 completed one exact FRED v1 point-in-time
 metadata and complete bounded raw-level range with canonical observations,
 response receipts, final-row semantics, and adjacent exact change, without a
-market-track assignment, forecast, or interpretation. Rank-15
+market-track assignment, forecast, or interpretation. Rank 15
 `pi_investor_workbench` is also complete after Session 19 resolved
 `CG-FUNDAMENTAL`, validates supplied dossier, metric, valuation, and review
-facts without provider orchestration or judgment. Exactly one next item is
-active: rank-16 `pi_company_profile`, a raw source lane. Full portfolio workflow
+facts without provider orchestration or judgment. Rank 16 completed one bounded
+Twelve Data US company-profile/statistics source slice with exact symbol/MIC
+identity, nullable fields, raw numeric share lexemes, separate observations,
+response hashes, explicit credits, and no classification or investment
+judgment. Rank 17 completed one exact CAPCO 2025-H2 stock-code classification
+row with content-hash-bound source evidence, distinct taxonomy/result/
+publication/retrieval dates, published level limits, and no inferred MIC or
+membership-validity interval. Exactly one next item is active: rank-18 dated
+news/catalyst source facts. Full portfolio workflow
 and full `CG-DAY` remain gated as recorded below.
 
 Depth resumes only for a named professional-task information gap, inefficient
@@ -524,6 +536,28 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
   selection, automated monitoring, thesis mutation, DCF/WACC/terminal-value
   model, completeness verdict, quality score, target-price claim, or investment
   recommendation.
+
+#### CAPCO classification source contract — 2026-08-09
+
+- **Evidence:** trading-course
+  [Session 20](../trading-course/sessions/20_cg_portfolio_classification_source_addendum_20260809.md),
+  written in response to `/tmp/QA03.md` and authorizing the rank-17 source slice.
+- **Reviewed scope:** the official CAPCO 2025-H2 listed-company industry-
+  classification result and exact PDF, with the 2023-05-01 guideline effective
+  date, 2025-H2 result label, 2026-04-03 publication date, retrieval instant,
+  published 门类/大类/manufacturing 次类, source fingerprint, rights, and one
+  exact requested stock-code row retained separately.
+- **Controlling boundary:** the result is a period-labelled published snapshot,
+  not a per-company effective interval. CAPCO publishes no MIC in the artifact;
+  the plugin infers none, publishes no 中类, maps no other taxonomy, treats no
+  vendor as authority evidence, and fails closed when the pinned bytes change.
+- **Initial implementation:** [`finance_capco`](finance/finance_capco/README.md)
+  owns the bounded exact request, content-hash check, PDF text boundary, and
+  pure row parser. [`cn_stock_sector_concept`](plugins/cn_stock_sector_concept/README.md)
+  registers only `cn_industry_classification`; concepts and membership lists
+  remain later slices. Five adapter tests, five plugin tests, two synthetic-PDF
+  boundary tests, and five bundled scenarios cover the implemented contract;
+  architecture, artifact, installed-Pi smoke, and full-regression gates pass.
 
 #### CG-SWING resolution — 2026-08-06
 

@@ -14,7 +14,7 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- fifty-seven Experimental finance packages, including provider adapters,
+- fifty-nine Experimental finance packages, including provider adapters,
   shared track/evidence/rules/document/accounting policy, and isolated CN/HK
   identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,
@@ -112,6 +112,16 @@ repository currently contains:
   16 Session 19 evidence states, exact listing/statement/review facts, requested
   formula-tree metrics, and caller-labelled valuation bridges without fetching
   providers or deciding reviewability, quality, thesis, or investment action;
+- a credentialed read-only `company_profile` US source shell over the bounded
+  `finance_twelve_data` adapter, returning one exact symbol/MIC profile plus
+  MIC-matched shares, canonical observation/track context, and two response
+  receipts while preserving missing effective dates, unnamed classification
+  taxonomy, provider-only identity, and Nasdaq segment MICs;
+- a read-only `cn_stock_sector_concept` mainland source shell over the bounded
+  `finance_capco` adapter, returning one exact stock-code row from the pinned
+  CAPCO 2025-H2 industry-classification PDF with distinct taxonomy-effective,
+  result-period, publication, and retrieval dates while keeping MIC and
+  per-listing membership validity unknown;
 - a network-free `stock_research_report` compositor that validates exact
   Alpaca/SEC receipts and renders a deterministic US source-fact brief;
 - a track-safe `watchlist` workflow plugin with exact listing keys, bounded
@@ -383,6 +393,7 @@ plugins; it never enables CN or US source access.
 | `us_ohlcv` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-ohlcv/0.1`; feed entitlement still depends on the Alpaca account and requested IEX/SIP feed. |
 | `stock_screener` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-screener/0.1`; `stock_universe` uses the explicitly selected paper/live Trading API environment and returns provider rows without interpreting capability flags. |
 | `stock_corporate_actions` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-corporate-actions/0.1`; the first slice fixes `region=us`, explicit Alpaca process-date/data-quality/action-type filters, and caller-visible page/action budgets. |
+| `company_profile` | `TWELVE_DATA_API_KEY` (**credential**) | None | Requires caller subscription access to Twelve Data `/profile` and `/statistics`; the first slice fixes `country=US`, requires an exact supported MIC, preserves Nasdaq segment MICs, and makes no automatic retry or fallback. |
 | `stock_technicals` | None | None | Stateless calculation-only shell over exact caller/LLM-supplied observations and receipts; every formula, parameter, policy, and projection is explicit. |
 | `finance_sources` | None | None | Stateless read-only shell over an exact caller/LLM-supplied provenance catalogue; it performs no hidden capture, fetch, verification, or persistence. |
 | `trade_plan` | None | None | Stateless calculation-only shell over exact caller/LLM-supplied account, policy, price, and trade-unit facts; it performs no account lookup, plan persistence, execution, or quantity choice. |
@@ -412,6 +423,7 @@ export ALPACA_USER_AGENT_CONTACT="ops@example.com"
 export OPENFIGI_API_KEY="<secret-manager:openfigi>"       # optional
 export ALPACA_API_KEY_ID="<secret-manager:alpaca-key-id>"
 export ALPACA_API_SECRET_KEY="<secret-manager:alpaca-secret>"
+export TWELVE_DATA_API_KEY="<secret-manager:twelve-data>"
 
 pi --no-extensions \
   -e ./dist/cn_ohlcv \
@@ -475,6 +487,7 @@ pi-sparkles/
 │   └── test/
 ├── finance/                      reusable non-Pi Gleam libraries
 │   ├── finance_archive/
+│   ├── finance_capco/            pinned CAPCO industry-classification adapter
 │   ├── finance_calendar/
 │   ├── finance_cn_calendar/
 │   ├── finance_cn_accounting/
@@ -489,6 +502,7 @@ pi-sparkles/
 │   ├── finance_evidence/
 │   ├── finance_execution/        information-only CG-DAY execution core
 │   ├── finance_fred/             bounded credentialed FRED v1 series adapter
+│   ├── finance_twelve_data/      bounded exact US company-profile adapter
 │   ├── finance_hk_accounting/
 │   ├── finance_hk_calendar/
 │   ├── finance_hk_documents/
@@ -549,6 +563,8 @@ pi-sparkles/
 │   ├── portfolio_risk/           exact supplied portfolio exposure/heat facts
 │   ├── macro_fred/               exact point-in-time FRED source facts
 │   ├── investor_workbench/       exact supplied dossier/metric/valuation facts
+│   ├── company_profile/          exact Twelve Data US profile/share snapshot
+│   ├── cn_stock_sector_concept/  exact CAPCO 2025-H2 classification row
 │   ├── quant_research/            exact trial, metric, and run-difference facts
 │   ├── backtest/                  bounded exact replay and reproduction export
 │   ├── finance_guardrails/       evidence and freshness policy
@@ -631,6 +647,8 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_eastmoney` | Bounded public-web SSE/SZSE/BSE/HK quote and raw daily-history plans/decoders with exact source lexemes, explicit caller identity, unknown service level, and unknown redistribution. |
 | `finance_market_alpaca` | Credentialed bounded US latest-quote, raw-daily stock-bar, and caller-filtered asset-master plans/decoders with explicit origins/IEX/SIP, exact provider rows, and subscription/redistribution limits. |
 | `finance_fred` | Credentialed bounded FRED v1 series metadata and raw-level observation plans/decoders with exact point-in-time dates, strict range completeness, source lexemes, cancellation, conservative local pacing, and series-dependent rights kept visible. |
+| `finance_twelve_data` | Credentialed bounded Twelve Data profile/statistics requests for exact US symbol/MIC pairs, exact employee/share-count lexemes, nullable fields, serial credit-aware transport, cancellation, and no automatic retry or fallback. |
+| `finance_capco` | Bounded exact CAPCO 2025-H2 classification-PDF request, content-hash-pinned PDF.js text extraction, and pure one-stock-code row parsing with the published 门类, 大类, and manufacturing-only 次类 levels; no MIC, per-company validity interval, taxonomy conversion, or redistribution claim. |
 | `finance_sec` | Identified read-only SEC access, normalized CIKs, bounded EDGAR request plans, typed submissions/XBRL facts, lossless numeric lexemes, explicit filing/period resolution, strict Q4/trend derivation, and conservative shared pacing. |
 | `finance_series` | Ordered observations, alignment, as-of joins, returns, windows, resampling, portfolio paths, and analytics. |
 | `finance_strategy` | Evidence-only completed-daily strategy definitions, compatibility facts, source-declared sector/regime and catalyst context, exact task-time and point-in-time universe/candidate observations, plan declarations, and structural history without a setup, acceptance, or trade verdict. |
