@@ -16,6 +16,7 @@ finance_core ─┬─> finance_provenance
               ├─> finance_listing  <─ finance_provenance + finance_track
               ├─> finance_http ─┬─> finance_openfigi
               │                 ├─> finance_sec
+              │                 ├─> finance_fred
               │                 ├─> finance_eastmoney
               │                 ├─> finance_market_alpaca
               │                 └─> finance_testkit
@@ -73,7 +74,7 @@ The authority contract validates track-scoped source ownership, official links,
 operational access, redistribution, and limitations without embedding any
 market's registry in the shared package.
 `finance_testkit` depends on core and HTTP. `finance_openfigi`, `finance_sec`,
-`finance_eastmoney`, and `finance_market_alpaca` remain reusable outside Pi and share the HTTP policies
+`finance_fred`, `finance_eastmoney`, and `finance_market_alpaca` remain reusable outside Pi and share the HTTP policies
 rather than implementing plugin-local fetch stacks. Eastmoney's public-web
 adapter is local-analysis-only with unknown latency, service level, and
 redistribution; it preserves exact quote scaling and raw daily-bar lexemes
@@ -214,10 +215,15 @@ Mixed-quarter TTM uses an explicit direct/derived sum type and expands derived
 Q4 observations into their direct annual and YTD formula leaves.
 Named multi-input metrics may select each SEC accession independently, then
 apply the pure same-period and same-filing proof before formula evaluation.
+`finance_fred` validates the caller's per-user API key, exact series/range/as-of
+query, raw-level response semantics, strict complete-range bound, exact source
+lexemes, and point-in-time envelope echoes. It has no search, transformation,
+release-calendar, forecast, interpretation, or Pi layer.
+
 Later plugins should be selected
 only after their provider adapters have endpoint, authentication, entitlement,
 licence, pacing, pagination, and cache designs comparable to
-`finance_openfigi` and `finance_sec`.
+`finance_openfigi`, `finance_sec`, and `finance_fred`.
 
 ## Completed 0.1 foundation
 

@@ -15,8 +15,8 @@ directory and is an independent Gleam project. Its local `README.md` becomes the
 detailed design document; this roadmap retains only the proposal, priority,
 dependencies, and delivery status.
 
-As of 2026-08-09, the catalog has 129 unique named `pi_*` proposals and 38
-matching implementation directories (29.5%). The repository has 47 plugin
+As of 2026-08-09, the catalog has 129 unique named `pi_*` proposals and 41
+matching implementation directories (31.8%). The repository has 50 plugin
 directories in total because nine reference, setup, and workflow slices do not
 map one-to-one to an R1 proposal. These are breadth counts, not completion
 counts: many directories intentionally implement only one Experimental slice.
@@ -108,9 +108,9 @@ reinterpret source evidence.
 | Trader workflow | Required decision loop | Current roadmap coverage | Steering gap |
 | --- | --- | --- | --- |
 | Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Quote, calendar/rules, order-book, tape, alerts, paper brokers, and compliance are proposed or narrow slices. | **Weakest.** No licensed, freshness-bounded intraday stream, shared order/fill model, fast trade-plan tool, or latency/execution-quality acceptance gate. Daily bars must not be presented as a day-trading surface. |
-| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, shared-replay, exact-predicate screener, shared exact-calendar, quant-research, backtest, deterministic-chart, HK result-related board-meeting-date, and US corporate-action source slices now compose around explicit facts. The two event adapters preserve their source timing and completeness limits. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 12 are complete; rank-13 `pi_portfolio_risk` is paused at light `CG-PORTFOLIO`. Extend swing/provider depth only on a concrete workflow trigger. |
-| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | US primary-source and exact-fact slices are strongest; valuation, quality, actions, portfolio, thesis, news, and reports are proposed. | `CG-FUNDAMENTAL` is first in the tutor queue and blocks investor-workbench design, not raw company-profile, action, earnings-date, or primary-source adapters. Narrow vendor facts remain short of a dossier. |
-| Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. `finance_dataset`, `stock_screener`, `finance_calendar`, `quant_research`, `backtest`, and `finance_charts` expose exact dataset/vintage, point-in-time predicate, session/closure, hypothesis/ledger, requested-metric, run-comparison, replay, reproduction, and deterministic-view inputs. | Ranks 5 through 11 are complete. Corporate actions/historical membership remain the highest-leverage missing quant source facts; edge/deployability remain LLM conclusions. |
+| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, shared-replay, exact-predicate screener, shared exact-calendar, quant-research, backtest, deterministic-chart, HK result-related board-meeting-date, US corporate-action source, explicit portfolio exposure/heat calculation, and point-in-time FRED source slices now compose around explicit facts. The source adapters preserve their timing and completeness limits, and portfolio/macro judgment stays LLM-owned. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 14 are complete. Extend swing/provider depth only on a concrete workflow trigger. |
+| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | Session 19 and the Experimental `pi_investor_workbench` now provide a caller-supplied 16-section evidence-state container, exact identity/statement/review facts, requested mechanical metrics, and assumption-explicit valuation bridges. US primary-source slices and FRED can supply separately labelled inputs, but company profiles, governance/industry extraction, peers, monitoring, portfolio composition, and deeper valuation remain proposed. | Rank-16 `pi_company_profile` is the active raw source lane. The dossier plugin does not decide evidence sufficiency, reviewability, quality, thesis, target price, recommendation, or action. |
+| Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. `finance_dataset`, `stock_screener`, `finance_calendar`, `quant_research`, `backtest`, `finance_charts`, and `macro_fred` expose exact dataset/vintage, point-in-time predicate, session/closure, hypothesis/ledger, requested-metric, run-comparison, replay, reproduction, deterministic-view, and bounded macro-source inputs. | Ranks 5 through 14 are complete. Historical membership remains a high-leverage missing quant source fact; edge/deployability remain LLM conclusions. |
 
 The following decisions bind later proposals:
 
@@ -182,6 +182,10 @@ sets this immediate queue:
     2026-08-08.
 12. `pi_stock_corporate_actions` — Experimental US source slice complete
     2026-08-09.
+13. `pi_portfolio_risk` — Experimental light calculation slice complete
+    2026-08-09.
+14. `pi_macro_fred` — Experimental credentialed source slice complete
+    2026-08-09.
 
 Every target follows the same explicit loop: controlling tutor specification →
 detailed `plugins/<name>/README.md` design → independent Gleam implementation →
@@ -204,9 +208,18 @@ PNG projection with exact structured/table fallback and no analytics. Rank 11
 completed a bounded HKEX Main Board/GEM result-related board-meeting-date slice
 without publication-time or completeness claims. Rank 12 completed an exact
 bounded Alpaca US corporate-action source slice without venue, effective-date,
-adjustment, impact, or completeness claims. Exactly one next item is selected:
-rank-13 `pi_portfolio_risk`, paused at light `CG-PORTFOLIO` with its expert
-request in `/tmp/QA01.md`. Full `CG-DAY` remains later and licensed-data gated.
+adjustment, impact, or completeness claims. Rank 13 completed the Session 18
+light `CG-PORTFOLIO` slice with exact supplied-fact exposure, weight, signed
+heat, partiality, contribution, temporal, reconciliation, and receipt facts,
+without a portfolio judgment. Rank 14 completed one exact FRED v1 point-in-time
+metadata and complete bounded raw-level range with canonical observations,
+response receipts, final-row semantics, and adjacent exact change, without a
+market-track assignment, forecast, or interpretation. Rank-15
+`pi_investor_workbench` is also complete after Session 19 resolved
+`CG-FUNDAMENTAL`, validates supplied dossier, metric, valuation, and review
+facts without provider orchestration or judgment. Exactly one next item is
+active: rank-16 `pi_company_profile`, a raw source lane. Full portfolio workflow
+and full `CG-DAY` remain gated as recorded below.
 
 Depth resumes only for a named professional-task information gap, inefficient
 LLM context, a missing shared receipt needed by two consumers, a risky effect
@@ -236,11 +249,11 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
 | `CG-RISK` **(Resolved — 2026-08-07)** | Phase 1, Week 3 “Risk Management Foundation” and Phase 5, Week 19 “Advanced Risk Management” | Replace slogans such as “2% rule” and “2:1” with configurable laws: account and portfolio heat, gap/leverage/correlation/liquidity risk, stop distance, lot rounding, scaling, drawdown limits, stress cases, zero-size outcomes, and every constraint the LLM must see when deciding on a proposed plan. | `finance_strategy`, `pi_trade_plan`, `pi_portfolio_risk` |
 | `CG-PSYCHOLOGY` **(Journal-information slice Resolved — 2026-08-07)** | Phase 1, Week 4 “Market Psychology” and Phase 5, Week 20 “Trading Psychology Mastery” | Specify user-declared bias/emotion/checklist vocabulary, pre-trade and post-trade review, immutable attribution, requested comparisons/metrics, portable storage, and boundaries against inferred diagnosis, plugin-owned process judgment, or automatic risk changes. | `finance_journal`, `pi_trade_journal`, and every persona review loop |
 | `CG-TECH` **(Resolved — 2026-08-07)** | Phase 2, Weeks 5–8 “Technical Analysis” | Provide exact formulas, seeds, parameters, warm-up, missing-session and corporate-action treatment for SMA/EMA, RSI, MACD, KD9, Bollinger, ATR and VWAP; operational definitions and counterexamples for support/resistance, trend, breakout, gaps, divergence, volume confirmation, patterns and multi-timeframe use. | `finance_indicators`, `pi_stock_technicals`, screeners, charts and alerts |
-| `CG-FUNDAMENTAL` | Phase 3, Weeks 9–12 “Fundamental Analysis” | Define a minimum complete investor dossier, statement/period/segment/debt and cash-flow checks, sector-specific metrics, business quality, governance/management evidence, industry/macro context, valuation methods, sensitivity, and “insufficient evidence” cases. | governance/industry, quality/growth/valuation, fundamentals, and `pi_investor_workbench` |
+| `CG-FUNDAMENTAL` **(Minimum dossier information slice Resolved — 2026-08-09)** | Phase 3, Weeks 9–12 “Fundamental Analysis” | Session 19 defines the 16-section evidence-state dossier, identity and statement laws, mechanical insufficiency and metric facts, assumption-explicit valuation rows, review history, and the boundary against plugin-owned investment judgment. Provider orchestration, governance/industry extraction, peer selection, monitoring, portfolio composition, and deeper valuation remain incremental. | `pi_investor_workbench`; later governance/industry, quality/growth/valuation, fundamentals, and profile sources |
 | `CG-SWING` **(Resolved — 2026-08-06)** | Phase 4, Week 13 “Swing Trading System” and Week 16 “Strategy Integration” | Walk one complete weekly-to-daily workflow: universe, sector/regime/catalyst context, setup and confirmation, entry/stop/target/expiry, sizing/scaling, monitoring, exits, invalidation and journal review; distinguish required evidence from preferences. | `finance_strategy` completed-daily-bar slice, `pi_swing_workbench`, the next sprint |
 | `CG-DAY` **(Execution-information slice Resolved — 2026-08-07; full intraday workflow Open)** | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Define pre-market, auction, opening-range, intraday and close workflows; permissible data latency; spread/depth/tape use; overtrading controls; order choice; partial/non-fill, gap, latency, impact and queue uncertainty; and track-specific stop/order availability. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench` |
 | `CG-QUANT` **(Shared-replay information slice Resolved — 2026-08-07)** | Phase 4, Week 15 “Quantitative Approaches” | Specify the research protocol: falsifiable hypothesis, point-in-time universe/data availability, adjustments, feature/signal versioning, fill/cost model, train/validation/test and walk-forward design, multiple testing, uncertainty/significance, robustness, benchmarks and reproducible run acceptance. | `finance_replay`, `pi_quant_research`, `pi_backtest`, factor lab and event study |
-| `CG-PORTFOLIO` | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | Define position/portfolio sizing, diversification versus hidden concentration, correlation regimes, rebalance and cash-flow rules, leverage/liquidity/currency exposure, VaR/CVaR limits, stress tests and drawdown response without false precision. | portfolio, risk, scenarios, attribution and rebalance proposals |
+| `CG-PORTFOLIO` **(Light calculation slice Resolved — 2026-08-09; full workflow Open)** | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | The resolved slice defines exact long-only single-currency exposure, weight, signed heat, selected denominators, contributions, partiality, temporal coherence, duplication, reconciliation, and the LLM judgment boundary. Full portfolio construction/review must still define diversification, correlation regimes, rebalance/cash-flow rules, leverage/liquidity/currency exposure, VaR/CVaR, stress, and drawdown response without false precision. | `pi_portfolio_risk` light slice; later portfolio, scenarios, attribution and rebalance proposals |
 | `CG-LIVE` | Phase 6, Weeks 21–24+ “Live Trading” | Define readiness evidence for paper-to-micro-live transition, broker/account criteria, size-increase and stop conditions, execution and emotion review, incident handling and rollback; this augments rather than weakens the separate security review. | paper-broker acceptance and any live-broker design |
 
 #### CG-MARKET-DATA resolution — 2026-08-07
@@ -457,6 +470,60 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
   Intraday replay, shorting/derivatives, portfolio construction, automated
   search/optimization, advanced statistics, live deployment, provider clients,
   and Pi shells remain incremental and do not reopen this LLM-only boundary.
+
+#### CG-PORTFOLIO light calculation resolution — 2026-08-09
+
+- **Evidence:** trading-course
+  [Session 18](../trading-course/sessions/18_cg_portfolio_light_calculation_contract_20260809.md),
+  which explicitly permits the bounded calculation slice before
+  `CG-FUNDAMENTAL` while leaving full portfolio construction/review open.
+- **Reviewed scope:** stateless calculations over supplied single-currency,
+  long-only cash-equity positions and account facts: gross/net exposure,
+  NLV-denominated weights, signed current-mark or entry-minus-stop heat,
+  caller-selected heat denominator, per-position contributions, partial or
+  all-or-nothing totals, temporal cutoff projection, duplicate/conflict
+  preservation, reconciliation, and canonical semantic receipts.
+- **Controlling boundary:** the plugin returns exact arithmetic, formula and
+  operand provenance, unknowns, conflicts, omissions, staleness, mechanical
+  facts, and reconciliation. The LLM owns every threshold, concentration or
+  adequacy judgment, response, rebalance, recommendation, authorization, and
+  next operation.
+- **Initial implementation:**
+  [`portfolio_risk`](plugins/portfolio_risk/README.md) registers one pure
+  calculation tool and reuses `finance_risk` information/expression contracts
+  plus `finance_math` exact arithmetic. Twelve pure tests, five bundled-boundary
+  scenarios, artifact verification, installed-Pi smoke, architecture gates,
+  and full repository regression pass. Shorts, FX/multi-currency,
+  provider/account import, aggregation by
+  listing/issuer, leverage/margin, correlation, concentration policy,
+  liquidity, stress, VaR/CVaR, optimization, and rebalancing remain outside the
+  resolved slice.
+
+#### CG-FUNDAMENTAL minimum dossier resolution — 2026-08-09
+
+- **Evidence:** trading-course
+  [Session 19](../trading-course/sessions/19_cg_fundamental_investor_dossier_contract_20260809.md),
+  written in response to `/tmp/QA02.md` and resolving the rank-15 gate.
+- **Reviewed scope:** a stateless caller-supplied dossier with 16 explicit
+  evidence states, exact primary and related listing legs, reporting and
+  statement/amendment facts, the 15-calendar-month annual-evidence condition,
+  append-only review links and receipt deltas, explicitly requested general and
+  sector metrics, and assumption-labelled valuation scenarios.
+- **Controlling boundary:** the plugin exposes information states, mechanical
+  compatibility/insufficiency facts, formula trees, operand proofs, and
+  enterprise-to-equity per-share arithmetic. The LLM/user owns evidence
+  sufficiency, reviewability, business quality, governance interpretation, peer
+  choice, macro linkage, valuation assumptions, thesis, portfolio fit,
+  recommendation, and next action.
+- **Initial implementation:**
+  [`investor_workbench`](plugins/investor_workbench/README.md) registers
+  `inspect_dossier`, `dossier_metric`, and `dossier_valuation`. Eleven pure
+  tests, five bundled-boundary scenarios, artifact verification, installed-Pi
+  smoke, architecture gates, and full repository regression pass. It performs
+  no provider fetch, storage, profile/governance/industry extraction, peer
+  selection, automated monitoring, thesis mutation, DCF/WACC/terminal-value
+  model, completeness verdict, quality score, target-price claim, or investment
+  recommendation.
 
 #### CG-SWING resolution — 2026-08-06
 

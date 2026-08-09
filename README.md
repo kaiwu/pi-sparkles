@@ -14,7 +14,7 @@ This approach is feasible and the first end-to-end implementation works. The
 repository currently contains:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- fifty-six Experimental finance packages, including provider adapters,
+- fifty-seven Experimental finance packages, including provider adapters,
   shared track/evidence/rules/document/accounting policy, and isolated CN/HK
   identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,
@@ -98,6 +98,20 @@ repository currently contains:
   explicit process-date range, preserving numeric lexemes, identity
   transitions, duplicates, pagination, unknowns, and page hashes without venue
   authentication, adjustment, impact, or completeness claims;
+- a stateless `portfolio_risk` calculation shell over exact supplied account
+  and `cn`/`hk`/`us` position facts, with explicit long-only single-currency
+  exposure, weight, signed heat, denominator, partiality, contribution,
+  temporal, reconciliation, and receipt outputs but no portfolio judgment or
+  rebalance decision;
+- a credentialed read-only `macro_fred` source shell over the bounded
+  `finance_fred` adapter, returning an exact point-in-time metadata/observation
+  range, canonical observation envelopes, the final source row, and exact
+  immediately-prior arithmetic change without a market-track label, forecast,
+  release-time inference, or economic interpretation;
+- a stateless read-only `investor_workbench` dossier shell that validates the
+  16 Session 19 evidence states, exact listing/statement/review facts, requested
+  formula-tree metrics, and caller-labelled valuation bridges without fetching
+  providers or deciding reviewability, quality, thesis, or investment action;
 - a network-free `stock_research_report` compositor that validates exact
   Alpaca/SEC receipts and renders a deterministic US source-fact brief;
 - a track-safe `watchlist` workflow plugin with exact listing keys, bounded
@@ -474,6 +488,7 @@ pi-sparkles/
 │   ├── finance_eastmoney/
 │   ├── finance_evidence/
 │   ├── finance_execution/        information-only CG-DAY execution core
+│   ├── finance_fred/             bounded credentialed FRED v1 series adapter
 │   ├── finance_hk_accounting/
 │   ├── finance_hk_calendar/
 │   ├── finance_hk_documents/
@@ -531,6 +546,9 @@ pi-sparkles/
 │   ├── cn_fundamentals/          exact mainland vendor fundamental slice
 │   ├── hk_fundamentals/          exact Hong Kong vendor fundamental slice
 │   ├── order_simulator/          exact completed-daily compatible bar paths
+│   ├── portfolio_risk/           exact supplied portfolio exposure/heat facts
+│   ├── macro_fred/               exact point-in-time FRED source facts
+│   ├── investor_workbench/       exact supplied dossier/metric/valuation facts
 │   ├── quant_research/            exact trial, metric, and run-difference facts
 │   ├── backtest/                  bounded exact replay and reproduction export
 │   ├── finance_guardrails/       evidence and freshness policy
@@ -612,6 +630,7 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_openfigi` | OpenFIGI v3 access, mapping/search plans, pagination, decoding, authenticated/anonymous rate profiles, and a bounded shared runtime. |
 | `finance_eastmoney` | Bounded public-web SSE/SZSE/BSE/HK quote and raw daily-history plans/decoders with exact source lexemes, explicit caller identity, unknown service level, and unknown redistribution. |
 | `finance_market_alpaca` | Credentialed bounded US latest-quote, raw-daily stock-bar, and caller-filtered asset-master plans/decoders with explicit origins/IEX/SIP, exact provider rows, and subscription/redistribution limits. |
+| `finance_fred` | Credentialed bounded FRED v1 series metadata and raw-level observation plans/decoders with exact point-in-time dates, strict range completeness, source lexemes, cancellation, conservative local pacing, and series-dependent rights kept visible. |
 | `finance_sec` | Identified read-only SEC access, normalized CIKs, bounded EDGAR request plans, typed submissions/XBRL facts, lossless numeric lexemes, explicit filing/period resolution, strict Q4/trend derivation, and conservative shared pacing. |
 | `finance_series` | Ordered observations, alignment, as-of joins, returns, windows, resampling, portfolio paths, and analytics. |
 | `finance_strategy` | Evidence-only completed-daily strategy definitions, compatibility facts, source-declared sector/regime and catalyst context, exact task-time and point-in-time universe/candidate observations, plan declarations, and structural history without a setup, acceptance, or trade verdict. |
