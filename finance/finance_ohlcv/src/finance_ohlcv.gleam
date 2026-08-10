@@ -3,7 +3,7 @@ import finance_core/adjustment.{type Adjustment}
 import finance_core/currency.{type Currency}
 import finance_core/decimal.{type Decimal, type RoundingMode}
 import finance_core/market.{type Session}
-import finance_core/observation.{type Observation}
+import finance_core/observation.{type Entitlement, type Observation}
 import finance_core/source.{type SourceRef}
 import finance_core/time.{type Date, type Instant, type Timezone}
 import finance_series/observed
@@ -247,6 +247,40 @@ pub fn batch(
   pagination pagination: Pagination,
   calendar calendar: CalendarAssessment,
 ) -> Result(Batch, BatchError) {
+  batch_with_metadata(
+    bars,
+    retrieved_at: retrieved_at,
+    timezone: timezone,
+    currency: currency,
+    volume_unit: volume_unit,
+    adjustment: adjustment,
+    session: session,
+    source: source_ref,
+    expected_provider: expected_provider,
+    pagination: pagination,
+    calendar: calendar,
+    evidence_id: None,
+    entitlement: observation.EndOfDay,
+  )
+}
+
+/// Construct a daily batch while retaining caller or provider-adapter evidence
+/// and entitlement metadata on every canonical observation.
+pub fn batch_with_metadata(
+  bars bars: List(Bar),
+  retrieved_at retrieved_at: Instant,
+  timezone timezone: Timezone,
+  currency currency: Currency,
+  volume_unit volume_unit: VolumeUnit,
+  adjustment adjustment: Adjustment,
+  session session: Session,
+  source source_ref: SourceRef,
+  expected_provider expected_provider: String,
+  pagination pagination: Pagination,
+  calendar calendar: CalendarAssessment,
+  evidence_id evidence_id: Option(String),
+  entitlement entitlement: Entitlement,
+) -> Result(Batch, BatchError) {
   use _ <- result.try(validate_calendar(calendar))
   let received_provider = source.provider(source_ref)
   use _ <- result.try(case received_provider == expected_provider {
@@ -262,6 +296,8 @@ pub fn batch(
       adjustment,
       session,
       source_ref,
+      evidence_id,
+      entitlement,
       [],
     ),
   )
@@ -539,6 +575,8 @@ fn observe(
   adjustment: Adjustment,
   session: Session,
   source_ref: SourceRef,
+  evidence_id: Option(String),
+  entitlement: Entitlement,
   reversed: List(Observation(Bar)),
 ) -> Result(List(Observation(Bar)), BatchError) {
   case bars {
@@ -557,6 +595,8 @@ fn observe(
             adjustment,
             session,
             source_ref,
+            evidence_id,
+            entitlement,
             [
               observation.Observation(
                 value: bar_value,
@@ -564,9 +604,9 @@ fn observe(
                 retrieved_at: retrieved_at,
                 timezone: Some(timezone),
                 source: source_ref,
-                evidence_id: None,
+                evidence_id: evidence_id,
                 freshness: observation.UnknownFreshness,
-                entitlement: observation.EndOfDay,
+                entitlement: entitlement,
                 quality: observation.Reported,
                 unit: None,
                 adjustment: Some(adjustment),

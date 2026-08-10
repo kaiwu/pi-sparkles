@@ -35,6 +35,33 @@ pub fn exact_values_and_observation_envelopes_are_preserved_test() {
   observed.entitlement |> should.equal(observation.EndOfDay)
 }
 
+pub fn explicit_evidence_and_entitlement_metadata_are_preserved_test() {
+  let assert Ok(zone) = time.timezone("America/New_York")
+  let assert Ok(usd) = currency.from_code("USD")
+  let assert Ok(source_ref) =
+    source.new("fixture", "https://example.test/bars", source.LicensedVendor)
+  let assert Ok(delay) = time.duration(900_000)
+  let assert Ok(value) =
+    finance_ohlcv.batch_with_metadata(
+      [bar(1_722_470_400_000, "100", "101", "99", "100")],
+      retrieved_at: instant(1_800_000_000_000),
+      timezone: zone,
+      currency: usd,
+      volume_unit: finance_ohlcv.Shares,
+      adjustment: adjustment.Raw,
+      session: market.Regular,
+      source: source_ref,
+      expected_provider: "fixture",
+      pagination: finance_ohlcv.AllPages,
+      calendar: finance_ohlcv.CalendarNotAssessed("calendar_unavailable"),
+      evidence_id: Some("receipt-one"),
+      entitlement: observation.Delayed(delay),
+    )
+  let assert [observed] = finance_ohlcv.observations(value)
+  observed.evidence_id |> should.equal(Some("receipt-one"))
+  observed.entitlement |> should.equal(observation.Delayed(delay))
+}
+
 pub fn date_only_bars_retain_a_distinct_ordering_anchor_test() {
   let assert Ok(value) =
     finance_ohlcv.date_bar(
