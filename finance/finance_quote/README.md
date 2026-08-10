@@ -14,4 +14,10 @@ before the quote timestamp. It deliberately retains locked or crossed source
 quotes: interpreting those states requires market and condition context that a
 generic value constructor does not possess.
 
-This package has no Pi, HTTP, provider, clock, storage, or entitlement logic.
+`observe_with_metadata` lets an adapter retain an already-validated evidence ID
+and explicit `RealTime`, `Delayed`, `EndOfDay`, or unknown entitlement in that
+canonical observation. It does not authenticate either declaration; the adapter
+remains responsible for the evidence and entitlement contract.
+
+This package has no Pi, HTTP, provider, clock, storage, or entitlement
+inference/verification logic.

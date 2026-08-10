@@ -44,6 +44,7 @@ for (const name of [
   "stock_earnings_calendar",
   "stock_research_report",
   "stock_screener",
+  "stock_quote",
   "stock_technicals",
   "swing_workbench",
   "trade_plan",

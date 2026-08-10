@@ -1,11 +1,11 @@
 import finance_core/currency.{type Currency}
 import finance_core/decimal.{type Decimal}
 import finance_core/market
-import finance_core/observation.{type Observation}
+import finance_core/observation.{type Entitlement, type Observation}
 import finance_core/source.{type SourceRef}
 import finance_core/time.{type Instant, type Timezone}
 import gleam/list
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/order.{Eq, Gt, Lt}
 import gleam/string
 
@@ -120,6 +120,32 @@ pub fn observe(
   source source_ref: SourceRef,
   expected_provider expected_provider: String,
 ) -> Result(Observation(Quote), ObservationError) {
+  observe_with_metadata(
+    value,
+    retrieved_at: retrieved_at,
+    timezone: timezone,
+    source: source_ref,
+    expected_provider: expected_provider,
+    evidence_id: None,
+    entitlement: observation.UnknownEntitlement,
+  )
+}
+
+/// Construct a canonical quote observation while retaining already-validated
+/// evidence and entitlement metadata supplied by a provider adapter.
+///
+/// This function validates the same provider and time invariants as `observe`.
+/// It does not authenticate the evidence identifier or prove the entitlement;
+/// those remain responsibilities of the adapter that supplies them.
+pub fn observe_with_metadata(
+  value value: Quote,
+  retrieved_at retrieved_at: Instant,
+  timezone timezone: Timezone,
+  source source_ref: SourceRef,
+  expected_provider expected_provider: String,
+  evidence_id evidence_id: Option(String),
+  entitlement entitlement: Entitlement,
+) -> Result(Observation(Quote), ObservationError) {
   let received_provider = source.provider(source_ref)
   case received_provider == expected_provider {
     False -> Error(SourceProviderMismatch(expected_provider, received_provider))
@@ -135,9 +161,9 @@ pub fn observe(
             retrieved_at: retrieved_at,
             timezone: Some(timezone),
             source: source_ref,
-            evidence_id: None,
+            evidence_id: evidence_id,
             freshness: observation.UnknownFreshness,
-            entitlement: observation.UnknownEntitlement,
+            entitlement: entitlement,
             quality: observation.Reported,
             unit: Some(market.CurrencyPerShare(value.currency)),
             adjustment: None,

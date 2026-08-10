@@ -4,7 +4,7 @@ import finance_core/observation
 import finance_core/source
 import finance_core/time
 import finance_quote
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 
@@ -80,6 +80,27 @@ pub fn provider_mismatch_and_future_quote_fail_closed_test() {
     expected_provider: "alpaca",
   )
   |> should.equal(Error(finance_quote.RetrievalBeforeQuote))
+}
+
+pub fn explicit_evidence_and_entitlement_survive_canonical_observation_test() {
+  let value = quote("189.10", "7", "189.12", "4")
+  let assert Ok(source_ref) =
+    source.new("adapter", "https://example.test/quote", source.LicensedVendor)
+  let assert Ok(zone) = time.timezone("America/New_York")
+  let assert Ok(delay) = time.duration(900_000)
+  let assert Ok(observed) =
+    finance_quote.observe_with_metadata(
+      value,
+      retrieved_at: instant(1_800_000_000_000),
+      timezone: zone,
+      source: source_ref,
+      expected_provider: "adapter",
+      evidence_id: Some("receipt-one"),
+      entitlement: observation.Delayed(delay),
+    )
+  observed.evidence_id |> should.equal(Some("receipt-one"))
+  observed.entitlement |> should.equal(observation.Delayed(delay))
+  observed.freshness |> should.equal(observation.UnknownFreshness)
 }
 
 fn quote(bid_price, bid_size, ask_price, ask_size) -> finance_quote.Quote {
