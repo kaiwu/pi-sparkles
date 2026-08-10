@@ -579,7 +579,8 @@ fn validate_fact(value: decode.FactInput) -> Result(Nil, DomainError) {
 }
 
 fn evaluate_row(prepared: Prepared, row: PreparedRow) -> RowOutcome {
-  let universe_binding = universe_binding(prepared.universe, row)
+  let universe_binding =
+    universe_binding(prepared.universe, row, prepared.cutoff)
   let dataset_binding = dataset_binding(prepared, row)
   let predicate_facts =
     list.map(prepared.predicates, fn(predicate) {
@@ -595,6 +596,7 @@ fn evaluate_row(prepared: Prepared, row: PreparedRow) -> RowOutcome {
 fn universe_binding(
   universe: manifest.UniverseManifest,
   row: PreparedRow,
+  cutoff: time.Instant,
 ) -> BindingFact {
   let matches =
     universe
@@ -602,15 +604,38 @@ fn universe_binding(
     |> list.filter(fn(value) {
       value.listing_id == row.input.listing_id && value.mic == row.input.mic
     })
-  case matches {
-    [] -> UnavailableBinding("no_exact_universe_membership")
-    [membership] -> membership_binding(membership, row.date)
-    values ->
+  let bindings =
+    list.map(matches, fn(value) { membership_binding(value, row.date, cutoff) })
+  let active =
+    list.filter_map(bindings, fn(value) {
+      case value {
+        ExactBinding(receipt) -> Ok(receipt)
+        _ -> Error(Nil)
+      }
+    })
+  let unresolved =
+    list.filter(bindings, fn(value) {
+      case value {
+        ExactBinding(_) -> False
+        UnavailableBinding(reason) -> !temporally_inactive(reason)
+        ConflictingBinding(_, _) -> True
+      }
+    })
+  case active, unresolved {
+    [receipt], [] -> ExactBinding(receipt)
+    [], [] -> UnavailableBinding("no_active_universe_membership_on_row_date")
+    [], [UnavailableBinding(reason), ..] -> UnavailableBinding(reason)
+    [], [ConflictingBinding(reason, alternatives), ..] ->
+      ConflictingBinding(reason, alternatives)
+    [receipt], _ ->
       ConflictingBinding(
-        "multiple_universe_memberships_for_exact_listing_and_mic",
-        list.map(values, fn(value) {
-          identity.sha256_value(value.source_receipt)
-        }),
+        "active_universe_membership_overlaps_unresolved_membership_evidence",
+        [identity.sha256_value(receipt)],
+      )
+    receipts, _ ->
+      ConflictingBinding(
+        "multiple_active_universe_memberships_for_exact_listing_and_mic",
+        list.map(receipts, identity.sha256_value),
       )
   }
 }
@@ -618,6 +643,7 @@ fn universe_binding(
 fn membership_binding(
   value: manifest.Membership,
   row_date: time.Date,
+  cutoff: time.Instant,
 ) -> BindingFact {
   let manifest.OpenInterval(listing_start, listing_end) = value.listing_interval
   case date_in_open_interval(row_date, listing_start, listing_end) {
@@ -625,9 +651,44 @@ fn membership_binding(
     True ->
       case calendar_date.compare(row_date, value.membership_effective) {
         Lt -> UnavailableBinding("membership_not_yet_effective_on_row_date")
-        _ -> membership_state_binding(value, row_date)
+        _ -> membership_knowledge_binding(value, row_date, cutoff)
       }
   }
+}
+
+fn membership_knowledge_binding(
+  value: manifest.Membership,
+  row_date: time.Date,
+  cutoff: time.Instant,
+) -> BindingFact {
+  case value.knowledge_time {
+    fact.Known(known_at) ->
+      case time.unix_milliseconds(known_at) <= time.unix_milliseconds(cutoff) {
+        True -> membership_state_binding(value, row_date)
+        False -> UnavailableBinding("membership_known_after_source_cutoff")
+      }
+    fact.Unknown(reason) ->
+      UnavailableBinding("membership_knowledge_time_unknown:" <> reason)
+    fact.NotObtained(reason) ->
+      UnavailableBinding("membership_knowledge_time_not_obtained:" <> reason)
+    fact.NotApplicable(reason) ->
+      UnavailableBinding("membership_knowledge_time_not_applicable:" <> reason)
+    fact.DecodeFailure(_, reason) ->
+      UnavailableBinding("membership_knowledge_time_decode_failure:" <> reason)
+    fact.Conflicting(alternatives, reason) ->
+      ConflictingBinding(
+        "membership_knowledge_time_conflicting:" <> reason,
+        list.map(alternatives, fn(value) {
+          value |> time.unix_milliseconds |> int.to_string
+        }),
+      )
+  }
+}
+
+fn temporally_inactive(reason: String) -> Bool {
+  reason == "listing_interval_excludes_row_date"
+  || reason == "membership_not_yet_effective_on_row_date"
+  || reason == "membership_ended_before_row_date"
 }
 
 fn membership_state_binding(

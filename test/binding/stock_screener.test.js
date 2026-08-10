@@ -67,7 +67,11 @@ async function execute(tool, maximumAssets = 10) {
 describe("stock universe Alpaca boundary", () => {
   test("copies bounded asset-master rows and makes no screening decision", async () => {
     const tools = await harness();
-    expect([...tools.keys()]).toEqual(["stock_universe", "screen"]);
+    expect([...tools.keys()]).toEqual([
+      "stock_universe",
+      "project_universe",
+      "screen",
+    ]);
 
     const result = await execute(tools.get("stock_universe"));
     const sourceReference =
@@ -129,6 +133,54 @@ describe("stock universe Alpaca boundary", () => {
     await expect(execute(tools.get("stock_universe"), 1)).rejects.toThrow(
       "over-budget asset array",
     );
+  });
+
+  test("projects exact caller-supplied point-in-time membership without fetching", async () => {
+    const tools = await harness();
+    const { universe } = canonicalManifests();
+    const result = await tools.get("project_universe").execute(
+      "project-universe-query",
+      {
+        track: "us",
+        effectiveDate: "2026-02-24",
+        knowledgeCutoffUnixMilliseconds: 1000,
+        universe,
+        page: { partition: "all", offset: 0, limit: 10 },
+      },
+      new AbortController().signal,
+      undefined,
+      { hasUI: false, ui: {} },
+    );
+
+    expect(result.details.operation).toBe("project_universe");
+    expect(result.details.manifest).toMatchObject({
+      manifestId: "universe-us",
+      track: "us",
+      membershipEventCount: 3,
+    });
+    expect(result.details.query).toMatchObject({
+      track: "us",
+      effectiveDate: "2026-02-24",
+      knowledgeCutoffUnixMilliseconds: 1000,
+      membershipEndPolicy: "inclusive_end_v1",
+    });
+    expect(result.details.relationCounts).toEqual({
+      member: 3,
+      notMember: 0,
+      unresolved: 0,
+      total: 3,
+    });
+    expect(result.details.rows.map((row) => row.listingId)).toEqual([
+      "listing:A",
+      "listing:B",
+      "listing:C",
+    ]);
+    expect(result.details.rows.every((row) => row.relation === "member")).toBe(
+      true,
+    );
+    expect(result.details.decisionOwner).toBe("llm");
+    expect(result.details.pluginDecisionFields).toEqual([]);
+    expect(requests).toHaveLength(0);
   });
 
   test("calculates exact predicates and preserves unresolved rows without fetching", async () => {

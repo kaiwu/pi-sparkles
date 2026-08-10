@@ -243,9 +243,27 @@ Rank 19 completed the Session 21 bounded caller-file portfolio import/
 inspection slice. Rank 20 completed the Session 22 caller-attested intraday
 packet, selected-calculation, and caller-retained workflow information slice
 without provider authentication/acquisition, persistence, judgment, or
-mutation. Exactly one next item is active: a post-rank-20 portfolio integration
-review that must name one subsequent breadth target or concrete Session 17
-depth trigger before another plugin is designed.
+mutation. The post-rank-20 portfolio integration review completed on
+2026-08-10: day depth remains licensed-source
+blocked, swing has no new trigger, and full investor review remains gated; the
+quant loop exposes one qualifying shared-receipt gap because both screening and
+backtesting require historical point-in-time universe membership. The
+provider-neutral part of that trigger is complete: `project_universe` in
+`pi_stock_screener` verifies exact canonical `finance_replay` manifests and
+projects effective-date/knowledge-cutoff membership independently for `cn`,
+`hk`, or `us`, preserving re-entry, ended, late, unknown, conflicting, and
+overlapping facts. Track-separated source/rights arbitration selected HKEX's
+licensed XHKG Securities Attribute Daily Files only as a conditional future
+provider adapter. Its unresolved counter identity, correction/completeness,
+subscriber/order, fixture, and output rights are parked external work, not an
+implementation blocker. The inquiry remains drafted and unsent.
+
+The next active breadth item is `pi_stock_quote`: a provider-neutral thin Pi
+shell over the implemented `finance_quote` core for one exact `cn`, `hk`, or
+`us` quote observation. Its first slice preserves explicit source, feed, time,
+entitlement, and licence facts and performs no provider fetch, fallback,
+freshness judgment, signal, or trade decision. Provider-specific licensed
+acquisition remains separate.
 
 Depth resumes only for a named professional-task information gap, inefficient
 LLM context, a missing shared receipt needed by two consumers, a risky effect

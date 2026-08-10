@@ -6,6 +6,7 @@ import finance_provenance/identity
 import finance_replay/fact
 import finance_replay/manifest
 import finance_track
+import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{None, Some}
@@ -14,6 +15,8 @@ import gleeunit
 import gleeunit/should
 import pi_sparkles_stock_screener/decode as screen_decode
 import pi_sparkles_stock_screener/domain
+import pi_sparkles_stock_screener/membership as membership_projection
+import pi_sparkles_stock_screener/membership_decode
 import pi_sparkles_stock_screener/screen
 
 pub fn main() -> Nil {
@@ -325,6 +328,295 @@ pub fn screen_emits_mechanical_facts_without_decision_or_ranking_fields_test() {
   text |> string.contains("\"nextAction\"") |> should.be_false
 }
 
+pub fn universe_projection_preserves_cn_hk_us_and_exact_relations_test() {
+  let tracks = [
+    #(finance_track.Cn, "XSHG"),
+    #(finance_track.Hk, "XHKG"),
+    #(finance_track.Us, "XNAS"),
+  ]
+  list.each(tracks, fn(track_and_mic) {
+    let #(track, mic) = track_and_mic
+    let universe =
+      projection_manifest(track, mic, [
+        projection_membership(
+          track,
+          mic,
+          "listing:member",
+          date_value(2020, 1, 1),
+          fact.NotApplicable("membership remains open"),
+          fact.Known(instant(100)),
+        ),
+        projection_membership(
+          track,
+          mic,
+          "listing:ended",
+          date_value(2020, 1, 1),
+          fact.Known(date_value(2026, 2, 23)),
+          fact.Known(instant(100)),
+        ),
+        projection_membership(
+          track,
+          mic,
+          "listing:late",
+          date_value(2020, 1, 1),
+          fact.NotApplicable("membership remains open"),
+          fact.Known(instant(1100)),
+        ),
+      ])
+    let assert Ok(response) =
+      membership_projection.run(projection_input(track, universe, "all", 0, 10))
+    let text = response.details |> json.to_string
+    text
+    |> string.contains("\"track\":\"" <> finance_track.name(track) <> "\"")
+    |> should.be_true
+    text
+    |> string.contains(
+      "\"relationCounts\":{\"member\":1,\"notMember\":1,\"unresolved\":1,\"total\":3}",
+    )
+    |> should.be_true
+    text
+    |> string.contains("\"reason\":\"membership_known_after_cutoff\"")
+    |> should.be_true
+  })
+}
+
+pub fn universe_projection_handles_reentry_and_overlapping_active_events_test() {
+  let track = finance_track.Hk
+  let mic = "XHKG"
+  let universe =
+    projection_manifest(track, mic, [
+      projection_membership(
+        track,
+        mic,
+        "listing:reentered",
+        date_value(2020, 1, 1),
+        fact.Known(date_value(2024, 12, 31)),
+        fact.Known(instant(100)),
+      ),
+      projection_membership(
+        track,
+        mic,
+        "listing:reentered",
+        date_value(2025, 1, 2),
+        fact.NotApplicable("membership remains open"),
+        fact.Known(instant(200)),
+      ),
+      projection_membership(
+        track,
+        mic,
+        "listing:overlap",
+        date_value(2020, 1, 1),
+        fact.NotApplicable("membership remains open"),
+        fact.Known(instant(100)),
+      ),
+      projection_membership(
+        track,
+        mic,
+        "listing:overlap",
+        date_value(2021, 1, 1),
+        fact.NotApplicable("membership remains open"),
+        fact.Known(instant(200)),
+      ),
+    ])
+  let assert Ok(response) =
+    membership_projection.run(projection_input(track, universe, "all", 0, 10))
+  let text = response.details |> json.to_string
+  text
+  |> string.contains(
+    "\"relationCounts\":{\"member\":1,\"notMember\":0,\"unresolved\":1,\"total\":2}",
+  )
+  |> should.be_true
+  text
+  |> string.contains(
+    "\"relationReason\":\"multiple_active_membership_events_for_exact_listing\"",
+  )
+  |> should.be_true
+}
+
+pub fn universe_projection_hash_canonicality_track_and_coverage_fail_closed_test() {
+  let universe =
+    projection_manifest(finance_track.Cn, "XSHG", [
+      projection_membership(
+        finance_track.Cn,
+        "XSHG",
+        "listing:A",
+        date_value(2020, 1, 1),
+        fact.NotApplicable("membership remains open"),
+        fact.Known(instant(100)),
+      ),
+    ])
+  let base = projection_input(finance_track.Cn, universe, "all", 0, 10)
+  let membership_decode.Input(track, date, cutoff, manifest_input, page) = base
+  case
+    membership_projection.run(membership_decode.Input(
+      track,
+      date,
+      cutoff,
+      membership_decode.ManifestInput(
+        manifest_input.manifest_json,
+        string.repeat("f", 64),
+      ),
+      page,
+    ))
+  {
+    Error(membership_projection.ManifestHashMismatch(_, _)) -> Nil
+    _ -> should.fail()
+  }
+  case
+    membership_projection.run(membership_decode.Input(
+      "hk",
+      date,
+      cutoff,
+      manifest_input,
+      page,
+    ))
+  {
+    Error(membership_projection.InvalidField("universe", _)) -> Nil
+    _ -> should.fail()
+  }
+  case
+    membership_projection.run(membership_decode.Input(
+      track,
+      "2026-03-01",
+      cutoff,
+      manifest_input,
+      page,
+    ))
+  {
+    Error(membership_projection.InvalidField("effectiveDate", _)) -> Nil
+    _ -> should.fail()
+  }
+  case
+    membership_projection.run(membership_decode.Input(
+      track,
+      date,
+      cutoff,
+      membership_decode.ManifestInput(
+        manifest_input.manifest_json <> " ",
+        manifest_input.manifest_hash,
+      ),
+      page,
+    ))
+  {
+    Error(membership_projection.ManifestNotCanonical) -> Nil
+    _ -> should.fail()
+  }
+}
+
+pub fn universe_projection_page_does_not_change_projection_handle_test() {
+  let universe =
+    projection_manifest(finance_track.Us, "XNAS", [
+      projection_membership(
+        finance_track.Us,
+        "XNAS",
+        "listing:A",
+        date_value(2020, 1, 1),
+        fact.NotApplicable("membership remains open"),
+        fact.Known(instant(100)),
+      ),
+      projection_membership(
+        finance_track.Us,
+        "XNAS",
+        "listing:B",
+        date_value(2020, 1, 1),
+        fact.NotApplicable("membership remains open"),
+        fact.Known(instant(100)),
+      ),
+    ])
+  let assert Ok(first) =
+    membership_projection.run(projection_input(
+      finance_track.Us,
+      universe,
+      "all",
+      0,
+      1,
+    ))
+  let assert Ok(second) =
+    membership_projection.run(projection_input(
+      finance_track.Us,
+      universe,
+      "member",
+      1,
+      1,
+    ))
+  projection_handle(first)
+  |> should.equal(projection_handle(second))
+  let text = first.details |> json.to_string
+  text |> string.contains("\"nextOffset\":1") |> should.be_true
+  text |> string.contains("\"decisionOwner\":\"llm\"") |> should.be_true
+  text |> string.contains("\"pluginDecisionFields\":[]") |> should.be_true
+}
+
+pub fn screen_accepts_one_active_reentry_event_and_rejects_late_membership_test() {
+  let base =
+    screen_input(
+      [row("listing:A", "obs-a", known_value("close", "price", "12", "obs-a"))],
+      [predicate("close", "close", "greater_than", "10", "price")],
+      "all",
+      0,
+      10,
+    )
+  let historical =
+    projection_manifest(finance_track.Us, "XNAS", [
+      projection_membership(
+        finance_track.Us,
+        "XNAS",
+        "listing:A",
+        date_value(2020, 1, 1),
+        fact.Known(date_value(2024, 12, 31)),
+        fact.Known(instant(100)),
+      ),
+      projection_membership(
+        finance_track.Us,
+        "XNAS",
+        "listing:A",
+        date_value(2025, 1, 2),
+        fact.NotApplicable("membership remains open"),
+        fact.Known(instant(200)),
+      ),
+    ])
+  let historical_context =
+    screen_decode.ContextInput(
+      ..base.context,
+      universe: screen_decode.ManifestInput(
+        manifest.encode_universe(historical),
+        historical |> manifest.universe_digest |> identity.sha256_value,
+      ),
+    )
+  let assert Ok(active) =
+    screen.run(screen_decode.ScreenInput(..base, context: historical_context))
+  active.details
+  |> json.to_string
+  |> string.contains("\"relation\":\"matched\"")
+  |> should.be_true
+
+  let late =
+    projection_manifest(finance_track.Us, "XNAS", [
+      projection_membership(
+        finance_track.Us,
+        "XNAS",
+        "listing:A",
+        date_value(2020, 1, 1),
+        fact.NotApplicable("membership remains open"),
+        fact.Known(instant(1100)),
+      ),
+    ])
+  let late_context =
+    screen_decode.ContextInput(
+      ..base.context,
+      universe: screen_decode.ManifestInput(
+        manifest.encode_universe(late),
+        late |> manifest.universe_digest |> identity.sha256_value,
+      ),
+    )
+  let assert Ok(unresolved) =
+    screen.run(screen_decode.ScreenInput(..base, context: late_context))
+  unresolved.details
+  |> json.to_string
+  |> string.contains("membership_known_after_source_cutoff")
+  |> should.be_true
+}
+
 fn fixture() -> String {
   "[{\"id\":\"asset-aapl\",\"class\":\"us_equity\",\"exchange\":\"NASDAQ\",\"symbol\":\"AAPL\",\"name\":\"Apple Inc. Common Stock\",\"status\":\"inactive\",\"tradable\":false,\"marginable\":true,\"shortable\":false,\"easy_to_borrow\":false,\"fractionable\":true,\"attributes\":[\"has_options\"]}]"
 }
@@ -530,6 +822,103 @@ fn observation(
     [],
     [],
   )
+}
+
+fn projection_manifest(
+  track: finance_track.Track,
+  mic: String,
+  memberships: List(manifest.Membership),
+) -> manifest.UniverseManifest {
+  let assert Ok(coverage) =
+    manifest.interval(date_value(2026, 2, 1), date_value(2026, 2, 28))
+  let assert Ok(value) =
+    manifest.universe(
+      "universe-" <> finance_track.name(track) <> "-" <> mic,
+      "1.0.0",
+      track,
+      manifest.ExactEnumerated,
+      instant(900),
+      coverage,
+      sha("universe-source-" <> finance_track.name(track) <> "-" <> mic),
+      manifest.CallerDeclared,
+      ["caller-supplied point-in-time membership fixture"],
+      memberships,
+    )
+  value
+}
+
+fn projection_membership(
+  track: finance_track.Track,
+  mic: String,
+  listing_id: String,
+  effective: time.Date,
+  membership_end: fact.Fact(time.Date),
+  knowledge_time: fact.Fact(time.Instant),
+) -> manifest.Membership {
+  let assert Ok(listing_interval) =
+    manifest.open_interval(date_value(2010, 1, 1), None)
+  manifest.Membership(
+    listing_id,
+    mic,
+    track,
+    fact.Known(listing_id),
+    fact.Known(listing_interval),
+    listing_interval,
+    fact.Known("cash_equity"),
+    fact.Known(listing_interval),
+    effective,
+    membership_end,
+    fact.Known(instant(90)),
+    knowledge_time,
+    instant(500),
+    sha(
+      "membership-"
+      <> finance_track.name(track)
+      <> "-"
+      <> mic
+      <> "-"
+      <> listing_id
+      <> "-"
+      <> date_identity(effective),
+    ),
+    [],
+    manifest.MembershipKnown,
+  )
+}
+
+fn projection_input(
+  track: finance_track.Track,
+  universe: manifest.UniverseManifest,
+  partition: String,
+  offset: Int,
+  limit: Int,
+) -> membership_decode.Input {
+  membership_decode.Input(
+    finance_track.name(track),
+    "2026-02-24",
+    1000,
+    membership_decode.ManifestInput(
+      manifest.encode_universe(universe),
+      universe |> manifest.universe_digest |> identity.sha256_value,
+    ),
+    membership_decode.PageInput(partition, offset, limit),
+  )
+}
+
+fn projection_handle(value: membership_projection.Response) -> String {
+  let text = value.details |> json.to_string
+  let assert [_, remainder] = string.split(text, "\"projectionHandle\":\"")
+  let assert [value, ..] = string.split(remainder, "\"")
+  value
+}
+
+fn date_identity(value: time.Date) -> String {
+  let #(year, month, day) = time.date_parts(value)
+  int.to_string(year)
+  <> "-"
+  <> int.to_string(month)
+  <> "-"
+  <> int.to_string(day)
 }
 
 fn result_handle(value: screen.Response, field: String) -> String {

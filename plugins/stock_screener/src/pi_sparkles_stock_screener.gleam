@@ -18,6 +18,8 @@ import pi/tool
 import pi_sparkles_stock_screener/decode as screen_decode
 import pi_sparkles_stock_screener/domain
 import pi_sparkles_stock_screener/effect/environment
+import pi_sparkles_stock_screener/membership
+import pi_sparkles_stock_screener/membership_decode
 import pi_sparkles_stock_screener/screen
 
 type Provider {
@@ -93,8 +95,29 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
       }
     },
   )
+  register_project_universe(api)
   register_screen(api)
   promise.resolve(Nil)
+}
+
+fn register_project_universe(api: pi.ExtensionApi) -> Nil {
+  tool.register(
+    api,
+    "project_universe",
+    "Project exact point-in-time universe membership",
+    "Verify one caller-supplied canonical finance_replay universe manifest and mechanically project exact cn, hk, or us listing membership at a caller-selected effective date and knowledge cutoff, preserving ended, late, unknown, conflicting, and overlapping facts",
+    "Supply the exact manifest, track, effective date, knowledge cutoff, and page; the LLM chooses and interprets every source, cutoff, limitation, and next operation",
+    tool.parameters(project_universe_schema(), membership_decode.input()),
+    tool.Parallel,
+    fn(_id, input, _signal, _updates, _ctx) {
+      case membership.run(input) {
+        Ok(value) ->
+          tool.text_result(value.summary, value.details)
+          |> promise.resolve
+        Error(error) -> tool.reject(membership.error_message(error))
+      }
+    },
+  )
 }
 
 fn register_screen(api: pi.ExtensionApi) -> Nil {
@@ -258,6 +281,29 @@ fn screen_schema() -> schema.Schema {
           ]),
         ),
         schema.Required("offset", bounded_integer(0.0, 2000.0)),
+        schema.Required("limit", bounded_integer(1.0, 200.0)),
+      ]),
+    ),
+  ])
+}
+
+fn project_universe_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("track", schema.string_enum(["cn", "hk", "us"])),
+    schema.Required("effectiveDate", date_schema()),
+    schema.Required(
+      "knowledgeCutoffUnixMilliseconds",
+      bounded_integer(0.0, 9_007_199_254_740_991.0),
+    ),
+    schema.Required("universe", canonical_manifest_schema("universe")),
+    schema.Required(
+      "page",
+      schema.object([
+        schema.Required(
+          "partition",
+          schema.string_enum(["member", "not_member", "unresolved", "all"]),
+        ),
+        schema.Required("offset", bounded_integer(0.0, 10_000.0)),
         schema.Required("limit", bounded_integer(1.0, 200.0)),
       ]),
     ),

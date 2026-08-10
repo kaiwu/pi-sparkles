@@ -1082,6 +1082,40 @@ pub fn universe_digest(value: UniverseManifest) -> Sha256 {
   value.digest
 }
 
+pub fn universe_manifest_id(value: UniverseManifest) -> String {
+  value.manifest_id
+}
+
+pub fn universe_version(value: UniverseManifest) -> String {
+  value.version
+}
+
+pub fn universe_definition_kind(
+  value: UniverseManifest,
+) -> UniverseDefinitionKind {
+  value.definition_kind
+}
+
+pub fn universe_as_of_time(value: UniverseManifest) -> Instant {
+  value.as_of_time
+}
+
+pub fn universe_coverage(value: UniverseManifest) -> Interval {
+  value.coverage
+}
+
+pub fn universe_source_receipt(value: UniverseManifest) -> Sha256 {
+  value.source_receipt
+}
+
+pub fn universe_provenance(value: UniverseManifest) -> Provenance {
+  value.provenance
+}
+
+pub fn universe_limitations(value: UniverseManifest) -> List(String) {
+  value.limitations
+}
+
 pub fn universe_memberships(value: UniverseManifest) -> List(Membership) {
   value.memberships
 }

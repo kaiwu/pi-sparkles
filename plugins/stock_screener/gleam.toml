@@ -1,7 +1,7 @@
 name = "pi_sparkles_stock_screener"
 version = "0.1.0"
 target = "javascript"
-description = "Exact point-in-time universe acquisition and caller-defined stock predicate calculations for Pi"
+description = "Exact three-track point-in-time universe projection and caller-defined stock predicate calculations for Pi"
 licences = ["Apache-2.0"]
 gleam = ">= 1.18.0"
 
@@ -29,6 +29,6 @@ tested_version = "0.83.0"
 
 [metadata.finance]
 status = "experimental"
-provider = "Alpaca Trading Assets"
+provider = "caller-supplied canonical manifests; Alpaca Trading Assets"
 access = "credentialed-read-only"
-track = "us"
+track = "cn,hk,us projection; us acquisition"

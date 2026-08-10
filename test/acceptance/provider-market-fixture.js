@@ -64,7 +64,7 @@ const specs = {
 const universeSpec = {
   artifact: "stock_screener",
   toolName: "stock_universe",
-  registeredTools: ["stock_universe", "screen"],
+  registeredTools: ["stock_universe", "project_universe", "screen"],
   input: {
     environment: "paper",
     status: "active",

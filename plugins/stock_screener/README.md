@@ -1,12 +1,15 @@
 # pi_sparkles_stock_screener
 
-Status: **Experimental — Session 17 rank-6 predicate increment complete 2026-08-08** · version:
-`0.1.0` · target: JavaScript/Bun
+Status: **Experimental — three-track point-in-time membership increment complete
+2026-08-10** · version: `0.1.0` · target: JavaScript/Bun
 
-`stock_screener` combines two deliberately separate surfaces:
+`stock_screener` combines three deliberately separate surfaces:
 
 - the existing provider-backed `stock_universe` acquisition tool, which copies
   bounded Alpaca US-equity asset-master rows without screening or ranking; and
+- the stateless `project_universe` tool, which projects exact `cn`, `hk`, or
+  `us` membership from a caller-supplied canonical `finance_replay` universe
+  manifest at an explicit effective date and knowledge cutoff; and
 - the new stateless `screen` calculation, which evaluates exact
   caller/LLM-supplied numeric predicates over caller-supplied point-in-time
   universe, dataset, market, and technical facts.
@@ -20,6 +23,10 @@ controls completed-daily fact states, [Session 12](../../../trading-course/sessi
 controls technical-calculation evidence, and
 [Session 16](../../../trading-course/sessions/16_cg_quant_shared_replay_information_contract_20260807.md)
 controls point-in-time universe/dataset manifests and reproducible handles.
+Session 17's post-rank-20 depth trigger explicitly identifies historical
+membership as a shared input for screening and backtesting. This increment
+implements that provider-neutral contract without choosing, purchasing, or
+substituting a market data source.
 
 ## Decision boundary
 
@@ -40,6 +47,31 @@ imputation, source merge, alternative selection, or provider/track fallback.
 Every result reports `decisionOwner: "llm"` and
 `pluginDecisionFields: []`. A mechanically matched row is not a qualified,
 suitable, attractive, actionable, or recommended security.
+
+## `project_universe` request
+
+The tool accepts one exact canonical universe envelope and matching SHA-256
+handle, one explicit `cn`, `hk`, or `us` track, an effective date inside the
+manifest coverage, a knowledge cutoff, and a caller-selected `member`,
+`not_member`, `unresolved`, or `all` page. It performs no network, filesystem,
+credential, source-selection, or persistence effect.
+
+Membership events are grouped by exact `listing_id` plus MIC in canonical
+manifest order. A listing is mechanically `member` only when exactly one
+membership event is active under the named `inclusive_end_v1` interval policy,
+the event was known by the cutoff, and no overlapping unresolved event exists.
+Ended and not-yet-effective events remain visible as inactive. Unknown,
+conflicting, late-known, malformed, or overlapping active events make the
+listing `unresolved`; they are never treated as absent. Re-entry is supported:
+an ended historical event and one later active event produce one exact member
+relation rather than a duplicate-event conflict.
+
+The response preserves every source membership event and its symbol, listing,
+status, interval, publication, knowledge, retrieval, source-receipt,
+correction-lineage, and state facts. It returns compact listing counts, stable
+paging, the verified manifest handle, and a page-independent projection handle.
+Matching hashes prove content coherence only—not source authority, correctness,
+completeness, origin authentication, or licence permission.
 
 ## `screen` request
 
@@ -73,7 +105,9 @@ their tracks equal the request track, the requested range is inside the dataset
 coverage interval, every row date is inside that range, every row has an exact
 dated universe membership and dataset observation binding, row keys and
 predicate IDs are unique, and numeric/evidence bounds are respected. It never
-looks up a manifest or receipt from ambient state.
+looks up a manifest or receipt from ambient state. Historical re-entry events
+are evaluated at the row date, and membership facts known after the source
+cutoff remain unresolved instead of becoming current-membership substitutions.
 
 ## Mechanical relation
 
@@ -139,23 +173,24 @@ they make no live provider call.
 
 ```text
                          Pi extension effect shell
-                            │                │
-                            ▼                ▼
-                 stateless screen      Alpaca acquisition
-                            │                │
-                            ▼                ▼
-                   typed decoder       bounded runtime
-                            │                │
-                            ▼                ▼
-               pure predicate domain   exact provider copy
-                   │            │
-                   ▼            ▼
-          finance_replay    finance_core decimal
-             manifests         comparison
+                     │                 │                │
+                     ▼                 ▼                ▼
+          universe projection   stateless screen   Alpaca acquisition
+                     │                 │                │
+                     ▼                 ▼                ▼
+              typed decoder      typed decoder     bounded runtime
+                     │                 │                │
+                     ▼                 ▼                ▼
+          pure temporal facts  predicate domain   exact provider copy
+                     └────────┬────────┘
+                              ▼
+                    finance_replay manifests
 ```
 
-- `pi_sparkles_stock_screener.gleam` registers both tools and confines
+- `pi_sparkles_stock_screener.gleam` registers all three tools and confines
   Promise/network behavior to the Alpaca shell.
+- `membership_decode.gleam` and `membership.gleam` own the typed untrusted
+  boundary and pure three-track projection.
 - `pi_sparkles_stock_screener/decode.gleam` decodes untrusted screen values
   into immutable boundary values.
 - `pi_sparkles_stock_screener/screen.gleam` performs canonical-manifest
@@ -167,30 +202,36 @@ they make no live provider call.
 
 ## Lifecycle, scorecard, and stop point
 
-| Scorecard field | Rank-6 predicate increment |
+| Scorecard field | Current membership and predicate increment |
 | --- | --- |
-| `professional_tasks_enabled` | Calculate caller-supplied field/constant predicates across exact dated universe rows and page matching/non-matching/unresolved facts |
+| `professional_tasks_enabled` | Project exact point-in-time membership and calculate caller-supplied field/constant predicates across exact dated universe rows |
 | `personas_served` | Swing and quant workflow lenses |
-| `provider_backed` | Screen: false; exact inputs supplied by caller. Existing acquisition: Alpaca US asset master |
-| `track_coverage` | Screen: explicit `cn`, `hk`, or `us`, one leg per call. Acquisition: `us` only |
+| `provider_backed` | Projection/screen: false; exact inputs supplied by caller. Existing acquisition: Alpaca US asset master |
+| `track_coverage` | Projection/screen: explicit `cn`, `hk`, or `us`, one leg per call. Acquisition: `us` only |
 | `shell_depth` | Thin |
 | `durable_state` | False; deterministic replay by immutable request |
-| `effect_risk` | Screen: none beyond Pi result delivery. Acquisition: bounded read-only HTTP and environment credentials |
-| `source_dependency` | Screen: none. Acquisition: credentialed Alpaca Trading Assets |
+| `effect_risk` | Projection/screen: none beyond Pi result delivery. Acquisition: bounded read-only HTTP and environment credentials |
+| `source_dependency` | Projection/screen: none. Acquisition: credentialed Alpaca Trading Assets |
 | `gate_dependency` | Resolved by Sessions 11, 12, 16, and 17 |
 | `last_tutor_run` | None for the predicate increment; it introduces no new workflow, provider, persistent effect, or three-plugin handoff |
 
-The first increment stops after one stateless `screen` tool, six exact
+The current increment stops after one stateless `project_universe` tool and the
+existing `screen` tool: exact effective-date/knowledge-cutoff projection,
+inclusive end-date policy, re-entry/overlap handling, stable paging, six exact
 field-versus-constant operators, explicit three-way relation facts, stable
-partition paging, and canonical handles. It does not add built-in screens,
+partition paging, and canonical handles. It does not add a provider adapter,
+source selection, membership import, built-in screens,
 field-to-field/formula predicates, ranking/scoring, ties, persistence,
 watchlists, alerts, provider fetching, correction selection, cross-track
 aggregation, backtests, charts, recommendations, or trade planning.
 
-The package moved to **Experimental** on 2026-08-08 after 10 focused tests, a
-bundled exact-predicate scenario, both preserved Alpaca boundary scenarios,
-artifact export, installed-Pi loading, architecture checks, and full repository
-regression passed. The implementation also corrected and covered the canonical
+The package's membership increment has 15 focused tests spanning all three
+tracks, re-entry, overlaps, knowledge cutoffs, canonical failures, stable
+paging, and the predicate handoff, plus four bundled boundary scenarios. The
+implementation also corrected and covered the canonical
 `finance_replay` known-membership wire state (`state`, not `kind`) needed for
-non-empty universe-manifest round trips. No tutor run or `/tmp/QA01.md` was
-needed.
+non-empty universe-manifest round trips. Provider acquisition and all normal
+tests remain fixture-only. Warnings-as-errors, architecture, artifact,
+installed-Pi, three-track acceptance, and the full repository regression pass.
+No new tutor run is needed because Session 16 owns the exact manifest contract
+and Session 17 names this shared receipt as the depth trigger.
