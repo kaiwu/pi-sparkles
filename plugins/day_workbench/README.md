@@ -1,6 +1,6 @@
 # day_workbench
 
-Status: **Designing** · version: `0.1.0` · target: JavaScript/Bun
+Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `day_workbench` is the narrow rank-20 implementation authorized by
 [Course Session 22](../../trading-course/sessions/22_cg_day_full_workflow_contract_20260809.md).
@@ -11,7 +11,7 @@ calculation; and advances only an explicitly supplied workflow transition. It
 does not acquire a feed, verify a caller's real-time claim, decide readiness or
 a trade, or mutate an order/account.
 
-The plugin will register three stateless read-only tools:
+The plugin registers three stateless read-only tools:
 
 - `day_inspect` validates one content-hash-bound evidence packet and returns a
   compact session/feed/integrity/evidence-matrix projection plus an optional
@@ -121,15 +121,15 @@ multi-listing scans, short/margin/derivative policy, smart routing, automated
 monitoring, durable persistence, paper/live mutation, and every trading
 judgment remain outside this slice.
 
-## Planned verification
+## Verification
 
-- packet identity/licence/entitlement and every event-variant decoding law;
-- duplicate/conflict, sequence gap/reset/order, depth binding, correction, and
-  truncation laws;
-- exact calculation formulas, filter/window/rounding receipts, and unperformed
-  counterexamples;
-- LLM-only/mechanical workflow transitions, idempotence, conflict, and replay;
-- bundled three-tool, privacy/no-effect, malformed-packet, and cancellation
-  boundaries;
-- warnings-as-errors, architecture, artifact, installed-Pi, and full repository
-  regression gates.
+Ten focused Gleam tests cover packet identity/licence/entitlement and every
+event variant; duplicate/conflict, sequence gap, depth binding, correction,
+cancel/bust, truncation, and filtering laws; exact quote/trade/depth
+calculations and unperformed counterexamples; and branch-bound workflow
+transitions, idempotence, replay validation, and the `CG-LIVE` boundary. Six Bun
+binding scenarios cover all three bundled tools, caller-attested claims,
+source-bound operands, gaps/incompleteness, stateless transitions, malformed
+hashes, and cancellation. Warnings-as-errors, architecture, artifact export,
+installed-Pi smoke, and the full repository regression pass complete the
+Experimental slice.

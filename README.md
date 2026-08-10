@@ -109,6 +109,12 @@ repository currently contains:
   conflicts, truncation, reconciliation, privacy, and paged row drill-down
   without broker access, durable storage, automatic aggregation, review, or
   rebalance decisions;
+- a stateless `day_workbench` shell that validates one caller-supplied,
+  licence-attested sequenced intraday packet, exposes exact session/feed/
+  integrity and freshness facts, performs one explicitly requested mechanical
+  calculation, and advances content-bound caller-retained workflow state
+  without authenticating the feed, deciding readiness or a trade, persisting
+  state, or mutating an order/account;
 - a stateless `portfolio_risk` calculation shell over exact supplied account
   and `cn`/`hk`/`us` position facts, with explicit long-only single-currency
   exposure, weight, signed heat, denominator, partiality, contribution,
@@ -354,6 +360,7 @@ the process supervisor, never commit them or place real values in documentation.
 | `finance_setup` | None | None | Reports configuration/capability state without ambient credentials. |
 | `finance_guardrails` | None | None | Pure evidence and freshness policy. |
 | `finance_track_status` | None | None | Its visible agent contact is explicit session/tool state, not an environment variable. |
+| `day_workbench` | None | None | Stateless network-free inspection, calculation, and caller-retained workflow transitions over exact supplied packets; it performs no provider, persistence, alert, broker, or order effect. |
 | `stock_research_report` | None | None | Composes caller-supplied tool receipts without direct provider access; `/us-research` queues the agent workflow. |
 | `watchlist` | None | None | Uses versioned Pi session-branch entries; no provider, credential, or external storage configuration. |
 | `hello`, `lifecycle`, `safety_gate` | None | None | Reference plugins require no provider configuration. |
@@ -578,6 +585,7 @@ pi-sparkles/
 │   ├── investor_workbench/       exact supplied dossier/metric/valuation facts
 │   ├── company_profile/          exact Twelve Data US profile/share snapshot
 │   ├── cn_stock_sector_concept/  exact CAPCO 2025-H2 classification row
+│   ├── day_workbench/             caller-attested intraday facts and workflow
 │   ├── quant_research/            exact trial, metric, and run-difference facts
 │   ├── backtest/                  bounded exact replay and reproduction export
 │   ├── finance_guardrails/       evidence and freshness policy

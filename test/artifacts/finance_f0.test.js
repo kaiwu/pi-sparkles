@@ -19,6 +19,7 @@ for (const name of [
   "cn_fundamentals",
   "cn_market_rules",
   "company_profile",
+  "day_workbench",
   "hk_setup",
   "hk_disclosures",
   "hk_market_calendar",

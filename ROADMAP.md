@@ -15,8 +15,8 @@ directory and is an independent Gleam project. Its local `README.md` becomes the
 detailed design document; this roadmap retains only the proposal, priority,
 dependencies, and delivery status.
 
-As of 2026-08-09, the catalog has 129 unique named `pi_*` proposals and 45
-matching implementation directories (34.9%). The repository has 54 plugin
+As of 2026-08-10, the catalog has 129 unique named `pi_*` proposals and 46
+matching implementation directories (35.7%). The repository has 55 plugin
 directories in total because nine reference, setup, and workflow slices do not
 map one-to-one to an R1 proposal. These are breadth counts, not completion
 counts: many directories intentionally implement only one Experimental slice.
@@ -107,8 +107,8 @@ reinterpret source evidence.
 
 | Trader workflow | Required decision loop | Current roadmap coverage | Steering gap |
 | --- | --- | --- | --- |
-| Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Quote, calendar/rules, order-book, tape, alerts, paper brokers, and compliance are proposed or narrow slices. | **Weakest.** No licensed, freshness-bounded intraday stream, shared order/fill model, fast trade-plan tool, or latency/execution-quality acceptance gate. Daily bars must not be presented as a day-trading surface. |
-| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, shared-replay, exact-predicate screener, shared exact-calendar, quant-research, backtest, deterministic-chart, HK result-related board-meeting-date, US corporate-action source, explicit portfolio exposure/heat calculation, point-in-time FRED, and exact Alpaca/Benzinga US news-metadata slices now compose around explicit facts. The source adapters preserve their timing and completeness limits, and portfolio/macro/news judgment stays LLM-owned. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 19 are complete. Extend swing/provider depth only on a concrete workflow trigger. |
+| Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Session 22 and the Experimental `pi_day_workbench` provide network-free validation/inspection of one caller-attested sequenced intraday packet, selected mechanical calculations, and explicit caller-retained workflow transitions; calendar, execution-information, and risk slices are separately available. | **Still the weakest live vertical.** No adapter authenticates or acquires a licensed freshness-bounded intraday stream, and no scan, durable monitor, alert, paper/live mutation, or whole-product day-trader acceptance exists. Daily bars must not be presented as a day-trading surface. |
+| Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, shared-replay, exact-predicate screener, shared exact-calendar, quant-research, backtest, deterministic-chart, HK result-related board-meeting-date, US corporate-action source, explicit portfolio exposure/heat calculation, point-in-time FRED, and exact Alpaca/Benzinga US news-metadata slices now compose around explicit facts. The source adapters preserve their timing and completeness limits, and portfolio/macro/news judgment stays LLM-owned. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 20 are complete. Extend swing/provider depth only on a concrete workflow trigger. |
 | Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | Session 19 and the Experimental `pi_investor_workbench` provide a caller-supplied 16-section evidence-state container, exact identity/statement/review facts, requested mechanical metrics, and assumption-explicit valuation bridges. `pi_company_profile`, `pi_cn_stock_sector_concept`, and `pi_finance_news` add bounded profile, classification, and vendor-news facts. The Experimental Session 21 `pi_portfolio` slice adds bounded raw import/inspection. | Rank 19's import slice is complete; durable/full portfolio review remains gated. The source and import slices must not be converted into venue/identity proof, verified events, impact/catalyst, portfolio sufficiency, thesis, target-price, recommendation, rebalance, or action judgments. |
 | Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. `finance_dataset`, `stock_screener`, `finance_calendar`, `quant_research`, `backtest`, `finance_charts`, and `macro_fred` expose exact dataset/vintage, point-in-time predicate, session/closure, hypothesis/ledger, requested-metric, run-comparison, replay, reproduction, deterministic-view, and bounded macro-source inputs. | Ranks 5 through 14 are complete. Historical membership remains a high-leverage missing quant source fact; edge/deployability remain LLM conclusions. |
 
@@ -195,6 +195,8 @@ sets this immediate queue:
     2026-08-09.
 19. `pi_portfolio` — Experimental bounded local import/inspection slice complete
     2026-08-09.
+20. `pi_day_workbench` — Experimental provider-neutral workflow information
+    slice complete 2026-08-10.
 
 Every target follows the same explicit loop: controlling tutor specification →
 detailed `plugins/<name>/README.md` design → independent Gleam implementation →
@@ -237,9 +239,13 @@ membership-validity interval. Rank 18 completed one bounded Alpaca/Benzinga US
 article-metadata source slice with exact symbol association, source timestamps,
 pagination, rights, and content-bound page receipts while withholding article
 material and making no event, sentiment, impact, catalyst, or absence claim.
-Exactly one next item is active: rank-19 `pi_portfolio`, Designing the bounded
-raw import/inspection slice authorized by Session 21 in response to
-`/tmp/QA04.md`. Full portfolio review and full `CG-DAY` remain gated.
+Rank 19 completed the Session 21 bounded caller-file portfolio import/
+inspection slice. Rank 20 completed the Session 22 caller-attested intraday
+packet, selected-calculation, and caller-retained workflow information slice
+without provider authentication/acquisition, persistence, judgment, or
+mutation. Exactly one next item is active: a post-rank-20 portfolio integration
+review that must name one subsequent breadth target or concrete Session 17
+depth trigger before another plugin is designed.
 
 Depth resumes only for a named professional-task information gap, inefficient
 LLM context, a missing shared receipt needed by two consumers, a risky effect
@@ -259,9 +265,10 @@ contract, `CG-TECH` for calculation-only technical facts, `CG-RISK` for
 calculation-only risk facts, and the execution-information slice of `CG-DAY`
 for desired instructions, capabilities, explicit simulations,
 lifecycle/fills, and requested calculations. `CG-QUANT` is resolved for the
-provider-neutral completed-daily shared-replay information contract. The full
-intraday workflow part of `CG-DAY` and the gates still marked open below remain
-**Open**.
+provider-neutral completed-daily shared-replay information contract. Session 22
+resolves the provider-neutral full intraday workflow information contract; a
+licensed acquisition adapter and `CG-LIVE` mutation remain separate open work.
+The gates still marked open below remain **Open**.
 
 | Gate | Trading-course TOC cross-reference | Finance-advisor deep dive required before design | Applies first to |
 | --- | --- | --- | --- |
@@ -271,7 +278,7 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
 | `CG-TECH` **(Resolved — 2026-08-07)** | Phase 2, Weeks 5–8 “Technical Analysis” | Provide exact formulas, seeds, parameters, warm-up, missing-session and corporate-action treatment for SMA/EMA, RSI, MACD, KD9, Bollinger, ATR and VWAP; operational definitions and counterexamples for support/resistance, trend, breakout, gaps, divergence, volume confirmation, patterns and multi-timeframe use. | `finance_indicators`, `pi_stock_technicals`, screeners, charts and alerts |
 | `CG-FUNDAMENTAL` **(Minimum dossier information slice Resolved — 2026-08-09)** | Phase 3, Weeks 9–12 “Fundamental Analysis” | Session 19 defines the 16-section evidence-state dossier, identity and statement laws, mechanical insufficiency and metric facts, assumption-explicit valuation rows, review history, and the boundary against plugin-owned investment judgment. Provider orchestration, governance/industry extraction, peer selection, monitoring, portfolio composition, and deeper valuation remain incremental. | `pi_investor_workbench`; later governance/industry, quality/growth/valuation, fundamentals, and profile sources |
 | `CG-SWING` **(Resolved — 2026-08-06)** | Phase 4, Week 13 “Swing Trading System” and Week 16 “Strategy Integration” | Walk one complete weekly-to-daily workflow: universe, sector/regime/catalyst context, setup and confirmation, entry/stop/target/expiry, sizing/scaling, monitoring, exits, invalidation and journal review; distinguish required evidence from preferences. | `finance_strategy` completed-daily-bar slice, `pi_swing_workbench`, the next sprint |
-| `CG-DAY` **(Execution-information slice Resolved — 2026-08-07; full intraday workflow Open)** | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Define pre-market, auction, opening-range, intraday and close workflows; permissible data latency; spread/depth/tape use; overtrading controls; order choice; partial/non-fill, gap, latency, impact and queue uncertainty; and track-specific stop/order availability. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench` |
+| `CG-DAY` **(Execution-information slice Resolved — 2026-08-07; provider-neutral full workflow Resolved — 2026-08-09)** | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Sessions 14 and 22 define desired-instruction/execution evidence plus the network-free intraday packet, session/phase, entitlement/licence, sequence/freshness/gap, explicit calculation, workflow-state, fail-closed, and forbidden-conclusion laws. Licensed acquisition, durable monitoring, alerts, and paper/live mutation remain later triggers. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench`; later licensed provider and `CG-LIVE` adapters |
 | `CG-QUANT` **(Shared-replay information slice Resolved — 2026-08-07)** | Phase 4, Week 15 “Quantitative Approaches” | Specify the research protocol: falsifiable hypothesis, point-in-time universe/data availability, adjustments, feature/signal versioning, fill/cost model, train/validation/test and walk-forward design, multiple testing, uncertainty/significance, robustness, benchmarks and reproducible run acceptance. | `finance_replay`, `pi_quant_research`, `pi_backtest`, factor lab and event study |
 | `CG-PORTFOLIO` **(Light calculation and raw import/inspection slices Resolved — 2026-08-09; full review Open)** | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | Sessions 18 and 21 define exact supplied-fact risk calculations plus bounded caller-file snapshot/account/position identity, information states, currencies, reconciliation, source time, privacy, and compact drill-down. Durable comparison, broker retrieval, FX aggregation, diversification, correlation regimes, rebalance/cash-flow rules, leverage/liquidity/currency analysis, VaR/CVaR, stress, attribution, and drawdown response remain later depth without false precision. | `pi_portfolio_risk`; rank-19 `pi_portfolio` import slice; later scenarios, attribution and rebalance proposals |
 | `CG-LIVE` | Phase 6, Weeks 21–24+ “Live Trading” | Define readiness evidence for paper-to-micro-live transition, broker/account criteria, size-increase and stop conditions, execution and emotion review, incident handling and rollback; this augments rather than weakens the separate security review. | paper-broker acceptance and any live-broker design |
@@ -378,8 +385,9 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
 
 - **Evidence:** trading-course
   [Session 14](../trading-course/sessions/14_cg_day_execution_information_contract_20260807.md),
-  which resolves the bounded execution-information slice while explicitly
-  leaving the complete professional intraday loop open.
+  which resolved the bounded execution-information slice and at that time left
+  the complete professional intraday loop open; Session 22 later resolves the
+  provider-neutral workflow information contract below.
 - **Reviewed scope:** long-only cash equities on separately labelled `cn`,
   `hk`, and `us` tracks: desired instructions, sourced broker/account/exchange
   capabilities, session comparisons, explicit daily-bar/depth/scenario models,
@@ -406,11 +414,38 @@ intraday workflow part of `CG-DAY` and the gates still marked open below remain
   `visible_depth_sweep_v1`, `bar_possible_paths_v1`, exact fill aggregation,
   lifecycle folding, requested spread/slippage/shortfall/cost/latency
   calculations, and canonical request/semantic receipts. Twenty-four
-  deterministic offline tests pass. Additional models, provider/broker
-  adapters, `pi_order_simulator`, licensed intraday data, full day-workflow
-  behavior, journal composition, and all mutation remain separate. The
+  deterministic offline tests pass. `pi_order_simulator` exposes the reviewed
+  completed-daily branch slice, while additional models, provider/broker
+  adapters, licensed intraday acquisition, journal composition, and all
+  mutation remain separate. The
   `CG-PSYCHOLOGY` journal-information slice is resolved below; it does not
   complete the day-trader workflow.
+
+#### CG-DAY provider-neutral full-workflow resolution — 2026-08-09
+
+- **Evidence:** trading-course
+  [Session 22](../trading-course/sessions/22_cg_day_full_workflow_contract_20260809.md),
+  which resolves the network-free intraday packet, calculation, and workflow
+  information contract before a licensed provider adapter exists.
+- **Reviewed scope:** one long cash-equity listing/session packet on an exact
+  `cn`, `hk`, or `us` track; caller-attested provider/feed/entitlement/licence
+  and acquisition facts; exact phase/rule receipts; all reviewed quote, trade,
+  depth, auction, halt/status, correction, cancel/bust, and heartbeat variants;
+  sequence/freshness/gap laws; explicit calculations; and caller-retained
+  `Preparation` through `Review` state transitions.
+- **Controlling boundary:** the workbench reports mechanical facts and applies
+  explicit transitions. It does not authenticate a feed, acquire data, decide
+  readiness or a trade, rank a candidate, predict/claim a fill, persist state,
+  alert, or mutate an order/account. `Ready` means only
+  `evidence_available`; the LLM/user owns every interpretation and next action.
+- **Initial implementation:** [`day_workbench`](plugins/day_workbench/README.md)
+  registers `day_inspect`, `day_calculate`, and `day_transition`. Ten focused
+  tests and six bundled scenarios cover the packet/event, calculation,
+  integrity, workflow/idempotence, cancellation, and `CG-LIVE` boundaries;
+  warnings-as-errors, architecture, artifact/installed-Pi smoke, and the full
+  regression pass complete the Experimental slice. Licensed acquisition,
+  scanning, durable monitoring, alerts, short/margin/derivatives, advanced
+  execution, and paper/live mutation remain future triggers.
 
 #### CG-PSYCHOLOGY journal-information resolution — 2026-08-07
 
