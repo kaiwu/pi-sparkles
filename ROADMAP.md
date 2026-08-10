@@ -258,14 +258,17 @@ provider adapter. Its unresolved counter identity, correction/completeness,
 subscriber/order, fixture, and output rights are parked external work, not an
 implementation blocker. The inquiry remains drafted and unsent.
 
-The provider-neutral `pi_stock_quote` and `pi_stock_history` slices are now
-implemented. `stock_quote` constructs one canonical exact quote observation;
-`stock_bars` validates and pages one bounded canonical daily OHLCV series. Both
-cover exact `cn`, `hk`, or `us` listing/MIC scope and retain raw lexemes,
-evidence ID, declared entitlement/licence, redacted source, and unknowns; all
-focused and repository gates pass. The next active breadth item is
-`pi_stock_market_snapshot`: a provider-neutral point-in-time market breadth
-projection. Provider selection/acquisition, cross-track fallback, inferred
+The provider-neutral `pi_stock_quote`, `pi_stock_history`,
+`pi_stock_market_snapshot`, and `pi_finance_data_quality` slices are now
+implemented. They cover one exact `cn`, `hk`, or `us` scope and retain raw
+lexemes, evidence IDs, entitlement/licence declarations, redacted sources,
+unavailable/conflicting states, and explicit unknowns. The data-quality slice
+adds only explicit-coordinate omissions, same-source duplicates, caller-policy
+freshness, exact unit/adjustment compatibility, and fully comparable exact
+provider agreement/disagreement; all focused and repository gates pass. The
+next active breadth item is `pi_stock_market_calendar`: a provider-neutral exact
+status/schedule packet. Provider selection/acquisition, inferred venue or halt
+state, trust or correctness verdicts, repair, cross-track fallback, inferred
 fund flows, forecasts, ranking policy, and trading decisions remain separate.
 
 Depth resumes only for a named professional-task information gap, inefficient
