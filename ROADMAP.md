@@ -15,9 +15,9 @@ directory and is an independent Gleam project. Its local `README.md` becomes the
 detailed design document; this roadmap retains only the proposal, priority,
 dependencies, and delivery status.
 
-As of 2026-08-10, the catalog has 129 unique named `pi_*` proposals and 46
-matching implementation directories (35.7%). The repository has 55 plugin
-directories in total because nine reference, setup, and workflow slices do not
+As of 2026-08-11, the catalog has 131 unique named `pi_*` proposals and 54
+matching implementation directories (41.2%). The repository has 61 plugin
+directories in total because seven reference, setup, and workflow slices do not
 map one-to-one to an R1 proposal. These are breadth counts, not completion
 counts: many directories intentionally implement only one Experimental slice.
 The operational breakdown and next breadth item are recorded in
@@ -259,17 +259,25 @@ subscriber/order, fixture, and output rights are parked external work, not an
 implementation blocker. The inquiry remains drafted and unsent.
 
 The provider-neutral `pi_stock_quote`, `pi_stock_history`,
-`pi_stock_market_snapshot`, and `pi_finance_data_quality` slices are now
-implemented. They cover one exact `cn`, `hk`, or `us` scope and retain raw
-lexemes, evidence IDs, entitlement/licence declarations, redacted sources,
-unavailable/conflicting states, and explicit unknowns. The data-quality slice
-adds only explicit-coordinate omissions, same-source duplicates, caller-policy
-freshness, exact unit/adjustment compatibility, and fully comparable exact
-provider agreement/disagreement; all focused and repository gates pass. The
-next active breadth item is `pi_stock_market_calendar`: a provider-neutral exact
-status/schedule packet. Provider selection/acquisition, inferred venue or halt
-state, trust or correctness verdicts, repair, cross-track fallback, inferred
-fund flows, forecasts, ranking policy, and trading decisions remain separate.
+`pi_stock_market_snapshot`, `pi_finance_data_quality`,
+`pi_stock_market_calendar`, and `pi_stock_order_book` slices are now
+implemented. They cover one exact
+`cn`, `hk`, or `us` scope and retain raw lexemes, evidence IDs,
+entitlement/licence declarations, redacted sources, unavailable/conflicting
+states, and explicit unknowns. The data-quality slice adds only explicit-
+coordinate omissions, same-source duplicates, caller-policy freshness, exact
+unit/adjustment compatibility, and fully comparable exact provider agreement/
+disagreement. The stock-market-calendar slice adds only typed reported
+schedule/status comparison and supplied half-open phase-interval containment.
+The top-of-book slice adds only explicit side states, venue aggregation,
+sequence/gap/reset facts, and displayed-liquidity limitations. All focused and
+repository gates pass. The next active breadth item is `pi_stock_tape`: one
+provider-neutral bounded trade/correction/cancel packet, with detailed design
+next. Provider
+selection/acquisition, inferred venue or halt state, trust or correctness
+verdicts, repair, depth reconstruction, hidden-liquidity or executable-price
+claims, cross-track fallback, inferred fund flows, forecasts, ranking policy,
+and trading decisions remain separate.
 
 Depth resumes only for a named professional-task information gap, inefficient
 LLM context, a missing shared receipt needed by two consumers, a risky effect

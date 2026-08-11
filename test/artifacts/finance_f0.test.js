@@ -46,6 +46,8 @@ for (const name of [
   "stock_research_report",
   "stock_screener",
   "stock_history",
+  "stock_market_calendar",
+  "stock_order_book",
   "stock_market_snapshot",
   "stock_quote",
   "stock_technicals",
