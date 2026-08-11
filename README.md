@@ -8,15 +8,17 @@ family, [TRACK_GUIDE.md](TRACK_GUIDE.md) for adding another isolated market
 track, and [FUNCTIONAL_DESIGN.md](FUNCTIONAL_DESIGN.md) for the mandatory
 functional-core/effect-shell architecture. Product maturity, supported input
 paths and professional workflow acceptance are governed by
-[PRODUCT_READINESS.md](PRODUCT_READINESS.md).
+[PRODUCT_READINESS.md](PRODUCT_READINESS.md); the six non-Cartesian role
+products and their blocker-first workflow are governed by
+[PRODUCT_TIERS.md](PRODUCT_TIERS.md) and [tiers.json](tiers.json).
 
 ## Status
 
 This approach is feasible and the first end-to-end implementation works. The
 repository currently contains 61 plugin implementation packages with
-Experimental slices and **zero currently claimed ProductUseful plugins**.
+Experimental slices and **zero currently claimed ProductUseful role tiers**.
 Experimental code must satisfy its exact implemented contract; ProductUseful
-additionally requires a supported repeatable input path and a complete
+applies only to a whole tier with a supported repeatable input path and complete
 professional journey.
 
 The repository includes:
@@ -282,19 +284,26 @@ Requirements: Gleam, Bun, and either a hydrated Pi source checkout or an
 installed `pi` executable.
 
 ```sh
-bun run check
-bun run test
-bun run build
+bun run tier:audit
+bun run tier:show -- T1
+bun run tier:checkpoint -- T1
 pi --no-extensions -e ./dist/hello --list-models
 ```
 
-Build or test one plugin by its directory or Gleam package name:
+Build or test one plugin by its directory or Gleam package name only as a
+focused development diagnostic:
 
 ```sh
 bun run build -- hello
 bun run test:unit -- safety_gate
 bun run test:pi -- pi_sparkles_hello
 ```
+
+The delivery and promotion unit is a complete role tier, not a plugin. Resolve
+all active-tier blockers first, keep every touched package coherent with
+`tier:checkpoint`, and run `bun run tier:verify -- Tn` once only after the
+whole tier reaches `verifying`. The six tiers each have one anchor track/profile;
+they do not expand into eighteen CN/HK/US products.
 
 `test:pi` uses `PI_SOURCE_DIR` when that checkout has its dependencies. It
 defaults to `/home/kaiwu/Documents/github/pi-mono` in this workspace and falls
@@ -849,9 +858,13 @@ Commands implemented now:
 
 | Command | Purpose |
 | --- | --- |
-| `bun run check` | formatting and warnings-as-errors builds for every package |
-| `bun run build [-- name]` | build and bundle every plugin or one plugin |
-| `bun run test:unit [-- name]` | Gleam tests with Bun for the binding, finance libraries, and plugins |
+| `bun run tier:audit` | validate exhaustive six-tier ownership and show inventory/blocker counts |
+| `bun run tier:show -- T1` | show one tier's product outcome, anchor profile, dependencies, blockers, proposals, and acceptance lane |
+| `bun run tier:checkpoint -- T1` | format, build, and focused-test all currently touched Gleam packages as one atomic working set |
+| `bun run tier:verify -- T1` | preflight and run the expensive repository plus role-acceptance promotion matrix once for a complete tier |
+| `bun run check` | diagnostic formatting and warnings-as-errors builds for every package |
+| `bun run build [-- name]` | diagnostic build and bundle for every plugin or one plugin |
+| `bun run test:unit [-- name]` | diagnostic Gleam tests for the binding, finance libraries, and plugins |
 | `bun run test:architecture` | enforce functional-core/effect-shell import and FFI boundaries |
 | `bun run test:ffi` | build and run JavaScript binding contracts |
 | `bun run test:artifacts` | build and inspect the generated extension modules |
@@ -859,7 +872,8 @@ Commands implemented now:
 | `bun run test:pi [-- name]` | load artifacts in Pi without invoking a model |
 | `bun run test:live:tutor` | run an opt-in multi-stage bounded journey through Pi's configured LLM and plugin tools |
 | `bun run test:live:sec` | run opt-in bounded compatibility checks against live read-only SEC APIs |
-| `bun run test` | complete repository verification |
+| `bun run test:workflow` | validate the tier manifest and blocker/promotion laws |
+| `bun run test` | complete repository diagnostic matrix, invoked once by `tier:verify` for promotion |
 | `bun run clean` | remove generated build, work, and distribution output |
 
 Planned release commands are `build:hex`, `hex:check`, and `hex:publish`.

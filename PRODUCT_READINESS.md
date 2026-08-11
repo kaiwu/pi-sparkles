@@ -5,6 +5,12 @@ calculation, decoder, or caller-supplied packet is not automatically a useful
 product. The domain contract must be correct, the Pi architecture must be
 explicit, and a named professional journey must work end to end.
 
+Delivery is governed by the six role products in
+[`PRODUCT_TIERS.md`](PRODUCT_TIERS.md) and [`tiers.json`](tiers.json). Product
+tiers and `cn`/`hk`/`us` tracks are not a matrix: each tier has one declared
+anchor acceptance profile, while other track operations remain focused exact
+contracts or are reported `track_partial`.
+
 This standard is controlled by the finance tutor's completed audit:
 
 - [Session 40](../trading-course/sessions/40_professional_product_readiness_audit_20260811.md): portfolio-wide readiness definitions, 81-design audit, implementation checklist, and Definition of Done;
@@ -22,13 +28,13 @@ workflow, safety-design, or professional-acceptance question remains inside the
 reviewed scope. Provider/access evidence and implementation remain real work,
 but they are not hidden tutor gaps.
 
-## Maturity and status
+## Package inventory and tier status
 
-Maturity is a sequence. Queue and blocker states are separate:
+Package maturity remains an honest inventory of existing code:
 
 ```text
-Maturity: Draft -> Designing -> Implementing -> Experimental -> ProductUseful -> Stable
-Flags:    Selected | ExternallyGated(reason) | Paused(reason)
+Package: Draft -> Designing -> Implementing -> Experimental
+Tier:    Queued -> BlockerResolution -> Building -> Verifying -> ProductUseful
 ```
 
 - **Draft:** only a catalog proposal exists.
@@ -37,20 +43,21 @@ Flags:    Selected | ExternallyGated(reason) | Paused(reason)
 - **Implementing:** an independent package, pure core, adapter boundary, Pi
   shell, and verification are being built.
 - **Experimental:** the exact implemented contract builds, loads, passes its
-  tests and bundled scenario, but the API or coverage may evolve. Experimental
-  is not permission for a toy, unauthenticated source claim, missing failure
-  state, hidden judgment, or unsafe effect.
-- **ProductUseful:** a complete named professional journey works through a
-  supported repeatable input path, compact response, drill-down, failure
-  recovery, and cross-plugin handoffs. The API may still evolve between minor
-  versions.
-- **Stable:** compatibility, migration, release, operational, entitlement, and
-  incident policies have demonstrated maturity and backward-compatibility.
+  tests and bundled scenario, but the API or coverage may evolve. It describes
+  existing package behavior only—not a delivery target, completed product, or
+  permission for a toy, unauthenticated-source claim, missing failure state,
+  hidden judgment, or unsafe effect. No new plugin is independently promoted to
+  this state.
+- **ProductUseful:** applies only to a whole tier. Its named professional
+  journey works through a supported repeatable input path, compact response,
+  drill-down, failure recovery, lifecycle, and cross-plugin handoffs. The API
+  may still evolve.
 
-**Selected for implementation** identifies the active code queue; it does not
-change maturity by itself. **Externally gated** identifies an exact provider,
-licence, entitlement, credential, security, jurisdictional, or human-
-authorization prerequisite; it is not a substitute for a missing design.
+The active tier and its exact blockers are recorded in `tiers.json`; there is
+no selected-plugin queue. An external blocker identifies a provider, licence,
+entitlement, credential, security, jurisdictional, storage, notification,
+streaming, or human-authorization prerequisite. It is not a substitute for a
+missing design and must be resolved before tier implementation begins.
 
 ## Uniform Pi-plugin contract
 
@@ -141,11 +148,11 @@ It is observed through provider receipts and reconciled explicitly.
 ## Supported input path
 
 ProductUseful requires at least one named, supported, versioned, repeatable
-end-to-end input path appropriate to the plugin:
+end-to-end input path appropriate to the tier's anchor journey:
 
 - licensed or public provider acquisition with entitlement/source receipt;
 - bounded user-owned import with content hash and documented schema;
-- canonical upstream receipts from ProductUseful plugins; or
+- canonical upstream receipts from tools delivered by ProductUseful tiers; or
 - a deterministic local path when the professional task itself is local-only.
 
 An ad hoc pasted fixture is not sufficient. A provider-neutral core can be a
@@ -159,15 +166,14 @@ entitlement/licence, budgets, fixture provenance, and intended output rights.
 
 ## Verification and professional Definition of Done
 
-An implementation may be called ProductUseful only when all applicable items
-pass:
+A tier may be called ProductUseful only when all applicable items pass together:
 
 - pure unit, law/invariant, invalid/unknown/conflict, and transition-sequence
   tests;
 - real response-byte provider decoder fixtures, with secrets and private data
   removed under an explicit fixture right;
 - FFI/binding, artifact export, installed-Pi smoke, architecture, and full
-  repository regression checks;
+  repository regression checks run once at the tier verification boundary;
 - the supported input path exercises identity → acquisition/import → decode →
   canonical receipt → calculation/transition → compact response → drill-down;
 - provider timeout/outage, malformed response, rate/entitlement failure,
@@ -192,8 +198,18 @@ pass:
 - `external_blocked(reason)`: an exact external prerequisite is missing;
 - `track_partial`: some of `cn`, `hk`, `us` are supported and others are not.
 
-These are facts, not grades. A plugin may be Experimental and also
-`adapter_missing`; it must not be presented as ProductUseful.
+These are facts, not grades. An existing package may be Experimental and also
+`adapter_missing`; no package is presented as ProductUseful independently. A
+tier may be ProductUseful for its declared anchor profile while another track
+is explicitly `track_partial`, provided the unsupported track is not required
+by that tier's acceptance contract.
+
+During tier construction, cross-package changes are one atomic working set.
+Every touched package must remain formatted, buildable with warnings as errors,
+and focused-test clean at each handoff; incomplete public tools, placeholder
+successes, panic/TODO paths, and half-updated receipt producers or consumers are
+forbidden. `bun run tier:checkpoint -- Tn` enforces this integrity rule without
+promoting any package.
 
 ## Tutor reopen rule
 

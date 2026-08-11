@@ -12,6 +12,9 @@ All implementation and promotion claims are governed by
 [`PRODUCT_READINESS.md`](PRODUCT_READINESS.md). A correct Experimental core is
 an engineering milestone; a real product additionally needs a supported input
 path and a complete professional journey.
+Delivery is grouped into the six role products in
+[`PRODUCT_TIERS.md`](PRODUCT_TIERS.md) and [`tiers.json`](tiers.json); no
+proposal is independently selected, verified, or promoted.
 
 Catalog entries represented only by this roadmap are **Draft**. A README-only
 `plugins/<name>/` directory is **Designing**; it is not a package and root tasks
@@ -30,15 +33,16 @@ packages intentionally implement only one Experimental slice, and design-only
 directories contribute zero implementation breadth.
 The increase from 131 proposals is Session 33's retirement of the broad
 `pi_hk_stock` umbrella and replacement by five exact HK proposals.
-The operational breakdown and next breadth item are recorded in
+The operational tier state and blocker docket are recorded in
 [`R2.md`](R2.md#catalog-breadth-snapshot).
 
 ## Proposal lifecycle
 
-Use these states when work begins:
+Use separate package-inventory and product-delivery states:
 
 ```text
-Draft -> Designing -> Implementing -> Experimental -> ProductUseful -> Stable
+Package: Draft -> Designing -> Implementing -> Experimental
+Tier:    Queued -> BlockerResolution -> Building -> Verifying -> ProductUseful
 ```
 
 - **Draft** means only the proposal in this file exists.
@@ -47,19 +51,18 @@ Draft -> Designing -> Implementing -> Experimental -> ProductUseful -> Stable
 - **Experimental** means it builds, loads in Pi, and can be distributed as Hex
   source, but its API or coverage may still change. Its exact implemented
   contract must work; this state does not permit toy behavior or hidden gaps.
-- **ProductUseful** means a named professional journey works end to end through
-  a supported repeatable input path, compact response, bounded drill-down,
-  explicit failures and cross-plugin receipt handoffs. Its API may still evolve.
-- **Stable** requires documented compatibility, release, migration, and
-  operational policies.
+- **ProductUseful** applies only to a complete tier whose named professional
+  journey works end to end through a supported repeatable input path, compact
+  response, bounded drill-down, explicit failures and cross-plugin receipt
+  handoffs. No plugin is independently promoted to this state.
 
-**Selected** is an orthogonal implementation-queue flag. **Externally gated**
-and **Paused** are blocker flags that may apply at any maturity; they do not
-replace a missing design or create a new maturity level.
+Proposal maturity is implementation inventory, not the delivery ledger.
+**Externally gated** and **Paused** are blocker facts. The owning tier is the
+only selected/building/verifying/ProductUseful unit.
 
 A proposal or build step marked **Course gate `CG-*` (Open)** cannot enter
-**Designing** for the gated scope. When that work reaches the front of the
-selected queue, pause, tell the user which gate was reached, and ask them to obtain
+**Designing** for the gated scope. When its owning tier reaches blocker
+resolution, pause, tell the user which gate was reached, and ask them to obtain
 the referenced finance-advisor deep dive. Do not create the package directory,
 finalize formulas/policy, or start implementation by filling the gap with model
 knowledge. Record the advisor's requirements and counterexamples in the
@@ -92,8 +95,9 @@ not remain centralized only in course sessions. QA22–QA28 and tutor Sessions
 40–46 then audited all 81 designs for real professional usefulness, supported
 input paths, Pi architecture, operational safety and cross-plugin acceptance.
 The corrected audit reports zero unresolved non-external questions in the
-reviewed scope. This bulk design pass does not change implementation order;
-`pi_stock_tape` remains Selected next.
+reviewed scope. The later tier-workflow decision retires the individual queue:
+T1 swing trader blocker resolution is active, and `pi_stock_tape` belongs to
+the deliberately last T6 day-trader/execution product.
 
 Creating a plugin directory therefore means its proposal has graduated from
 this catalog. Empty placeholder directories are not useful and should not be
@@ -185,12 +189,13 @@ The following decisions bind later proposals:
   identity, calendar/rules, source rights, time resolution, and required data
   quality pass that workflow's acceptance gate.
 
-### Portfolio steering — Session 17
+### Historical portfolio steering — Session 17 (retired)
 
 [Course Session 17](../trading-course/sessions/17_product_plugin_portfolio_steering_20260807.md)
-is the canonical implementation-priority review. It finds the architecture and
-swing proof deep enough, switches delivery to breadth-first thin shells, and
-sets this immediate queue:
+is the historical implementation-priority review that produced the following
+thin-shell inventory. It no longer controls selection, verification, or
+promotion; [`PRODUCT_TIERS.md`](PRODUCT_TIERS.md) and [`tiers.json`](tiers.json)
+supersede its queue:
 
 1. `pi_stock_technicals` — Experimental thin shell complete 2026-08-07;
 2. `pi_finance_sources` — Experimental thin shell complete 2026-08-07;
@@ -222,14 +227,13 @@ sets this immediate queue:
 20. `pi_day_workbench` — Experimental provider-neutral workflow information
     slice complete 2026-08-10.
 
-Every target follows the same explicit loop: controlling tutor specification →
-detailed `plugins/<name>/README.md` design → independent Gleam implementation →
-proportional verification → ledger closeout and promotion of exactly one next
-target. Rank 1 `pi_stock_technicals` completed that loop with its detailed
-design, Experimental implementation, focused/bundled verification, installed-Pi
-smoke, and full repository regression. Ranks 2 through 5 completed the same
+The retired process advanced one plugin at a time. The following paragraphs
+are evidence of work already performed, not instructions to repeat that
+cadence. Rank 1 `pi_stock_technicals` completed with its detailed design,
+Experimental implementation, focused/bundled verification, installed-Pi smoke,
+and full repository regression. Ranks 2 through 5 completed the same historical
 loop with stateless `finance_provenance`, `finance_risk`, `finance_execution`,
-and canonical dataset-inspection shells. Rank 6 then completed the same loop
+and canonical dataset-inspection shells. Rank 6 then completed that loop
 with exact manifest binding, six caller-supplied decimal operators, explicit
 matched/not-matched/unresolved facts, stable paging receipts, and no built-in
 screen or rank. Rank 7 then completed the same loop with exact track/MIC
@@ -295,9 +299,10 @@ disagreement. The stock-market-calendar slice adds only typed reported
 schedule/status comparison and supplied half-open phase-interval containment.
 The top-of-book slice adds only explicit side states, venue aggregation,
 sequence/gap/reset facts, and displayed-liquidity limitations. All focused and
-repository gates pass. The next active breadth item is `pi_stock_tape`: one
-provider-neutral bounded trade/correction/cancel packet, with detailed design
-next. Provider
+repository gates passed for those historical slices. There is now no next
+breadth item. T1 swing trader is active in blocker resolution; `pi_stock_tape`
+is T6 inventory and begins only as part of the complete day-trader/execution
+product after its live-provider and operational blockers resolve. Provider
 selection/acquisition, inferred venue or halt state, trust or correctness
 verdicts, repair, depth reconstruction, hidden-liquidity or executable-price
 claims, cross-track fallback, inferred fund flows, forecasts, ranking policy,
@@ -918,7 +923,7 @@ finance-plugin rules above apply to every phase file.
 | --- | --- | --- | --- |
 | **R0 — Trustworthy substrate and implemented baseline** | [`R0.md`](R0.md) | Shared finance packages, dependency laws, completed arbitrations, Experimental vertical slices, and the current depth gaps. | Establish what is real and reusable before counting trader-facing breadth. |
 | **R1 — Finance capability catalog** | [`R1.md`](R1.md) | Foundation/trust, market data, CN/HK/US research, fundamentals, valuation, trader workbenches, events, macro, portfolio, backtest, and execution proposals. | Keep the complete capability map while thin workbenches compose shared engines instead of cloning them. |
-| **R2 — Delivery and trader-workflow convergence** | [`R2.md`](R2.md) | Active delivery ledger, Session 17 breadth queue/scorecard, F0–F6 delivery, T0–T4 four-trader acceptance, and CN0–CN4. | Keep exactly one next target and its tutor-spec → detailed design → implementation → verification loop explicit; deepen only on a named Session 17 trigger. |
+| **R2 — Delivery and trader-workflow convergence** | [`R2.md`](R2.md) | Active six-tier ledger and blockers, historical Session 17 inventory, dependency foundations, role acceptance, and CN/HK/US track evidence. | Resolve the active tier's blockers first, build its complete dependency cone atomically, and run the promotion matrix once at the role-product boundary. |
 | **R3 — Provider policy and open decisions** | [`R3.md`](R3.md) | Candidate/accepted providers, entitlement and source cautions, and unresolved product/data decisions. | Resolve provider and policy choices without creating invisible fallback chains. |
 
 Read phases in order for a full audit. They are categories, not permission to

@@ -7,8 +7,10 @@ The catalog currently contains 135 exact `pi_*` proposals:
 
 README-only directories are reviewed specifications, not runnable plugins.
 Root tasks discover packages by `gleam.toml`, so these designs do not increase
-implementation breadth. The implementation queue remains controlled by
-[R2](../R2.md); `pi_stock_tape` is selected next.
+implementation breadth. The implementation queue remains controlled by the
+[product-tier standard](../PRODUCT_TIERS.md), [R2](../R2.md), and
+[`tiers.json`](../tiers.json). T1 swing trader blocker resolution is active; no
+individual plugin is selected next.
 
 Every design inherits the [professional product-readiness standard](../PRODUCT_READINESS.md)
 and follows the functional-core/effect-shell boundary in
@@ -73,19 +75,18 @@ are represented above.
 | CN ownership and market publications | [cn_stock_share_structure](cn_stock_share_structure/README.md), [cn_stock_shareholders](cn_stock_shareholders/README.md), [cn_stock_restricted_shares](cn_stock_restricted_shares/README.md), [cn_stock_pledges](cn_stock_pledges/README.md), [cn_stock_insiders](cn_stock_insiders/README.md), [cn_stock_public_info](cn_stock_public_info/README.md), [cn_stock_margin](cn_stock_margin/README.md), [cn_stock_block_trades](cn_stock_block_trades/README.md), [cn_stock_connect](cn_stock_connect/README.md) |
 | SEC and infrastructure | [sec_ownership](sec_ownership/README.md), [sec_insiders](sec_insiders/README.md), [finance_cache](finance_cache/README.md) |
 | Existing shared-shell projections | [cn_stock_screener](cn_stock_screener/README.md), [cn_market_snapshot](cn_market_snapshot/README.md) |
-| Selected next | [stock_tape](stock_tape/README.md) |
+| T6 day/execution inventory | [stock_tape](stock_tape/README.md) |
 
-## Promotion rule
+## Tier-only implementation and promotion rule
 
-A design becomes an implementation package only when its R2 queue item is
-selected. A pure core may be implemented while a provider/effect prerequisite
-is externally blocked, but the blocker remains explicit. Promotion adds
-`gleam.toml`, `src/`, tests, artifact registration, and Pi-load coverage; it
-updates R1/R2 from Designing to Experimental only after the exact implemented
-contract and verification layers pass.
+A design becomes code only as part of its owning tier after every tier blocker
+is resolved. Cross-package work is expected, but every touched package remains
+compilable and focused-test green at atomic checkpoints; incomplete public
+tools or placeholder behavior are forbidden.
 
-Experimental is not the finish line. ProductUseful additionally requires the
-named supported input path and complete professional journey in
-[PRODUCT_READINESS.md](../PRODUCT_READINESS.md). A provider-neutral packet
-validator is reported as `core_ready` or `adapter_missing`, never as a complete
-product.
+No README-only design or implemented package is individually promoted. The
+full build/binding/artifact/Pi/persona matrix runs once through
+`bun run tier:verify -- Tn`, after every proposal and handoff required by the
+role product is implemented. Only the complete tier becomes ProductUseful.
+Existing Experimental slices are inventory to integrate or replace, not
+delivery milestones.

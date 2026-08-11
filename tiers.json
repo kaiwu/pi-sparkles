@@ -1,0 +1,333 @@
+{
+  "schema_version": 1,
+  "active_tier": "T1",
+  "statuses": [
+    "queued",
+    "blocker_resolution",
+    "building",
+    "verifying",
+    "product_useful"
+  ],
+  "tiers": [
+    {
+      "id": "T1",
+      "name": "Swing trader product",
+      "status": "blocker_resolution",
+      "depends_on": [],
+      "track_profile": "One CN anchor journey. Shared tools retain track-neutral contracts; the already enumerated HK/US source packages prove their exact bounded operations without duplicating the whole swing journey.",
+      "product_outcome": "A CN swing trader can select an exact listing; acquire supported daily market, calendar, rule, universe, event, classification, and provenance inputs; screen and inspect it; calculate technicals; create and simulate a plan; and resume an auditable journal-backed review loop. Exact HK/US input operations remain separately labelled capabilities, not duplicate role products.",
+      "acceptance_lane": "test/tiers/t1_swing_trader",
+      "blockers": [
+        {
+          "id": "T1-DAILY-PROVIDERS",
+          "status": "open",
+          "exit": "The named CN-anchor daily quote/OHLCV path documents exact identity, latency, adjustment, session/completeness, correction, entitlement/licence, fixture/output rights, budgets, cancellation, and source authority. Existing HK/US tools retain focused bounded contracts but do not block the CN role journey."
+        },
+        {
+          "id": "T1-UNIVERSE-EVENT-SOURCES",
+          "status": "open",
+          "exit": "At least one supported point-in-time universe path and the required calendar, rule, earnings, corporate-action, classification, and news/event paths have the same source and rights evidence."
+        },
+        {
+          "id": "T1-SWING-JOURNEY",
+          "status": "open",
+          "exit": "The Session 45 swing journey is updated to use only named repeatable inputs, compact/drill-down receipts, explicit failure recovery, portable journal state, and no ad hoc caller-attested market packet."
+        }
+      ],
+      "proposals": [
+        "finance_setup",
+        "finance_track_status",
+        "cn_market_calendar",
+        "hk_market_calendar",
+        "us_market_calendar",
+        "us_market_rules",
+        "cn_market_data",
+        "hk_market_data",
+        "cn_market_rules",
+        "hk_market_rules",
+        "finance_guardrails",
+        "finance_symbols",
+        "finance_calendar",
+        "finance_sources",
+        "finance_cache",
+        "finance_dataset",
+        "finance_data_quality",
+        "stock_quote",
+        "us_quote",
+        "stock_history",
+        "us_ohlcv",
+        "us_ohlcv_gaps",
+        "cn_ohlcv",
+        "cn_ohlcv_gaps",
+        "hk_ohlcv",
+        "hk_ohlcv_gaps",
+        "stock_corporate_actions",
+        "stock_earnings_calendar",
+        "stock_market_calendar",
+        "stock_screener",
+        "cn_stock_symbols",
+        "cn_stock_rules",
+        "cn_stock_quote",
+        "cn_stock_history",
+        "cn_stock_sector_concept",
+        "stock_technicals",
+        "finance_charts",
+        "trade_plan",
+        "order_simulator",
+        "swing_workbench",
+        "trade_journal"
+      ],
+      "extra_packages": [
+        "cn_setup",
+        "hello",
+        "hk_setup",
+        "lifecycle",
+        "safety_gate"
+      ]
+    },
+    {
+      "id": "T2",
+      "name": "Long-term equity investor product",
+      "status": "queued",
+      "depends_on": ["T1"],
+      "track_profile": "One US/SEC anchor journey. CN/HK proposals prove their market-owned source and calculation contracts inside the same tier; they do not create two more investor-product acceptance matrices.",
+      "product_outcome": "A US long-term investor can complete a cited company review from original filings and exact accounting/ownership/event evidence through normalized fundamentals, comparisons, valuation, quality/growth, governance, thesis, and a reproducible research report. CN/HK capabilities remain exact and isolated without duplicating the full journey.",
+      "acceptance_lane": "test/tiers/t2_long_term_investor",
+      "blockers": [
+        {
+          "id": "T2-PRIMARY-DOCUMENTS",
+          "status": "open",
+          "exit": "Named CNINFO/exchange/HKEX/SEC document and attachment paths prove exact identity, filing scope, language/correction lineage, bounded retrieval, licence, fixture, OCR/PDF, and output rights."
+        },
+        {
+          "id": "T2-COMPANY-INTELLIGENCE-SOURCES",
+          "status": "open",
+          "exit": "Named transcript, guidance, estimate, governance, ownership, industry, sentiment, and A/H comparison inputs document authority, timing, coverage, corrections, licence, and output rights."
+        },
+        {
+          "id": "T2-INVESTOR-JOURNEY",
+          "status": "open",
+          "exit": "The Session 45 long-term-investor journey runs entirely from T1 ProductUseful receipts and supported primary/company-intelligence inputs through cited report and thesis review."
+        }
+      ],
+      "proposals": [
+        "cn_disclosures",
+        "hk_disclosures",
+        "cn_stock_announcements",
+        "cn_stock_financials",
+        "cn_stock_corporate_actions",
+        "cn_stock_earnings",
+        "cn_stock_share_structure",
+        "cn_stock_shareholders",
+        "cn_stock_restricted_shares",
+        "cn_stock_pledges",
+        "cn_stock_insiders",
+        "cn_stock_public_info",
+        "cn_stock_margin",
+        "cn_stock_block_trades",
+        "cn_stock_connect",
+        "cn_stock_indices",
+        "cn_regulatory",
+        "hk_stock_corporate_actions",
+        "hk_stock_board_lot",
+        "hk_stock_shareholders",
+        "hk_stock_connect",
+        "sec_edgar",
+        "sec_xbrl",
+        "company_profile",
+        "finance_news",
+        "stock_fundamentals",
+        "sec_insiders",
+        "sec_ownership",
+        "filing_diff",
+        "earnings_release",
+        "earnings_transcript",
+        "company_guidance",
+        "consensus_estimates",
+        "stock_peers",
+        "stock_comps",
+        "stock_valuation",
+        "stock_quality",
+        "stock_growth",
+        "stock_thesis",
+        "company_governance",
+        "industry_research",
+        "stock_research_report",
+        "cn_stock_research_report",
+        "cn_stock_valuation",
+        "cn_stock_filing_diff",
+        "hk_stock_ah_comparison",
+        "finance_sentiment",
+        "finance_rumor_check",
+        "investor_workbench"
+      ],
+      "extra_packages": ["cn_fundamentals", "hk_fundamentals"]
+    },
+    {
+      "id": "T3",
+      "name": "Portfolio manager and monitoring product",
+      "status": "queued",
+      "depends_on": ["T1", "T2"],
+      "track_profile": "One mixed portfolio/import journey whose CN, HK, and US legs remain separately labelled; no per-track portfolio product or repeated journey.",
+      "product_outcome": "A portfolio owner or manager can import and reconcile holdings, calculate risk/scenario/attribution/rebalance/tax-lot facts, define durable company and portfolio monitors, receive separately authorized alerts, resume across sessions, and audit every state and notification event.",
+      "acceptance_lane": "test/tiers/t3_portfolio_manager",
+      "blockers": [
+        {
+          "id": "T3-DURABLE-STORAGE",
+          "status": "open",
+          "exit": "One user-owned durable storage adapter proves idempotency, concurrency, correction lineage, retention, export/import, privacy, reload, fork, and recovery."
+        },
+        {
+          "id": "T3-NOTIFICATION-EFFECT",
+          "status": "open",
+          "exit": "One separately authorized notification path has bounded delivery, retry/idempotency, privacy, incident, and observable failure semantics."
+        },
+        {
+          "id": "T3-PORTFOLIO-INPUT",
+          "status": "open",
+          "exit": "At least one repeatable bounded portfolio input path proves identity, currency, lot, reconciliation, privacy, correction, and refresh behavior end to end."
+        }
+      ],
+      "proposals": [
+        "filing_monitor",
+        "finance_catalysts",
+        "finance_alerts",
+        "cn_stock_watch",
+        "portfolio",
+        "portfolio_risk",
+        "portfolio_scenarios",
+        "portfolio_attribution",
+        "portfolio_rebalance",
+        "tax_lots",
+        "watchlist"
+      ],
+      "extra_packages": []
+    },
+    {
+      "id": "T4",
+      "name": "Quant researcher product",
+      "status": "queued",
+      "depends_on": ["T1"],
+      "track_profile": "One US point-in-time dataset/replay anchor journey. Provider-neutral manifests preserve other declared tracks without three separate quant acceptance runs.",
+      "product_outcome": "A quant researcher can bind a point-in-time universe and dataset, calculate explicit market/factor/event features, execute bounded replay and backtests, compare declared trials, and reproduce the complete run from canonical manifests without survivorship, vintage, or experiment-ledger ambiguity.",
+      "acceptance_lane": "test/tiers/t4_quant_researcher",
+      "blockers": [
+        {
+          "id": "T4-POINT-IN-TIME-DATA",
+          "status": "open",
+          "exit": "One supported US-anchor point-in-time universe/dataset path proves membership, vintages, corrections, completeness limits, fixture/output rights, and reproducible replay. Other declared tracks retain exact labels without requiring duplicate quant journeys."
+        },
+        {
+          "id": "T4-QUANT-JOURNEY",
+          "status": "open",
+          "exit": "The Session 45 quant journey runs from supported T1 receipts through hypothesis, feature/event calculation, trial ledger, backtest, comparison, chart/table, and reproduction export."
+        }
+      ],
+      "proposals": [
+        "stock_market_snapshot",
+        "cn_market_snapshot",
+        "cn_stock_screener",
+        "stock_event_study",
+        "stock_factor_lab",
+        "quant_research",
+        "backtest"
+      ],
+      "extra_packages": []
+    },
+    {
+      "id": "T5",
+      "name": "Macro and multi-asset researcher product",
+      "status": "queued",
+      "depends_on": ["T1"],
+      "track_profile": "Global and cross-market labelled legs, not an equity track. CN-specific instruments remain explicit source legs and never create cn/hk/us product variants.",
+      "product_outcome": "A multi-asset researcher can identify exact fund, bond, convertible, option, future, commodity, crypto, macro, rate, and FX legs; acquire supported source evidence; run the reviewed calculations; and compose separately labelled global comparisons without equity-track leakage.",
+      "acceptance_lane": "test/tiers/t5_multi_asset_researcher",
+      "blockers": [
+        {
+          "id": "T5-PROVIDER-MATRIX",
+          "status": "open",
+          "exit": "Every instrument family has at least one named supported acquisition/import path with identity, symbology, timestamps, coverage, correction/completeness, entitlement/licence, fixture, and output-right evidence."
+        },
+        {
+          "id": "T5-REFERENCE-DATA",
+          "status": "open",
+          "exit": "Fund/share-class, fixed-income, convertible, option, futures, crypto, macro-release, and FX terms come from dated authoritative or explicitly bounded sources."
+        },
+        {
+          "id": "T5-MULTI-ASSET-JOURNEY",
+          "status": "open",
+          "exit": "A complete researcher journey proves exact instrument legs, calculations, timing alignment, revisions, separately labelled comparisons, drill-down, and failure recovery."
+        }
+      ],
+      "proposals": [
+        "cn_ipo",
+        "cn_convertible_bonds",
+        "cn_funds_etf",
+        "cn_mutual_funds",
+        "cn_macro",
+        "cn_policy_monitor",
+        "macro_fred",
+        "macro_dashboard",
+        "rates_treasury",
+        "fx_ecb",
+        "fixed_income",
+        "options",
+        "cftc_cot",
+        "commodities",
+        "crypto_market",
+        "global_markets"
+      ],
+      "extra_packages": []
+    },
+    {
+      "id": "T6",
+      "name": "Day trader and execution operator product",
+      "status": "queued",
+      "depends_on": ["T1", "T3", "T4"],
+      "track_profile": "One US live-session and broker anchor journey, plus the single CN tape-adapter contract required by Session 41. No duplicated HK or CN end-to-end day/broker journey.",
+      "product_outcome": "A day trader can acquire and inspect authenticated live quote/depth/tape evidence, run a bounded session workflow, plan and simulate action, observe accounts, paper trade, evaluate compliance facts, and—only after every live gate—submit explicitly authorized orders with reconciliation, incidents, duplicate-exposure representation, and complete audit receipts.",
+      "acceptance_lane": "test/tiers/t6_day_trader_execution",
+      "blockers": [
+        {
+          "id": "T6-INTRADAY-PROVIDERS",
+          "status": "open",
+          "exit": "At minimum the reviewed credentialed Alpaca US real-time and documented-latency Eastmoney CN paths prove sequence domains, gaps/resets, corrections/cancels/busts, three clocks, conditions, entitlement, licence, fixtures, and bounded acquisition."
+        },
+        {
+          "id": "T6-STREAM-CAPABILITY",
+          "status": "open",
+          "exit": "The injected bounded streaming capability proves cancellation, reconnect/reset behavior, backpressure, byte/event budgets, stale-completion rejection, and shutdown."
+        },
+        {
+          "id": "T6-BROKER-CONTRACTS",
+          "status": "open",
+          "exit": "Named Alpaca, IBKR, and CN broker account/API agreements, capabilities, credentials, entitlements, host/method allowlists, pacing, and account/jurisdiction rules are evidenced."
+        },
+        {
+          "id": "T6-SECURITY-INCIDENT",
+          "status": "open",
+          "exit": "Credential custody, per-order authorization, idempotency, reconciliation, kill/disable controls, observability, privacy, incident response, and ambiguous-submission force-resume behavior pass review."
+        },
+        {
+          "id": "T6-PAPER-EVIDENCE",
+          "status": "open",
+          "exit": "Prolonged paper operation and failure-injection evidence satisfies Sessions 25 and 44 before any live mutation lane is enabled."
+        }
+      ],
+      "proposals": [
+        "stock_order_book",
+        "stock_tape",
+        "day_workbench",
+        "cn_broker_readonly",
+        "cn_broker_paper",
+        "broker_readonly_alpaca",
+        "broker_readonly_ibkr",
+        "broker_paper_alpaca",
+        "broker_paper_ibkr",
+        "broker_live",
+        "trade_compliance"
+      ],
+      "extra_packages": []
+    }
+  ]
+}

@@ -15,6 +15,12 @@
     "test:pi": "bun scripts/test-pi.js",
     "test:live:tutor": "bun scripts/test-live-tutor.js",
     "test:live:sec": "bun scripts/test-live-sec.js",
+    "test:workflow": "bun test test/workflow",
+    "tier:audit": "bun scripts/tier.js audit",
+    "tier:checkpoint": "bun scripts/tier.js checkpoint",
+    "tier:list": "bun scripts/tier.js list",
+    "tier:show": "bun scripts/tier.js show",
+    "tier:verify": "bun scripts/tier.js verify",
     "test": "bun scripts/test.js",
     "clean": "bun scripts/clean.js"
   },

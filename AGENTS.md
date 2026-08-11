@@ -11,6 +11,58 @@ and `test/artifacts/`. Generated `build/`, `dist/`, `.work/`, and
 `manifest.toml` files are ignored. Keep proposals in `ROADMAP.md`; create plugin
 directories only when implementation starts.
 
+## Product-Tier Delivery Workflow
+
+[`PRODUCT_TIERS.md`](PRODUCT_TIERS.md) and [`tiers.json`](tiers.json) are the
+normative delivery plan. All 135 R1 proposals belong to exactly one role-based
+product tier. The active tier and its blocker state in `tiers.json` replace the
+old one-plugin active queue.
+
+The only delivery, verification, and promotion unit is a complete tier. Never
+select, implement, close out, or promote one plugin as an independent roadmap
+item, and never record another “Experimental complete” milestone. Existing
+Experimental packages are implementation inventory, not finished products.
+
+For each tier:
+
+1. resolve every provider, licence, entitlement, source-right, credential,
+   storage, notification, streaming, security, jurisdiction, and human-
+   authorization blocker first, with exact exit evidence in `R3.md` or the
+   referenced decision record;
+2. only then move the tier to `building` and implement its entire dependency
+   cone inside out: pure finance laws, adapters/capabilities, Pi shells,
+   receipt handoffs, lifecycle, and the complete role journey;
+3. use focused package tests only as cheap inner-loop diagnostics; they do not
+   change ledger status and are not promotion evidence;
+4. move the tier to `verifying` only when every proposal is implemented and
+   the role-level acceptance lane exists, then run `bun run tier:verify -- Tn`
+   exactly once for the tier;
+5. promote only the whole tier to `product_useful`. If any required provider
+   path, track leg, plugin, handoff, failure/recovery case, or acceptance step is
+   partial, the tier remains blocked/building/verifying.
+
+Do not run the full build/binding/artifact/Pi/regression matrix after each
+plugin. Do not use provider-neutral packets, fixtures, or isolated passing tests
+to claim that a tier or role product is complete. Later tiers consume earlier
+ProductUseful tiers through typed Pi-visible receipts, never plugin-to-plugin
+source imports.
+
+Product tiers and market tracks are not a Cartesian matrix. Each tier has the
+single acceptance profile declared in `tiers.json`; do not create CN/HK/US
+copies of its role journey or full verification lane. Shared logic is built
+once. Add a track-owned adapter/module only when market semantics genuinely
+differ, and keep non-anchor coverage explicitly unsupported or `track_partial`.
+Never infer that one anchor journey proves another track.
+
+Tier scope may cross many package boundaries, but every touched plugin must
+remain coherent and buildable at every handoff or commit checkpoint. Update
+coordinated producers/consumers atomically and run
+`bun run tier:checkpoint -- Tn`. Do not expose incomplete public tools, commands,
+events, manifests, placeholder successes, `todo`/panic paths, silently empty
+adapters, or README claims. Unfinished work remains private compilable code or
+explicit tier backlog. This checkpoint is an integrity rule, not plugin-level
+delivery or promotion.
+
 ## Architecture & Distribution
 
 Plugin root modules export
@@ -176,14 +228,22 @@ and an annual-shaped complete window.
 
 ## Build, Test, and Development Commands
 
-- `bun run check`: check formatting and warnings-as-errors builds.
-- `bun run build [-- hello]`: bundle all plugins or one named plugin.
-- `bun run test:unit [-- hello]`: run Gleam/gleeunit tests using Bun.
-- `bun run test:architecture`: enforce functional core/effect shell boundaries.
-- `bun run test:ffi`: run binding contract tests.
-- `bun run test:artifacts`: verify bundled extension exports.
-- `bun run test:pi [-- hello]`: smoke-load bundles without a model call.
-- `bun run test`: run all verification layers.
+- `bun run tier:audit`: validate exhaustive tier ownership and show blocker,
+  implementation-inventory, and remaining counts.
+- `bun run tier:show -- T1`: inspect one tier's exact proposals, blockers,
+  dependencies, outcome, and acceptance lane.
+- `bun run tier:checkpoint -- T1`: format, warnings-as-errors build, and unit-
+  test every currently touched Gleam package as one atomic tier working set;
+  it never changes maturity.
+- `bun run tier:verify -- T1`: run the only promotion gate; it refuses open
+  blockers, missing implementations/dependencies, wrong status, or a missing
+  role-level acceptance lane before running the expensive matrix.
+- `bun run check`, `bun run build [-- hello]`, and
+  `bun run test:unit [-- hello]`: inner-loop diagnostics only; a package-level
+  pass never changes delivery status.
+- `bun run test:architecture`, `bun run test:ffi`, `bun run test:artifacts`,
+  `bun run test:pi [-- hello]`, and `bun run test`: diagnostic/manual commands
+  used by the tier gate, not per-plugin promotion loops.
 - `bun run clean`: remove generated outputs.
 
 ## Coding Style & Naming Conventions
@@ -200,8 +260,11 @@ Use gleeunit for pure logic. Name Gleam tests `*_test.gleam` and Bun tests
 `*.test.js`. New binding wrappers need Bun contract tests for applicable shapes,
 promises, options, failures, and callbacks. Finance libraries need deterministic
 unit tests, laws/invariants, transition-sequence tests, and FFI contracts where
-applicable. Plugins additionally need artifact and Pi-load smoke tests. Run
-`bun run test` before submission.
+applicable. Plugins additionally need artifact and Pi-load coverage. Run focused
+tests while building, but do not run or cite the full promotion matrix for an
+individual plugin. At the completed tier boundary, change the tier to
+`verifying` and run `bun run tier:verify -- Tn` once before ProductUseful
+promotion.
 Provider plugin unit tests use fixtures or scripted transports, never live
 network calls, real sleeps, ambient credentials, or mutable shared caches.
 The sole live-provider lane is the explicit `bun run test:live:sec` runner. It

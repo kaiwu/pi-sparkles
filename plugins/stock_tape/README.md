@@ -1,12 +1,12 @@
 # pi_sparkles_stock_tape
 
-Status: **Designing — selected next implementation target** · no package manifest or code
+Status: **Designing — owned by T6 day trader/execution; not independently queued** · no package manifest or code
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 41](../../../trading-course/sessions/41_market_structure_source_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
-Controlling evidence: [Course Session 22](../../../trading-course/sessions/22_cg_day_full_workflow_contract_20260809.md), Session 11 market-data laws, and the active queue in [R2](../../R2.md#selected-next-real-breadth-target).
+Controlling evidence: [Course Session 22](../../../trading-course/sessions/22_cg_day_full_workflow_contract_20260809.md), Session 11 market-data laws, the [tier workflow](../../PRODUCT_TIERS.md), and the [active ledger](../../R2.md#active-delivery-ledger--2026-08-11).
 
-## Product target and implementation phases
+## T6 role contribution and completion contract
 
 The recurring professional task is to inspect the exact executed tape for one
 listing and bounded session window, including venue, conditions, corrections,
@@ -15,26 +15,31 @@ user-facing operation is
 `stock_tape(symbol, mic, from_time, to_time, max_events)`. It returns a compact
 summary plus a stable handle for bounded event and lineage drill-down.
 
-Implementation proceeds without pretending that the first internal milestone
-is the product:
+This plugin has no standalone implementation or promotion phase. It begins only
+when T6 enters `building`, after the tier's live-data, streaming, broker,
+security/incident, and prolonged-paper blockers are resolved. Its pure core,
+provider capabilities, Pi shell, and day-workbench/broker receipt handoffs are
+implemented as one atomic T6 change set; every touched package remains buildable
+and focused-test green throughout.
 
-1. **Experimental / `core_ready`:** build the pure `finance_tape` event,
-   ordering, sequence, gap/reset, duplicate and correction-lineage laws; expose
-   a bounded caller/provider-adapter packet through a thin Pi shell; pass pure,
-   artifact, Pi-load and architecture tests. This is useful engineering, but it
-   is not ProductUseful.
-2. **Adapter-ready:** add named, source-documented adapters using `finance_http`
-   or a bounded streaming capability. The minimum reviewed product path is one
-   credentialed US real-time feed (Alpaca) and one public CN feed (Eastmoney,
-   with its actual latency documented). Missing credentials, entitlement,
-   licence or access are reported as `external_blocked`; a missing adapter is
-   `adapter_missing`. HK remains `track_partial` until an equally supported HK
-   path exists.
-3. **ProductUseful:** exercise live-session gap/reset/duplicate/out-of-order
-   detection, real correction → cancel/bust lineage, populated exchange,
-   provider and receipt clocks with measured latency, and exact documented sale
-   condition codes. Run the applicable Session 45 day-trader journey, including
-   compact response, drill-down, cancellation and failure recovery.
+T6 cannot verify until `stock_tape` provides all of the following together:
+
+1. the pure `finance_tape` event, ordering, sequence, gap/reset, duplicate and
+   correction-lineage laws;
+2. one credentialed US real-time path (Alpaca) and the documented-latency CN
+   path (Eastmoney) required by Session 41, using `finance_http` or the reviewed
+   bounded streaming capability with exact rights and source receipts;
+3. live-session gap/reset/duplicate/out-of-order detection, real correction →
+   cancel/bust lineage, populated exchange/provider/receipt clocks with
+   measured latency, and exact documented sale-condition codes;
+4. compact Pi output, stable bounded drill-down, cancellation/outage recovery,
+   and the single T6 US anchor journey plus its required CN tape-adapter contract.
+
+A caller-packet validator may exist as private, tested internal code while T6 is
+building, but it is never exposed, promoted, or recorded as a completed product
+slice. Missing provider access keeps T6 blocked rather than producing an
+adapter-missing public shell. HK is outside the T6 acceptance profile and must
+remain explicitly unsupported/`track_partial`, not silently inferred.
 
 The Pi tool returns a bounded tape window; it never exposes an unbounded stream.
 A WebSocket adapter may acquire events incrementally behind that boundary. The
@@ -47,10 +52,10 @@ coverage can be proved and explicitly requested.
 
 The packet validates identity, event ordering and correction references without reconstructing missing state. Requested `volume_profile` or condition summaries operate only over the retained bounded packet and expose coverage, excluded/unknown conditions, formulas and receipt hashes. No aggressor side is inferred unless an explicit sourced field exists.
 
-A pure tape core owns event/lineage validation and requested summaries. During
-the first phase the Pi shell only decodes/encodes caller-supplied packets;
-provider acquisition and bounded streaming state arrive through later adapters
-and cannot be claimed by that core.
+A pure tape core owns event/lineage validation and requested summaries. The Pi
+shell is wired only when the complete T6 capability path exists; provider
+acquisition and bounded streaming state remain typed injected effects rather
+than business logic in JavaScript.
 
 ## Acceptance and exclusions
 
