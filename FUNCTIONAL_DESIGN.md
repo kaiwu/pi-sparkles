@@ -1,5 +1,11 @@
 # Functional design standard
 
+This document governs code structure and effect boundaries. Product maturity,
+supported input paths, uniform Pi behavior and professional end-to-end
+acceptance are separately mandatory under
+[`PRODUCT_READINESS.md`](PRODUCT_READINESS.md); passing this architecture alone
+does not make an Experimental core ProductUseful.
+
 ## Principle
 
 The repository uses Gleam to obtain more than nicer JavaScript types. Plugin

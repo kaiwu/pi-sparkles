@@ -8,18 +8,26 @@ built into a Pi-loadable JavaScript artifact with Gleam and Bun.
 The catalog is intentionally broad. It is a menu and dependency map, not a
 promise to build every package at once.
 
-Catalog entries without an implementation directory are **Draft**. Implemented
-entries use the lifecycle state recorded in their package README and the status
-sections below. Each implementation gets its own `plugins/<name>/`
-directory and is an independent Gleam project. Its local `README.md` becomes the
-detailed design document; this roadmap retains only the proposal, priority,
-dependencies, and delivery status.
+All implementation and promotion claims are governed by
+[`PRODUCT_READINESS.md`](PRODUCT_READINESS.md). A correct Experimental core is
+an engineering milestone; a real product additionally needs a supported input
+path and a complete professional journey.
 
-As of 2026-08-11, the catalog has 135 unique named `pi_*` proposals and 54
-matching implementation directories (40.0%). The repository has 61 plugin
-directories in total because seven reference, setup, and workflow slices do not
-map one-to-one to an R1 proposal. These are breadth counts, not completion
-counts: many directories intentionally implement only one Experimental slice.
+Catalog entries represented only by this roadmap are **Draft**. A README-only
+`plugins/<name>/` directory is **Designing**; it is not a package and root tasks
+ignore it. Implemented entries have `gleam.toml`, source, tests, and the
+lifecycle state recorded in their package README. The local README is the
+detailed design document; this roadmap retains only the proposal, priority,
+dependencies, and delivery status. The complete package/design inventory is
+[`plugins/README.md`](plugins/README.md).
+
+As of 2026-08-11, the catalog has 135 unique named `pi_*` proposals: 54 have
+matching implementation packages with `gleam.toml` (40.0%), and 81 have
+README-only designs. The repository has 61 plugin implementation packages in
+total because seven reference, setup, or workflow slices do not map one-to-one
+to an R1 proposal. These are breadth counts, not completion counts: many
+packages intentionally implement only one Experimental slice, and design-only
+directories contribute zero implementation breadth.
 The increase from 131 proposals is Session 33's retirement of the broad
 `pi_hk_stock` umbrella and replacement by five exact HK proposals.
 The operational breakdown and next breadth item are recorded in
@@ -30,23 +38,28 @@ The operational breakdown and next breadth item are recorded in
 Use these states when work begins:
 
 ```text
-Draft -> Selected -> Designing -> Implementing -> Experimental -> Stable
-                                   |                    |
-                                   +----> Paused <------+
+Draft -> Designing -> Implementing -> Experimental -> ProductUseful -> Stable
 ```
 
 - **Draft** means only the proposal in this file exists.
-- **Selected** means it is next in the implementation sequence.
 - **Designing** starts by creating `plugins/<name>/README.md`, not code.
 - **Implementing** means its independent Gleam project and tests exist.
 - **Experimental** means it builds, loads in Pi, and can be distributed as Hex
-  source, but its API/provider behavior may still change.
+  source, but its API or coverage may still change. Its exact implemented
+  contract must work; this state does not permit toy behavior or hidden gaps.
+- **ProductUseful** means a named professional journey works end to end through
+  a supported repeatable input path, compact response, bounded drill-down,
+  explicit failures and cross-plugin receipt handoffs. Its API may still evolve.
 - **Stable** requires documented compatibility, release, migration, and
   operational policies.
 
-A proposal or build step marked **Course gate `CG-*` (Open)** has an additional
-stop between **Selected** and **Designing**. When that work reaches the front of
-the queue, pause, tell the user which gate was reached, and ask them to obtain
+**Selected** is an orthogonal implementation-queue flag. **Externally gated**
+and **Paused** are blocker flags that may apply at any maturity; they do not
+replace a missing design or create a new maturity level.
+
+A proposal or build step marked **Course gate `CG-*` (Open)** cannot enter
+**Designing** for the gated scope. When that work reaches the front of the
+selected queue, pause, tell the user which gate was reached, and ask them to obtain
 the referenced finance-advisor deep dive. Do not create the package directory,
 finalize formulas/policy, or start implementation by filling the gap with model
 knowledge. Record the advisor's requirements and counterexamples in the
@@ -72,6 +85,15 @@ Each plugin README should cover:
 8. pure, FFI, artifact, Pi integration, and provider-contract tests;
 9. tested Pi/binding/provider versions and known limitations;
 10. Hex source contents and the exact source-to-Pi build instructions.
+
+At the user's direction on 2026-08-11, every then-unimplemented catalog row
+moved into README-only Designing so the available tutor specifications would
+not remain centralized only in course sessions. QA22–QA28 and tutor Sessions
+40–46 then audited all 81 designs for real professional usefulness, supported
+input paths, Pi architecture, operational safety and cross-plugin acceptance.
+The corrected audit reports zero unresolved non-external questions in the
+reviewed scope. This bulk design pass does not change implementation order;
+`pi_stock_tape` remains Selected next.
 
 Creating a plugin directory therefore means its proposal has graduated from
 this catalog. Empty placeholder directories are not useful and should not be
@@ -111,7 +133,7 @@ reinterpret source evidence.
 | --- | --- | --- | --- |
 | Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Session 22 and the Experimental `pi_day_workbench` provide network-free validation/inspection of one caller-attested sequenced intraday packet, selected mechanical calculations, and explicit caller-retained workflow transitions; calendar, execution-information, and risk slices are separately available. | **Still the weakest live vertical.** No adapter authenticates or acquires a licensed freshness-bounded intraday stream, and no scan, durable monitor, alert, paper/live mutation, or whole-product day-trader acceptance exists. Daily bars must not be presented as a day-trading surface. |
 | Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, shared-replay, exact-predicate screener, shared exact-calendar, quant-research, backtest, deterministic-chart, HK result-related board-meeting-date, US corporate-action source, explicit portfolio exposure/heat calculation, point-in-time FRED, and exact Alpaca/Benzinga US news-metadata slices now compose around explicit facts. The source adapters preserve their timing and completeness limits, and portfolio/macro/news judgment stays LLM-owned. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 20 are complete. Extend swing/provider depth only on a concrete workflow trigger. |
-| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | Session 19 and the Experimental `pi_investor_workbench` provide a caller-supplied dossier; existing profile/classification/news and Session 21 portfolio import slices add bounded facts. Sessions 24, 26, 27, 29–31, and 34–36 now specify future portfolio review, comparative valuation, quality/growth/thesis, monitoring/company intelligence, fund, and fixed-income/options contracts. | Current implementations remain narrow Experimental slices. Future rows are design-unblocked but not Selected; source/provider/licence/security work, optimization, professional judgments, live execution, and implementation remain separate. |
+| Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | Session 19 and the Experimental `pi_investor_workbench` provide a caller-supplied dossier; existing profile/classification/news and Session 21 portfolio import slices add bounded facts. Sessions 24, 26, 27, 29–31, and 34–36 now specify future portfolio review, comparative valuation, quality/growth/thesis, monitoring/company intelligence, fund, and fixed-income/options contracts. | Current implementations remain narrow Experimental slices. Future rows now have README-only designs but are not selected for implementation; source/provider/licence/security work, optimization, professional judgments, live execution, and implementation remain separate. |
 | Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. `finance_dataset`, `stock_screener`, `finance_calendar`, `quant_research`, `backtest`, `finance_charts`, and `macro_fred` expose exact dataset/vintage, point-in-time predicate, session/closure, hypothesis/ledger, requested-metric, run-comparison, replay, reproduction, deterministic-view, and bounded macro-source inputs. | Ranks 5 through 14 are complete. Historical membership remains a high-leverage missing quant source fact; edge/deployability remain LLM conclusions. |
 
 The following decisions bind later proposals:
@@ -523,8 +545,8 @@ authority/completeness, pass a security review, or authorize external effects.
   mandatory independent inputs or stops. An ambiguous submission is reconciled,
   never automatically retried; a submitted order cannot be rolled back by
   assertion.
-- **Design effect:** the eight catalog proposals and `pi_trade_compliance` are
-  design-unblocked for their exact Session 25 slices, but none is Selected or
+- **Design effect:** the eight catalog proposals now have README-only designs
+  for their exact Session 25 slices, but none is selected for implementation or
   implemented by this resolution.
 
 #### CG-PSYCHOLOGY journal-information resolution — 2026-08-07
@@ -680,9 +702,9 @@ authority/completeness, pass a security review, or authorize external effects.
   automated harvesting, provider/broker retrieval, and live execution remain
   outside scope.
 - **Design effect:** `pi_portfolio_scenarios`, `pi_portfolio_attribution`,
-  `pi_portfolio_rebalance`, and `pi_tax_lots` are design-unblocked but remain
-  Draft until selected. Existing `pi_portfolio` and `pi_portfolio_risk`
-  implementations remain within their Session 18/21 slices.
+  `pi_portfolio_rebalance`, and `pi_tax_lots` now have README-only designs but
+  are not selected for implementation. Existing `pi_portfolio` and
+  `pi_portfolio_risk` implementations remain within their Session 18/21 slices.
 
 #### CG-FUNDAMENTAL minimum dossier resolution — 2026-08-09
 

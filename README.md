@@ -6,12 +6,20 @@ with Bun.
 See [ROADMAP.md](ROADMAP.md) for the proposed finance and stock-market plugin
 family, [TRACK_GUIDE.md](TRACK_GUIDE.md) for adding another isolated market
 track, and [FUNCTIONAL_DESIGN.md](FUNCTIONAL_DESIGN.md) for the mandatory
-functional-core/effect-shell architecture.
+functional-core/effect-shell architecture. Product maturity, supported input
+paths and professional workflow acceptance are governed by
+[PRODUCT_READINESS.md](PRODUCT_READINESS.md).
 
 ## Status
 
 This approach is feasible and the first end-to-end implementation works. The
-repository currently contains:
+repository currently contains 61 plugin implementation packages with
+Experimental slices and **zero currently claimed ProductUseful plugins**.
+Experimental code must satisfy its exact implemented contract; ProductUseful
+additionally requires a supported repeatable input path and a complete
+professional journey.
+
+The repository includes:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
 - fifty-nine Experimental finance packages, including provider adapters,
@@ -625,8 +633,9 @@ implemented package below `finance/` and `plugins/` own a `gleam.toml`, version,
 README, source, and tests, so each can be versioned and released independently.
 A proposal in **Designing** may contain only its reviewed `README.md`; root tasks
 discover packages by `gleam.toml` and ignore these design-only directories until
-implementation starts. Finance libraries are checked and unit-tested by the
-root tasks but are not Pi bundles.
+implementation starts. The 81 current README-only proposals are indexed in
+[`plugins/README.md`](plugins/README.md). Finance libraries are checked and
+unit-tested by the root tasks but are not Pi bundles.
 
 ## Finance foundations
 
