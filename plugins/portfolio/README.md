@@ -3,7 +3,7 @@
 Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `portfolio` is the narrow rank-19 implementation authorized by
-[Course Session 21](../../trading-course/sessions/21_cg_portfolio_import_inspection_contract_20260809.md).
+[Course Session 21](../../../trading-course/sessions/21_cg_portfolio_import_inspection_contract_20260809.md).
 It imports caller-supplied local CSV or JSON, validates and preserves exact
 snapshot/position facts, reconciles values per currency, and exposes bounded
 session-local inspection. It is not a broker adapter or a portfolio-review
@@ -132,8 +132,12 @@ aggregation, tax-lot accounting, FX conversion, short/derivative risk model,
 broker authentication, diversification/concentration/correlation analysis,
 stress/VaR/CVaR, attribution, optimization, rebalancing, recommendation,
 authorization, trade mutation, evidence-sufficiency verdict, or next-action
-choice. Those remain behind Session 21's named depth triggers and `CG-LIVE`
-where applicable.
+choice. [Session 24](../../../trading-course/sessions/24_cg_portfolio_full_review_contract_20260811.md)
+now specifies separate future scenario, attribution, mechanical-rebalance, and
+tax-lot plugins; it does not add those capabilities to this import shell.
+[Session 25](../../../trading-course/sessions/25_cg_live_broker_effect_contract_20260811.md)
+specifies the adjacent broker-effect boundary, while provider, security,
+jurisdictional, and human-authorization stops remain external.
 
 ## Verification
 

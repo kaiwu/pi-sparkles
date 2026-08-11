@@ -106,7 +106,11 @@ The plugin performs no network, storage, clock, credential, or mutation effect.
 SHA-256 strings are shape-validated evidence references, not provider
 authentication. Source adapters, dossier updating, section drill-down,
 statement extraction, automated monitoring, thesis mutation, and portfolio
-composition require later ledger triggers.
+composition are not implemented here. Sessions 24, 26, 27, 29, 30, and 39 now
+specify those separate future portfolio, comparative-research,
+quality/growth/thesis, monitoring, company-intelligence, and macro-composition
+contracts; they do not turn this stateless dossier shell into an orchestrator or
+select any of those proposals for implementation.
 
 ## Verification
 

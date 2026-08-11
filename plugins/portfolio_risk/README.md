@@ -12,6 +12,11 @@ parallel-safe tool:
   reconciliation, temporal coherence, unknown/conflict counts, and receipt
   handle.
 
+[Session 24](../../../trading-course/sessions/24_cg_portfolio_full_review_contract_20260811.md)
+resolves the full portfolio-review requirements for separate future scenario,
+attribution, rebalance-proposal, and tax-lot plugins. It does not silently
+broaden this implemented single-currency light calculation slice.
+
 The implementation is deliberately plugin logic, not a new portfolio
 framework. Its pure domain imports the existing `finance_risk` information
 states and expression records, and `finance_math` exact sums/ratios. The root

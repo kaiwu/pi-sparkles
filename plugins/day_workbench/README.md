@@ -3,7 +3,7 @@
 Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
 `day_workbench` is the narrow rank-20 implementation authorized by
-[Course Session 22](../../trading-course/sessions/22_cg_day_full_workflow_contract_20260809.md).
+[Course Session 22](../../../trading-course/sessions/22_cg_day_full_workflow_contract_20260809.md).
 It is a network-free consumer of caller-supplied intraday evidence. It validates
 packet identity, licence and entitlement declarations, sequence integrity,
 session facts, and exact source lexemes; performs only an explicitly requested
@@ -105,7 +105,10 @@ of an idempotency key fails closed.
 The state payload is caller-retained and content-hash-bound on every call. It
 contains no executable order payload. `confirm_entry`, `confirm_exit`, broker
 submission/cancel/replace, paper mutation, automatic closeout, and alerts remain
-behind `CG-LIVE` and explicit authorization.
+outside this plugin. Session 25 resolves the adjacent `CG-LIVE` interaction
+contract, but provider agreements, entitlement, security review,
+jurisdiction-specific rules, and exact per-order human authorization remain
+mandatory external stops.
 
 ## Budgets and exclusions
 
