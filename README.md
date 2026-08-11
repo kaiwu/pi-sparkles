@@ -252,6 +252,30 @@ The binding is an initial `0.1.0` implementation, not a published Hex package.
 Its typed surface covers normal plugin authoring, while `pi/raw` makes the
 entire JavaScript API reachable when a typed wrapper is not available yet.
 
+## Plain Pi tier packages
+
+ProductUseful role tiers can be built as one ordinary Pi package without
+publishing Gleam or Hex packages first:
+
+```sh
+bun run tier:package -- T1
+pi --no-extensions -e ./dist/tiers/t1 --list-models
+bun run tier:install -- T1 --scope user
+```
+
+The package manifest lists the tier's separately bundled extensions, so users
+install one product without merging or weakening plugin boundaries. A later
+tier automatically includes its ProductUseful dependency tiers. Packaging
+refuses any selected or dependency tier that is not ProductUseful and excludes
+reference/demo `extra_packages`.
+
+Each output includes `tier-lock.json`, `SHA256SUMS`, `CONFIGURATION.md`, and the
+versioned extension artifacts. Credential values are never read or included;
+the configuration inventory contains environment-variable names and declared
+provider/access metadata only. `tier:install` verifies the package and delegates
+to plain Pi's `pi install`, using user scope by default or Pi's project-local
+scope with `--scope project`.
+
 ## The Hex model
 
 Hex distributes the Gleam **source**, not a directly loadable Pi plugin. A Hex
@@ -275,9 +299,9 @@ dist/<plugin>/index.js + package.json
 Pi
 ```
 
-Pi never loads the Hex package directly. Publishing a prebuilt npm package is
-not required. Prebuilt bundles could later be attached to releases, but that is
-separate from the Hex source package.
+Pi never loads the Hex package directly. The plain Pi tier builder above
+distributes already-built role packages independently of this source-release
+model; publishing either form externally remains a separate explicit action.
 
 ## Try it
 
@@ -288,6 +312,8 @@ installed `pi` executable.
 bun run tier:audit
 bun run tier:show -- T1
 bun run tier:checkpoint -- T1
+bun run tier:package -- T1
+pi --no-extensions -e ./dist/tiers/t1 --list-models
 pi --no-extensions -e ./dist/hello --list-models
 ```
 
@@ -863,6 +889,8 @@ Commands implemented now:
 | `bun run tier:show -- T1` | show one tier's product outcome, anchor profile, dependencies, blockers, proposals, and acceptance lane |
 | `bun run tier:checkpoint -- T1` | format, build, and focused-test all currently touched Gleam packages as one atomic working set |
 | `bun run tier:verify -- T1` | preflight and run the expensive repository plus role-acceptance promotion matrix once for a complete tier |
+| `bun run tier:package -- T1` | build and content-lock one plain Pi package for a ProductUseful tier plus its ProductUseful dependencies |
+| `bun run tier:install -- T1 [--scope user|project]` | verify/build the tier package and delegate installation to plain Pi |
 | `bun run check` | diagnostic formatting and warnings-as-errors builds for every package |
 | `bun run build [-- name]` | diagnostic build and bundle for every plugin or one plugin |
 | `bun run test:unit [-- name]` | diagnostic Gleam tests for the binding, finance libraries, and plugins |

@@ -19,6 +19,8 @@
     "tier:audit": "bun scripts/tier.js audit",
     "tier:checkpoint": "bun scripts/tier.js checkpoint",
     "tier:list": "bun scripts/tier.js list",
+    "tier:package": "bun scripts/tier-package.js",
+    "tier:install": "bun scripts/tier-install.js",
     "tier:show": "bun scripts/tier.js show",
     "tier:verify": "bun scripts/tier.js verify",
     "test": "bun scripts/test.js",

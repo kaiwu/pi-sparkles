@@ -193,6 +193,40 @@ tier remains partial, the tier remains `building` or `verifying`. We report the
 exact tier blocker; we do not promote the working subset as an Experimental
 product.
 
+### 5. Package ProductUseful tiers for plain Pi
+
+A tier is distributable only after ProductUseful promotion. The generic tier
+builder refuses queued, blocked, building, or verifying tiers, and also refuses
+any dependency tier that is not ProductUseful:
+
+```sh
+bun run tier:package -- T1
+bun run tier:package -- T1 --verify-only
+bun run tier:install -- T1 --scope user
+bun run tier:install -- T1 --scope project
+```
+
+The output at `dist/tiers/t1/` is one ordinary Pi package whose `package.json`
+declares every tier extension entry point. A later tier includes the complete
+dependency closure—T2 therefore includes T1 once T2 is ProductUseful. Source
+modules are not merged: each extension retains its existing typed/effect and
+market boundaries. Reference and demonstration `extra_packages` are excluded.
+
+`tier-lock.json` records the exact tiers, extension names and versions, tested
+Pi versions, providers/access descriptions, referenced environment-variable
+names, and content hashes. `SHA256SUMS` covers every distributed file, and the
+builder rejects missing, changed, duplicate, unsafe, or untracked content.
+Credential values are never read or copied. `CONFIGURATION.md` lists names
+only; provider-specific required/optional and entitlement behavior stays in
+the extension contracts. The lock binds only the selected tier dependency
+closure, so unrelated later-tier ledger work does not invalidate a frozen
+earlier product.
+
+The installer invokes `pi install` with the verified local package path. User
+scope is the default; project scope uses Pi's `--local` setting. It does not
+rewrite Pi settings directly, does not publish to npm/Hex/git, and does not
+weaken the ProductUseful gate.
+
 ## Active ledger decision
 
 T1 is **ProductUseful**. All 45 proposal packages exist; the complete repository

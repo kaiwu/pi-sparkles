@@ -23,7 +23,7 @@ function moduleSpecifier(fromDirectory, target) {
   return path.startsWith(".") ? path : `./${path}`;
 }
 
-async function buildPlugin(plugin) {
+export async function buildPlugin(plugin) {
   console.log(`building ${plugin.shortName} (${plugin.name} ${plugin.version})`);
   run(
     "gleam",
@@ -102,8 +102,12 @@ async function buildPlugin(plugin) {
   console.log(`  dist/${plugin.shortName}/index.js`);
 }
 
+export async function buildPlugins(selected) {
+  for (const plugin of selected) await buildPlugin(plugin);
+}
+
 export async function build(filter) {
-  for (const plugin of requirePlugins(filter)) await buildPlugin(plugin);
+  await buildPlugins(requirePlugins(filter));
 }
 
 if (import.meta.main) {

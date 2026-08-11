@@ -55,6 +55,15 @@ once. Add a track-owned adapter/module only when market semantics genuinely
 differ, and keep non-anchor coverage explicitly unsupported or `track_partial`.
 Never infer that one anchor journey proves another track.
 
+Only a ProductUseful tier may become a plain Pi distribution. Use
+`bun run tier:package -- Tn` to build one package containing that tier and its
+ProductUseful dependency closure. The manifest loads each version-locked
+extension separately; never collapse the tier into a boundary-breaking mega
+plugin. Reference/demo `extra_packages` are excluded. The generated lock,
+checksums, configuration inventory, and ProductUseful gate are mandatory.
+`bun run tier:install -- Tn` must delegate to plain Pi's package installer and
+must never edit Pi settings, persist credentials, or publish externally itself.
+
 Provider breadth does not create another product matrix and is not a pre-build
 gate. Define canonical provider ports and conformance laws once, implement at
 least one testable adapter for the tier, and keep the plugin ready for several
@@ -259,6 +268,10 @@ and an annual-shaped complete window.
 - `bun run tier:verify -- T1`: run the only promotion gate; it refuses open
   blockers, missing implementations/dependencies, wrong status, or a missing
   role-level acceptance lane before running the expensive matrix.
+- `bun run tier:package -- T1`: build and content-lock one plain Pi package for
+  a ProductUseful tier and all its ProductUseful tier dependencies.
+- `bun run tier:install -- T1 [--scope user|project]`: verify/build the tier
+  package and delegate its local-path installation to the installed Pi CLI.
 - `bun run check`, `bun run build [-- hello]`, and
   `bun run test:unit [-- hello]`: inner-loop diagnostics only; a package-level
   pass never changes delivery status.
