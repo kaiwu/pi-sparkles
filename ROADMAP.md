@@ -24,9 +24,9 @@ detailed design document; this roadmap retains only the proposal, priority,
 dependencies, and delivery status. The complete package/design inventory is
 [`plugins/README.md`](plugins/README.md).
 
-As of 2026-08-11, the catalog has 135 unique named `pi_*` proposals: 54 have
-matching implementation packages with `gleam.toml` (40.0%), and 81 have
-README-only designs. The repository has 61 plugin implementation packages in
+As of 2026-08-11, the catalog has 135 unique named `pi_*` proposals: 62 have
+matching implementation packages with `gleam.toml` (45.9%), and 73 have
+README-only designs. The repository has 69 plugin implementation packages in
 total because seven reference, setup, or workflow slices do not map one-to-one
 to an R1 proposal. These are breadth counts, not completion counts: many
 packages intentionally implement only one Experimental slice, and design-only
@@ -96,8 +96,9 @@ not remain centralized only in course sessions. QA22–QA28 and tutor Sessions
 input paths, Pi architecture, operational safety and cross-plugin acceptance.
 The corrected audit reports zero unresolved non-external questions in the
 reviewed scope. The later tier-workflow decision retires the individual queue:
-T1 swing trader blocker resolution is active, and `pi_stock_tape` belongs to
-the deliberately last T6 day-trader/execution product.
+T1 swing trader is ProductUseful with Eastmoney plus a Tushare Pro adapter
+proof, and `pi_stock_tape` belongs to the deliberately last T6
+day-trader/execution product.
 
 Creating a plugin directory therefore means its proposal has graduated from
 this catalog. Empty placeholder directories are not useful and should not be
@@ -300,9 +301,10 @@ schedule/status comparison and supplied half-open phase-interval containment.
 The top-of-book slice adds only explicit side states, venue aggregation,
 sequence/gap/reset facts, and displayed-liquidity limitations. All focused and
 repository gates passed for those historical slices. There is now no next
-breadth item. T1 swing trader is active in blocker resolution; `pi_stock_tape`
-is T6 inventory and begins only as part of the complete day-trader/execution
-product after its live-provider and operational blockers resolve. Provider
+breadth item. T1 swing trader is ProductUseful; `pi_stock_tape` is T6 inventory and
+begins only as part of the complete day-trader/execution product. Authentic
+real-time market-data access is the only current external tier blocker; other
+provider adapters and operational controls are implementation requirements. Provider
 selection/acquisition, inferred venue or halt state, trust or correctness
 verdicts, repair, depth reconstruction, hidden-liquidity or executable-price
 claims, cross-track fallback, inferred fund flows, forecasts, ranking policy,

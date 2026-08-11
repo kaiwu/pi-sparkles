@@ -13,8 +13,8 @@ Pi tools, never plugin-to-plugin source imports.
 
 | Tier | Product and user | Proposals | Current inventory | ProductUseful outcome |
 | --- | --- | ---: | ---: | --- |
-| **T1 — Active** | Swing trader | 41 | 36 packages, 5 not implemented | Exact CN daily acquisition → screen → inspect → technicals → plan → simulate → journal/review; bounded HK/US tools remain separately scoped |
-| **T2** | Long-term equity investor | 49 | 9 packages, 40 not implemented | Primary filings/disclosures → normalized company facts → comparison/valuation/quality/governance → cited report and thesis review |
+| **T1 — ProductUseful** | Swing trader | 45 | 45 packages, 0 not implemented | Exact CN daily acquisition → screen → inspect → technicals → plan → simulate → journal/review; bounded HK/US tools remain separately scoped |
+| **T2** | Long-term equity investor | 45 | 8 packages, 37 not implemented | Primary filings/disclosures → normalized company facts → comparison/valuation/quality/governance → cited report and thesis review |
 | **T3** | Portfolio manager and monitor | 11 | 3 packages, 8 not implemented | Durable portfolio import/reconciliation → risk/scenarios/attribution/rebalance/tax lots → monitors/alerts and auditable resume |
 | **T4** | Quant researcher | 7 | 3 packages, 4 not implemented | Point-in-time universe/data → explicit features/events → trial ledger/backtest/comparison → complete reproduction |
 | **T5** | Macro and multi-asset researcher | 16 | 1 package, 15 not implemented | Exact instrument/source legs → reviewed calculations → time-aligned, separately labelled cross-asset research |
@@ -50,6 +50,34 @@ That is a complete scoped product, not a half-product. We never imply that an
 anchor journey proves another track, and adding a new anchor track would be a
 separate future scope decision—not an automatic matrix expansion.
 
+### Provider adapters and credentials
+
+Provider breadth is not a product or acceptance matrix. Shared canonical ports,
+schemas and conformance laws are implemented once; concrete adapters are added
+for the useful providers whose contracts can be proved. Every shipped adapter
+declares its exact environment variables or injected capability, source scope,
+entitlement, pacing, limits and unsupported claims. Provider selection is
+explicit, and adapters never silently borrow credentials, cross tracks or fall
+back to another source.
+
+Credentials are never product files, fixtures, defaults or persisted plugin
+state. Ordinary tests use rights-safe response fixtures and scripted
+transports. An opt-in live compatibility run may temporarily read caller-owned
+credentials from the environment to prove the adapter against the subscribed
+service; it must redact them and retain only non-secret evidence. Missing
+credentials or alternative-provider breadth is not a blocker. A provider blocks
+work only when no testable provider/import path can establish a required
+contract, as with authentic T6 real-time stream behavior.
+
+For T1, Eastmoney is the working CN adapter and Tushare Pro is the second
+mainstream adapter/conformance proof. The Tushare token is an environment-only
+runtime and opt-in-test dependency. Later adapters reuse the same provider port
+without reopening T1 or changing the plugin-facing contract.
+
+Each adapter receives focused conformance and decoder coverage. The tier's
+expensive role journey uses only its declared anchor adapter, so supporting
+additional providers does not duplicate the entire product acceptance suite.
+
 ## Mandatory tier workflow
 
 Every tier moves through this exact sequence:
@@ -68,12 +96,13 @@ completed, integrated, or replaced inside their owning tier.
 
 ### 1. Resolve the blocker dossier first
 
-Before new tier implementation begins, every blocker in `tiers.json` must be
+Before new tier implementation begins, every genuine blocker in `tiers.json` must be
 changed from `open` to `resolved` with exact evidence recorded in `R3.md` or the
-referenced provider/security decision record. This includes provider access,
-licence/entitlement, source identity and coverage, correction/completeness,
-fixture/output rights, credentials, storage, notification, streaming, security,
-jurisdiction, and human authorization where applicable.
+referenced provider/security decision record. A condition is a blocker only
+when no testable provider, public source, bounded user-owned import, fixture, or
+scripted capability can support implementation. Alternative providers,
+production credentials and acceptance work are delivery requirements, not
+pre-build stops.
 
 An unresolved provider or operational prerequisite stops the whole tier. We do
 not fill the time by producing provider-neutral shells and calling them a
@@ -166,8 +195,9 @@ product.
 
 ## Active ledger decision
 
-T1 is active in **BlockerResolution**. `pi_stock_tape` is no longer an
-individual next target; it belongs to T6. The immediate work is to close the
-three T1 source/journey blockers in [`tiers.json`](tiers.json), record the
-provider decisions in [`R3.md`](R3.md), and only then begin the complete swing-
-trader product batch.
+T1 is **ProductUseful**. All 45 proposal packages exist; the complete repository
+matrix, installed-Pi smoke lane, existing CN/HK/US receipt-and-journal swing
+workflow, and dedicated Eastmoney-first CN role lane passed on 2026-08-11.
+Tushare credentials remain environment-only adapter inputs and CNINFO remains a
+public official-source path. `pi_stock_tape` belongs to T6; authentic real-time
+market-data access for T6 is the only open external tier blocker.

@@ -36,3 +36,14 @@ Runtime configuration:
 
 Eastmoney is vendor-origin public-web evidence with unknown service level,
 licence, and redistribution rights. Normal tests use fixtures only.
+
+## T1 provider-port migration
+
+This implementation is the first adapter evidence. T1 introduces one canonical
+CN daily-series provider port and keeps this exact Eastmoney decoder behind it;
+Tushare Pro becomes the second conformance adapter using caller-owned
+`TUSHARE_TOKEN` only from the runtime or opt-in-test environment. Both adapters
+must preserve their own lexemes, timestamps, adjustment, units, rights,
+pagination and limitations while returning the same canonical envelope. There
+is no automatic fallback and no duplicated swing acceptance journey per
+provider.

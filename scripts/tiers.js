@@ -170,6 +170,9 @@ export function validateTierManifest(manifest = readTierManifest()) {
       if (!blocker.exit?.trim()) {
         errors.push(`${tier.id} blocker ${blocker.id} has no exit evidence`);
       }
+      if (blocker.status === "resolved" && !blocker.resolution?.trim()) {
+        errors.push(`${tier.id} blocker ${blocker.id} has no resolution record`);
+      }
     }
     for (const proposal of tier.proposals) {
       if (!existsSync(join(PLUGINS_DIR, proposal, "README.md"))) {

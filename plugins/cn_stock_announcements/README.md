@@ -1,6 +1,6 @@
 # pi_sparkles_cn_stock_announcements
 
-Status: **Designing** · disclosure source slice · no package manifest or code
+Status: **Implemented in ProductUseful T1** · official disclosure source product
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 41](../../../trading-course/sessions/41_market_structure_source_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
@@ -15,3 +15,19 @@ Retrieval uses the existing CNINFO adapter and reviewed bounded attachment contr
 ## Explicit exclusions
 
 No arbitrary archive/OCR, semantic/materiality judgment, completeness-from-no-match, issuer identity guess, summary presented as source text, recommendation, or trading action.
+
+## Implemented T1 scope
+
+`cn_stock_announcement_search` first captures CNINFO's public security
+catalogue and proves the exact code/organization association. Zero,
+ambiguous, or mismatched candidates fail closed. It then performs one bounded,
+stable-paged CNINFO announcement query for an inclusive date range and explicit
+report category.
+
+Results preserve original Chinese titles, organization/document IDs, CNINFO
+type codes, provider timestamps with unverified semantics, canonical PDF URLs,
+attachment sizes, total/page counts, retrieval time, response byte length and
+content SHA-256. Missing report-period/correction/translation facts remain
+null. `CNINFO_USER_AGENT_CONTACT` is responsible public-source identification,
+not a credential or product dependency; arbitrary attachment download, OCR and
+materiality interpretation remain outside this operation.

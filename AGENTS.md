@@ -25,10 +25,11 @@ Experimental packages are implementation inventory, not finished products.
 
 For each tier:
 
-1. resolve every provider, licence, entitlement, source-right, credential,
-   storage, notification, streaming, security, jurisdiction, and human-
-   authorization blocker first, with exact exit evidence in `R3.md` or the
-   referenced decision record;
+1. resolve every genuine external blocker first, with exact exit evidence in
+   `R3.md` or the referenced decision record. A missing alternative provider or
+   absent production credential is not a blocker when one testable provider,
+   public source, user-owned import, fixture, or scripted capability can prove
+   the contract;
 2. only then move the tier to `building` and implement its entire dependency
    cone inside out: pure finance laws, adapters/capabilities, Pi shells,
    receipt handoffs, lifecycle, and the complete role journey;
@@ -53,6 +54,25 @@ copies of its role journey or full verification lane. Shared logic is built
 once. Add a track-owned adapter/module only when market semantics genuinely
 differ, and keep non-anchor coverage explicitly unsupported or `track_partial`.
 Never infer that one anchor journey proves another track.
+
+Provider breadth does not create another product matrix and is not a pre-build
+gate. Define canonical provider ports and conformance laws once, implement at
+least one testable adapter for the tier, and keep the plugin ready for several
+mainstream adapters without redesigning its domain or Pi API. Each concrete
+adapter declares exact environment variables or injected capabilities and
+requires explicit selection; never silently share credentials, cross tracks,
+or fall back to another provider. Credentials are caller-owned runtime or
+opt-in-test inputs, never product files, fixtures, defaults, logs, receipts, or
+persisted plugin state. Deterministic tests use rights-safe fixtures and
+scripted transports. Test each additional adapter with focused conformance and
+decoder coverage; do not duplicate the complete role journey per provider.
+
+Record unknown service level, entitlement, licence, redistribution, correction,
+or completeness facts honestly in adapter results. Such limitations restrict
+claims and distribution; they block a tier only when no lawful/testable input
+path can support the tier's anchor journey. Real-time day-trader behavior is the
+current external exception because daily fixtures cannot prove live sequence,
+gap/reset, correction, or latency behavior.
 
 Tier scope may cross many package boundaries, but every touched plugin must
 remain coherent and buildable at every handoff or commit checkpoint. Update
@@ -82,7 +102,7 @@ The finance foundations include `finance_archive`, `finance_core`, `finance_trac
 `finance_evidence`, `finance_listing`, `finance_market_calendar`,
 `finance_market_authorities`, `finance_market_rules`, `finance_market_documents`,
 `finance_document_attachment`, `finance_market_accounting`,
-`finance_track_capabilities`,
+`finance_track_capabilities`, `finance_cache_contract`,
 `finance_provenance`, `finance_http`, `finance_math`, `finance_series`,
 `finance_calendar`, `finance_ohlcv`, `finance_indicators`, `finance_risk`,
 `finance_execution`, `finance_journal`, `finance_replay`,
@@ -143,7 +163,8 @@ half-day schedule evidence without treating a daily row as proof of intraday
 completeness. It must not import CN/US market domains or turn Eastmoney into
 HKEX evidence.
 
-Provider adapters such as `finance_openfigi` and `finance_sec` are also independent finance
+Provider adapters such as `finance_openfigi`, `finance_sec`, and
+`finance_tushare` are also independent finance
 packages but sit outside the provider-neutral foundation. They may compose core
 and HTTP, must keep credentials opaque, and must expose validated request plans,
 fixture-tested decoders, explicit pacing/entitlement/licence policy, bounded

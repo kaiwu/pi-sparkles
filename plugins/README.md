@@ -2,15 +2,15 @@
 
 The catalog currently contains 135 exact `pi_*` proposals:
 
-- 54 have an implementation package (`gleam.toml`, source, tests, and README);
-- 81 are **Designing** and contain only `plugins/<name>/README.md`.
+- 62 have an implementation package (`gleam.toml`, source, tests, and README);
+- 73 are **Designing** and contain only `plugins/<name>/README.md`.
 
 README-only directories are reviewed specifications, not runnable plugins.
 Root tasks discover packages by `gleam.toml`, so these designs do not increase
 implementation breadth. The implementation queue remains controlled by the
 [product-tier standard](../PRODUCT_TIERS.md), [R2](../R2.md), and
-[`tiers.json`](../tiers.json). T1 swing trader blocker resolution is active; no
-individual plugin is selected next.
+[`tiers.json`](../tiers.json). The complete T1 swing product is ProductUseful;
+no individual plugin is selected next.
 
 Every design inherits the [professional product-readiness standard](../PRODUCT_READINESS.md)
 and follows the functional-core/effect-shell boundary in

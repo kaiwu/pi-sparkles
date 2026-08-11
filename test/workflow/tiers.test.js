@@ -19,23 +19,31 @@ describe("tier delivery workflow", () => {
       6,
     );
     expect(tierSummary(manifest).map((tier) => tier.proposals)).toEqual([
-      41, 49, 11, 7, 16, 11,
+      45, 45, 11, 7, 16, 11,
+    ]);
+    expect(tierSummary(manifest).map((tier) => tier.open_blockers)).toEqual([
+      0, 0, 0, 0, 0, 1,
     ]);
   });
 
-  test("keeps blocker resolution ahead of Tier 1 implementation", () => {
+  test("records Tier 1 ProductUseful and prevents an accidental repeat gate", () => {
     const manifest = readTierManifest();
     const tier = tierById(manifest, "T1");
     expect(manifest.active_tier).toBe("T1");
-    expect(tier.status).toBe("blocker_resolution");
+    expect(tier.status).toBe("product_useful");
+    expect(
+      verificationBlockers(manifest, tier).some((message) =>
+        message.includes("blocker is open"),
+      ),
+    ).toBeFalse();
     expect(verificationBlockers(manifest, tier)).toContain(
-      "T1 status must be verifying, found blocker_resolution",
+      "T1 status must be verifying, found product_useful",
     );
     expect(
       verificationBlockers(manifest, tier).some((message) =>
-        message.includes("T1-DAILY-PROVIDERS"),
+        message.includes("implementation is missing"),
       ),
-    ).toBeTrue();
+    ).toBeFalse();
   });
 
   test("rejects duplicate proposal ownership", () => {

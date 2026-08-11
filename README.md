@@ -15,8 +15,9 @@ products and their blocker-first workflow are governed by
 ## Status
 
 This approach is feasible and the first end-to-end implementation works. The
-repository currently contains 61 plugin implementation packages with
-Experimental slices and **zero currently claimed ProductUseful role tiers**.
+repository currently contains 69 plugin implementation packages and **one
+ProductUseful role tier: T1 swing trader**. Package-level Experimental labels
+remain implementation inventory; they are not individual product promotions.
 Experimental code must satisfy its exact implemented contract; ProductUseful
 applies only to a whole tier with a supported repeatable input path and complete
 professional journey.
@@ -24,7 +25,7 @@ professional journey.
 The repository includes:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- fifty-nine Experimental finance packages, including provider adapters,
+- sixty-one finance packages, including provider adapters,
   shared track/evidence/rules/document/accounting policy, and isolated CN/HK
   identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,

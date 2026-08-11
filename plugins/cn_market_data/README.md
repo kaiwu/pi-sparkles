@@ -17,3 +17,14 @@ though the contract follows the same endpoints used by its Eastmoney functions.
 
 Set non-secret `EASTMONEY_USER_AGENT_CONTACT`; optionally set
 `EASTMONEY_USER_AGENT_PRODUCT`. Normal tests never make live requests.
+
+## T1 provider-port migration
+
+The current implementation is the Eastmoney adapter evidence, not the final
+provider-selection architecture. During T1, the canonical CN quote/history
+port moves behind explicit adapter selection. Eastmoney remains the first
+adapter and Tushare Pro supplies the second conformance proof using caller-owned
+`TUSHARE_TOKEN` from the runtime or opt-in-test environment. The plugin-facing
+identity, observation, receipt, error and cancellation contract remains stable;
+provider-specific fields and limitations remain visible. No credential is
+bundled or persisted, and no adapter silently falls back to another provider.

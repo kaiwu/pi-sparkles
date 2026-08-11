@@ -55,9 +55,11 @@ Tier:    Queued -> BlockerResolution -> Building -> Verifying -> ProductUseful
 
 The active tier and its exact blockers are recorded in `tiers.json`; there is
 no selected-plugin queue. An external blocker identifies a provider, licence,
-entitlement, credential, security, jurisdictional, storage, notification,
-streaming, or human-authorization prerequisite. It is not a substitute for a
-missing design and must be resolved before tier implementation begins.
+entitlement, security, jurisdictional, storage, notification, streaming, or
+human-authorization prerequisite for which no testable alternative exists.
+Credentials themselves are never product contents, and lack of an alternative
+provider or production credential is not a blocker when a supported provider,
+public source, import, fixture, or scripted capability can prove the contract.
 
 ## Uniform Pi-plugin contract
 
@@ -122,6 +124,14 @@ typed receipts and handles.
 - Provider adapters use `finance_http` and explicit typed ports. They own
   bounded request plans, decoders, pacing/retry rules, cancellation,
   pagination, entitlement/licence facts, and fixture tests.
+- Provider-neutral ports and conformance laws are shared. Each adapter declares
+  its exact environment variables or injected capabilities, and provider
+  selection is explicit. Supporting more mainstream providers adds focused
+  adapter conformance/decoder coverage, not another role-level acceptance run.
+- Credentials are caller-owned runtime or opt-in-test inputs. They are never
+  committed, bundled, copied into fixtures, logged, returned in receipts, or
+  persisted as plugin business state. Missing runtime configuration produces a
+  structured unavailable result.
 - The Pi root exports only `extension(api: pi.ExtensionApi) -> Promise(Nil)`
   and wires decode, capabilities, pure transitions, effect interpretation, and
   encoding.

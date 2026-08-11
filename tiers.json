@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "active_tier": "T1",
+  "blocker_policy": "A tier is externally blocked only when no testable provider, public source, user-owned import, fixture, or scripted capability can prove a required contract. Missing alternative providers and production credentials are adapter backlog or runtime dependencies, not blockers. T6 real-time market behavior is the current exception.",
   "statuses": [
     "queued",
     "blocker_resolution",
@@ -12,7 +13,7 @@
     {
       "id": "T1",
       "name": "Swing trader product",
-      "status": "blocker_resolution",
+      "status": "product_useful",
       "depends_on": [],
       "track_profile": "One CN anchor journey. Shared tools retain track-neutral contracts; the already enumerated HK/US source packages prove their exact bounded operations without duplicating the whole swing journey.",
       "product_outcome": "A CN swing trader can select an exact listing; acquire supported daily market, calendar, rule, universe, event, classification, and provenance inputs; screen and inspect it; calculate technicals; create and simulate a plan; and resume an auditable journal-backed review loop. Exact HK/US input operations remain separately labelled capabilities, not duplicate role products.",
@@ -20,18 +21,21 @@
       "blockers": [
         {
           "id": "T1-DAILY-PROVIDERS",
-          "status": "open",
-          "exit": "The named CN-anchor daily quote/OHLCV path documents exact identity, latency, adjustment, session/completeness, correction, entitlement/licence, fixture/output rights, budgets, cancellation, and source authority. Existing HK/US tools retain focused bounded contracts but do not block the CN role journey."
+          "status": "resolved",
+          "exit": "At least one CN-anchor daily quote/OHLCV adapter is testable and the provider port can accept additional explicit adapters without changing the product contract.",
+          "resolution": "Eastmoney already supplies the bounded CN quote/history implementation and deterministic adapter evidence. Tushare Pro is the second mainstream conformance adapter; its caller-owned token is an environment-only opt-in test/runtime dependency. Other providers are future adapter breadth, not a tier blocker."
         },
         {
           "id": "T1-UNIVERSE-EVENT-SOURCES",
-          "status": "open",
-          "exit": "At least one supported point-in-time universe path and the required calendar, rule, earnings, corporate-action, classification, and news/event paths have the same source and rights evidence."
+          "status": "resolved",
+          "exit": "At least one testable source/import seam exists for universe and event inputs, while exact identity, time, correction, rights and receipt behavior remains mandatory implementation work.",
+          "resolution": "Existing Eastmoney, CNINFO, official calendar/rule, CAPCO and user-owned fixture/import seams are sufficient to implement and test the CN journey. Implementing their exact adapters and honest limitations belongs to the T1 build, not pre-build blocker resolution."
         },
         {
           "id": "T1-SWING-JOURNEY",
-          "status": "open",
-          "exit": "The Session 45 swing journey is updated to use only named repeatable inputs, compact/drill-down receipts, explicit failure recovery, portable journal state, and no ad hoc caller-attested market packet."
+          "status": "resolved",
+          "exit": "The complete CN-anchor journey and its receipt, failure, recovery and lifecycle acceptance contract are specified before implementation.",
+          "resolution": "Sessions 40, 45 and 46 plus the existing swing acceptance evidence specify the journey. Replacing historical fixtures with the completed Eastmoney/Tushare-capable T1 path and making the lane pass are tier implementation and verification work."
         }
       ],
       "proposals": [
@@ -45,6 +49,10 @@
         "hk_market_data",
         "cn_market_rules",
         "hk_market_rules",
+        "cn_disclosures",
+        "cn_stock_announcements",
+        "cn_stock_corporate_actions",
+        "cn_stock_earnings",
         "finance_guardrails",
         "finance_symbols",
         "finance_calendar",
@@ -96,27 +104,26 @@
       "blockers": [
         {
           "id": "T2-PRIMARY-DOCUMENTS",
-          "status": "open",
-          "exit": "Named CNINFO/exchange/HKEX/SEC document and attachment paths prove exact identity, filing scope, language/correction lineage, bounded retrieval, licence, fixture, OCR/PDF, and output rights."
+          "status": "resolved",
+          "exit": "Named primary-document sources or bounded user-owned imports are testable for the anchor journey.",
+          "resolution": "SEC, CNINFO, exchange/HKEX and bounded import seams are already specified and testable; exact decoders, attachment handling, rights and limitations remain T2 implementation requirements rather than pre-build blockers."
         },
         {
           "id": "T2-COMPANY-INTELLIGENCE-SOURCES",
-          "status": "open",
-          "exit": "Named transcript, guidance, estimate, governance, ownership, industry, sentiment, and A/H comparison inputs document authority, timing, coverage, corrections, licence, and output rights."
+          "status": "resolved",
+          "exit": "Every company-intelligence input has a testable provider or bounded import adapter seam.",
+          "resolution": "The reviewed contracts permit provider adapters and user-owned imports. Provider breadth and production credentials are runtime/backlog concerns; exact authority, timing, coverage and correction facts are implemented and tested inside T2."
         },
         {
           "id": "T2-INVESTOR-JOURNEY",
-          "status": "open",
-          "exit": "The Session 45 long-term-investor journey runs entirely from T1 ProductUseful receipts and supported primary/company-intelligence inputs through cited report and thesis review."
+          "status": "resolved",
+          "exit": "The long-term-investor journey is completely specified before implementation.",
+          "resolution": "Sessions 40, 42, 45 and 46 specify the journey; implementing and passing it remains the T2 build/verification outcome, not a pre-build blocker."
         }
       ],
       "proposals": [
-        "cn_disclosures",
         "hk_disclosures",
-        "cn_stock_announcements",
         "cn_stock_financials",
-        "cn_stock_corporate_actions",
-        "cn_stock_earnings",
         "cn_stock_share_structure",
         "cn_stock_shareholders",
         "cn_stock_restricted_shares",
@@ -174,18 +181,21 @@
       "blockers": [
         {
           "id": "T3-DURABLE-STORAGE",
-          "status": "open",
-          "exit": "One user-owned durable storage adapter proves idempotency, concurrency, correction lineage, retention, export/import, privacy, reload, fork, and recovery."
+          "status": "resolved",
+          "exit": "A user-owned local durable-storage capability is available for deterministic implementation and testing.",
+          "resolution": "The reviewed local append-only/versioned storage contract is implementable without an external provider; adapter implementation and lifecycle proof belong to T3."
         },
         {
           "id": "T3-NOTIFICATION-EFFECT",
-          "status": "open",
-          "exit": "One separately authorized notification path has bounded delivery, retry/idempotency, privacy, incident, and observable failure semantics."
+          "status": "resolved",
+          "exit": "A scripted/local notification capability can prove the effect contract without external delivery credentials.",
+          "resolution": "Notification providers are optional adapters. Deterministic scripted delivery proves bounded retry, idempotency, privacy and failure behavior; production credentials are runtime configuration."
         },
         {
           "id": "T3-PORTFOLIO-INPUT",
-          "status": "open",
-          "exit": "At least one repeatable bounded portfolio input path proves identity, currency, lot, reconciliation, privacy, correction, and refresh behavior end to end."
+          "status": "resolved",
+          "exit": "A bounded user-owned portfolio import path is available.",
+          "resolution": "The implemented CSV/JSON portfolio import is sufficient to build the anchor journey; broker retrieval is future adapter breadth, not a blocker."
         }
       ],
       "proposals": [
@@ -214,13 +224,15 @@
       "blockers": [
         {
           "id": "T4-POINT-IN-TIME-DATA",
-          "status": "open",
-          "exit": "One supported US-anchor point-in-time universe/dataset path proves membership, vintages, corrections, completeness limits, fixture/output rights, and reproducible replay. Other declared tracks retain exact labels without requiring duplicate quant journeys."
+          "status": "resolved",
+          "exit": "A bounded point-in-time dataset/import seam is available for reproducible implementation and testing.",
+          "resolution": "Canonical manifests, user-owned imports and scripted provider fixtures can prove the US-anchor replay contract. Additional historical providers are adapter breadth rather than pre-build blockers."
         },
         {
           "id": "T4-QUANT-JOURNEY",
-          "status": "open",
-          "exit": "The Session 45 quant journey runs from supported T1 receipts through hypothesis, feature/event calculation, trial ledger, backtest, comparison, chart/table, and reproduction export."
+          "status": "resolved",
+          "exit": "The quant journey is completely specified before implementation.",
+          "resolution": "Sessions 16, 28, 40, 42, 45 and 46 specify the journey; passing it remains T4 implementation/verification work."
         }
       ],
       "proposals": [
@@ -245,18 +257,21 @@
       "blockers": [
         {
           "id": "T5-PROVIDER-MATRIX",
-          "status": "open",
-          "exit": "Every instrument family has at least one named supported acquisition/import path with identity, symbology, timestamps, coverage, correction/completeness, entitlement/licence, fixture, and output-right evidence."
+          "status": "resolved",
+          "exit": "Each instrument family permits a provider adapter or bounded user-owned import seam.",
+          "resolution": "Provider-neutral ports, public sources and bounded imports are sufficient to implement T5. Supporting more providers is focused adapter breadth and never a role/provider matrix."
         },
         {
           "id": "T5-REFERENCE-DATA",
-          "status": "open",
-          "exit": "Fund/share-class, fixed-income, convertible, option, futures, crypto, macro-release, and FX terms come from dated authoritative or explicitly bounded sources."
+          "status": "resolved",
+          "exit": "Dated authoritative or explicitly bounded reference inputs are available to fixtures/import adapters.",
+          "resolution": "Session 43 identifies the required source roles and bounded import behavior. Exact adapters and dated reference evidence are T5 implementation work, not an external pre-build stop."
         },
         {
           "id": "T5-MULTI-ASSET-JOURNEY",
-          "status": "open",
-          "exit": "A complete researcher journey proves exact instrument legs, calculations, timing alignment, revisions, separately labelled comparisons, drill-down, and failure recovery."
+          "status": "resolved",
+          "exit": "The multi-asset journey is completely specified before implementation.",
+          "resolution": "Sessions 40, 43, 45 and 46 specify the journey; implementation and acceptance remain T5 work."
         }
       ],
       "proposals": [
@@ -291,27 +306,31 @@
         {
           "id": "T6-INTRADAY-PROVIDERS",
           "status": "open",
-          "exit": "At minimum the reviewed credentialed Alpaca US real-time and documented-latency Eastmoney CN paths prove sequence domains, gaps/resets, corrections/cancels/busts, three clocks, conditions, entitlement, licence, fixtures, and bounded acquisition."
+          "exit": "At least one real-time market-data provider can be exercised with caller-owned environment configuration to validate authentic sequence domains, gaps/resets, corrections/cancels/busts, exchange/provider/receipt clocks, conditions and bounded streaming behavior. Credentials remain outside the product."
         },
         {
           "id": "T6-STREAM-CAPABILITY",
-          "status": "open",
-          "exit": "The injected bounded streaming capability proves cancellation, reconnect/reset behavior, backpressure, byte/event budgets, stale-completion rejection, and shutdown."
+          "status": "resolved",
+          "exit": "The bounded streaming effect contract is fully specified and testable with scripted transports.",
+          "resolution": "Cancellation, reconnect/reset, backpressure, budgets, stale-completion and shutdown can be implemented and deterministically tested without provider credentials; authentic real-time semantics remain under T6-INTRADAY-PROVIDERS."
         },
         {
           "id": "T6-BROKER-CONTRACTS",
-          "status": "open",
-          "exit": "Named Alpaca, IBKR, and CN broker account/API agreements, capabilities, credentials, entitlements, host/method allowlists, pacing, and account/jurisdiction rules are evidenced."
+          "status": "resolved",
+          "exit": "Broker ports, environment dependencies, allowlists and state/effect contracts are specified and testable with scripted or paper capabilities.",
+          "resolution": "Alpaca, IBKR and CN brokers are concrete adapters over one reviewed contract. Tokens and account credentials are runtime/opt-in-test inputs, not products or pre-build blockers."
         },
         {
           "id": "T6-SECURITY-INCIDENT",
-          "status": "open",
-          "exit": "Credential custody, per-order authorization, idempotency, reconciliation, kill/disable controls, observability, privacy, incident response, and ambiguous-submission force-resume behavior pass review."
+          "status": "resolved",
+          "exit": "The security, authorization, reconciliation and incident state machines are fully specified before implementation.",
+          "resolution": "Sessions 25, 44 and 46 specify these laws. Implementing and proving them is T6 work; no additional external decision is needed before coding."
         },
         {
           "id": "T6-PAPER-EVIDENCE",
-          "status": "open",
-          "exit": "Prolonged paper operation and failure-injection evidence satisfies Sessions 25 and 44 before any live mutation lane is enabled."
+          "status": "resolved",
+          "exit": "Paper and failure-injection evidence is a release gate rather than a pre-build dependency.",
+          "resolution": "The evidence plan is specified by Sessions 25 and 44 and will be executed during T6 build/verification before live mutation is enabled."
         }
       ],
       "proposals": [

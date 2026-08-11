@@ -1,6 +1,6 @@
 # pi_sparkles_cn_stock_symbols
 
-Status: **Designing** · identity contract · no package manifest or code
+Status: **Implemented in ProductUseful T1** · identity contract
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 41](../../../trading-course/sessions/41_market_structure_source_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
@@ -15,3 +15,20 @@ A symbol or code alone never proves venue, board, class, currency, current statu
 ## Explicit exclusions
 
 No guessed MIC/board, silent historical-to-current substitution, global fallback, issuer/listing collapse, preferred share class, recommendation, or market-data fetch.
+
+## Implemented T1 scope
+
+`cn_stock_symbol_search` performs either an exact code search with a mandatory
+venue or a name search with an optional venue. It preserves zero/unique/multiple
+candidate resolution and returns bounded Tushare `stock_basic` candidates with
+short/legal names, pinyin, provider market/exchange, mapped MIC/board, currency,
+status, and listing dates. Every venue/board field is visibly vendor-reported or
+mapped from exact provider labels; it is not exchange-authenticated.
+
+`cn_stock_alias_history` requires an already resolved venue/code plus upstream
+identity-evidence reference and returns every `namechange` row with separate
+effective-start, effective-end, announcement-date, and original Chinese reason.
+Missing dates stay unknown and aliases are never substituted into current
+identity. Cross-listing and issuer relationships remain unsupported rather than
+guessed. Both operations use a caller-owned `TUSHARE_TOKEN` and content-bound
+receipts.
