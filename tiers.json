@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "active_tier": "T1",
+  "active_tier": "T2",
   "blocker_policy": "A tier is externally blocked only when no testable provider, public source, user-owned import, fixture, or scripted capability can prove a required contract. Missing alternative providers and production credentials are adapter backlog or runtime dependencies, not blockers. T6 real-time market behavior is the current exception.",
   "statuses": [
     "queued",
@@ -96,7 +96,7 @@
     {
       "id": "T2",
       "name": "Long-term equity investor product",
-      "status": "queued",
+      "status": "product_useful",
       "depends_on": ["T1"],
       "track_profile": "One US/SEC anchor journey. CN/HK proposals prove their market-owned source and calculation contracts inside the same tier; they do not create two more investor-product acceptance matrices.",
       "product_outcome": "A US long-term investor can complete a cited company review from original filings and exact accounting/ownership/event evidence through normalized fundamentals, comparisons, valuation, quality/growth, governance, thesis, and a reproducible research report. CN/HK capabilities remain exact and isolated without duplicating the full journey.",

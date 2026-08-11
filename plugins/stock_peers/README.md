@@ -1,6 +1,13 @@
 # pi_sparkles_stock_peers
 
-Status: **Designing** · requirements only · no package manifest or code
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
+The package now validates a content-bound caller-defined target, universe,
+evidence date, and predicate set. Its pure engine retains every candidate and
+derives only three mechanical states: accepted when every predicate is observed
+true, rejected when any predicate is observed false, and unresolved when facts
+are unknown or conflicting. It provides stable paging and per-candidate drill
+down with all source receipts; it never discovers, ranks, or chooses peers.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 

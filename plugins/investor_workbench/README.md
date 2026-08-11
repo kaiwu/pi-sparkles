@@ -1,5 +1,7 @@
 # pi_investor_workbench
 
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
 Experimental rank-15 implementation of the minimum investor-dossier slice
 authorized by trading-course
 [Session 19](../../../trading-course/sessions/19_cg_fundamental_investor_dossier_contract_20260809.md).

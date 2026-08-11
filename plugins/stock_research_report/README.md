@@ -1,6 +1,6 @@
 # stock_research_report
 
-Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
 
 `stock_research_report` registers `/us-research` and `us_company_brief`.
 The command queues a bounded workflow for the agent to call the existing

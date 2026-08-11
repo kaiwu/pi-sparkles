@@ -1,5 +1,7 @@
 # finance_news
 
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
 Experimental Pi plugin for bounded, read-only US vendor-news metadata from
 Alpaca's current `GET /v1beta1/news` endpoint. Alpaca states that the historical
 feed currently comes directly from Benzinga and dates back to 2015.

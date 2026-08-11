@@ -1,5 +1,7 @@
 # company_profile
 
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
 `company_profile` is an **Experimental**, read-only US source plugin. It
 registers one tool, `company_profile`, over the current Twelve Data `/profile`
 and `/statistics` endpoints.

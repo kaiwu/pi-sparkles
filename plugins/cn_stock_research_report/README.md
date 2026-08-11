@@ -1,6 +1,13 @@
 # pi_sparkles_cn_stock_research_report
 
-Status: **Designing** · composition contract only · no package manifest or code
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
+The package now implements a bounded content-bound CN report packet. Its pure
+core validates exact mainland identity, allowed section kinds, fact states,
+source handles, hashes, conflicts, omissions, and original/translation lineage.
+Chinese originals are mandatory for un-translated sections; any other language
+must identify its controlling Chinese section, translator, time, and source
+span. Paging and drill-down never invent narrative or fill missing sections.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 

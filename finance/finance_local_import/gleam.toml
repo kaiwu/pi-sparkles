@@ -1,0 +1,19 @@
+name = "finance_local_import"
+version = "0.1.0"
+target = "javascript"
+description = "Bounded cancellation-aware user-owned UTF-8 finance import adapter"
+
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+gleam_javascript = ">= 1.0.0 and < 2.0.0"
+
+[javascript]
+runtime = "bun"
+
+[metadata.finance]
+status = "experimental"
+provider = "bounded user-owned local import"
+access = "read-only regular UTF-8 files; symlinks rejected"

@@ -1,6 +1,14 @@
 # pi_sparkles_finance_rumor_check
 
-Status: **Designing** · claim-evidence contract · no package manifest or code
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
+The package now accepts a content-bound structured claim and bounded evidence
+set, then classifies each source independently through exact predicate, value,
+unit, negation, and exclusivity rules. It preserves exact passages, authority
+role, independence/circularity, provenance, search scope, cutoff, omissions,
+and hashes. `NotFound` and `Inaccessible` remain information states, and no
+aggregate truth, credibility, materiality, recommendation, or trade verdict is
+produced.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 

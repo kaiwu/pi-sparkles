@@ -5,7 +5,10 @@
 The root is a private Bun task runner, not a Gleam package. The shared Pi binding
 lives in `pi_gleam/`. Reusable non-Pi libraries live in `finance/<name>/`, and
 loadable extensions live in `plugins/<name>/`. Each package is an independent
-Gleam project with its own `gleam.toml`, `src/`, `test/`, and `README.md`.
+Gleam project with its own `gleam.toml`, `src/`, and `README.md`; add `test/`
+where the package owns pure laws or focused behavior. Mechanically generated
+Pi-only shells may omit package-local tests when their shared core has law tests
+and the shells are covered once by tier acceptance, artifact, and Pi-load lanes.
 Orchestration lives in `scripts/`; FFI and bundle tests live in `test/binding/`
 and `test/artifacts/`. Generated `build/`, `dist/`, `.work/`, and
 `manifest.toml` files are ignored. Keep proposals in `ROADMAP.md`; create plugin
@@ -262,9 +265,9 @@ and an annual-shaped complete window.
   implementation-inventory, and remaining counts.
 - `bun run tier:show -- T1`: inspect one tier's exact proposals, blockers,
   dependencies, outcome, and acceptance lane.
-- `bun run tier:checkpoint -- T1`: format, warnings-as-errors build, and unit-
-  test every currently touched Gleam package as one atomic tier working set;
-  it never changes maturity.
+- `bun run tier:checkpoint -- T1`: format and warnings-as-errors build every
+  currently touched Gleam package, and run each focused test suite that exists,
+  as one atomic tier working set; it never changes maturity.
 - `bun run tier:verify -- T1`: run the only promotion gate; it refuses open
   blockers, missing implementations/dependencies, wrong status, or a missing
   role-level acceptance lane before running the expensive matrix.

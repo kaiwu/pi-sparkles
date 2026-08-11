@@ -1,5 +1,7 @@
 # sec_edgar
 
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
 `sec_edgar` is an **Experimental** Pi plugin for read-only company discovery and
 recent filing metadata from the SEC's primary EDGAR data APIs. It is the first
 vertical slice above the reusable `finance_sec` provider package.

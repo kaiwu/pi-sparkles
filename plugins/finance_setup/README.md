@@ -1,7 +1,10 @@
 # pi_sparkles_finance_setup
 
-Experimental F0 Pi extension for finance capability discovery and safe
-configuration diagnostics. It registers `/finance-setup`,
+Tier coverage: **ProductUseful T1** · package behavior is promoted and verified
+only through the complete tier
+
+Pi extension for finance capability discovery and safe configuration
+diagnostics. It registers `/finance-setup`,
 `finance_capabilities`, and `finance_provider_health`.
 
 ## Why this plugin exists
@@ -41,9 +44,10 @@ ambient environment variables.
   reserved adapter tool contracts; unknown providers remain explicitly
   `unknown`.
 
-Tool results include structured `details` with state names. `experimental`
-means a companion tool is active, not that credentials, connectivity, data
-freshness, or entitlement were verified.
+Tool results include structured `details` with state names. `available` means a
+companion tool is installed; it never implies that credentials, connectivity,
+data freshness, or entitlement were verified. Those require a provider-specific
+probe.
 
 ## Safety and permissions
 
@@ -57,5 +61,6 @@ and fresh as separate states.
 
 Local development uses path dependencies on `../../pi_gleam` and
 `../../finance/finance_core`. Replace them with released Hex constraints before
-publishing. Tested against Pi `0.83.0`. This is an Experimental interface, not
-yet a stable provider-health protocol.
+publishing. Tested against Pi `0.83.0`. The installed-capability report is part
+of ProductUseful T1; live provider health remains explicitly unproved unless a
+provider-specific probe supplies that evidence.

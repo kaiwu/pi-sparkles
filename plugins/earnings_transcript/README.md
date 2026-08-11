@@ -1,6 +1,13 @@
 # pi_sparkles_earnings_transcript
 
-Status: **Designing** · licensed-source gated · no package manifest or code
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
+The package now implements strict, content-bound local import for a caller's
+licensed, caller-owned, or public-record transcript projection. Exact search,
+speaker-aware excerpting, and two-version exact-query alignment preserve source
+text, offsets, participant state, corrections, omissions, rights, and hashes.
+The plugin rejects ambiguous scope, invalid offsets, unpermitted rights, and
+incorrect hashes before returning text.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 

@@ -14,7 +14,7 @@ Pi tools, never plugin-to-plugin source imports.
 | Tier | Product and user | Proposals | Current inventory | ProductUseful outcome |
 | --- | --- | ---: | ---: | --- |
 | **T1 — ProductUseful** | Swing trader | 45 | 45 packages, 0 not implemented | Exact CN daily acquisition → screen → inspect → technicals → plan → simulate → journal/review; bounded HK/US tools remain separately scoped |
-| **T2** | Long-term equity investor | 45 | 8 packages, 37 not implemented | Primary filings/disclosures → normalized company facts → comparison/valuation/quality/governance → cited report and thesis review |
+| **T2 — ProductUseful** | Long-term equity investor | 45 | 45 packages, 0 not implemented | Primary filings/disclosures → normalized company facts → comparison/valuation/quality/governance → cited report and thesis review |
 | **T3** | Portfolio manager and monitor | 11 | 3 packages, 8 not implemented | Durable portfolio import/reconciliation → risk/scenarios/attribution/rebalance/tax lots → monitors/alerts and auditable resume |
 | **T4** | Quant researcher | 7 | 3 packages, 4 not implemented | Point-in-time universe/data → explicit features/events → trial ledger/backtest/comparison → complete reproduction |
 | **T5** | Macro and multi-asset researcher | 16 | 1 package, 15 not implemented | Exact instrument/source legs → reviewed calculations → time-aligned, separately labelled cross-asset research |
@@ -132,8 +132,10 @@ isolated tests pass.
 Tier implementation is deliberately cross-package, but the shared worktree may
 never be left with a half-wired or broken plugin:
 
-- every touched package must format, compile with warnings as errors, and pass
-  its focused deterministic tests at each handoff or commit checkpoint;
+- every touched package must format and compile with warnings as errors, and
+  every focused deterministic suite that exists must pass, at each handoff or
+  commit checkpoint; mechanically generated Pi-only shells share reviewed core
+  laws and are covered once by artifact, Pi-load, and tier-role lanes;
 - a public tool, command, event, or manifest entry is wired only when its whole
   typed path—decode, capability, domain transition/calculation, effect,
   response, error, cancellation, and test—is coherent;
@@ -229,9 +231,15 @@ weaken the ProductUseful gate.
 
 ## Active ledger decision
 
-T1 is **ProductUseful**. All 45 proposal packages exist; the complete repository
-matrix, installed-Pi smoke lane, existing CN/HK/US receipt-and-journal swing
-workflow, and dedicated Eastmoney-first CN role lane passed on 2026-08-11.
+T1 and T2 are **ProductUseful**. T1's complete repository matrix, installed-Pi
+smoke lane, existing CN/HK/US receipt-and-journal swing workflow, and dedicated
+Eastmoney-first CN role lane passed on 2026-08-11. T2's 45-package checkpoint,
+complete repository matrix, installed-Pi smoke lane, and dedicated US/SEC
+long-term-investor role journey passed on 2026-08-12. T2 remains the active
+ledger tier only to preserve the completed promotion record. Its verified plain
+Pi package contains the cumulative T1+T2 closure as 90 content-locked extension
+entry points. Selecting and activating the next tier is a separate decision.
+
 Tushare credentials remain environment-only adapter inputs and CNINFO remains a
 public official-source path. `pi_stock_tape` belongs to T6; authentic real-time
 market-data access for T6 is the only open external tier blocker.

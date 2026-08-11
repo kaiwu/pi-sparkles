@@ -1,5 +1,7 @@
 # pi_sparkles_hk_disclosures
 
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
 Experimental, read-only Hong Kong shell over HKEXnews's public security-prefix
 and listed-company title-search surfaces plus HKEX's official Full List of
 Securities. It exposes `hk_security_search`, `hk_security_profile`,

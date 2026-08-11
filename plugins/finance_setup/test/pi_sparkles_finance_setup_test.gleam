@@ -31,5 +31,5 @@ pub fn provider_health_never_claims_an_unchecked_connection_test() {
 
   capability.provider_health("alpaca", ["us_stock_quote"])
   |> fn(value) { value.state }
-  |> should.equal(capability.Experimental)
+  |> should.equal(capability.Available)
 }

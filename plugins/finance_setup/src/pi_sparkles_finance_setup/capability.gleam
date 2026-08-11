@@ -7,7 +7,7 @@ import gleam/string
 
 pub type State {
   Ready
-  Experimental
+  Available
   MissingDependency
   InvalidConfiguration
   Unknown
@@ -85,7 +85,7 @@ pub fn provider_health(
         True ->
           Capability(
             "Alpaca Market Data",
-            Experimental,
+            Available,
             "typed read-only US market-data tool is active; this is installation state, not a live health probe",
           )
         False ->
@@ -108,7 +108,7 @@ pub fn provider_health(
 pub fn state_name(state: State) -> String {
   case state {
     Ready -> "ready"
-    Experimental -> "experimental"
+    Available -> "available"
     MissingDependency -> "missing_dependency"
     InvalidConfiguration -> "invalid_configuration"
     Unknown -> "unknown"
@@ -148,7 +148,12 @@ fn registered(
   active_tools: List(String),
 ) -> Capability {
   case list.contains(active_tools, tool_name) {
-    True -> Capability(name, Experimental, "typed Pi tool is active")
+    True ->
+      Capability(
+        name,
+        Available,
+        "typed Pi tool is installed; provider-specific health remains unprobed",
+      )
     False ->
       Capability(
         name,

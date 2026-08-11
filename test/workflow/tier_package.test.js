@@ -62,7 +62,7 @@ function fixtureArtifact(root, shortName) {
 }
 
 describe("plain Pi tier packaging", () => {
-  test("plans the ProductUseful tier and refuses unfinished tiers", () => {
+  test("plans cumulative ProductUseful tiers and refuses unfinished tiers", () => {
     const manifest = readTierManifest();
     const t1 = tierPackagePlan(manifest, "T1");
     expect(t1.includedTiers.map((tier) => tier.id)).toEqual(["T1"]);
@@ -75,7 +75,29 @@ describe("plain Pi tier packaging", () => {
       "safety_gate",
     ]);
     expect(t1.plugins.map((plugin) => plugin.shortName)).not.toContain("hello");
-    expect(() => tierPackagePlan(manifest, "T2")).toThrow(
+    const t2Tier = tierById(manifest, "T2");
+    if (t2Tier.status === "product_useful") {
+      const t2 = tierPackagePlan(manifest, "T2");
+      expect(t2.includedTiers.map((tier) => tier.id)).toEqual(["T1", "T2"]);
+      expect(t2.plugins).toHaveLength(90);
+      expect(t2.excludedExtraPackages).toEqual([
+        "cn_setup",
+        "hello",
+        "hk_setup",
+        "lifecycle",
+        "safety_gate",
+        "cn_fundamentals",
+        "hk_fundamentals",
+      ]);
+      expect(t2.plugins.map((plugin) => plugin.shortName)).not.toContain(
+        "cn_fundamentals",
+      );
+    } else {
+      expect(() => tierPackagePlan(manifest, "T2")).toThrow(
+        "only ProductUseful tiers can be packaged",
+      );
+    }
+    expect(() => tierPackagePlan(manifest, "T3")).toThrow(
       "only ProductUseful tiers can be packaged",
     );
   });

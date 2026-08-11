@@ -1,5 +1,7 @@
 # stock_fundamentals
 
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
 `stock_fundamentals` is an **Experimental** Pi plugin that turns a deliberately
 small set of raw SEC XBRL facts into named fundamentals under inspectable,
 exact-period rules. It never resolves amendments, duplicate contexts, or

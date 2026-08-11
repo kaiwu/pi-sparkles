@@ -1,5 +1,7 @@
 # sec_xbrl
 
+Tier coverage: **ProductUseful T2** · package behavior is promoted and verified only through the complete tier
+
 `sec_xbrl` is an **Experimental** read-only Pi plugin for discovering SEC XBRL
 concepts and retrieving exact raw company facts. It composes `finance_sec` and
 keeps accounting selection policy outside the HTTP and Pi shells.
