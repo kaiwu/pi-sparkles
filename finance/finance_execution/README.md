@@ -54,8 +54,8 @@ receipts, request/result budgets, and forbidden plugin-decision language.
 Top-of-book, sequenced trade-through, declared queue-ahead, intraday-bar,
 auction, stop-child, broker-replay correction projections, richer fee schedules,
 cross-currency aggregation, provider adapters, `pi_order_simulator`, full day
-workflow, and all live mutation remain incremental. Full day-trader acceptance
-also remains gated by licensed intraday data, exact track rules,
-the still-open full-workflow part of `CG-DAY`, and the later `CG-LIVE`
-authorization/security review. The resolved `CG-PSYCHOLOGY` journal-information
-slice supplies review records but does not complete that workflow.
+workflow, and imported/read-only lifecycle projections remain incremental.
+Broker order mutation is outside every Pi plugin, including paper environments.
+Full day-trader acceptance remains gated by licensed CN intraday data and exact
+track rules. The resolved `CG-PSYCHOLOGY` journal-information slice supplies
+review records but does not complete that workflow.

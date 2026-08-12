@@ -76,7 +76,8 @@ continuity or recovery claim. Gaps and resets are never repaired.
 
 The output always warns that displayed size can change or disappear, does not
 describe hidden liquidity, is not durable, and is not an executable-price or
-fill promise.
+fill promise. It is informational observation only and cannot be transformed
+into a broker operation by this or any other repository plugin.
 
 ## Public package surface
 

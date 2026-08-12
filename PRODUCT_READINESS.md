@@ -22,11 +22,34 @@ This standard is controlled by the finance tutor's completed audit:
 - [Session 46](../trading-course/sessions/46_product_readiness_corrections_20260811.md): controlling chronology, input-path, maturity, dependency-DAG, and ambiguous-live-submission corrections.
 
 Session 46 supersedes conflicting chronology or maturity wording in earlier
-sessions. The audit concludes that all 135 catalog proposals are at least
+sessions, except for the repository-level non-executing amendment below, which
+is newer and controlling. The audit concludes that all 135 catalog proposals are at least
 domain- and architecture-ready. No unresolved finance-domain, Pi-architecture,
 workflow, safety-design, or professional-acceptance question remains inside the
 reviewed scope. Provider/access evidence and implementation remain real work,
 but they are not hidden tutor gaps.
+
+## Non-executing broker boundary — controlling amendment 2026-08-12
+
+Pi plugins in this repository never place, submit, route, cancel, replace,
+modify, approve, or otherwise mutate a paper or live order. They never request,
+hold, or call with write-capable broker credentials. This rule supersedes every
+earlier session, roadmap, catalog, or plugin design that contemplated broker
+order mutation.
+
+Allowed scope is limited to read-only account/order/fill/status observation,
+bounded caller-owned receipt import, deterministic local simulation,
+policy/compliance fact evaluation, non-executable handoff export, and
+read-only reconciliation of actions the user performed outside Pi. Cancelling
+a bounded data acquisition or subscription remains lifecycle cleanup; it is
+not an order cancellation. The user chooses and performs any actual market
+action through means outside this repository.
+
+Every implemented broker-adjacent plugin manifest must declare
+`metadata.finance.broker_order_mutation = false` and a read-only, import,
+simulation, or non-executable-handoff access class. Architecture checks reject
+mutating access declarations and public order placement/submission/routing/
+cancellation/replacement/modification/approval operations in plugin source.
 
 ## Package inventory and tier status
 
@@ -86,9 +109,11 @@ an explicit reason:
 8. Structured observability with correlation/request IDs, timings, budgets,
    retries and failures, while never exposing secrets or private account data.
 
-The plugin exposes facts, calculations, state and effects. The LLM/user owns
+The plugin exposes facts, calculations, read-only state and non-executing
+effects. The LLM/user owns
 interpretation, benchmarks, assumptions, scenarios, thresholds, rankings,
-recommendations, professional judgments, authorization, and next action unless
+recommendations, professional judgments, authorization, and every actual market
+action unless
 a cited contract explicitly assigns a purely mechanical choice to the plugin.
 
 ## Functional architecture

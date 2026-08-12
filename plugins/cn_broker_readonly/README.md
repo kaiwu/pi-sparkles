@@ -1,10 +1,10 @@
 # pi_sparkles_cn_broker_readonly
 
-Status: **Designing** · provider-specific choice unresolved · no package manifest or code
+Status: **Designing — T6 CN anchor** · provider-specific choice unresolved · no package manifest or code
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 44](../../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
-Controlling evidence: [Course Session 25](../../../trading-course/sessions/25_cg_live_broker_effect_contract_20260811.md).
+Historical input: [Course Session 25](../../../trading-course/sessions/25_cg_live_broker_effect_contract_20260811.md). The repository's [non-executing broker boundary](../../PRODUCT_READINESS.md#non-executing-broker-boundary--controlling-amendment-2026-08-12) controls.
 
 ## Reviewed first slice
 
@@ -16,4 +16,4 @@ Acceptance starts with provider fixtures for multi-account/currency, settlement 
 
 ## Stop conditions and exclusions
 
-Blocked until one CN broker, API contract, authentication method, entitlement, and usage rights are reviewed. No submission, cancellation, paper/live mutation, universal broker support, inferred legal status, or trading judgment.
+Blocked until one CN broker or caller-owned export contract, authentication/import method, entitlement, and usage rights are reviewed. No write-capable credential, order placement, routing, order cancellation/replacement, paper/live mutation, universal broker support, inferred legal status, or trading judgment.

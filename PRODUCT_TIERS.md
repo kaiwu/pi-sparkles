@@ -18,7 +18,7 @@ Pi tools, never plugin-to-plugin source imports.
 | **T3 — ProductUseful** | Portfolio manager and monitor | 11 | 11 packages, 0 not implemented | Durable portfolio import/reconciliation → risk/scenarios/attribution/rebalance/tax lots → monitors/alerts and auditable resume |
 | **T4 — ProductUseful** | Quant researcher | 7 | 7 packages, 0 not implemented | Point-in-time universe/data → explicit features/events → trial ledger/backtest/comparison → complete reproduction |
 | **T5 — ProductUseful** | Macro and multi-asset researcher | 16 | 16 packages, 0 not implemented | Exact instrument/source legs → reviewed calculations → time-aligned, separately labelled cross-asset research |
-| **T6** | Day trader and execution operator | 11 | 2 packages, 9 not implemented | Authenticated live quote/depth/tape → bounded day workflow → account/paper/compliance → explicitly authorized and reconciled live effects |
+| **T6** | CN day trader and execution reviewer | 11 | 2 packages, 9 not implemented | Authenticated CN live transaction tape → bounded day workflow → local simulation/read-only account and compliance → non-executable handoff and external-receipt reconciliation |
 
 “Current inventory” means code exists. It is not a completion percentage and
 does not credit narrow Experimental slices as finished product behavior.
@@ -36,7 +36,7 @@ the role journey or expensive acceptance suite to be copied three times.
 | T3 portfolio | One mixed imported portfolio with separately labelled CN/HK/US legs |
 | T4 quant | One US point-in-time dataset/replay journey; provider-neutral manifests preserve other track labels |
 | T5 multi-asset | Global/cross-market legs; it is not an equity-track product |
-| T6 day/execution | One US live/broker journey plus the specific CN tape-adapter contract required by Session 41; no HK/CN journey duplication |
+| T6 day/execution review | One CN live transaction-tape journey; US live market-data and broker-network adapters are on hold and remain `track_partial`, with no US/HK journey duplication |
 
 Shared domain types, calculations, receipts, Pi shells, and acceptance logic are
 implemented once. Track-owned adapters or rule modules exist only when market
@@ -233,11 +233,12 @@ weaken the ProductUseful gate.
 
 T1 through T5 are **ProductUseful**. Their single declared role journeys,
 complete repository checks, artifact contracts and installed-Pi smoke lanes
-passed on 2026-08-11 or 2026-08-12. T5 remains the active ledger tier to
-preserve the completed promotion record. Its plain-Pi package contains the T1
-and T5 dependency closure as 61 separately loadable, content-locked extension
-entry points. T6 remains deliberately last and externally blocked on authentic
-real-time market behavior.
+passed on 2026-08-11 or 2026-08-12. T6 is now the active ledger tier in
+`blocker_resolution`; T5's completed promotion record remains frozen. Its
+plain-Pi package contains the T1 and T5 dependency closure as 61 separately
+loadable, content-locked extension entry points. T6 remains externally blocked
+on authentic real-time market behavior and must not enter `building` until the
+recorded exit evidence exists.
 
 Tushare credentials remain environment-only adapter inputs and CNINFO remains a
 public official-source path. `pi_stock_tape` belongs to T6; authentic real-time

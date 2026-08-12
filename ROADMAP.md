@@ -116,9 +116,9 @@ The first useful finance agent should answer questions such as:
 - What risks and concentrations exist in a portfolio?
 - Can this research be reproduced from cited source data?
 
-It should not begin with autonomous live trading. Read-only research, provenance,
-portfolio analytics, and paper execution give us the highest usefulness with a
-much smaller failure cost.
+It never performs autonomous or user-confirmed broker trading. Read-only
+research, provenance, portfolio analytics, local simulation, and external
+receipt review give us the highest usefulness with a much smaller failure cost.
 
 ## Trader-requirement steering audit — 2026-08-06
 
@@ -136,7 +136,7 @@ reinterpret source evidence.
 
 | Trader workflow | Required decision loop | Current roadmap coverage | Steering gap |
 | --- | --- | --- | --- |
-| Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review execution. | Session 22 and the Experimental `pi_day_workbench` provide network-free validation/inspection of one caller-attested sequenced intraday packet, selected mechanical calculations, and explicit caller-retained workflow transitions; calendar, execution-information, and risk slices are separately available. | **Still the weakest live vertical.** No adapter authenticates or acquires a licensed freshness-bounded intraday stream, and no scan, durable monitor, alert, paper/live mutation, or whole-product day-trader acceptance exists. Daily bars must not be presented as a day-trading surface. |
+| Day trader | Establish the live session and auction/halts state; scan intraday price, volume, spread, depth, and tape; form a bounded entry/exit plan; size risk; monitor; review externally performed execution. | Session 22 and the Experimental `pi_day_workbench` provide network-free validation/inspection of one caller-attested sequenced intraday packet, selected mechanical calculations, and explicit caller-retained workflow transitions; calendar, execution-information, and risk slices are separately available. | **Still the weakest live-data vertical.** T6 now anchors on CN, but no adapter yet authenticates or acquires a licensed freshness-bounded CN transaction stream, and no scan, durable monitor, alert, or whole-product day-trader acceptance exists. Order mutation is intentionally outside plugin scope; daily bars must not be presented as a day-trading surface. |
 | Swing trader | Scan a point-in-time universe; confirm price/volume/volatility and sector regime; inspect catalysts; define entry, stop, target, size, and holding horizon; monitor and journal. | Experimental strategy, market-data, indicator, risk, execution, workbench, journal, shared-replay, exact-predicate screener, shared exact-calendar, quant-research, backtest, deterministic-chart, HK result-related board-meeting-date, US corporate-action source, explicit portfolio exposure/heat calculation, point-in-time FRED, and exact Alpaca/Benzinga US news-metadata slices now compose around explicit facts. The source adapters preserve their timing and completeness limits, and portfolio/macro/news judgment stays LLM-owned. | **Strongest current vertical; no more depth before breadth.** Session 17 ranks 1 through 20 are complete. Extend swing/provider depth only on a concrete workflow trigger. |
 | Long-term investor | Resolve the security; read primary disclosures and complete statements; assess business quality, governance, valuation, dividends/actions, portfolio fit, and thesis changes; review periodically. | Session 19 and the Experimental `pi_investor_workbench` provide a caller-supplied dossier; existing profile/classification/news and Session 21 portfolio import slices add bounded facts. Sessions 24, 26, 27, 29–31, and 34–36 now specify future portfolio review, comparative valuation, quality/growth/thesis, monitoring/company intelligence, fund, and fixed-income/options contracts. | Current implementations remain narrow Experimental slices. Future rows now have README-only designs but are not selected for implementation; source/provider/licence/security work, optimization, professional judgments, live execution, and implementation remain separate. |
 | Quant researcher | State a falsifiable hypothesis; bind a point-in-time universe and dataset; define features/signals; simulate costs and fills; validate out of sample; measure uncertainty; reproduce every run. | The Experimental `finance_replay` core supplies point-in-time manifests, shared receipt joins, caller-declared partitions/trials, deterministic replay, requested calculations, comparison, compact context, and reproduction JSONL. `finance_dataset`, `stock_screener`, `finance_calendar`, `quant_research`, `backtest`, `finance_charts`, and `macro_fred` expose exact dataset/vintage, point-in-time predicate, session/closure, hypothesis/ledger, requested-metric, run-comparison, replay, reproduction, deterministic-view, and bounded macro-source inputs. | Ranks 5 through 14 are complete. Historical membership remains a high-leverage missing quant source fact; edge/deployability remain LLM conclusions. |
@@ -330,11 +330,12 @@ for desired instructions, capabilities, explicit simulations,
 lifecycle/fills, and requested calculations. `CG-QUANT` is resolved for the
 provider-neutral completed-daily shared-replay, event-study, and factor-research
 information contracts. Session 22 resolves the provider-neutral full intraday
-workflow information contract. Sessions 24 and 25 resolve full portfolio
-review and the broker observation/paper/live interaction contract. Licensed
-acquisition, provider agreements, entitlement, security review,
-jurisdiction-specific policy, and per-order human authorization remain
-separate external stops.
+workflow information contract. Session 24 resolves full portfolio review;
+Session 25 is historical input for broker lifecycle evidence. The 2026-08-12
+repository amendment limits plugins to read-only observation/import, local
+simulation, non-executable handoff, reconciliation, and compliance facts.
+Licensed acquisition, provider agreements, entitlement, private-data security,
+and jurisdiction-specific policy remain separate inputs.
 
 | Gate | Trading-course TOC cross-reference | Finance-advisor deep dive required before design | Applies first to |
 | --- | --- | --- | --- |
@@ -344,10 +345,10 @@ separate external stops.
 | `CG-TECH` **(Resolved — 2026-08-07)** | Phase 2, Weeks 5–8 “Technical Analysis” | Provide exact formulas, seeds, parameters, warm-up, missing-session and corporate-action treatment for SMA/EMA, RSI, MACD, KD9, Bollinger, ATR and VWAP; operational definitions and counterexamples for support/resistance, trend, breakout, gaps, divergence, volume confirmation, patterns and multi-timeframe use. | `finance_indicators`, `pi_stock_technicals`, screeners, charts and alerts |
 | `CG-FUNDAMENTAL` **(Minimum dossier information slice Resolved — 2026-08-09)** | Phase 3, Weeks 9–12 “Fundamental Analysis” | Session 19 defines the 16-section evidence-state dossier, identity and statement laws, mechanical insufficiency and metric facts, assumption-explicit valuation rows, review history, and the boundary against plugin-owned investment judgment. Provider orchestration, governance/industry extraction, peer selection, monitoring, portfolio composition, and deeper valuation remain incremental. | `pi_investor_workbench`; later governance/industry, quality/growth/valuation, fundamentals, and profile sources |
 | `CG-SWING` **(Resolved — 2026-08-06)** | Phase 4, Week 13 “Swing Trading System” and Week 16 “Strategy Integration” | Walk one complete weekly-to-daily workflow: universe, sector/regime/catalyst context, setup and confirmation, entry/stop/target/expiry, sizing/scaling, monitoring, exits, invalidation and journal review; distinguish required evidence from preferences. | `finance_strategy` completed-daily-bar slice, `pi_swing_workbench`, the next sprint |
-| `CG-DAY` **(Execution-information slice Resolved — 2026-08-07; provider-neutral full workflow Resolved — 2026-08-09)** | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Sessions 14 and 22 define desired-instruction/execution evidence plus the network-free intraday packet, session/phase, entitlement/licence, sequence/freshness/gap, explicit calculation, workflow-state, fail-closed, and forbidden-conclusion laws. Licensed acquisition, durable monitoring, alerts, and paper/live mutation remain later triggers. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench`; later licensed provider and `CG-LIVE` adapters |
+| `CG-DAY` **(Execution-information slice Resolved — 2026-08-07; provider-neutral full workflow Resolved — 2026-08-09)** | Phase 4, Week 14 “Day Trading System” and Phase 5, Week 17 “Order Types & Execution” | Sessions 14 and 22 define desired-instruction/execution evidence plus the network-free intraday packet, session/phase, entitlement/licence, sequence/freshness/gap, explicit calculation, workflow-state, fail-closed, and forbidden-conclusion laws. Licensed CN acquisition, durable monitoring, alerts, external handoff and receipt review remain later triggers. | `finance_execution`, `pi_order_simulator`, `pi_day_workbench`; later licensed CN provider and read-only receipt adapters |
 | `CG-QUANT` **(Shared replay Resolved — 2026-08-07; event/factor slices Resolved — 2026-08-11)** | Phase 4, Week 15 “Quantitative Approaches” | Session 16 defines the shared research/replay protocol; Session 28 adds explicit event-study and factor-definition calculations, point-in-time inputs, uncertainty facts, trial receipts, and forbidden edge/deployability conclusions. | `finance_replay`, `pi_quant_research`, `pi_backtest`, `pi_stock_event_study`, `pi_stock_factor_lab` |
 | `CG-PORTFOLIO` **(Resolved — full review 2026-08-11)** | Phase 5, Week 18 “Portfolio Management” and Week 19 “Advanced Risk Management” | Sessions 18 and 21 define light calculations and bounded raw import; Session 24 adds the multi-account/multi-currency fact model, requested return/attribution and scenario calculations, mechanical rebalance proposals, durable review receipts, and tax-lot information. Optimization, automated harvesting, jurisdictional tax policy, broker execution, and professional judgments remain outside scope. | `pi_portfolio`, `pi_portfolio_risk`, `pi_portfolio_scenarios`, `pi_portfolio_attribution`, `pi_portfolio_rebalance`, `pi_tax_lots` |
-| `CG-LIVE` **(Interaction contract Resolved — 2026-08-11; external stops remain)** | Phase 6, Weeks 21–24+ “Live Trading” | Session 25 separates read-only observation, deterministic paper, broker-paper, and live mutation; binds non-executable draft, exact preview, versioned rule comparison, explicit human authorization, idempotent submission, lifecycle/race evidence, and incident handling. It does not approve a broker, authenticate credentials, pass a security review, supply jurisdictional rules, or authorize an order. | read-only/paper/live broker proposals and `pi_trade_compliance` |
+| `CG-LIVE` **(Non-executing amendment controls — 2026-08-12)** | Phase 6, Weeks 21–24+ “Live Trading” | Plugins may preserve read-only broker facts, run deterministic local simulations, export non-executable handoffs, and reconcile imported/read-only lifecycle evidence. They never receive write-capable authority or place, route, cancel, replace, modify, or approve an order. | read-only broker, simulation/receipt-review, handoff, and `pi_trade_compliance` proposals |
 
 #### Supplementary tutor specification harvest — 2026-08-11
 
@@ -532,29 +533,23 @@ authority/completeness, pass a security review, or authorize external effects.
   warnings-as-errors, architecture, artifact/installed-Pi smoke, and the full
   regression pass complete the Experimental slice. Licensed acquisition,
   scanning, durable monitoring, alerts, short/margin/derivatives, advanced
-  execution, and paper/live mutation remain future triggers.
+  execution evidence, and external-receipt review remain future triggers.
 
-#### CG-LIVE interaction-contract resolution — 2026-08-11
+#### CG-LIVE historical contract and controlling amendment — 2026-08-12
 
 - **Evidence:** trading-course
   [Session 25](../trading-course/sessions/25_cg_live_broker_effect_contract_20260811.md),
   written in response to `/tmp/QA07.md`.
-- **Reviewed scope:** four non-interchangeable effect kinds—read-only broker
-  observation, deterministic local paper simulation, broker-hosted paper, and
-  live mutation—plus exact account/order/activity observations, non-executable
-  drafts, versioned rule comparisons, normalized previews, expiry/staleness,
-  explicit human authorization, idempotent submission, lifecycle/race and
-  ambiguous-timeout evidence, reconciliation, and immutable audit events.
-- **Controlling boundary:** the course contract emits no ready/compliant/safe
-  verdict and authorizes no order. Provider agreement and capability,
-  credential handling, entitlement, security review, jurisdiction-specific
-  policy, prolonged paper evidence, and per-order human authorization remain
-  mandatory independent inputs or stops. An ambiguous submission is reconciled,
-  never automatically retried; a submitted order cannot be rolled back by
-  assertion.
-- **Design effect:** the eight catalog proposals now have README-only designs
-  for their exact Session 25 slices, but none is selected for implementation or
-  implemented by this resolution.
+- **Reviewed scope:** Session 25 supplies account/order/activity observation,
+  lifecycle/race, reconciliation and immutable audit vocabulary. Its
+  broker-hosted paper and live mutation effects are superseded.
+- **Controlling boundary:** no plugin accepts write-capable credentials or
+  places, routes, cancels, replaces, modifies, or approves an order. Plugins may
+  perform read-only observation/import, deterministic local simulation,
+  non-executable handoff export, lifecycle reconciliation, and pure rule
+  evaluation. The user performs every market action outside Pi.
+- **Design effect:** all eight catalog proposal scopes follow the amended
+  evidence-only boundary. US network paths are on hold; T6 anchors on CN.
 
 #### CG-PSYCHOLOGY journal-information resolution — 2026-08-07
 
@@ -909,8 +904,9 @@ Finance tools need a stricter contract than ordinary convenience plugins:
   policy is provider-specific.
 - Credentials come from environment/configuration and are never appended to Pi
   sessions, logs, tool details, or error messages.
-- Read-only is the default. Paper and live execution are separate plugins and
-  capabilities.
+- Read-only is mandatory for broker access. Local simulation, non-executable
+  handoff, and external receipt review are separate capabilities; paper/live
+  order mutation is unavailable to every plugin.
 - Output is research tooling, not a guarantee, fiduciary service, or substitute
   for professional advice.
 

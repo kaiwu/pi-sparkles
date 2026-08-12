@@ -104,11 +104,10 @@ of an idempotency key fails closed.
 
 The state payload is caller-retained and content-hash-bound on every call. It
 contains no executable order payload. `confirm_entry`, `confirm_exit`, broker
-submission/cancel/replace, paper mutation, automatic closeout, and alerts remain
-outside this plugin. Session 25 resolves the adjacent `CG-LIVE` interaction
-contract, but provider agreements, entitlement, security review,
-jurisdiction-specific rules, and exact per-order human authorization remain
-mandatory external stops.
+order placement/routing/cancellation/replacement, paper mutation, automatic
+closeout, and alerts remain outside this plugin and outside every Pi plugin in
+the repository. The user performs any actual market action through external
+means; T6 can later reconcile only imported or read-only receipts.
 
 ## Budgets and exclusions
 
@@ -121,7 +120,7 @@ network, filesystem, credential, clock, sleep, broker, or order effect exists.
 
 Licensed acquisition, actual real-time streaming, provider authentication,
 multi-listing scans, short/margin/derivative policy, smart routing, automated
-monitoring, durable persistence, paper/live mutation, and every trading
+monitoring, durable persistence, paper/live order mutation, and every trading
 judgment remain outside this slice.
 
 ## Verification

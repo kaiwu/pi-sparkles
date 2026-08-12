@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "active_tier": "T5",
+  "active_tier": "T6",
   "blocker_policy": "A tier is externally blocked only when no testable provider, public source, user-owned import, fixture, or scripted capability can prove a required contract. Missing alternative providers and production credentials are adapter backlog or runtime dependencies, not blockers. T6 real-time market behavior is the current exception.",
   "statuses": [
     "queued",
@@ -296,17 +296,17 @@
     },
     {
       "id": "T6",
-      "name": "Day trader and execution operator product",
-      "status": "queued",
+      "name": "CN day trader and execution-review product",
+      "status": "blocker_resolution",
       "depends_on": ["T1", "T3", "T4"],
-      "track_profile": "One US live-session and broker anchor journey, plus the single CN tape-adapter contract required by Session 41. No duplicated HK or CN end-to-end day/broker journey.",
-      "product_outcome": "A day trader can acquire and inspect authenticated live quote/depth/tape evidence, run a bounded session workflow, plan and simulate action, observe accounts, paper trade, evaluate compliance facts, and—only after every live gate—submit explicitly authorized orders with reconciliation, incidents, duplicate-exposure representation, and complete audit receipts.",
-      "acceptance_lane": "test/tiers/t6_day_trader_execution",
+      "track_profile": "One CN live-session and transaction-tape anchor journey. US live market-data and broker-network adapters are on hold and remain explicitly track_partial; no US or HK end-to-end journey is inferred.",
+      "product_outcome": "A CN day trader can acquire and inspect authenticated live transaction-tape evidence, run a bounded session workflow, plan and simulate action locally, observe read-only account and externally executed order/fill state, evaluate compliance facts, export a non-executable handoff, and reconcile imported or read-only receipts. No Pi plugin can place, route, cancel, replace, or otherwise mutate any paper or live order.",
+      "acceptance_lane": "test/tiers/t6_cn_day_trader_review",
       "blockers": [
         {
           "id": "T6-INTRADAY-PROVIDERS",
           "status": "open",
-          "exit": "At least one real-time market-data provider can be exercised with caller-owned environment configuration to validate authentic sequence domains, gaps/resets, corrections/cancels/busts, exchange/provider/receipt clocks, conditions and bounded streaming behavior. Credentials remain outside the product."
+          "exit": "At least one CN real-time transaction-data provider can be exercised with caller-owned environment configuration to validate its authentic sequence domain, gap/reset and replay behavior, correction/cancel/bust availability or explicit absence, exchange/provider/receipt clocks, condition/type semantics and bounded streaming behavior. Credentials remain outside the product; US paths are not part of this exit."
         },
         {
           "id": "T6-STREAM-CAPABILITY",
@@ -317,20 +317,20 @@
         {
           "id": "T6-BROKER-CONTRACTS",
           "status": "resolved",
-          "exit": "Broker ports, environment dependencies, allowlists and state/effect contracts are specified and testable with scripted or paper capabilities.",
-          "resolution": "Alpaca, IBKR and CN brokers are concrete adapters over one reviewed contract. Tokens and account credentials are runtime/opt-in-test inputs, not products or pre-build blockers."
+          "exit": "Read-only broker observation, caller-owned receipt import, deterministic local simulation, non-executable handoff and reconciliation ports are specified and testable without order mutation.",
+          "resolution": "The controlling non-executing boundary forbids every plugin from placing, routing, cancelling, replacing or otherwise mutating paper or live orders. CN is the anchor; US network adapters are on hold. Any future account adapter is read-only and any credential is a caller-owned runtime input."
         },
         {
           "id": "T6-SECURITY-INCIDENT",
           "status": "resolved",
-          "exit": "The security, authorization, reconciliation and incident state machines are fully specified before implementation.",
-          "resolution": "Sessions 25, 44 and 46 specify these laws. Implementing and proving them is T6 work; no additional external decision is needed before coding."
+          "exit": "The read-only access, private-data redaction, handoff, reconciliation and incident-evidence state machines are fully specified before implementation.",
+          "resolution": "The repository's 2026-08-12 non-executing amendment supersedes earlier order-mutation designs. T6 implements evidence-only state machines and never accepts write-capable broker authority."
         },
         {
           "id": "T6-PAPER-EVIDENCE",
           "status": "resolved",
-          "exit": "Paper and failure-injection evidence is a release gate rather than a pre-build dependency.",
-          "resolution": "The evidence plan is specified by Sessions 25 and 44 and will be executed during T6 build/verification before live mutation is enabled."
+          "exit": "Local simulation, imported external-paper receipts and failure-injection evidence are release gates rather than pre-build dependencies.",
+          "resolution": "Paper behavior is deterministic local simulation or read-only review of caller-owned external receipts. It is not broker-hosted mutation and can never enable live mutation."
         }
       ],
       "proposals": [

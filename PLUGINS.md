@@ -347,28 +347,29 @@ Analytical output should expose:
 
 Single unexplained scores are unsuitable for high-consequence decisions.
 
-### Paper and live execution
+### External execution and receipt review
 
-Paper trading can validate software workflow, idempotency, order-state handling,
-and user interaction. It does not faithfully reproduce queue position, market
-impact, information leakage, latency, or every live fill condition.
+Plugins never place, submit, route, cancel, replace, modify, approve, or
+otherwise mutate paper or live orders. They never receive write-capable broker
+credentials. The user performs every market action outside Pi.
 
-Live execution is technically possible because a plugin can call a broker API.
-It is nevertheless an operational and regulatory system rather than an ordinary
-agent feature. A defensible workflow requires:
+The supported workflow is evidence-only:
 
-1. The model creates a non-executable order draft.
-2. Deterministic policy validates the account, instrument, side, quantity,
-   price, session, quote freshness, and configured limits.
-3. Pi displays the exact normalized order and estimated maximum cost.
-4. The user confirms through a short-lived authorization mechanism.
-5. Submission uses an idempotency or client-order identifier.
-6. The system records the policy decision and broker request identifier.
-7. Broker state is reconciled separately through acknowledgement, partial fill,
-   rejection, cancellation, and completion.
+1. The model creates a non-executable, content-bound plan or simulation input.
+2. Deterministic policy evaluates instrument, side, quantity, price, session,
+   observation freshness, configured limits, and explicit unknowns.
+3. Pi displays the exact normalized plan, assumptions and estimated maximum
+   cost, then exports a non-executable handoff if requested.
+4. The user independently acts or declines outside Pi.
+5. A plugin imports caller-owned receipts or reads an explicitly read-only
+   account endpoint.
+6. Pure transitions reconcile acknowledgement, partial fill, rejection,
+   external cancellation, replacement, completion, duplicates and conflicts as
+   observed facts only.
 
-Read-only research, paper execution, and live execution should remain separate
-packages and credentials.
+Read-only account observation, local simulation, handoff export and receipt
+review remain separately scoped capabilities. Cancelling a data subscription
+is allowed lifecycle cleanup and never an order operation.
 
 ## Distribution and commercial defensibility
 
@@ -481,15 +482,13 @@ support, and self-hosted deployment.
 These libraries are more likely to enable an ecosystem and generate commercial
 leads than to be the primary product by themselves.
 
-### 7. Live trading
+### 7. External execution boundary
 
-Live execution offers the highest operational risk and the weakest tolerance
-for model or integration errors. It requires broker-specific implementation,
-security review, fault handling, policy enforcement, reconciliation, and ongoing
-support. It may also introduce significant legal and regulatory obligations.
-
-It should remain a late optional capability rather than the initial commercial
-focus.
+Live or paper order mutation is outside the product, not a later commercial
+capability. Plugins can export non-executable handoffs and reconcile
+caller-owned imports or demonstrably read-only broker observations. This keeps
+broker credentials least-privilege and leaves every actual market action under
+the user's separate external control.
 
 ## Recommended product direction
 
@@ -505,7 +504,7 @@ A suitable commercial architecture is:
 3. A paid service for ingestion, monitoring, normalization, evidence storage,
    and team workflows.
 4. Optional enterprise self-hosting for sensitive portfolios and licensed data.
-5. No live execution in the initial product.
+5. No paper or live order mutation in any plugin.
 
 The first sellable workflow should answer:
 

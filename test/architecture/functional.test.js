@@ -30,6 +30,10 @@ function display(path) {
 
 const piImport = /^import pi(?:\s|\/|\.|$)/m;
 const promiseImport = /^import gleam\/javascript\/promise(?:\s|\.|$)/m;
+const publicOrderMutation =
+  /(?:pub\s+fn|export\s+(?:async\s+)?function|export\s+const)\s+(?:(?:place|submit|route|cancel|replace|modify|approve)_?order|(?:\w+_)?order_?(?:place|submit|route|cancel|replace|modify|approve))\b/i;
+const mutatingBrokerAccess =
+  /(?:broker|order)[-_ ]*(?:write|mutation)|(?:write|mutation)[-_ ]*(?:broker|order)|(?:paper|live)[-_ ]*trading/i;
 
 describe("functional architecture", () => {
   test("finance libraries never depend on the Pi host", () => {
@@ -71,6 +75,31 @@ describe("functional architecture", () => {
         const allowed =
           basename(path) === "store.gleam" || path.includes("/effect/");
         expect(allowed, `${display(path)} must move FFI under effect/`).toBeTrue();
+      }
+    }
+  });
+
+  test("plugins cannot expose broker order-mutation operations or authority", () => {
+    for (const pkg of discoverPackages(PLUGINS_DIR)) {
+      const finance = pkg.metadata.metadata?.finance;
+      const access = finance?.access;
+      if (typeof access === "string") {
+        expect(
+          mutatingBrokerAccess.test(access),
+          `${pkg.shortName} access`,
+        ).toBeFalse();
+      }
+      if (/(^|_)broker(_|$)/.test(pkg.shortName)) {
+        expect(
+          finance?.broker_order_mutation,
+          `${pkg.shortName} must declare broker_order_mutation = false`,
+        ).toBeFalse();
+      }
+
+      for (const extension of [".gleam", ".mjs"]) {
+        for (const path of filesBelow(join(pkg.directory, "src"), extension)) {
+          expect(publicOrderMutation.test(source(path)), display(path)).toBeFalse();
+        }
       }
     }
   });
