@@ -24,6 +24,7 @@ import {
 import {
   aggregateBundlePlan,
   buildAggregateBundle,
+  HOST_PEERS,
   verifyAggregateBundle,
 } from "./aggregate-bundle.js";
 import {
@@ -236,6 +237,7 @@ function npmManifest(plan) {
     ],
     engines: { node: ">=22.19.0" },
     dependencies: { "pdfjs-dist": pdfVersion },
+    peerDependencies: HOST_PEERS,
     pi: { extensions: ["./index.js"] },
     piSparkles: {
       aggregateThrough: plan.throughTierId,
@@ -275,6 +277,7 @@ function releaseLock(plan, packageDirectory) {
       left.localeCompare(right),
     ),
     runtimeDependencies: { "pdfjs-dist": rootManifest().dependencies["pdfjs-dist"] },
+    runtimePeerDependencies: HOST_PEERS,
     credentialValuesIncluded: false,
     lifecycleScriptsIncluded: false,
     brokerOrderMutation: false,
@@ -381,6 +384,7 @@ export function verifyNpmPackageDirectory(directory, expectedPlan) {
     manifest.license !== "Apache-2.0" ||
     manifest.engines?.node !== ">=22.19.0" ||
     manifest.dependencies?.["pdfjs-dist"] !== expectedPdfVersion ||
+    JSON.stringify(manifest.peerDependencies) !== JSON.stringify(HOST_PEERS) ||
     manifest.scripts !== undefined ||
     lock.lifecycleScriptsIncluded !== false ||
     lock.credentialValuesIncluded !== false ||
@@ -406,6 +410,7 @@ export function verifyNpmPackageDirectory(directory, expectedPlan) {
     lock.sourceAggregate.bundleSha256 !== aggregateLock.bundleSha256 ||
     JSON.stringify(lock.npmFiles) !== JSON.stringify(expectedFiles) ||
     lock.runtimeDependencies?.["pdfjs-dist"] !== expectedPdfVersion ||
+    JSON.stringify(lock.runtimePeerDependencies) !== JSON.stringify(HOST_PEERS) ||
     aggregateLock.plugins.some((plugin) => plugin.brokerOrderMutation === true)
   ) {
     throw new Error("Npm package differs from its aggregate source lock");
@@ -725,6 +730,108 @@ export function npmPublishDryRun(releaseDirectory, expectedPlan) {
   return summary;
 }
 
+function withoutProviderCredentials(aggregateLock) {
+  const environment = { ...process.env };
+  const names = new Set(
+    aggregateLock.plugins.flatMap(
+      (plugin) => plugin.environmentVariables ?? [],
+    ),
+  );
+  for (const name of names) delete environment[name];
+  return environment;
+}
+
+export function npmInstallSmoke(
+  releaseDirectory,
+  expectedPlan,
+  { piCommand = process.env.PI_SPARKLES_PI_COMMAND ?? "pi" } = {},
+) {
+  const summary = verifyNpmRelease(releaseDirectory, expectedPlan);
+  if (typeof piCommand !== "string" || piCommand.trim().length === 0) {
+    throw new Error("Npm install smoke requires a Pi command");
+  }
+  const installation = mkdtempSync(
+    join(tmpdir(), "pi-sparkles-npm-install-smoke-"),
+  );
+  try {
+    requireSuccess(
+      runCaptured(
+        "npm",
+        [
+          "install",
+          "--prefix",
+          installation,
+          "--ignore-scripts",
+          "--no-audit",
+          "--no-fund",
+          "--package-lock=false",
+          summary.tarball,
+        ],
+        { cwd: installation },
+      ),
+      "clean npm tarball installation",
+    );
+    const installedPackage = join(
+      installation,
+      "node_modules",
+      NPM_PACKAGE_NAME,
+    );
+    verifyNpmPackageDirectory(installedPackage, expectedPlan);
+    const pdfVersion = rootManifest().dependencies["pdfjs-dist"];
+    const installedPdfManifest = JSON.parse(
+      readFileSync(
+        join(installation, "node_modules", "pdfjs-dist", "package.json"),
+        "utf8",
+      ),
+    );
+    if (installedPdfManifest.version !== pdfVersion) {
+      throw new Error(
+        `Clean npm installation resolved pdfjs-dist ${installedPdfManifest.version}, expected ${pdfVersion}`,
+      );
+    }
+
+    const entrypoint = join(installedPackage, "index.js");
+    requireSuccess(
+      runCaptured(
+        process.execPath,
+        [
+          "--input-type=module",
+          "--eval",
+          'import { pathToFileURL } from "node:url"; const loaded = await import(pathToFileURL(process.argv[1]).href); if (typeof loaded.default !== "function") throw new Error("npm entrypoint has no default extension export");',
+          entrypoint,
+        ],
+        { cwd: installation },
+      ),
+      "installed npm entrypoint import",
+    );
+    const aggregateLock = JSON.parse(
+      readFileSync(join(installedPackage, "aggregate-lock.json"), "utf8"),
+    );
+    requireSuccess(
+      runCaptured(
+        piCommand,
+        [
+          "--no-extensions",
+          "--extension",
+          entrypoint,
+          "--list-models",
+        ],
+        {
+          cwd: installation,
+          env: withoutProviderCredentials(aggregateLock),
+        },
+      ),
+      "plain Pi npm tarball load",
+    );
+    console.log(
+      `${summary.throughTierId} npm install smoke passed with ${piCommand} and pdfjs-dist ${pdfVersion}`,
+    );
+    return summary;
+  } finally {
+    rmSync(installation, { recursive: true, force: true });
+  }
+}
+
 export function checkNpmRegistryAvailability(summary) {
   assertNpmPublishable(summary);
   const spec = `${summary.name}@${summary.version}`;
@@ -746,7 +853,7 @@ function usage() {
   return [
     "Usage: bun run npm:pack -- [T5|T6] [--no-build] [--output <directory>]",
     "       bun run npm:pack -- [T5|T6] --verify-only [--output <directory>]",
-    "       bun run npm:pack -- [T5|T6] --no-build --publish-dry-run [--check-registry]",
+    "       bun run npm:pack -- [T5|T6] --no-build --install-smoke [--publish-dry-run] [--check-registry]",
     "T5 is the default. T6 packs as private while blocked and becomes publishable only after ProductUseful promotion.",
   ].join("\n");
 }
@@ -757,6 +864,7 @@ export function parseNpmPackageArguments(args) {
   let build = true;
   let verifyOnly = false;
   let publishDryRun = false;
+  let installSmoke = false;
   let checkRegistry = false;
   let outputDirectory;
   for (let index = 0; index < args.length; index += 1) {
@@ -764,6 +872,7 @@ export function parseNpmPackageArguments(args) {
     if (arg === "--no-build") build = false;
     else if (arg === "--verify-only") verifyOnly = true;
     else if (arg === "--publish-dry-run") publishDryRun = true;
+    else if (arg === "--install-smoke") installSmoke = true;
     else if (arg === "--check-registry") checkRegistry = true;
     else if (arg === "--output") {
       outputDirectory = args[index + 1];
@@ -790,6 +899,7 @@ export function parseNpmPackageArguments(args) {
     build,
     verifyOnly,
     publishDryRun,
+    installSmoke,
     checkRegistry,
     outputDirectory,
     help: false,
@@ -812,6 +922,7 @@ if (import.meta.main) {
           outputDirectory: output,
         });
     if (options.publishDryRun) npmPublishDryRun(output, plan);
+    if (options.installSmoke) npmInstallSmoke(output, plan);
     if (options.checkRegistry) checkNpmRegistryAvailability(summary);
     if (options.verifyOnly) {
       console.log(

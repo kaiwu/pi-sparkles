@@ -32,7 +32,7 @@ Before a release, exercise npm's publication validation and confirm that the
 exact name/version does not already exist:
 
 ```sh
-bun run npm:pack -- T5 --no-build --publish-dry-run --check-registry
+bun run npm:pack -- T5 --no-build --install-smoke --publish-dry-run --check-registry
 ```
 
 The current T5 selection passes the publish gate. The current T6 selection is
@@ -42,7 +42,11 @@ and the ledger marks it ProductUseful, the same T6 command becomes releasable.
 
 ## Local consumer verification
 
-Test the packed artifact in a clean temporary project before publication:
+The `--install-smoke` gate installs the exact tarball into a clean temporary npm
+prefix with lifecycle scripts disabled, verifies the installed package and exact
+`pdfjs-dist` version, imports its default extension, removes every declared
+provider variable from the child environment, and asks plain Pi to load the
+entrypoint with `--list-models`. For a manual equivalent:
 
 ```sh
 npm install ./dist/npm/t5/pi-sparkles-all-in-one-0.1.0.tgz
@@ -52,8 +56,9 @@ pi --no-extensions \
 ```
 
 The package pins `pdfjs-dist` because the CN PDF path resolves its CMap assets
-at runtime. Pi host code is not bundled. There are no npm lifecycle scripts,
-and packaging never reads credential values.
+at runtime. Pi host code is not bundled and is declared with the Pi-required
+`"*"` peer ranges. There are no npm lifecycle scripts, and packaging never
+reads credential values.
 
 ## Version and publish procedure
 

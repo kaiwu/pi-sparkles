@@ -150,6 +150,13 @@ describe("all-in-one npm packaging", () => {
     expect(packageManifest.dependencies).toEqual({
       "pdfjs-dist": "6.2.108",
     });
+    expect(packageManifest.peerDependencies).toEqual({
+      "@earendil-works/pi-agent-core": "*",
+      "@earendil-works/pi-ai": "*",
+      "@earendil-works/pi-coding-agent": "*",
+      "@earendil-works/pi-tui": "*",
+      typebox: "*",
+    });
     expect(packageManifest.scripts).toBeUndefined();
     expect(packageManifest.publishConfig).toEqual({
       access: "public",
@@ -205,6 +212,13 @@ describe("all-in-one npm packaging", () => {
     expect(parseNpmPackageArguments(["T6", "--no-build"])).toMatchObject({
       throughTierId: "T6",
       build: false,
+    });
+    expect(
+      parseNpmPackageArguments(["T5", "--no-build", "--install-smoke"]),
+    ).toMatchObject({
+      throughTierId: "T5",
+      build: false,
+      installSmoke: true,
     });
     expect(() => parseNpmPackageArguments(["T4"])).toThrow(
       "target must be T5 or T6",

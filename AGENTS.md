@@ -75,8 +75,9 @@ ProductUseful or blocked-preview gate are mandatory.
 `bun run npm:pack -- T5|T6` turns the selected aggregate into the stable
 `pi-sparkles-all-in-one` npm package. It must pack only a whitelisted,
 content-locked inventory, include the licence and third-party notices, declare
-exact runtime assets, contain no lifecycle scripts or credential values, and
-refuse publication unless the selected aggregate is releasable. T6 may produce
+exact runtime assets and the Pi-required host peers, contain no lifecycle
+scripts or credential values, install into a clean npm prefix, load in plain Pi
+without provider credentials, and refuse publication unless the selected aggregate is releasable. T6 may produce
 a private npm-format preview while blocked; the same target becomes publishable
 only after it is complete and ProductUseful. Packaging and verification never
 publish. Registry publication remains a separate explicit, authenticated action

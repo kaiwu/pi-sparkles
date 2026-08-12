@@ -39,7 +39,7 @@ import {
 const BUNDLE_SCHEMA_VERSION = 1;
 const PRODUCT_TIER_IDS = ["T1", "T2", "T3", "T4", "T5"];
 const ALLOWED_TARGETS = new Set(["T5", "T6"]);
-const HOST_PEERS = {
+export const HOST_PEERS = {
   "@earendil-works/pi-agent-core": "*",
   "@earendil-works/pi-ai": "*",
   "@earendil-works/pi-coding-agent": "*",

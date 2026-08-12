@@ -14,3 +14,6 @@ inventory, maturity, and content hashes remain authoritative in each tarball's
   still allowing local npm-format packing and inspection.
 - Add deterministic inventory, checksums, credential-name-only configuration,
   duplicate-registration protection, and a broker order-mutation prohibition.
+- Preserve the Pi-required host peer declarations in the published manifest.
+- Add a clean tarball installation, exact runtime-dependency, default-export,
+  and plain-Pi load gate to the trusted publication workflow.

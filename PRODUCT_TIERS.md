@@ -290,9 +290,11 @@ must be bumped before publishing different content under the stable name.
 The tarball has one Pi entrypoint, a strict file allowlist, no lifecycle
 scripts, no credential values, exact `pdfjs-dist` runtime assets, Apache-2.0 and
 third-party notices, npm integrity metadata, inner and outer SHA-256 inventories,
-and a clean-tarball re-verification step. Packaging never publishes. The manual
-tag-bound trusted-publisher workflow and first-release procedure are documented
-in [`NPM_RELEASE.md`](NPM_RELEASE.md).
+and a clean-tarball re-verification step. The release workflow additionally
+installs that exact tarball into a clean npm prefix and makes plain Pi load the
+installed entrypoint without provider credentials. Packaging never publishes.
+The manual tag-bound trusted-publisher workflow and first-release procedure are
+documented in [`NPM_RELEASE.md`](NPM_RELEASE.md).
 
 ## Active ledger decision
 

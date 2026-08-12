@@ -333,11 +333,13 @@ metadata and locks even though both selections use one stable npm name.
 Each tarball contains one Pi entrypoint, an exact file allowlist, Apache-2.0 and
 third-party notices, configuration names without values, inner and outer
 checksums, npm integrity metadata, no lifecycle scripts, and an exact
-`pdfjs-dist` runtime dependency for PDF CMap assets. Validate npm publication
-rules and name/version availability without publishing:
+`pdfjs-dist` runtime dependency for PDF CMap assets. Pi's host libraries retain
+their required `"*"` peer declarations. Validate a clean npm install, plain-Pi
+loading, npm publication rules, and name/version availability without
+publishing:
 
 ```sh
-bun run npm:pack -- T5 --no-build --publish-dry-run --check-registry
+bun run npm:pack -- T5 --no-build --install-smoke --publish-dry-run --check-registry
 ```
 
 See [NPM_RELEASE.md](NPM_RELEASE.md) for clean-install testing, versioning, the

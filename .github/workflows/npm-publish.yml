@@ -81,7 +81,7 @@ jobs:
       - name: Pack and validate the npm tarball
         run: >-
           bun run npm:pack -- "${{ inputs.target }}" --no-build
-          --publish-dry-run --check-registry
+          --install-smoke --publish-dry-run --check-registry
 
       - name: Resolve the locked tarball path
         id: tarball
