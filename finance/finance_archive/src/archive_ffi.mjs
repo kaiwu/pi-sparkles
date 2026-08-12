@@ -2,6 +2,13 @@ const EOCD_SIGNATURE = 0x06054b50;
 const CENTRAL_SIGNATURE = 0x02014b50;
 const LOCAL_SIGNATURE = 0x04034b50;
 const textDecoder = new TextDecoder("utf-8", { fatal: true });
+const CRC32_TABLE = Uint32Array.from({ length: 256 }, (_, index) => {
+  let value = index;
+  for (let bit = 0; bit < 8; bit += 1) {
+    value = (value >>> 1) ^ ((value & 1) ? 0xedb88320 : 0);
+  }
+  return value >>> 0;
+});
 
 export async function extract_zip_utf8(
   bodyBase64,
@@ -10,11 +17,13 @@ export async function extract_zip_utf8(
   maximumEntries,
   maximumEntryBytes,
   maximumTotalUncompressedBytes,
+  cancellation,
 ) {
   try {
+    if (isCancelled(cancellation)) return failure("cancelled");
     if (typeof bodyBase64 !== "string") return failure("invalid_base64");
-    const bytes = Uint8Array.from(Buffer.from(bodyBase64, "base64"));
-    if (Buffer.from(bytes).toString("base64") !== bodyBase64) {
+    const bytes = Buffer.from(bodyBase64, "base64");
+    if (bytes.toString("base64") !== bodyBase64) {
       return failure("invalid_base64");
     }
     if (bytes.length > maximumArchiveBytes) {
@@ -50,6 +59,7 @@ export async function extract_zip_utf8(
     let cursor = centralOffset;
     let totalUncompressedBytes = 0;
     for (let index = 0; index < entryCount; index += 1) {
+      if (isCancelled(cancellation)) return failure("cancelled");
       if (cursor + 46 > eocdOffset || u32(bytes, cursor) !== CENTRAL_SIGNATURE) {
         return failure("invalid_archive");
       }
@@ -108,9 +118,16 @@ export async function extract_zip_utf8(
 
     const entries = [];
     for (const name of requiredNames) {
+      if (isCancelled(cancellation)) return failure("cancelled");
       const record = records.get(name);
       if (!record) return failure("missing_required_entry", name);
-      const extracted = await extractRecord(bytes, record, centralOffset, maximumEntryBytes);
+      const extracted = await extractRecord(
+        bytes,
+        record,
+        centralOffset,
+        maximumEntryBytes,
+        cancellation,
+      );
       if (!extracted.ok) return extracted;
       entries.push({
         name,
@@ -131,7 +148,14 @@ export async function extract_zip_utf8(
   }
 }
 
-async function extractRecord(bytes, record, centralOffset, maximumEntryBytes) {
+async function extractRecord(
+  bytes,
+  record,
+  centralOffset,
+  maximumEntryBytes,
+  cancellation,
+) {
+  if (isCancelled(cancellation)) return failure("cancelled");
   const offset = record.localOffset;
   if (offset + 30 > centralOffset || u32(bytes, offset) !== LOCAL_SIGNATURE) {
     return failure("malformed_entry", record.name);
@@ -152,9 +176,16 @@ async function extractRecord(bytes, record, centralOffset, maximumEntryBytes) {
   try {
     output = record.method === 0
       ? Uint8Array.from(compressed)
-      : await inflateBounded(compressed, maximumEntryBytes, record.uncompressedSize);
-  } catch {
-    return failure("decompression_failed", record.name);
+      : await inflateBounded(
+        compressed,
+        maximumEntryBytes,
+        record.uncompressedSize,
+        cancellation,
+      );
+  } catch (error) {
+    return error instanceof CancelledExtraction
+      ? failure("cancelled", record.name)
+      : failure("decompression_failed", record.name);
   }
   if (output.length !== record.uncompressedSize) {
     return failure("entry_length_mismatch", record.name);
@@ -167,7 +198,7 @@ async function extractRecord(bytes, record, centralOffset, maximumEntryBytes) {
   }
 }
 
-async function inflateBounded(compressed, limit, expected) {
+async function inflateBounded(compressed, limit, expected, cancellation) {
   const stream = new Blob([compressed])
     .stream()
     .pipeThrough(new DecompressionStream("deflate-raw"));
@@ -175,6 +206,10 @@ async function inflateBounded(compressed, limit, expected) {
   const chunks = [];
   let total = 0;
   for (;;) {
+    if (isCancelled(cancellation)) {
+      await reader.cancel();
+      throw new CancelledExtraction();
+    }
     const { done, value } = await reader.read();
     if (done) break;
     total += value.length;
@@ -191,6 +226,12 @@ async function inflateBounded(compressed, limit, expected) {
     offset += chunk.length;
   }
   return output;
+}
+
+class CancelledExtraction extends Error {}
+
+function isCancelled(cancellation) {
+  return Boolean(cancellation?.signal?.aborted);
 }
 
 function findEocd(bytes) {
@@ -246,10 +287,7 @@ function u32(bytes, offset) {
 function crc32(bytes) {
   let value = 0xffffffff;
   for (const byte of bytes) {
-    value ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) {
-      value = (value >>> 1) ^ ((value & 1) ? 0xedb88320 : 0);
-    }
+    value = (value >>> 8) ^ CRC32_TABLE[(value ^ byte) & 0xff];
   }
   return (value ^ 0xffffffff) >>> 0;
 }

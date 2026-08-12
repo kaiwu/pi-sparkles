@@ -19,6 +19,7 @@ pub opaque type PdfArtifact {
 pub type CaptureError {
   ArtifactRejected(error: artifact.CaptureError)
   InspectionRejected(error: inspector.InspectionError)
+  InspectionEffectRejected
 }
 
 /// Capture and inspect the same response, preventing a caller from pairing a
@@ -62,14 +63,19 @@ pub fn capture_with(
   {
     Error(error) -> promise.resolve(Error(ArtifactRejected(error)))
     Ok(captured) -> {
-      use inspected <- promise.await(inspect_effect(
-        inspection_policy_value,
-        response_value,
-        cancellation_value,
-      ))
+      use inspected <- promise.await(
+        inspect_effect(
+          inspection_policy_value,
+          response_value,
+          cancellation_value,
+        )
+        |> promise.map(Ok)
+        |> promise.rescue(fn(_) { Error(Nil) }),
+      )
       case inspected {
-        Error(error) -> promise.resolve(Error(InspectionRejected(error)))
-        Ok(value) -> promise.resolve(Ok(PdfArtifact(captured, value)))
+        Error(_) -> promise.resolve(Error(InspectionEffectRejected))
+        Ok(Error(error)) -> promise.resolve(Error(InspectionRejected(error)))
+        Ok(Ok(value)) -> promise.resolve(Ok(PdfArtifact(captured, value)))
       }
     }
   }

@@ -79,7 +79,7 @@ pub fn raw_authority_text_becomes_hashed_local_evidence_test() {
   content_hash |> should.not_equal(hash_of("x"))
 }
 
-pub fn capture_rejects_non_authority_wrong_media_and_length_test() {
+pub fn capture_rejects_non_authority_and_wrong_media_test() {
   let assert Ok(vendor) =
     source.new("vendor", "https://example.test", source.LicensedVendor)
   snapshot.local_analysis_policy(
@@ -102,14 +102,20 @@ pub fn capture_rejects_non_authority_wrong_media_and_length_test() {
       1000,
     )
   let html = "<html>公告</html>"
-  let json_response = response_value("application/json", html, 1)
+  let json_response =
+    response_value("application/json", html, string.byte_size(html))
 
   snapshot.capture(policy, json_response, instant(1), instant(1))
   |> should.equal(Error(snapshot.UnsupportedMediaType("application/json")))
 
-  let wrong_length = response_value("text/html", html, 1)
-  snapshot.capture(policy, wrong_length, instant(1), instant(1))
-  |> should.equal(Error(snapshot.ByteLengthMismatch(1, string.byte_size(html))))
+  response.new(
+    200,
+    [response.Header("content-type", "text/html")],
+    html,
+    1,
+    duration(1),
+  )
+  |> should.equal(Error(response.ByteLengthMismatch(1, string.byte_size(html))))
 }
 
 pub fn binary_pdf_becomes_byte_preserving_hashed_evidence_test() {
@@ -256,6 +262,62 @@ pub fn runtime_policy_is_allowlisted_and_bounded_test() {
     maximum_delay: maximum,
   )
   |> should.equal(Error(runtime.InvalidPath("/unsafe?query=yes")))
+
+  runtime.policy(
+    origin: "https://www.sfc.hk",
+    allowed_paths: ["//attacker.example.test/escape"],
+    admissions_per_window: 1,
+    window: window,
+    maximum_in_flight: 1,
+    maximum_waiting: 50,
+    maximum_attempts: 2,
+    maximum_elapsed: elapsed,
+    base_delay: base,
+    maximum_delay: maximum,
+  )
+  |> should.equal(Error(runtime.InvalidPath("//attacker.example.test/escape")))
+
+  runtime.policy(
+    origin: "https://www.sfc.hk",
+    allowed_paths: ["/feed"],
+    admissions_per_window: 1,
+    window: duration(0),
+    maximum_in_flight: 1,
+    maximum_waiting: 50,
+    maximum_attempts: 2,
+    maximum_elapsed: elapsed,
+    base_delay: base,
+    maximum_delay: maximum,
+  )
+  |> should.equal(Error(runtime.InvalidWindow))
+
+  runtime.policy(
+    origin: "https://www.sfc.hk",
+    allowed_paths: ["/feed"],
+    admissions_per_window: 1,
+    window: window,
+    maximum_in_flight: 1,
+    maximum_waiting: 0,
+    maximum_attempts: 2,
+    maximum_elapsed: elapsed,
+    base_delay: base,
+    maximum_delay: maximum,
+  )
+  |> should.equal(Error(runtime.InvalidMaximumWaiting))
+
+  runtime.policy(
+    origin: "https://www.sfc.hk/feed",
+    allowed_paths: ["/feed"],
+    admissions_per_window: 1,
+    window: window,
+    maximum_in_flight: 1,
+    maximum_waiting: 50,
+    maximum_attempts: 2,
+    maximum_elapsed: elapsed,
+    base_delay: base,
+    maximum_delay: maximum,
+  )
+  |> should.equal(Error(runtime.InvalidOrigin))
 }
 
 fn response_value(

@@ -18,6 +18,7 @@ finance_provenance = { path = "../finance_provenance" }
 
 [dev-dependencies]
 gleeunit = ">= 1.9.0 and < 2.0.0"
+finance_track = { path = "../finance_track" }
 
 [javascript]
 runtime = "bun"

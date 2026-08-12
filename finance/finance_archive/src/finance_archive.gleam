@@ -82,6 +82,7 @@ fn extract_zip_utf8(
   maximum_entries: Int,
   maximum_entry_bytes: Int,
   maximum_total_uncompressed_bytes: Int,
+  cancellation: Cancellation,
 ) -> Promise(Dynamic)
 
 pub fn policy(
@@ -137,6 +138,7 @@ pub fn extract(
         policy_value.maximum_entries,
         policy_value.maximum_entry_bytes,
         policy_value.maximum_total_uncompressed_bytes,
+        cancellation_value,
       )
       |> promise.map(fn(value) {
         case transport.is_cancelled(cancellation_value) {
@@ -237,6 +239,7 @@ fn map_failure(
 ) -> ExtractError {
   let entry = option_name(name)
   case kind {
+    "cancelled" -> Cancelled
     "invalid_base64" -> InvalidBase64
     "invalid_archive" -> InvalidArchive
     "multi_disk" -> MultiDiskUnsupported

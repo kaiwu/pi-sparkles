@@ -23,6 +23,7 @@ pub type ResponseError {
   InvalidHeaderName
   InvalidHeaderValue
   NegativeByteLength
+  ByteLengthMismatch(declared: Int, actual: Int)
 }
 
 pub type SafeSummary {
@@ -36,10 +37,16 @@ pub fn new(
   byte_length byte_length: Int,
   elapsed elapsed: Duration,
 ) -> Result(Response, ResponseError) {
-  case status >= 100 && status <= 599, byte_length >= 0 {
-    False, _ -> Error(InvalidStatus)
-    _, False -> Error(NegativeByteLength)
-    True, True ->
+  let actual_byte_length = string.byte_size(body)
+  case
+    status >= 100 && status <= 599,
+    byte_length >= 0,
+    byte_length == actual_byte_length
+  {
+    False, _, _ -> Error(InvalidStatus)
+    _, False, _ -> Error(NegativeByteLength)
+    _, _, False -> Error(ByteLengthMismatch(byte_length, actual_byte_length))
+    True, True, True ->
       validate_headers(headers, [])
       |> result.map(fn(safe_headers) {
         Response(status, safe_headers, body, byte_length, elapsed)

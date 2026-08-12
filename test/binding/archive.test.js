@@ -154,6 +154,35 @@ describe("bounded ZIP extraction boundary", () => {
       ),
     ).toMatchObject({ ok: false, kind: "invalid_utf8" });
   });
+
+  test("observes cancellation while walking archive entries", async () => {
+    let checks = 0;
+    const cancellation = {
+      signal: {
+        get aborted() {
+          checks += 1;
+          return checks >= 2;
+        },
+      },
+    };
+    const body = zip([
+      ["first.xml", "first"],
+      ["second.xml", "second"],
+    ]).toString("base64");
+
+    expect(
+      await extract_zip_utf8(
+        body,
+        ["first.xml"],
+        10_000,
+        8,
+        100,
+        100,
+        cancellation,
+      ),
+    ).toEqual({ ok: false, kind: "cancelled" });
+    expect(checks).toBeGreaterThanOrEqual(2);
+  });
 });
 
 function zip(entries) {

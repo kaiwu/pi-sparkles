@@ -44,6 +44,7 @@ pub type PolicyError {
   InvalidPath(path: String)
   DuplicatePath(path: String)
   InvalidAdmissions
+  InvalidWindow
   InvalidMaximumInFlight
   InvalidMaximumWaiting
   InvalidRetry(retry.PolicyError)
@@ -72,17 +73,19 @@ pub fn policy(
     first_invalid_path(allowed_path_values),
     first_duplicate(allowed_path_values),
     admissions > 0,
+    time.duration_milliseconds(window_value) > 0,
     in_flight > 0,
-    waiting >= 0
+    waiting > 0
   {
-    False, _, _, _, _, _, _ -> Error(InvalidOrigin)
-    _, [], _, _, _, _, _ -> Error(EmptyPathAllowlist)
-    _, _, Some(path), _, _, _, _ -> Error(InvalidPath(path))
-    _, _, _, Some(path), _, _, _ -> Error(DuplicatePath(path))
-    _, _, _, _, False, _, _ -> Error(InvalidAdmissions)
-    _, _, _, _, _, False, _ -> Error(InvalidMaximumInFlight)
-    _, _, _, _, _, _, False -> Error(InvalidMaximumWaiting)
-    True, [_, ..], None, None, True, True, True ->
+    False, _, _, _, _, _, _, _ -> Error(InvalidOrigin)
+    _, [], _, _, _, _, _, _ -> Error(EmptyPathAllowlist)
+    _, _, Some(path), _, _, _, _, _ -> Error(InvalidPath(path))
+    _, _, _, Some(path), _, _, _, _ -> Error(DuplicatePath(path))
+    _, _, _, _, False, _, _, _ -> Error(InvalidAdmissions)
+    _, _, _, _, _, False, _, _ -> Error(InvalidWindow)
+    _, _, _, _, _, _, False, _ -> Error(InvalidMaximumInFlight)
+    _, _, _, _, _, _, _, False -> Error(InvalidMaximumWaiting)
+    True, [_, ..], None, None, True, True, True, True ->
       retry.policy(
         maximum_attempts: attempts,
         maximum_elapsed: elapsed,
@@ -351,19 +354,32 @@ fn first_duplicate(values: List(String)) -> Option(String) {
 }
 
 fn valid_origin(value: String) -> Bool {
-  string.starts_with(value, "https://")
-  && !string.ends_with(value, "/")
-  && !string.contains(value, "?")
-  && !string.contains(value, "#")
-  && !string.contains(value, "@")
+  case value {
+    "https://" <> authority ->
+      authority != ""
+      && !string.contains(authority, "/")
+      && !string.contains(authority, "?")
+      && !string.contains(authority, "#")
+      && !string.contains(authority, "@")
+      && !string.contains(authority, "\\")
+      && !string.contains(authority, "\r")
+      && !string.contains(authority, "\n")
+      && !string.contains(authority, "\t")
+      && !string.contains(authority, " ")
+      && string.trim(authority) == authority
+    _ -> False
+  }
 }
 
 fn valid_path(value: String) -> Bool {
   string.starts_with(value, "/")
+  && !string.starts_with(value, "//")
+  && !string.contains(value, "\\")
   && !string.contains(value, "?")
   && !string.contains(value, "#")
   && !string.contains(value, "\r")
   && !string.contains(value, "\n")
+  && !string.contains(value, "\u{0}")
 }
 
 @external(javascript, "./runtime_ffi.mjs", "new_cell")

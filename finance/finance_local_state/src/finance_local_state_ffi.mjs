@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { lstat, open, readFile, rename, unlink } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, rename, unlink } from "node:fs/promises";
+
+const READ_FLAGS = constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
+const READ_CHUNK_BYTES = 64 * 1024;
 
 function cancelled(signal) {
   return Boolean(signal && typeof signal === "object" && signal.aborted);
@@ -29,30 +33,71 @@ function strictUtf8(buffer) {
   }
 }
 
-async function readExisting(path, maximumBytes) {
+async function openRegular(path) {
+  let handle;
   try {
-    const metadata = await lstat(path);
-    if (metadata.isSymbolicLink()) {
-      return { state: "failure", code: "symbolic_link_not_supported" };
-    }
+    handle = await open(path, READ_FLAGS);
+    const metadata = await handle.stat();
     if (!metadata.isFile()) {
-      return { state: "failure", code: "not_a_regular_file" };
+      await handle.close();
+      return { result: { state: "failure", code: "not_a_regular_file" } };
     }
+    return { handle, metadata };
+  } catch (error) {
+    await handle?.close().catch(() => {});
+    if (error?.code === "ENOENT") return { result: { state: "missing" } };
+    if (error?.code === "ELOOP") {
+      return {
+        result: { state: "failure", code: "symbolic_link_not_supported" },
+      };
+    }
+    return { result: { state: "failure", code: errorCode(error) } };
+  }
+}
+
+async function readBounded(handle, maximumBytes, signal) {
+  const chunks = [];
+  let total = 0;
+  while (total <= maximumBytes) {
+    if (cancelled(signal)) return { cancelled: true };
+    const remaining = maximumBytes + 1 - total;
+    const buffer = Buffer.allocUnsafe(Math.min(READ_CHUNK_BYTES, remaining));
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, total);
+    if (bytesRead === 0) break;
+    chunks.push(buffer.subarray(0, bytesRead));
+    total += bytesRead;
+  }
+  return { cancelled: false, buffer: Buffer.concat(chunks, total) };
+}
+
+async function readExisting(path, maximumBytes, signal) {
+  const opened = await openRegular(path);
+  if (opened.result) return opened.result;
+  const { handle, metadata } = opened;
+  try {
+    if (cancelled(signal)) return { state: "cancelled" };
     if (metadata.size > maximumBytes) {
       return { state: "too_large", bytes: metadata.size, maximum: maximumBytes };
     }
-    const buffer = await readFile(path);
+    const read = await readBounded(handle, maximumBytes, signal);
+    if (read.cancelled) return { state: "cancelled" };
+    const { buffer } = read;
     if (buffer.byteLength > maximumBytes) {
-      return { state: "too_large", bytes: buffer.byteLength, maximum: maximumBytes };
+      const latest = await handle.stat();
+      return {
+        state: "too_large",
+        bytes: Math.max(metadata.size, latest.size, buffer.byteLength),
+        maximum: maximumBytes,
+      };
     }
     const text = strictUtf8(buffer);
     return text === undefined
       ? { state: "invalid_utf8" }
       : { state: "loaded", text, bytes: buffer.byteLength };
   } catch (error) {
-    return error?.code === "ENOENT"
-      ? { state: "missing" }
-      : { state: "failure", code: errorCode(error) };
+    return { state: "failure", code: errorCode(error) };
+  } finally {
+    await handle.close().catch(() => {});
   }
 }
 
@@ -61,7 +106,7 @@ export async function read_text(path, maximumBytes, signal) {
     return { state: "failure", code: "invalid_read_request" };
   }
   if (cancelled(signal)) return { state: "cancelled" };
-  const result = await readExisting(path, maximumBytes);
+  const result = await readExisting(path, maximumBytes, signal);
   return cancelled(signal) ? { state: "cancelled" } : result;
 }
 
@@ -96,8 +141,12 @@ export async function replace_if_unchanged(
         ? { state: "busy" }
         : { state: "failure", code: errorCode(error) };
     }
-    const current = await readExisting(path, maximumBytes);
-    if (["too_large", "failure", "invalid_utf8"].includes(current.state)) {
+    const current = await readExisting(path, maximumBytes, signal);
+    if (
+      ["too_large", "failure", "invalid_utf8", "cancelled"].includes(
+        current.state,
+      )
+    ) {
       return current;
     }
     if (cancelled(signal)) return { state: "cancelled" };

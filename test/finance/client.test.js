@@ -217,6 +217,80 @@ test("policy client status acceptance is immutable and provider-configurable", a
   expect(rejected).toBeInstanceOf(Error);
 });
 
+test("text and binary clients contain rejected injected transports", async () => {
+  const secret = "transport rejected with api_key=private";
+  const text = client.new$(
+    retryPolicy(),
+    async () => {
+      throw new globalThis.Error(secret);
+    },
+    async () => true,
+    () => instant(1_700_000_000_000),
+  );
+  const binary = binaryClient.new$(
+    retryPolicy(),
+    async () => Promise.reject(new globalThis.Error(secret)),
+    async () => true,
+    () => instant(1_700_000_000_000),
+  );
+
+  for (const [result, retryStopped] of [
+    [
+      await client.send(text, getRequest(), transport.new_cancellation()),
+      client.RetryStopped,
+    ],
+    [
+      await binaryClient.send(binary, getRequest(), transport.new_cancellation()),
+      binaryClient.RetryStopped,
+    ],
+  ]) {
+    expect(result).toBeInstanceOf(Error);
+    expect(result[0]).toBeInstanceOf(retryStopped);
+    expect(result[0].reason).toBe(retry.StopReason$PermanentFailure$const);
+    expect(result[0].last.error).toBe(
+      transport.TransportError$InvalidTransportResult$const,
+    );
+    expect(JSON.stringify(result)).not.toContain(secret);
+  }
+});
+
+test("text and binary clients contain rejected retry delays", async () => {
+  const secret = "retry sleeper rejected with token=private";
+  const cases = [
+    {
+      module: client,
+      value: client.new$(
+        retryPolicy({ baseDelay: 1 }),
+        async () => new Error(transport.TransportError$Timeout$const),
+        async () => Promise.reject(new globalThis.Error(secret)),
+        () => instant(1_700_000_000_000),
+      ),
+    },
+    {
+      module: binaryClient,
+      value: binaryClient.new$(
+        retryPolicy({ baseDelay: 1 }),
+        async () => new Error(transport.TransportError$Timeout$const),
+        async () => {
+          throw new globalThis.Error(secret);
+        },
+        () => instant(1_700_000_000_000),
+      ),
+    },
+  ];
+
+  for (const current of cases) {
+    const result = await current.module.send(
+      current.value,
+      getRequest(),
+      transport.new_cancellation(),
+    );
+    expect(result).toBeInstanceOf(Error);
+    expect(result[0]).toBe(current.module.ClientError$RetryDelayFailed$const);
+    expect(JSON.stringify(result)).not.toContain(secret);
+  }
+});
+
 test("default retry sleep is abort-aware", async () => {
   const cancellation = transport.new_cancellation();
   const sleeping = sleep_milliseconds(10_000, cancellation);

@@ -38,6 +38,7 @@ pub type SafeFailure {
 
 pub type ClientError {
   Cancelled
+  RetryDelayFailed
   RetryStopped(reason: StopReason, attempts: Int, last: SafeFailure)
 }
 
@@ -88,7 +89,10 @@ fn attempt(
   started_at: time.Instant,
 ) -> Promise(Result(Response, ClientError)) {
   let Client(_, sender, _, clock, accepts) = client
-  use outcome <- promise.await(sender(request_value, cancellation))
+  use outcome <- promise.await(
+    sender(request_value, cancellation)
+    |> promise.rescue(fn(_) { Error(transport.InvalidTransportResult) }),
+  )
   let now = clock()
   let elapsed = elapsed_since(started_at, now)
   case outcome {
@@ -141,10 +145,15 @@ fn retry_or_stop(
     retry.Stop(reason) ->
       promise.resolve(Error(RetryStopped(reason, attempt_number, safe_failure)))
     retry.RetryAfter(delay, next_attempt) -> {
-      use completed <- promise.await(sleeper(delay, cancellation))
+      use completed <- promise.await(
+        sleeper(delay, cancellation)
+        |> promise.map(Ok)
+        |> promise.rescue(fn(_) { Error(Nil) }),
+      )
       case completed {
-        False -> promise.resolve(Error(Cancelled))
-        True ->
+        Error(_) -> promise.resolve(Error(RetryDelayFailed))
+        Ok(False) -> promise.resolve(Error(Cancelled))
+        Ok(True) ->
           attempt(client, request_value, cancellation, next_attempt, started_at)
       }
     }

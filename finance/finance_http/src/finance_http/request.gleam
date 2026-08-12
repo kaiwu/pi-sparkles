@@ -59,10 +59,12 @@ pub type RequestError {
   InvalidHeaderName
   InvalidHeaderValue
   InvalidQueryName
+  InvalidQueryValue
   InvalidContentType
   InvalidSafeVariant
   BodyNotAllowed
   RepeatableReadRequiresPost
+  NonPositiveTimeout
   NonPositiveResponseLimit
 }
 
@@ -72,12 +74,7 @@ pub fn new(
   path path: String,
   idempotency_key idempotency_key: Option(String),
 ) -> Result(Request, RequestError) {
-  case
-    valid_origin(origin),
-    string.starts_with(path, "/")
-    && !string.contains(path, "?")
-    && !string.contains(path, "#")
-  {
+  case valid_origin(origin), valid_path(path) {
     False, _ -> Error(InvalidOrigin)
     _, False -> Error(InvalidPath)
     True, True ->
@@ -148,9 +145,10 @@ pub fn with_query(
   value value: String,
   sensitivity sensitivity: Sensitivity,
 ) -> Result(Request, RequestError) {
-  case valid_query_name(name) {
-    False -> Error(InvalidQueryName)
-    True -> {
+  case valid_query_name(name), valid_query_value(value) {
+    False, _ -> Error(InvalidQueryName)
+    _, False -> Error(InvalidQueryValue)
+    True, True -> {
       let Request(
         method,
         origin,
@@ -265,9 +263,10 @@ pub fn with_limits(
   timeout timeout: Duration,
   maximum_response_bytes maximum_response_bytes: Int,
 ) -> Result(Request, RequestError) {
-  case maximum_response_bytes > 0 {
-    False -> Error(NonPositiveResponseLimit)
-    True -> {
+  case time.duration_milliseconds(timeout) > 0, maximum_response_bytes > 0 {
+    False, _ -> Error(NonPositiveTimeout)
+    _, False -> Error(NonPositiveResponseLimit)
+    True, True -> {
       let Request(
         method,
         origin,
@@ -361,18 +360,20 @@ pub fn safe_key(request: Request) -> String {
     query
     |> list.map(fn(parameter) {
       let QueryParameter(name, value, sensitivity) = parameter
+      let safe_name = safe_component(name)
       case sensitivity {
-        Public -> name <> "=" <> value
-        Secret -> name <> "=[REDACTED]"
+        Public -> safe_name <> "=" <> safe_component(value)
+        Secret -> safe_name <> "=[REDACTED]"
       }
     })
     |> list.sort(by: string.compare)
     |> string.join("&")
   let suffix = case query_key, safe_variant {
     "", None -> ""
-    "", Some(variant) -> " variant=" <> variant
+    "", Some(variant) -> " variant=" <> safe_component(variant)
     query, None -> "?" <> query
-    query, Some(variant) -> "?" <> query <> " variant=" <> variant
+    query, Some(variant) ->
+      "?" <> query <> " variant=" <> safe_component(variant)
   }
   method_name(method(request))
   <> " "
@@ -417,9 +418,25 @@ fn valid_origin(origin: String) -> Bool {
       && !string.contains(authority, "@")
       && !string.contains(authority, "?")
       && !string.contains(authority, "#")
+      && !string.contains(authority, "\\")
+      && !string.contains(authority, "\r")
+      && !string.contains(authority, "\n")
+      && !string.contains(authority, "\t")
+      && !string.contains(authority, " ")
       && string.trim(authority) == authority
     _ -> False
   }
+}
+
+fn valid_path(path: String) -> Bool {
+  string.starts_with(path, "/")
+  && !string.starts_with(path, "//")
+  && !string.contains(path, "\\")
+  && !string.contains(path, "?")
+  && !string.contains(path, "#")
+  && !string.contains(path, "\r")
+  && !string.contains(path, "\n")
+  && !string.contains(path, "\u{0}")
 }
 
 fn valid_header_name(name: String) -> Bool {
@@ -446,6 +463,22 @@ fn valid_query_name(name: String) -> Bool {
   && !string.contains(name, "&")
   && !string.contains(name, "=")
   && !string.contains(name, "#")
+}
+
+fn valid_query_value(value: String) -> Bool {
+  !string.contains(value, "\r")
+  && !string.contains(value, "\n")
+  && !string.contains(value, "\u{0}")
+}
+
+fn safe_component(value: String) -> String {
+  value
+  |> string.replace(each: "%", with: "%25")
+  |> string.replace(each: "&", with: "%26")
+  |> string.replace(each: "=", with: "%3D")
+  |> string.replace(each: "?", with: "%3F")
+  |> string.replace(each: "#", with: "%23")
+  |> string.replace(each: " ", with: "%20")
 }
 
 fn valid_content_type(value: String) -> Bool {

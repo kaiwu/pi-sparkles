@@ -6,6 +6,7 @@ pub opaque type State {
 
 pub type RateLimitError {
   NonPositiveLimit
+  NonPositiveWindow
   InvalidRemaining
   ResetOverflow
 }
@@ -21,10 +22,15 @@ pub fn new(
   reset_at reset_at: Instant,
   window window: Duration,
 ) -> Result(State, RateLimitError) {
-  case limit > 0, remaining >= 0 && remaining <= limit {
-    False, _ -> Error(NonPositiveLimit)
-    _, False -> Error(InvalidRemaining)
-    True, True -> Ok(State(limit, remaining, reset_at, window))
+  case
+    limit > 0,
+    time.duration_milliseconds(window) > 0,
+    remaining >= 0 && remaining <= limit
+  {
+    False, _, _ -> Error(NonPositiveLimit)
+    _, False, _ -> Error(NonPositiveWindow)
+    _, _, False -> Error(InvalidRemaining)
+    True, True, True -> Ok(State(limit, remaining, reset_at, window))
   }
 }
 

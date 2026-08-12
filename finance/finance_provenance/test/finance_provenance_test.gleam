@@ -283,6 +283,26 @@ pub fn asynchronous_verification_uses_injected_fetcher_test() {
   promise.resolve(Nil)
 }
 
+pub fn asynchronous_verification_contains_rejected_fetch_effects_test() {
+  let content = "replayable synthetic evidence"
+  let assert Ok(content_hash) = hash.text(content)
+  let item = fixture_with_content("a", content_hash, string.byte_size(content))
+  let assert Ok(with_evidence) = manifest.new() |> manifest.add_evidence(item)
+  let assert Ok(plan) =
+    verify.plan(with_evidence, maximum_items: 1, maximum_content_bytes: 1024)
+
+  use report <- promise.await(verify.verify(plan, rejected_fetch))
+  report
+  |> should.equal(verify.Report([verify.FetchEffectRejected(id("a"))]))
+  promise.resolve(Nil)
+}
+
+@external(javascript, "./finance_provenance_test_ffi.mjs", "rejected_fetch")
+fn rejected_fetch(
+  target: verify.Target,
+  maximum_bytes: Int,
+) -> promise.Promise(Result(String, Nil))
+
 fn fixture(
   identity_character: String,
   parents: List(identity.EvidenceId),

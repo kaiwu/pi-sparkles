@@ -32,6 +32,7 @@ pub type Outcome(error) {
   ContentMismatch(id: EvidenceId, expected: Sha256, actual: Sha256)
   LengthMismatch(id: EvidenceId, expected: Int, actual: Int)
   FetchFailed(id: EvidenceId, error: error)
+  FetchEffectRejected(id: EvidenceId)
   InvalidFetchedContent(id: EvidenceId)
   ContentLimitExceeded(id: EvidenceId, actual: Int, maximum: Int)
 }
@@ -129,10 +130,15 @@ fn verify_targets(
   case remaining {
     [] -> promise.resolve(Report(list.reverse(reversed)))
     [target, ..rest] -> {
-      use fetched <- promise.await(fetch(target, maximum_content_bytes))
+      use fetched <- promise.await(
+        fetch(target, maximum_content_bytes)
+        |> promise.map(Ok)
+        |> promise.rescue(fn(_) { Error(Nil) }),
+      )
       let outcome = case fetched {
-        Error(error) -> FetchFailed(target.id, error)
-        Ok(content) -> {
+        Error(_) -> FetchEffectRejected(target.id)
+        Ok(Error(error)) -> FetchFailed(target.id, error)
+        Ok(Ok(content)) -> {
           let actual = string.byte_size(content)
           case actual > maximum_content_bytes {
             True ->

@@ -15,6 +15,7 @@ import finance_http/scheduler
 import finance_http/transport
 import finance_http/workflow
 import gleam/javascript/promise
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleeunit
 import gleeunit/should
@@ -70,6 +71,40 @@ pub fn request_rejects_credential_bearing_origin_test() {
   |> should.equal(Error(request.InvalidOrigin))
 }
 
+pub fn request_rejects_paths_that_can_escape_the_validated_origin_test() {
+  [
+    "//attacker.example.test/quotes",
+    "/\\attacker.example.test/quotes",
+    "/quotes\r\nx-injected: true",
+    "/quotes\u{0}suffix",
+  ]
+  |> list.each(fn(path) {
+    request.new(
+      method: request.Get,
+      origin: "https://data.example.test",
+      path: path,
+      idempotency_key: None,
+    )
+    |> should.equal(Error(request.InvalidPath))
+  })
+}
+
+pub fn request_limits_require_a_positive_timeout_and_response_budget_test() {
+  let assert Ok(value) =
+    request.new(
+      method: request.Get,
+      origin: "https://data.example.test",
+      path: "/quotes",
+      idempotency_key: None,
+    )
+  let assert Ok(zero) = time.duration(0)
+
+  request.with_limits(value, zero, 100)
+  |> should.equal(Error(request.NonPositiveTimeout))
+  request.with_limits(value, duration(1), 0)
+  |> should.equal(Error(request.NonPositiveResponseLimit))
+}
+
 pub fn request_keys_redact_secrets_and_distinguish_body_variants_test() {
   let assert Ok(base) =
     request.new(
@@ -99,6 +134,26 @@ pub fn request_keys_redact_secrets_and_distinguish_body_variants_test() {
   )
 }
 
+pub fn request_safe_keys_escape_public_query_delimiters_without_collisions_test() {
+  let assert Ok(base) =
+    request.new(
+      method: request.Get,
+      origin: "https://data.example.test",
+      path: "/quotes",
+      idempotency_key: None,
+    )
+  let assert Ok(single) = request.with_query(base, "x", "a&y=b", request.Public)
+  let assert Ok(first) = request.with_query(base, "x", "a", request.Public)
+  let assert Ok(split) = request.with_query(first, "y", "b", request.Public)
+
+  request.safe_key(single)
+  |> should.equal("GET https://data.example.test/quotes?x=a%26y%3Db")
+  request.safe_key(single)
+  |> should.not_equal(request.safe_key(split))
+  request.with_query(base, "symbol", "AAPL\r\ninjected", request.Public)
+  |> should.equal(Error(request.InvalidQueryValue))
+}
+
 pub fn response_redacts_sensitive_headers_from_its_typed_boundary_test() {
   let assert Ok(value) =
     response.new(
@@ -119,6 +174,17 @@ pub fn response_redacts_sensitive_headers_from_its_typed_boundary_test() {
   ])
   response.safe_summary(value)
   |> should.equal(response.SafeSummary(200, 21, duration(12)))
+}
+
+pub fn response_rejects_declared_utf8_byte_length_drift_test() {
+  response.new(
+    status: 200,
+    headers: [],
+    body: "贵州",
+    byte_length: 2,
+    elapsed: duration(1),
+  )
+  |> should.equal(Error(response.ByteLengthMismatch(2, 6)))
 }
 
 pub fn binary_response_validates_integrity_metadata_and_redacts_headers_test() {
@@ -222,6 +288,24 @@ pub fn queue_can_take_first_match_without_reordering_or_mutating_test() {
   taken |> should.equal(Some(2))
   queue.to_list(without_even) |> should.equal([1, 3, 4])
   queue.to_list(four) |> should.equal([1, 2, 3, 4])
+}
+
+pub fn queue_reuses_capacity_across_interleaved_operations_test() {
+  let assert Ok(empty) = queue.new(capacity: 3)
+  let assert Ok(one) = queue.enqueue(empty, "first")
+  let assert Ok(two) = queue.enqueue(one, "second")
+  let #(after_first, first) = queue.dequeue(two)
+  let assert Ok(with_third) = queue.enqueue(after_first, "third")
+  let assert Ok(full) = queue.enqueue(with_third, "fourth")
+  let #(without_third, third) =
+    queue.take_first(full, fn(value) { value == "third" })
+
+  first |> should.equal(Some("first"))
+  third |> should.equal(Some("third"))
+  queue.size(full) |> should.equal(3)
+  queue.size(without_third) |> should.equal(2)
+  queue.to_list(full) |> should.equal(["second", "third", "fourth"])
+  queue.to_list(without_third) |> should.equal(["second", "fourth"])
 }
 
 pub fn scheduler_bypasses_a_blocked_origin_without_losing_fifo_fairness_test() {
@@ -511,6 +595,16 @@ pub fn rate_limit_acquisition_is_an_immutable_state_transition_test() {
   |> rate_limit.reset_at
   |> time.unix_milliseconds
   |> should.equal(1100)
+}
+
+pub fn rate_limit_rejects_a_zero_window_that_would_bypass_pacing_test() {
+  rate_limit.new(
+    limit: 2,
+    remaining: 2,
+    reset_at: instant(1000),
+    window: duration(0),
+  )
+  |> should.equal(Error(rate_limit.NonPositiveWindow))
 }
 
 pub fn cache_never_hides_stale_state_test() {

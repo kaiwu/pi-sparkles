@@ -205,7 +205,7 @@ test("pool removes waiting cancellation and retains an active slot until abort s
   expect(await next).toBeInstanceOf(Ok);
 });
 
-test("pool contains a rejected injected client and releases its slot", async () => {
+test("pool preserves typed containment for a rejected sender and releases its slot", async () => {
   const started = [];
   const sender = async (requestValue) => {
     const path = request.path(requestValue);
@@ -230,7 +230,14 @@ test("pool contains a rejected injected client and releases its slot", async () 
 
   const brokenResult = await broken;
   expect(brokenResult).toBeInstanceOf(Error);
-  expect(brokenResult[0]).toBe(pool.PoolError$UnexpectedClientFailure$const);
+  expect(brokenResult[0]).toBeInstanceOf(pool.RequestFailed);
+  expect(brokenResult[0].error).toBeInstanceOf(client.RetryStopped);
+  expect(brokenResult[0].error.reason).toBe(
+    retry.StopReason$PermanentFailure$const,
+  );
+  expect(brokenResult[0].error.last.error).toBe(
+    transport.TransportError$InvalidTransportResult$const,
+  );
   expect(JSON.stringify(brokenResult)).not.toContain("secret provider failure");
   expect(await recovered).toBeInstanceOf(Ok);
   expect(started).toEqual(["/broken", "/recovered"]);

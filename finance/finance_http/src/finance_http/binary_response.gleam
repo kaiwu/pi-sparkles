@@ -33,13 +33,7 @@ pub fn new(
   elapsed elapsed_value: Duration,
 ) -> Result(Response, ResponseError) {
   case
-    response.new(
-      status_value,
-      header_values,
-      "",
-      byte_length_value,
-      elapsed_value,
-    ),
+    response.new(status_value, header_values, "", 0, elapsed_value),
     valid_base64(body_value, byte_length_value),
     valid_sha256(sha256_value),
     valid_prefix(prefix_value, byte_length_value)

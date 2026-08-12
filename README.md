@@ -905,6 +905,10 @@ Commands implemented now:
 | `bun run test` | complete repository diagnostic matrix, invoked once by `tier:verify` for promotion |
 | `bun run clean` | remove generated build, work, and distribution output |
 
+The unit runner uses up to four package workers by default. Set
+`PI_SPARKLES_TEST_JOBS=1..16` to tune the bounded concurrency for a particular
+machine; `1` preserves serial execution for constrained environments.
+
 Planned release commands are `build:hex`, `hex:check`, and `hex:publish`.
 Publishing will always remain an explicit operation; ordinary builds and tests
 must never alter Hex or other external state.
