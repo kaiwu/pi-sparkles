@@ -17,7 +17,7 @@ Pi tools, never plugin-to-plugin source imports.
 | **T2 — ProductUseful** | Long-term equity investor | 45 | 45 packages, 0 not implemented | Primary filings/disclosures → normalized company facts → comparison/valuation/quality/governance → cited report and thesis review |
 | **T3 — ProductUseful** | Portfolio manager and monitor | 11 | 11 packages, 0 not implemented | Durable portfolio import/reconciliation → risk/scenarios/attribution/rebalance/tax lots → monitors/alerts and auditable resume |
 | **T4 — ProductUseful** | Quant researcher | 7 | 7 packages, 0 not implemented | Point-in-time universe/data → explicit features/events → trial ledger/backtest/comparison → complete reproduction |
-| **T5** | Macro and multi-asset researcher | 16 | 1 package, 15 not implemented | Exact instrument/source legs → reviewed calculations → time-aligned, separately labelled cross-asset research |
+| **T5 — ProductUseful** | Macro and multi-asset researcher | 16 | 16 packages, 0 not implemented | Exact instrument/source legs → reviewed calculations → time-aligned, separately labelled cross-asset research |
 | **T6** | Day trader and execution operator | 11 | 2 packages, 9 not implemented | Authenticated live quote/depth/tape → bounded day workflow → account/paper/compliance → explicitly authorized and reconciled live effects |
 
 “Current inventory” means code exists. It is not a completion percentage and
@@ -231,14 +231,13 @@ weaken the ProductUseful gate.
 
 ## Active ledger decision
 
-T1 and T2 are **ProductUseful**. T1's complete repository matrix, installed-Pi
-smoke lane, existing CN/HK/US receipt-and-journal swing workflow, and dedicated
-Eastmoney-first CN role lane passed on 2026-08-11. T2's 45-package checkpoint,
-complete repository matrix, installed-Pi smoke lane, and dedicated US/SEC
-long-term-investor role journey passed on 2026-08-12. T2 remains the active
-ledger tier only to preserve the completed promotion record. Its verified plain
-Pi package contains the cumulative T1+T2 closure as 90 content-locked extension
-entry points. Selecting and activating the next tier is a separate decision.
+T1 through T5 are **ProductUseful**. Their single declared role journeys,
+complete repository checks, artifact contracts and installed-Pi smoke lanes
+passed on 2026-08-11 or 2026-08-12. T5 remains the active ledger tier to
+preserve the completed promotion record. Its plain-Pi package contains the T1
+and T5 dependency closure as 61 separately loadable, content-locked extension
+entry points. T6 remains deliberately last and externally blocked on authentic
+real-time market behavior.
 
 Tushare credentials remain environment-only adapter inputs and CNINFO remains a
 public official-source path. `pi_stock_tape` belongs to T6; authentic real-time

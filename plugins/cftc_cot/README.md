@@ -1,19 +1,19 @@
 # pi_sparkles_cftc_cot
 
-Status: **Designing** · public-source adapter pending · no package manifest or code
+Tier 5 ProductUseful, stateless Pi shell over the pure `finance_multi_asset`
+contract. It registers `cot_analyze` and accepts one bounded caller-owned,
+versioned JSON packet plus its expected SHA-256 digest.
 
-Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 43](../../../trading-course/sessions/43_multi_asset_macro_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
+The first slice validates exact CFTC report identity, reporting/release lag, categories, revisions, crosswalk limits, net/change/net-percent/percentile/z-score calculations. Every result retains exact source,
+time, entitlement, licence, correction and receipt context. The input digest
+binds the imported bytes and the result receipt, but is not a provider
+signature, authority proof or origin authentication.
 
-Controlling evidence: [Course Session 37](../../../trading-course/sessions/37_commodity_futures_cot_contract_20260811.md).
+The shell owns only bounded UTF-8 import, cancellation and Pi presentation.
+Domain decoding, validation and calculations remain pure Gleam. There is no
+ambient credential, network fallback, storage or cross-plugin source import.
 
-## Reviewed first slice
+No category equivalence inference, suppressed-value fill, positioning signal, forecast or recommendation.
 
-Tools retrieve legacy or disaggregated CFTC reports for exact market/report/date identity, inspect category positions, and calculate requested net/change/share, percentile, or z-score facts over explicit windows.
-
-Reports retain futures-only/combined scope, market code/name, report and release dates, category taxonomy/version, long/short/spreading/open-interest lexemes, suppressed/revised states, source receipt and publication lag. Crosswalks from a CFTC market to tradable contracts remain sourced, one-to-many and uncertain; they never imply exact equivalence.
-
-Parsing and calculations are pure after a bounded CFTC text/PDF adapter. Percentiles/z-scores expose population/window/missing policy and remain unperformed when suppressed operands are required.
-
-## Gates and exclusions
-
-Source format/coverage and rights must be reviewed. No crowded/extreme/bullish/bearish label, positioning signal, inferred hedger/speculator intent, exact-contract equivalence, recommendation, or trade action.
+Focused package builds are inner-loop diagnostics only. Product usefulness is
+decided once by the complete T5 multi-asset researcher acceptance lane.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "active_tier": "T4",
+  "active_tier": "T5",
   "blocker_policy": "A tier is externally blocked only when no testable provider, public source, user-owned import, fixture, or scripted capability can prove a required contract. Missing alternative providers and production credentials are adapter backlog or runtime dependencies, not blockers. T6 real-time market behavior is the current exception.",
   "statuses": [
     "queued",
@@ -249,7 +249,7 @@
     {
       "id": "T5",
       "name": "Macro and multi-asset researcher product",
-      "status": "queued",
+      "status": "product_useful",
       "depends_on": ["T1"],
       "track_profile": "Global and cross-market labelled legs, not an equity track. CN-specific instruments remain explicit source legs and never create cn/hk/us product variants.",
       "product_outcome": "A multi-asset researcher can identify exact fund, bond, convertible, option, future, commodity, crypto, macro, rate, and FX legs; acquire supported source evidence; run the reviewed calculations; and compose separately labelled global comparisons without equity-track leakage.",

@@ -1,19 +1,19 @@
 # pi_sparkles_cn_convertible_bonds
 
-Status: **Designing** · CN source contract · no package manifest or code
+Tier 5 ProductUseful, stateless Pi shell over the pure `finance_multi_asset`
+contract. It registers `cn_convertible_analyze` and accepts one bounded caller-owned,
+versioned JSON packet plus its expected SHA-256 digest.
 
-Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 43](../../../trading-course/sessions/43_multi_asset_macro_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
+The first slice validates mainland convertible-bond identity, exact terms and adjustments, conversion value/premium, investment premium and declared scenario payoffs. Every result retains exact source,
+time, entitlement, licence, correction and receipt context. The input digest
+binds the imported bytes and the result receipt, but is not a provider
+signature, authority proof or origin authentication.
 
-Controlling evidence: [Course Session 35](../../../trading-course/sessions/35_rates_fixed_income_convertible_contract_20260811.md).
+The shell owns only bounded UTF-8 import, cancellation and Pi presentation.
+Domain decoding, validation and calculations remain pure Gleam. There is no
+ambient credential, network fallback, storage or cross-plugin source import.
 
-## Reviewed first slice
+No exercise choice, call-risk forecast, fair-value claim, recommendation or trade effect.
 
-The plugin inspects an exact mainland convertible and its linked underlying listing, terms and revision announcements; calculates conversion value/parity, conversion and investment premium, caller-model bond floor, requested call/convert/hold/put scenario payoffs, and mechanical trigger counts.
-
-Identity retains bond/listing/MIC, issuer, underlying share class, currency, issue/maturity/coupon and lot facts. Conversion price/ratio, reset, redemption/call/put clauses, effective dates, corporate-action adjustments, trading calendars and source receipts remain versioned. Calculations expose every bond/stock/rate leaf and fail on unknown/conflicting terms rather than predicting them.
-
-CN-only domain code composes shared exact math/fixed-income calculations but imports no HK/US market domain. Provider effects are bounded and source-specific.
-
-## Gates and exclusions
-
-Requires a reviewed convertible-terms source plus underlying/rate evidence. No call/reset/exercise prediction, cheap/expensive/fair-value label, credit/volatility model by default, trigger interpretation, recommendation, or order action.
+Focused package builds are inner-loop diagnostics only. Product usefulness is
+decided once by the complete T5 multi-asset researcher acceptance lane.

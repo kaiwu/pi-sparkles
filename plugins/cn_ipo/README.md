@@ -1,19 +1,19 @@
 # pi_sparkles_cn_ipo
 
-Status: **Designing** · provider/source gated · no package manifest or code
+Tier 5 ProductUseful, stateless Pi shell over the pure `finance_multi_asset`
+contract. It registers `cn_ipo_research` and accepts one bounded caller-owned,
+versioned JSON packet plus its expected SHA-256 digest.
 
-Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
+The first slice validates mainland IPO identity, append-only state history, offer terms, dilution, gross proceeds and listing-return calculations. Every result retains exact source,
+time, entitlement, licence, correction and receipt context. The input digest
+binds the imported bytes and the result receipt, but is not a provider
+signature, authority proof or origin authentication.
 
-Controlling evidence: [Course Session 32](../../../trading-course/sessions/32_cn_ipo_information_contract_20260811.md).
+The shell owns only bounded UTF-8 import, cancellation and Pi presentation.
+Domain decoding, validation and calculations remain pure Gleam. There is no
+ambient credential, network fallback, storage or cross-plugin source import.
 
-## Reviewed first slice
+No approval prediction, allocation advice, valuation verdict, recommendation or account/order effect.
 
-Tools query a bounded mainland IPO pipeline/calendar, search exact issuer candidates, inspect one company, inspect/retrieve bounded document metadata/content, and calculate requested dilution over supplied offer facts. Identity binds issuer/organization, application/listing codes, venue/board, security/share class, sponsor/accountant/law firm and alias history.
-
-Pipeline is append-only state events with source, publication/effective/retrieval dates and corrections—not an overwritten status. Prospectus/inquiry/registration/offer/listing documents retain original Chinese, version and attachment receipts. Offer facts preserve price/range, quantities, old/new shares, greenshoe, allocations, lockups and unknowns. Dilution formulas expose all leaves and never infer missing terms.
-
-Pure modules own identity, state ordering, calendars and calculations; network/document effects use bounded `finance_http` and reviewed attachment contracts.
-
-## Gates and exclusions
-
-Requires reviewed CSRC/SSE/SZSE/BSE/CNINFO source and rights contracts. No subscription/account/order effect, allocation probability, eligibility judgment, IPO valuation, fair price, post-listing forecast, recommendation, or cross-market substitution.
+Focused package builds are inner-loop diagnostics only. Product usefulness is
+decided once by the complete T5 multi-asset researcher acceptance lane.

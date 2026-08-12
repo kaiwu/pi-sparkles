@@ -1,19 +1,19 @@
 # pi_sparkles_crypto_market
 
-Status: **Designing** · provider/licence/security gated · no package manifest or code
+Tier 5 ProductUseful, stateless Pi shell over the pure `finance_multi_asset`
+contract. It registers `crypto_market_inspect` and accepts one bounded caller-owned,
+versioned JSON packet plus its expected SHA-256 digest.
 
-Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 43](../../../trading-course/sessions/43_multi_asset_macro_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
+The first slice validates exact asset/network/token/contract/venue identity, quote/trades/24-7 candle/order book/derivative context, venue state and lifecycle events. Every result retains exact source,
+time, entitlement, licence, correction and receipt context. The input digest
+binds the imported bytes and the result receipt, but is not a provider
+signature, authority proof or origin authentication.
 
-Controlling evidence: [Course Session 38](../../../trading-course/sessions/38_crypto_market_information_contract_20260811.md).
+The shell owns only bounded UTF-8 import, cancellation and Pi presentation.
+Domain decoding, validation and calculations remain pure Gleam. There is no
+ambient credential, network fallback, storage or cross-plugin source import.
 
-## Reviewed first slice
+Crypto is not a fourth equity track. No fiat equivalence, safety, arbitrage, liquidity, value or trading judgment.
 
-Tools resolve asset/network/token/contract/venue-instrument identity and return one venue's spot quote, trades, candles, order-book snapshot, venue status, derivative funding context, and fork/airdrop/migration/delisting events. Explicit caller requests may calculate returns, spreads or time-aligned cross-venue differences over supplied facts.
-
-Identity layers never collapse; symbol collisions, forks and migrations return alternatives. Observations retain 24/7 UTC interval semantics, venue/feed, sequence/gaps, quote/base units, fees, stablecoin classification, entitlement/licence and exact receipt. Stablecoin is not fiat; funding/OI context remains a separately labelled derivative leg.
-
-Pure `finance_crypto` types/calculations remain independent of per-venue bounded adapters and a thin Pi shell. No wallet/withdrawal capability is permitted.
-
-## Gates and exclusions
-
-Requires reviewed CEX/DEX terms, data entitlement, source security and credential scopes. No venue/custody/solvency/safety judgment, regulatory classification, fair value, arbitrage/liquidity claim, funding signal, recommendation, wallet key, or trade action.
+Focused package builds are inner-loop diagnostics only. Product usefulness is
+decided once by the complete T5 multi-asset researcher acceptance lane.

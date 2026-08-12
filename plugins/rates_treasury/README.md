@@ -1,19 +1,19 @@
 # pi_sparkles_rates_treasury
 
-Status: **Designing** · public-source review pending · no package manifest or code
+Tier 5 ProductUseful, stateless Pi shell over the pure `finance_multi_asset`
+contract. It registers `treasury_rate_inspect` and accepts one bounded caller-owned,
+versioned JSON packet plus its expected SHA-256 digest.
 
-Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 43](../../../trading-course/sessions/43_multi_asset_macro_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
+The first slice validates exact US Treasury CMT-series or tradable-security identity, maturity, rate unit, date, vintage, rights and receipt. Every result retains exact source,
+time, entitlement, licence, correction and receipt context. The input digest
+binds the imported bytes and the result receipt, but is not a provider
+signature, authority proof or origin authentication.
 
-Controlling evidence: [Course Session 35](../../../trading-course/sessions/35_rates_fixed_income_convertible_contract_20260811.md).
+The shell owns only bounded UTF-8 import, cancellation and Pi presentation.
+Domain decoding, validation and calculations remain pure Gleam. There is no
+ambient credential, network fallback, storage or cross-plugin source import.
 
-## Reviewed first slice
+A CMT series is never presented as a tradable security. No rate forecast, security selection or advice.
 
-The plugin returns exact US Treasury security and rate observations. Tradable bills/notes/bonds retain CUSIP, issue/maturity/auction dates, coupon, day-count, payment frequency, on/off-the-run status and price/yield observation facts. Constant Maturity Treasury series retain tenor/series identity and must never be represented as a tradable security.
-
-Every observation preserves clean/dirty/rate kind, source lexeme, unit/convention, observation/publication/retrieval dates, revision/vintage, entitlement and receipt. No curve is constructed unless a separate caller request is sent to `pi_fixed_income`.
-
-The adapter uses bounded public FRED/Treasury source plans; decoding and identity validation remain pure and fixture-tested.
-
-## Gates and exclusions
-
-Requires exact source/terms/coverage review. No benchmark selection, silent CMT/tradable equivalence, curve, forecast, relative-value/attractive-yield label, recommendation, or trade action.
+Focused package builds are inner-loop diagnostics only. Product usefulness is
+decided once by the complete T5 multi-asset researcher acceptance lane.

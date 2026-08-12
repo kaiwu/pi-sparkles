@@ -1,19 +1,19 @@
 # pi_sparkles_global_markets
 
-Status: **Designing** · cross-market composition contract · no package manifest or code
+Tier 5 ProductUseful, stateless Pi shell over the pure `finance_multi_asset`
+contract. It registers `global_markets_compare` and accepts one bounded caller-owned,
+versioned JSON packet plus its expected SHA-256 digest.
 
-Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 43](../../../trading-course/sessions/43_multi_asset_macro_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
+The first slice validates exact labelled CN/HK/US index, ETF, equity or ADR legs, open-session intersection, unmatched points, native-currency returns, rebasing and correlation. Every result retains exact source,
+time, entitlement, licence, correction and receipt context. The input digest
+binds the imported bytes and the result receipt, but is not a provider
+signature, authority proof or origin authentication.
 
-Controlling evidence: [Course Session 39](../../../trading-course/sessions/39_macro_fx_global_market_composition_contract_20260811.md).
+The shell owns only bounded UTF-8 import, cancellation and Pi presentation.
+Domain decoding, validation and calculations remain pure Gleam. There is no
+ambient credential, network fallback, storage or cross-plugin source import.
 
-## Reviewed first slice
+No synthetic global track, index/ETF equivalence, silent FX, stale carry, ranking, causal claim or recommendation.
 
-Tools define/inspect a view of caller-selected market legs, align them under an explicit policy, and calculate requested normalized comparisons or correlations over an exact window. Each leg retains native `cn`, `hk` or `us` track, instrument/index/ETF/ADR kind, MIC, calendar/session, currency, price/return basis, source times, entitlement and receipt.
-
-Alignment policies such as exact-date intersection or caller-selected as-of join are named and expose matched/unmatched dates and time deltas. FX conversion is a separate evidenced calculation. Indexes, ETFs and ADRs remain non-equivalent; no synthetic global track/calendar or merged source is created.
-
-The pure composition core consumes existing quote/history/index/FX receipts; no direct acquisition or provider fallback occurs.
-
-## Explicit exclusions
-
-No risk-on/off, synchronization/decoupling, capital-flow/contagion/causal claim, diversification judgment, forecast, index-ETF equivalence, recommendation, or trade action.
+Focused package builds are inner-loop diagnostics only. Product usefulness is
+decided once by the complete T5 multi-asset researcher acceptance lane.

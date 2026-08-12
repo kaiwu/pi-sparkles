@@ -1,19 +1,19 @@
 # pi_sparkles_cn_policy_monitor
 
-Status: **Designing** · source access unresolved · no package manifest or code
+Tier 5 ProductUseful, stateless Pi shell over the pure `finance_multi_asset`
+contract. It registers `cn_policy_documents` and accepts one bounded caller-owned,
+versioned JSON packet plus its expected SHA-256 digest.
 
-Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
+The first slice validates bounded original-language mainland policy documents, exact publishers/dates, correction lineage, rights and receipts. Every result retains exact source,
+time, entitlement, licence, correction and receipt context. The input digest
+binds the imported bytes and the result receipt, but is not a provider
+signature, authority proof or origin authentication.
 
-Controlling evidence: [Course Session 29](../../../trading-course/sessions/29_monitoring_catalyst_alert_contract_20260811.md).
+The shell owns only bounded UTF-8 import, cancellation and Pi presentation.
+Domain decoding, validation and calculations remain pure Gleam. There is no
+ambient credential, network fallback, storage or cross-plugin source import.
 
-## Reviewed first slice
+No translation substitution, legal conclusion, policy-impact prediction or recommendation.
 
-The first slice queries policy-document metadata from an explicitly selected CSRC or mainland exchange source. It returns publisher/authority role, original Chinese title, document/type/number, publication and stated effective dates, jurisdiction/market scope, status/correction lineage, source URL/receipt, retrieval time, rights, coverage, and unknowns.
-
-Identity, date ordering and metadata decoding are pure. A future adapter must be bounded, cancellable, fixture-tested, source-specific and use `finance_http`. Sources are never merged as equivalent authorities. Translation, when later requested, is a labelled derivative retaining original spans.
-
-Acceptance covers publisher/type/date decoding, corrections, unavailable effective dates, source coverage, original language, malformed responses, budgets and rights facts.
-
-## Gates and exclusions
-
-Blocked on source access and terms review. No policy interpretation/advice, affected-company inference, importance/impact score, continuous polling, full-text or translation in the first slice, notification, recommendation, or trade action.
+Focused package builds are inner-loop diagnostics only. Product usefulness is
+decided once by the complete T5 multi-asset researcher acceptance lane.

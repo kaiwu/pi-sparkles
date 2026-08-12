@@ -110,7 +110,20 @@ describe("plain Pi tier packaging", () => {
     expect(t3.plugins.map((plugin) => plugin.shortName)).not.toContain(
       "cn_fundamentals",
     );
-    expect(() => tierPackagePlan(manifest, "T4")).toThrow(
+    const t4 = tierPackagePlan(manifest, "T4");
+    expect(t4.includedTiers.map((tier) => tier.id)).toEqual(["T1", "T4"]);
+    expect(t4.plugins).toHaveLength(52);
+    const t5Tier = tierById(manifest, "T5");
+    if (t5Tier.status === "product_useful") {
+      const t5 = tierPackagePlan(manifest, "T5");
+      expect(t5.includedTiers.map((tier) => tier.id)).toEqual(["T1", "T5"]);
+      expect(t5.plugins).toHaveLength(61);
+    } else {
+      expect(() => tierPackagePlan(manifest, "T5")).toThrow(
+        "only ProductUseful tiers can be packaged",
+      );
+    }
+    expect(() => tierPackagePlan(manifest, "T6")).toThrow(
       "only ProductUseful tiers can be packaged",
     );
   });
