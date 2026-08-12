@@ -32,7 +32,7 @@ non-external questions** inside the reviewed scope.
 | [Session 41](../../trading-course/sessions/41_market_structure_source_product_contract_20260811.md) | 30 market/source/identity/rule/disclosure/cache/tape/HK designs | Concrete professional tasks, provider-path requirements, tape depth, compact/drill-down and failures |
 | [Session 42](../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md) | 31 research/portfolio/monitoring/company-intelligence designs | Exact workflows, receipt chains, durable artifacts, executable assumptions and acceptance |
 | [Session 43](../../trading-course/sessions/43_multi_asset_macro_product_contract_20260811.md) | 12 fund/rates/fixed-income/options/commodity/COT/crypto/macro/FX/global designs | Instrument semantics, calculations, source paths and cross-asset laws |
-| [Session 44](../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md) | 8 broker/simulation/receipt/compliance designs, amended 2026-08-12 | Read-only observation/import, local simulation, non-executable handoff, lifecycle evidence, credentials/redaction, and incidents; order mutation is forbidden |
+| [Session 44](../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md) | 7 `track_partial` broker/simulation/receipt/compliance packages plus 1 README-only CN broker design, amended 2026-08-12 | Current code is offline/import-only validation and pure evaluation; read-only network observation, named simulation, provider conformance, private import, and richer compliance remain explicit backlog; order mutation is forbidden |
 | [Session 45](../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md) | Whole product | Uniform Pi contract, capability/data-flow DAG, lifecycle, five persona journeys and acceptance |
 | [Session 46](../../trading-course/sessions/46_product_readiness_corrections_20260811.md) | Sessions 40, 44 and 45 | Correct chronology, maturity/input-path semantics, DAG meaning and ambiguous live-submission handling |
 
@@ -75,14 +75,16 @@ are represented above.
 | CN ownership and market publications | [cn_stock_share_structure](cn_stock_share_structure/README.md), [cn_stock_shareholders](cn_stock_shareholders/README.md), [cn_stock_restricted_shares](cn_stock_restricted_shares/README.md), [cn_stock_pledges](cn_stock_pledges/README.md), [cn_stock_insiders](cn_stock_insiders/README.md), [cn_stock_public_info](cn_stock_public_info/README.md), [cn_stock_margin](cn_stock_margin/README.md), [cn_stock_block_trades](cn_stock_block_trades/README.md), [cn_stock_connect](cn_stock_connect/README.md) |
 | SEC and infrastructure | [sec_ownership](sec_ownership/README.md), [sec_insiders](sec_insiders/README.md), [finance_cache](finance_cache/README.md) |
 | Existing shared-shell projections | [cn_stock_screener](cn_stock_screener/README.md), [cn_market_snapshot](cn_market_snapshot/README.md) |
-| T6 day/execution inventory | [stock_tape](stock_tape/README.md) |
+| T6 day/execution inventory | README-only: [stock_tape](stock_tape/README.md), [cn_broker_readonly](cn_broker_readonly/README.md). Implemented `track_partial`: [cn_broker_paper](cn_broker_paper/README.md), [broker_readonly_alpaca](broker_readonly_alpaca/README.md), [broker_readonly_ibkr](broker_readonly_ibkr/README.md), [broker_paper_alpaca](broker_paper_alpaca/README.md), [broker_paper_ibkr](broker_paper_ibkr/README.md), [broker_live](broker_live/README.md), [trade_compliance](trade_compliance/README.md) |
 
 ## Tier-only implementation and promotion rule
 
-A design becomes code only as part of its owning tier after every tier blocker
-is resolved. Cross-package work is expected, but every touched package remains
-compilable and focused-test green at atomic checkpoints; incomplete public
-tools or placeholder behavior are forbidden.
+A design normally becomes code only as part of its owning tier after every tier
+blocker is resolved. T6's seven explicit offline/import-only exceptions are
+listed as `track_partial` in `tiers.json`; they neither resolve its feed blocker
+nor permit verification. Cross-package work is expected, but every touched
+package remains compilable and focused-test green at atomic checkpoints;
+incomplete public tools or placeholder behavior are forbidden.
 
 No README-only design or implemented package is individually promoted. The
 full build/binding/artifact/Pi/persona matrix runs once through

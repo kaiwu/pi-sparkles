@@ -114,13 +114,31 @@ if (command === "checkpoint") {
       ),
     );
   }
+  const changedPlugins = packages.filter((pkg) =>
+    pkg.directory.startsWith(join(ROOT, "plugins")),
+  );
+  const declaredPartialPlugins = new Set(
+    (tier.partial_implementations ?? []).map((entry) => entry.proposal),
+  );
+  const isDeclaredPartialCheckpoint =
+    tier.id === "T6" &&
+    tier.status === "blocker_resolution" &&
+    changedPlugins.length > 0 &&
+    changedPlugins.every((pkg) => declaredPartialPlugins.has(pkg.shortName));
   if (
-    packages.some((pkg) => pkg.directory.startsWith(join(ROOT, "plugins"))) &&
-    !new Set(["building", "verifying"]).has(tier.status)
+    changedPlugins.length > 0 &&
+    !new Set(["building", "verifying"]).has(tier.status) &&
+    !isDeclaredPartialCheckpoint
   ) {
     fail([
       `${tier.id} plugin code changed while status is ${tier.status}; resolve blockers and move the tier to building first`,
     ]);
+  }
+
+  if (isDeclaredPartialCheckpoint) {
+    console.log(
+      `${tier.id} is accepting only its ledger-declared track_partial implementation inventory; blockers and tier status are unchanged.`,
+    );
   }
 
   for (const pkg of packages) {

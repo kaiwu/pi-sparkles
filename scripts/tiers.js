@@ -41,6 +41,10 @@ export function unresolvedBlockers(tier) {
   return tier.blockers.filter((blocker) => blocker.status !== "resolved");
 }
 
+export function partialImplementations(tier) {
+  return tier.partial_implementations ?? [];
+}
+
 function duplicateValues(values) {
   const counts = new Map();
   for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
@@ -88,9 +92,8 @@ export function validateTierManifest(manifest = readTierManifest()) {
   const validStatuses = new Set(manifest.statuses);
   const allProposals = manifest.tiers.flatMap((tier) => tier.proposals);
   const allExtras = manifest.tiers.flatMap((tier) => tier.extra_packages);
-  const implemented = discoverPackages(PLUGINS_DIR).map(
-    (pkg) => pkg.shortName,
-  );
+  const implementationPackages = discoverPackages(PLUGINS_DIR);
+  const implemented = implementationPackages.map((pkg) => pkg.shortName);
   const nonCatalogPackages = implemented.filter(
     (name) => !catalogSet.has(name),
   );
@@ -174,6 +177,73 @@ export function validateTierManifest(manifest = readTierManifest()) {
         errors.push(`${tier.id} blocker ${blocker.id} has no resolution record`);
       }
     }
+    const partials = partialImplementations(tier);
+    if (tier.id !== "T6" && partials.length > 0) {
+      errors.push(`${tier.id} cannot declare the T6 partial-inventory exception`);
+    }
+    if (tier.status === "product_useful" && partials.length > 0) {
+      errors.push(
+        `${tier.id} is ProductUseful but retains partial implementations`,
+      );
+    }
+    for (const duplicate of duplicateValues(
+      partials.map((partial) => partial.proposal),
+    )) {
+      errors.push(
+        `${tier.id} partial implementation appears more than once: pi_${duplicate}`,
+      );
+    }
+    for (const partial of partials) {
+      if (!tier.proposals.includes(partial.proposal)) {
+        errors.push(
+          `${tier.id} partial implementation is outside the tier: pi_${partial.proposal}`,
+        );
+      }
+      if (partial.status !== "track_partial") {
+        errors.push(
+          `${tier.id} partial implementation has invalid status: pi_${partial.proposal}`,
+        );
+      }
+      if (!existsSync(join(PLUGINS_DIR, partial.proposal, "gleam.toml"))) {
+        errors.push(
+          `${tier.id} partial implementation has no package: pi_${partial.proposal}`,
+        );
+      }
+      const pkg = implementationPackages.find(
+        (candidate) => candidate.shortName === partial.proposal,
+      );
+      if (pkg?.metadata.metadata?.finance?.status !== partial.status) {
+        errors.push(
+          `${tier.id} partial implementation metadata disagrees with the ledger: pi_${partial.proposal}`,
+        );
+      }
+      if (!Array.isArray(partial.available) || partial.available.length === 0) {
+        errors.push(
+          `${tier.id} partial implementation has no available scope: pi_${partial.proposal}`,
+        );
+      } else if (
+        partial.available.some(
+          (value) => typeof value !== "string" || !value.trim(),
+        )
+      ) {
+        errors.push(
+          `${tier.id} partial implementation has an empty available item: pi_${partial.proposal}`,
+        );
+      }
+      if (!Array.isArray(partial.missing) || partial.missing.length === 0) {
+        errors.push(
+          `${tier.id} partial implementation has no missing scope: pi_${partial.proposal}`,
+        );
+      } else if (
+        partial.missing.some(
+          (value) => typeof value !== "string" || !value.trim(),
+        )
+      ) {
+        errors.push(
+          `${tier.id} partial implementation has an empty missing item: pi_${partial.proposal}`,
+        );
+      }
+    }
     for (const proposal of tier.proposals) {
       if (!existsSync(join(PLUGINS_DIR, proposal, "README.md"))) {
         errors.push(`${tier.id} proposal has no README: pi_${proposal}`);
@@ -208,6 +278,11 @@ export function verificationBlockers(manifest, tier) {
   for (const proposal of missingImplementations(tier)) {
     errors.push(`${tier.id} implementation is missing: pi_${proposal}`);
   }
+  for (const partial of partialImplementations(tier)) {
+    errors.push(
+      `${tier.id} implementation remains track_partial: pi_${partial.proposal}`,
+    );
+  }
   if (!existsSync(join(ROOT, tier.acceptance_lane))) {
     errors.push(`${tier.id} acceptance lane is missing: ${tier.acceptance_lane}`);
   }
@@ -223,6 +298,7 @@ export function tierSummary(manifest = readTierManifest()) {
     implemented: implementedPackagesForTier(tier).filter((pkg) =>
       tier.proposals.includes(pkg.shortName),
     ).length,
+    track_partial: partialImplementations(tier).length,
     remaining: missingImplementations(tier).length,
     open_blockers: unresolvedBlockers(tier).length,
   }));

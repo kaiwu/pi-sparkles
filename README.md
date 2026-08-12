@@ -15,7 +15,7 @@ products and their blocker-first workflow are governed by
 ## Status
 
 This approach is feasible and five complete role products now work. The
-repository currently contains 133 plugin implementation packages and
+repository currently contains 140 plugin implementation packages and
 **ProductUseful tiers T1 through T5**. Package-level Experimental labels remain
 implementation inventory; they are not individual product promotions.
 Experimental code must satisfy its exact implemented contract; ProductUseful
@@ -25,7 +25,7 @@ professional journey.
 The repository includes:
 
 - `pi_gleam`, a common Gleam binding for Pi's extension API;
-- seventy-five finance packages, including provider adapters,
+- seventy-six finance packages, including provider adapters,
   shared track/evidence/rules/document/accounting policy, and isolated CN/HK
   identity, calendar, rules, document, and accounting layers;
 - the first F0 finance plugins: `finance_setup`, `finance_track_status`,
@@ -126,6 +126,12 @@ The repository includes:
   calculation, and advances content-bound caller-retained workflow state
   without authenticating the feed, deciding readiness or a trade, persisting
   state, or mutating an order/account;
+- seven T6 `track_partial` offline/import-only packages for bounded external
+  activity review, scenario-envelope validation, non-executable handoff, and
+  supplied-rule evaluation. They reject market-depth facts, have no transport
+  or credential surface, and cannot mutate an order. T6 remains blocked on its
+  authentic CN transaction feed; `stock_tape` and `cn_broker_readonly` remain
+  README-only;
 - a stateless `portfolio_risk` calculation shell over exact supplied account
   and `cn`/`hk`/`us` position facts, with explicit long-only single-currency
   exposure, weight, signed heat, denominator, partiality, contribution,

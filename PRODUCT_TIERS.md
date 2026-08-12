@@ -108,6 +108,15 @@ An unresolved provider or operational prerequisite stops the whole tier. We do
 not fill the time by producing provider-neutral shells and calling them a
 completed slice.
 
+T6 has one explicit inventory exception recorded in `tiers.json`: seven
+non-network, non-executing packages may exist as `track_partial` while the live
+feed blocker remains open. Each entry must enumerate both its working contract
+and its missing product scope. The checkpoint accepts only those named packages
+during `blocker_resolution`, while verification rejects every remaining
+`track_partial` entry. This inventory neither resolves a blocker nor changes
+the tier's delivery state, and it must not grow transport, market-depth, broker
+credential, or order-mutation authority.
+
 ### 2. Build the whole tier inside out
 
 Once blockers are resolved, implement one coherent dependency cone:
@@ -238,7 +247,9 @@ passed on 2026-08-11 or 2026-08-12. T6 is now the active ledger tier in
 plain-Pi package contains the T1 and T5 dependency closure as 61 separately
 loadable, content-locked extension entry points. T6 remains externally blocked
 on authentic real-time market behavior and must not enter `building` until the
-recorded exit evidence exists.
+recorded exit evidence exists. Seven explicitly ledger-declared offline/import
+packages are coherent `track_partial` inventory only; their listed missing
+scope remains a verification blocker.
 
 Tushare credentials remain environment-only adapter inputs and CNINFO remains a
 public official-source path. `pi_stock_tape` belongs to T6; authentic real-time

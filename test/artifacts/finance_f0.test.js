@@ -3,7 +3,13 @@ import { resolve } from "node:path";
 
 for (const name of [
   "backtest",
+  "broker_live",
+  "broker_paper_alpaca",
+  "broker_paper_ibkr",
+  "broker_readonly_alpaca",
+  "broker_readonly_ibkr",
   "cftc_cot",
+  "cn_broker_paper",
   "cn_convertible_bonds",
   "cn_funds_etf",
   "cn_ipo",
@@ -81,6 +87,7 @@ for (const name of [
   "tax_lots",
   "trade_plan",
   "trade_journal",
+  "trade_compliance",
   "watchlist",
   "us_market_calendar",
   "us_market_rules",

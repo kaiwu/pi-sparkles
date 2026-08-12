@@ -92,6 +92,17 @@ describe("tier delivery workflow", () => {
         message.includes("dependency T1 must be product_useful"),
       ),
     ).toBeFalse();
+    expect(active.partial_implementations).toHaveLength(7);
+    expect(
+      verificationBlockers(manifest, active).filter((message) =>
+        message.includes("implementation remains track_partial"),
+      ),
+    ).toHaveLength(7);
+    expect(tierSummary(manifest).at(-1)).toMatchObject({
+      implemented: 9,
+      track_partial: 7,
+      remaining: 2,
+    });
   });
 
   test("anchors Tier 6 in CN and forbids plugin order mutation", () => {
@@ -139,5 +150,19 @@ describe("tier delivery workflow", () => {
         message.includes("proposal appears in more than one tier"),
       ),
     ).toBeTrue();
+  });
+
+  test("rejects incomplete or falsely promoted partial inventory", () => {
+    const missing = structuredClone(readTierManifest());
+    missing.tiers.at(-1).partial_implementations[0].missing = [];
+    expect(validateTierManifest(missing)).toContain(
+      "T6 partial implementation has no missing scope: pi_cn_broker_paper",
+    );
+
+    const promoted = structuredClone(readTierManifest());
+    promoted.tiers.at(-1).status = "product_useful";
+    expect(validateTierManifest(promoted)).toContain(
+      "T6 is ProductUseful but retains partial implementations",
+    );
   });
 });

@@ -24,11 +24,12 @@ detailed design document; this roadmap retains only the proposal, priority,
 dependencies, and delivery status. The complete package/design inventory is
 [`plugins/README.md`](plugins/README.md).
 
-As of 2026-08-12, the catalog has 135 unique named `pi_*` proposals: 126 have
-matching implementation packages with `gleam.toml` (93.3%), and 9 have
-README-only designs. The repository has 133 plugin implementation packages in
+As of 2026-08-12, the catalog has 135 unique named `pi_*` proposals: 133 have
+matching implementation packages with `gleam.toml` (98.5%), and 2 have
+README-only designs. The repository has 140 plugin implementation packages in
 total because seven reference, setup, or workflow slices do not map one-to-one
-to an R1 proposal. These are breadth counts, not completion counts: many
+to an R1 proposal. Seven T6 packages are explicitly `track_partial`; their
+available and missing scope is recorded in `tiers.json`. These are breadth counts, not completion counts: many
 packages intentionally implement only one Experimental slice, and design-only
 directories contribute zero implementation breadth.
 The increase from 131 proposals is Session 33's retirement of the broad

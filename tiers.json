@@ -333,6 +333,100 @@
           "resolution": "Paper behavior is deterministic local simulation or read-only review of caller-owned external receipts. It is not broker-hosted mutation and can never enable live mutation."
         }
       ],
+      "partial_implementations": [
+        {
+          "proposal": "cn_broker_paper",
+          "status": "track_partial",
+          "available": [
+            "Bounded validation of caller-supplied CN deterministic-scenario envelopes",
+            "Bounded review of caller-owned external paper facts and lifecycle observations",
+            "Content receipts, duplicate detection and explicit conflict projection"
+          ],
+          "missing": [
+            "Named CN broker read-only or export contract and provider conformance evidence",
+            "Named fill-model execution with exact CN rule, calendar and settlement receipts",
+            "Authenticated CN intraday transaction-data feed required by T6-INTRADAY-PROVIDERS"
+          ]
+        },
+        {
+          "proposal": "broker_readonly_alpaca",
+          "status": "track_partial",
+          "available": [
+            "Bounded caller-owned Alpaca account-activity fact and lifecycle import review",
+            "Exact provider status lexemes, content receipts, duplicate and conflict projection"
+          ],
+          "missing": [
+            "Alpaca response decoders, pagination and provider conformance fixtures",
+            "Reviewed read-only credential-scope proof and opt-in provider check",
+            "Alpaca network adapter, which remains on hold with all US network paths"
+          ]
+        },
+        {
+          "proposal": "broker_readonly_ibkr",
+          "status": "track_partial",
+          "available": [
+            "Bounded caller-owned IBKR account-activity fact and lifecycle import review",
+            "Exact provider status lexemes, content receipts, duplicate and conflict projection"
+          ],
+          "missing": [
+            "Client Portal or TWS/Gateway response decoders, pacing and session-state fixtures",
+            "Reviewed read-only gateway authority and opt-in provider check",
+            "IBKR network adapter, which remains on hold with all US network paths"
+          ]
+        },
+        {
+          "proposal": "broker_paper_alpaca",
+          "status": "track_partial",
+          "available": [
+            "Bounded validation of caller-supplied deterministic-scenario envelopes",
+            "Bounded caller-owned Alpaca paper receipt review with duplicate and conflict projection"
+          ],
+          "missing": [
+            "Named fill-model execution rather than scenario-envelope validation only",
+            "Alpaca paper response decoders and provider conformance fixtures",
+            "Alpaca read-only network observation, which remains on hold"
+          ]
+        },
+        {
+          "proposal": "broker_paper_ibkr",
+          "status": "track_partial",
+          "available": [
+            "Bounded validation of caller-supplied deterministic-scenario envelopes",
+            "Bounded caller-owned IBKR paper receipt review with duplicate and conflict projection"
+          ],
+          "missing": [
+            "Named fill-model execution rather than scenario-envelope validation only",
+            "IBKR paper response decoders and provider conformance fixtures",
+            "IBKR read-only network observation, which remains on hold"
+          ]
+        },
+        {
+          "proposal": "broker_live",
+          "status": "track_partial",
+          "available": [
+            "Content-bound non-executable handoff projection from caller-supplied exact facts",
+            "Bounded caller-owned external execution-receipt review with duplicate and conflict projection"
+          ],
+          "missing": [
+            "Private local import channel that keeps raw account data outside model context",
+            "Named read-only provider adapters and rights review",
+            "Authenticated live sequence and reconciliation conformance evidence"
+          ]
+        },
+        {
+          "proposal": "trade_compliance",
+          "status": "track_partial",
+          "available": [
+            "Pure effective-interval evaluation of bounded caller-supplied boolean rules and facts",
+            "Independent True, False, Unknown, NotApplicable and Conflict outcomes with a content receipt"
+          ],
+          "missing": [
+            "Authoritative rule acquisition and rule-set completeness evidence",
+            "Rule-version comparison and individual predicate-explanation tools",
+            "Typed compound expressions beyond one named boolean fact per rule"
+          ]
+        }
+      ],
       "proposals": [
         "stock_order_book",
         "stock_tape",

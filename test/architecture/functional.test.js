@@ -104,6 +104,34 @@ describe("functional architecture", () => {
     }
   });
 
+  test("T6 partial broker and compliance inventory has no market-depth or transport surface", () => {
+    const partials = [
+      "cn_broker_paper",
+      "broker_readonly_alpaca",
+      "broker_readonly_ibkr",
+      "broker_paper_alpaca",
+      "broker_paper_ibkr",
+      "broker_live",
+      "trade_compliance",
+    ];
+    const depthField =
+      /["'](?:bid|bids|ask|asks|offer|offers|orderBook|marketDepth)["']/i;
+    for (const name of partials) {
+      const directory = join(PLUGINS_DIR, name);
+      const manifest = source(join(directory, "gleam.toml"));
+      expect(
+        manifest.includes("finance_http"),
+        `${name} transport dependency`,
+      ).toBeFalse();
+      for (const path of filesBelow(join(directory, "src"), ".gleam")) {
+        const gleam = source(path);
+        expect(depthField.test(gleam), `${display(path)} depth field`).toBeFalse();
+        expect(gleam.includes("@external"), `${display(path)} FFI`).toBeFalse();
+      }
+      expect(filesBelow(join(directory, "src"), ".mjs"), name).toEqual([]);
+    }
+  });
+
   test("pure finance foundations contain no Promise or FFI boundary", () => {
     for (const name of [
       "finance_core",
@@ -142,6 +170,7 @@ describe("functional architecture", () => {
       "finance_indicators",
       "finance_risk",
       "finance_execution",
+      "finance_broker_review",
       "finance_journal",
       "finance_replay",
       "finance_strategy",

@@ -1,14 +1,33 @@
 # pi_sparkles_trade_compliance
 
-Status: **Designing** · requirements only · no package manifest or code
+Status: **Implemented inventory — `track_partial`** · pure supplied-rule evaluation only
+
+## Implemented partial slice
+
+`evaluate_supplied_trade_rules` evaluates up to 200 versioned caller-supplied
+boolean rules over up to 200 exact facts at one non-negative time. It enforces
+effective intervals and unique rule/version pairs, then reports each rule as
+`True`, `False`, `Unknown`, `NotApplicable`, or `Conflict` with matched facts
+and a content receipt. Aggregate verdict is always absent, and the result is
+non-executable.
+Market-depth fact/rule names are rejected; this plugin does not read
+bid/ask/offer data.
+
+Missing: authoritative rule acquisition and rule-set completeness evidence;
+rule-version comparison and individual predicate-explanation tools; and typed
+compound expressions beyond one named boolean fact per rule.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 44](../../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
 Historical input: [Course Session 25](../../../trading-course/sessions/25_cg_live_broker_effect_contract_20260811.md). The repository's [non-executing broker boundary](../../PRODUCT_READINESS.md#non-executing-broker-boundary--controlling-amendment-2026-08-12) controls.
 
-## Reviewed first slice
+## Reviewed completion target
 
-The plugin evaluates versioned caller/expert-supplied rules over exact account, position, order, market, calendar, and capability facts. Proposed tools inspect a rule set, evaluate one draft, explain individual predicates, and compare rule-set versions.
+The completed plugin evaluates versioned caller/expert-supplied rules over exact
+account, position, instruction, market, calendar, and capability facts. The
+current partial package evaluates one supplied boolean rule set; the remaining
+tools inspect a rule set, explain individual predicates, and compare rule-set
+versions.
 
 Each rule retains jurisdiction/account scope, authority/source, version, effective interval, required facts, boolean/unknown expression, severity label supplied by the rule author, and correction lineage. Results are per-rule `True`, `False`, `Unknown`, `NotApplicable`, or `Conflict`, with exact inputs, intermediate predicates, missing facts, and content receipts.
 

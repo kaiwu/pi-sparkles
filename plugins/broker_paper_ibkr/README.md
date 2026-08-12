@@ -1,15 +1,32 @@
 # pi_sparkles_broker_paper_ibkr
 
-Status: **Designing — US network path on hold** · local simulation/receipt review · no package manifest or code
+Status: **Implemented inventory — `track_partial`** · offline scenario/receipt review only · US network path on hold
+
+## Implemented partial slice
+
+`review_ibkr_paper_evidence` validates bounded caller-supplied deterministic
+scenario envelopes or caller-owned IBKR paper lifecycle observations. It
+content-binds the projection, preserves status lexemes, and reports duplicate
+or conflicting events. It has no gateway, network, or broker authority.
+Scenario mode is evidence validation only and does not predict or calculate a
+fill.
+Caller-supplied source hashes are retained but are not verified against absent
+source bytes and do not authenticate IBKR.
+Market-depth fact names are rejected; this plugin does not read bid/ask/offer
+data.
+
+Missing: named fill-model execution; IBKR paper response decoders and provider
+conformance fixtures; and read-only IBKR network observation, which remains on
+hold.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 44](../../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
 Historical input: [Course Session 25](../../../trading-course/sessions/25_cg_live_broker_effect_contract_20260811.md). The repository's [non-executing broker boundary](../../PRODUCT_READINESS.md#non-executing-broker-boundary--controlling-amendment-2026-08-12) controls.
 
-## Reviewed first slice
+## Reviewed completion target
 
-An IBKR paper-environment receipt-review adapter plus deterministic local
-simulation. It accepts a non-executable plan and imports caller-owned paper
+The completed scope adds an IBKR paper-environment receipt-review adapter plus
+deterministic local simulation. It accepts a non-executable plan and imports caller-owned paper
 activity or observes it through a demonstrably read-only gateway capability.
 It performs no broker mutation.
 
@@ -25,7 +42,8 @@ races, disconnect/reconnect, deduplication, conflicts and endpoint isolation.
 
 ## Gates and exclusions
 
-The US network path is on hold. Fixture/import and deterministic simulation can
-proceed without it. No write-capable credential, paper/live order placement,
+The US network path is on hold. Fixture/import work and deterministic
+scenario-envelope validation can proceed without it; named fill-model execution
+is still missing. No write-capable credential, paper/live order placement,
 routing, cancellation/replacement, automatic retry, hidden confirmation,
 inferred fill, live-readiness judgment, or trade recommendation.
