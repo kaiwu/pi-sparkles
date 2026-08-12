@@ -97,7 +97,20 @@ describe("plain Pi tier packaging", () => {
         "only ProductUseful tiers can be packaged",
       );
     }
-    expect(() => tierPackagePlan(manifest, "T3")).toThrow(
+    const t3 = tierPackagePlan(manifest, "T3");
+    expect(t3.includedTiers.map((tier) => tier.id)).toEqual([
+      "T1",
+      "T2",
+      "T3",
+    ]);
+    expect(t3.plugins).toHaveLength(101);
+    expect(t3.plugins.map((plugin) => plugin.shortName)).toContain(
+      "finance_alerts",
+    );
+    expect(t3.plugins.map((plugin) => plugin.shortName)).not.toContain(
+      "cn_fundamentals",
+    );
+    expect(() => tierPackagePlan(manifest, "T4")).toThrow(
       "only ProductUseful tiers can be packaged",
     );
   });

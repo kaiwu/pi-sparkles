@@ -1,6 +1,11 @@
 # pi_sparkles_finance_catalysts
 
-Status: **Designing** · read-only composition contract · no package manifest or code
+Status: **Tier 3 ProductUseful** · read-only canonical-receipt composition
+
+The implemented `catalyst_timeline` tool validates a bounded,
+SHA-256-bound multi-source receipt packet and produces a stable timeline while
+retaining independent same-event reports, corrections/retractions, language,
+rights, coverage, source failures, and separately labelled track identity.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 

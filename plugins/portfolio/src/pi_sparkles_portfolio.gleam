@@ -12,6 +12,7 @@ import pi_sparkles_portfolio/domain
 import pi_sparkles_portfolio/effect/environment
 import pi_sparkles_portfolio/effect/store
 import pi_sparkles_portfolio_local_file as local_file
+import pi_sparkles_portfolio_review_store as review_store
 
 type PositionRequest {
   PositionRequest(
@@ -27,6 +28,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   register_import(api, snapshots)
   register_summary(api, snapshots)
   register_positions(api, snapshots)
+  review_store.register(api)
   promise.resolve(Nil)
 }
 

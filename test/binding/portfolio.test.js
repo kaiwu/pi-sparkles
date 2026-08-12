@@ -102,13 +102,84 @@ function document(overrides = {}) {
 }
 
 describe("portfolio import and inspection boundary", () => {
-  test("registers only the three Session 21 read-only tools", async () => {
+  test("registers snapshot inspection plus durable review receipt tools", async () => {
     const tools = await harness();
     expect([...tools.keys()]).toEqual([
       "portfolio_import",
       "portfolio_summary",
       "portfolio_positions",
+      "portfolio_review_record",
+      "portfolio_review_inspect",
     ]);
+  });
+
+  test("records an immutable review receipt and replays it in a fresh instance", async () => {
+    const root = directory();
+    const packetPath = join(root, "review.json");
+    const journalPath = join(root, "reviews.jsonl");
+    const packet = JSON.stringify({
+      schemaVersion: 1,
+      contractId: "portfolio_review_v1",
+      reviewId: "review-001",
+      snapshotId: "snap-001",
+      reviewAsOf: "2026-08-12T09:30:00+08:00",
+      reviewerKind: "user",
+      reviewerId: "portfolio-manager-1",
+      priorReviewId: null,
+      supersedes: null,
+      changedSections: ["scenario", "risk", "monitoring"],
+      receiptLinks: [
+        { section: "scenario", receipt: "a".repeat(64) },
+        { section: "risk", receipt: "b".repeat(64) },
+        { section: "monitoring", receipt: "c".repeat(64) },
+      ],
+      conclusionRef: "manager-owned-conclusion-001",
+      privacy: "review_visible",
+    });
+    writeFileSync(packetPath, packet);
+    const input = {
+      journalPath,
+      maximumJournalBytes: 1_000_000,
+      expectedRevision: 0,
+      eventId: "review-event-001",
+      idempotencyKey: "review-idempotency-001",
+      packetPath,
+      expectedSha256: createHash("sha256").update(packet).digest("hex"),
+      maximumPacketBytes: 1_000_000,
+    };
+
+    const first = await harness();
+    const recorded = await execute(first.get("portfolio_review_record"), input);
+    expect(recorded.details).toMatchObject({
+      revision: 1,
+      reviewId: "review-001",
+      snapshotId: "snap-001",
+      reviewerKind: "user",
+      conclusionRef: "manager-owned-conclusion-001",
+    });
+    expect(recorded.details.receiptLinks).toHaveLength(3);
+
+    const repeated = await execute(first.get("portfolio_review_record"), input);
+    expect(repeated.content[0].text).toContain("already stored");
+
+    const resumed = await harness();
+    const inspected = await execute(resumed.get("portfolio_review_inspect"), {
+      journalPath,
+      maximumJournalBytes: 1_000_000,
+      reviewId: "review-001",
+      includePrivate: false,
+      maximumHistory: 20,
+    });
+    expect(inspected.details.portfolioReview).toMatchObject({
+      journalRevision: 1,
+      historyCount: 1,
+      persistence: "user_owned_append_only_jsonl_atomic_cas",
+      selected: {
+        reviewId: "review-001",
+        snapshotId: "snap-001",
+      },
+    });
+    expect(inspected.details.canonicalContentHash).toHaveLength(64);
   });
 
   test("imports exact JSON, redacts privacy, and supports session-local drill-down", async () => {

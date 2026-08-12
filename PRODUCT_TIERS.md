@@ -15,7 +15,7 @@ Pi tools, never plugin-to-plugin source imports.
 | --- | --- | ---: | ---: | --- |
 | **T1 — ProductUseful** | Swing trader | 45 | 45 packages, 0 not implemented | Exact CN daily acquisition → screen → inspect → technicals → plan → simulate → journal/review; bounded HK/US tools remain separately scoped |
 | **T2 — ProductUseful** | Long-term equity investor | 45 | 45 packages, 0 not implemented | Primary filings/disclosures → normalized company facts → comparison/valuation/quality/governance → cited report and thesis review |
-| **T3** | Portfolio manager and monitor | 11 | 3 packages, 8 not implemented | Durable portfolio import/reconciliation → risk/scenarios/attribution/rebalance/tax lots → monitors/alerts and auditable resume |
+| **T3 — ProductUseful** | Portfolio manager and monitor | 11 | 11 packages, 0 not implemented | Durable portfolio import/reconciliation → risk/scenarios/attribution/rebalance/tax lots → monitors/alerts and auditable resume |
 | **T4** | Quant researcher | 7 | 3 packages, 4 not implemented | Point-in-time universe/data → explicit features/events → trial ledger/backtest/comparison → complete reproduction |
 | **T5** | Macro and multi-asset researcher | 16 | 1 package, 15 not implemented | Exact instrument/source legs → reviewed calculations → time-aligned, separately labelled cross-asset research |
 | **T6** | Day trader and execution operator | 11 | 2 packages, 9 not implemented | Authenticated live quote/depth/tape → bounded day workflow → account/paper/compliance → explicitly authorized and reconciled live effects |

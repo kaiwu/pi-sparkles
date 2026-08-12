@@ -26,12 +26,14 @@ describe("tier delivery workflow", () => {
     ]);
   });
 
-  test("freezes the ProductUseful Tier 1 and Tier 2 products", () => {
+  test("freezes ProductUseful dependencies and activates Tier 3", () => {
     const manifest = readTierManifest();
     const tier = tierById(manifest, "T1");
-    const active = tierById(manifest, "T2");
-    expect(manifest.active_tier).toBe("T2");
+    const dependency = tierById(manifest, "T2");
+    const active = tierById(manifest, "T3");
+    expect(manifest.active_tier).toBe("T3");
     expect(tier.status).toBe("product_useful");
+    expect(dependency.status).toBe("product_useful");
     expect(active.status).toBe("product_useful");
     expect(
       verificationBlockers(manifest, tier).some((message) =>
@@ -47,12 +49,15 @@ describe("tier delivery workflow", () => {
       ),
     ).toBeFalse();
     expect(
-      verificationBlockers(manifest, active).some((message) =>
+      verificationBlockers(manifest, dependency).some((message) =>
         message.includes("implementation is missing"),
       ),
     ).toBeFalse();
-    expect(verificationBlockers(manifest, active)).toContain(
+    expect(verificationBlockers(manifest, dependency)).toContain(
       "T2 status must be verifying, found product_useful",
+    );
+    expect(verificationBlockers(manifest, active)).toContain(
+      "T3 status must be verifying, found product_useful",
     );
   });
 

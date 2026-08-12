@@ -1,6 +1,13 @@
 # pi_sparkles_portfolio_scenarios
 
-Status: **Designing** · requirements only · no package manifest or code
+Status: **Tier 3 ProductUseful** · calculation-only price-scenario implementation
+
+The implemented `run_scenario` tool consumes one bounded, SHA-256-bound,
+versioned portfolio receipt packet. It applies exact caller-defined price
+shocks, retains separately labelled market legs and explicit FX operands, and
+returns per-position and aggregate impacts with a canonical receipt. Other
+reviewed shock families remain explicitly unsupported until their required
+sensitivity operands are modelled; there is no silent approximation.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 

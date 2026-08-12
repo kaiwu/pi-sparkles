@@ -1,6 +1,11 @@
 # pi_sparkles_filing_monitor
 
-Status: **Designing** · read-only first slice · no package manifest or code
+Status: **Tier 3 ProductUseful** · read-only canonical-receipt implementation
+
+The implemented `filing_monitor_query` tool validates one bounded,
+SHA-256-bound SEC/CNINFO receipt packet produced by ProductUseful source tools.
+It pages exact filing metadata and retains amendment/correction lineage,
+source failures, entitlement, coverage, original language, and date semantics.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 

@@ -1,6 +1,8 @@
 # pi_sparkles_watchlist
 
-`watchlist` is the first Experimental persistent workflow-state slice. It
+Status: **Tier 3 ProductUseful** · session-branch collection state
+
+`watchlist` is the session-branch persistent workflow-state slice. It
 registers `/watch`, `watchlist_add`, `watchlist_remove`, and
 `watchlist_snapshot`.
 

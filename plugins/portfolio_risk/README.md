@@ -1,6 +1,8 @@
 # portfolio_risk
 
-Experimental, stateless Pi calculation shell for the light `CG-PORTFOLIO`
+Status: **Tier 3 ProductUseful** · stateless light-risk calculation shell
+
+This is the light `CG-PORTFOLIO`
 contract resolved by trading-course
 [Session 18](../../../trading-course/sessions/18_cg_portfolio_light_calculation_contract_20260809.md).
 It consumes caller/LLM-supplied account and position facts and registers one

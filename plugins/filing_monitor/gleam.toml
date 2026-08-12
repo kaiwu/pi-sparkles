@@ -1,0 +1,24 @@
+name = "pi_sparkles_filing_monitor"
+version = "0.1.0"
+target = "javascript"
+description = "Exact SEC and CN filing receipt timeline for Pi"
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+gleam_javascript = ">= 1.0.0 and < 2.0.0"
+finance_local_import = { path = "../../finance/finance_local_import" }
+finance_monitoring = { path = "../../finance/finance_monitoring" }
+pi_gleam = { path = "../../pi_gleam" }
+
+[javascript]
+runtime = "bun"
+
+[metadata.pi]
+tested_version = "0.83.0"
+
+[metadata.finance]
+provider = "versioned canonical SEC/CNINFO receipt import"
+access = "read-only receipt composition"
+track = "cn,us"

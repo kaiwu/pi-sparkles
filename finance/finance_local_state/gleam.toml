@@ -1,0 +1,19 @@
+name = "finance_local_state"
+version = "0.1.0"
+target = "javascript"
+description = "Atomic bounded user-owned local state capability"
+
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+gleam_javascript = ">= 1.0.0 and < 2.0.0"
+
+[javascript]
+runtime = "bun"
+
+[metadata.finance]
+status = "experimental"
+provider = "caller-selected local regular file"
+access = "bounded atomic compare-and-swap"

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "active_tier": "T2",
+  "active_tier": "T3",
   "blocker_policy": "A tier is externally blocked only when no testable provider, public source, user-owned import, fixture, or scripted capability can prove a required contract. Missing alternative providers and production credentials are adapter backlog or runtime dependencies, not blockers. T6 real-time market behavior is the current exception.",
   "statuses": [
     "queued",
@@ -173,7 +173,7 @@
     {
       "id": "T3",
       "name": "Portfolio manager and monitoring product",
-      "status": "queued",
+      "status": "product_useful",
       "depends_on": ["T1", "T2"],
       "track_profile": "One mixed portfolio/import journey whose CN, HK, and US legs remain separately labelled; no per-track portfolio product or repeated journey.",
       "product_outcome": "A portfolio owner or manager can import and reconcile holdings, calculate risk/scenario/attribution/rebalance/tax-lot facts, define durable company and portfolio monitors, receive separately authorized alerts, resume across sessions, and audit every state and notification event.",

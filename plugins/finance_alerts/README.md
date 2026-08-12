@@ -1,6 +1,12 @@
 # pi_sparkles_finance_alerts
 
-Status: **Designing** · durable local predicate contract · no package manifest or code
+Status: **Tier 3 ProductUseful** · durable predicate and scripted notification implementation
+
+Implemented tools define/amend/disable monitors, evaluate exact observation
+batches, inspect replayed audit events, and deliver one separately authorized
+scripted notification. State is caller-owned append-only JSONL updated through
+atomic compare-and-swap; every definition, evaluation and delivery attempt is
+content-bound and survives a fresh plugin instance.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
@@ -16,4 +22,7 @@ Acceptance covers every predicate state, duplicates, cooldown, late/corrected ob
 
 ## Explicit exclusions
 
-No scheduler, source polling, external notification in the first slice, inferred urgency, silence-as-all-clear, monitor sufficiency, recommendation, or automatic trading response. Notification requires a separately authorized destination effect.
+No scheduler, source polling, inferred urgency, silence-as-all-clear, monitor
+sufficiency, recommendation, or automatic trading response. The implemented
+notification adapter is deterministic and local; production channels remain
+optional credentialed adapters and never share or persist credentials.

@@ -1,6 +1,13 @@
 # pi_sparkles_tax_lots
 
-Status: **Designing** · requirements only · no package manifest or code
+Status: **Tier 3 ProductUseful** · caller-rule lot mechanics implementation
+
+The implemented `inspect_lots` and `realized_gain` tools retain exact lot and
+rule receipts and calculate cost per share, Gregorian holding days,
+caller-threshold holding class, unrealized gain, and realized gain for an exact
+caller-selected lot set. They encode no jurisdiction law and provide no tax
+advice or optimal-lot label. The current slice rejects foreign-currency lots
+instead of inventing an FX conversion.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 42](../../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 

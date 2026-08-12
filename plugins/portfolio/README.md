@@ -1,15 +1,16 @@
 # portfolio
 
-Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
+Status: **Tier 3 ProductUseful** · version: `0.1.0` · target: JavaScript/Bun
 
 `portfolio` is the narrow rank-19 implementation authorized by
 [Course Session 21](../../../trading-course/sessions/21_cg_portfolio_import_inspection_contract_20260809.md).
 It imports caller-supplied local CSV or JSON, validates and preserves exact
 snapshot/position facts, reconciles values per currency, and exposes bounded
-session-local inspection. It is not a broker adapter or a portfolio-review
-engine.
+session-local inspection. Tier 3 adds immutable receipt-linked review storage;
+it is still not a broker adapter or an autonomous portfolio-review engine.
 
-The plugin registers three read-only tools:
+The plugin registers three import/inspection tools plus two durable review
+receipt tools:
 
 - `portfolio_import` reads one exact regular file under explicit byte, row,
   column, field, and JSON-depth budgets. It returns a compact summary and keeps
@@ -20,13 +21,22 @@ The plugin registers three read-only tools:
 - `portfolio_positions` pages retained source rows and supports exact optional
   position/source-row ID, track, currency, security-type, identity-resolution,
   unsupported, conflict, and decode-failure filters.
+- `portfolio_review_record` atomically appends one immutable review linking the
+  snapshot and selected risk/scenario/attribution/rebalance/tax-lot receipt
+  hashes, prior review, correction target, changed sections, reviewer, privacy,
+  and optional journal conclusion reference.
+- `portfolio_review_inspect` replays caller-owned review JSONL in a fresh plugin
+  instance and returns bounded correction-linked history.
 
 The in-memory store exists only to reconcile Session 21's required
 `snapshot_id` drill-down with its prohibition on durable storage. It is capped
 at eight immutable snapshots, is serialized through sequential tool execution,
 and does not survive extension reload or Pi restart. Reimporting the same ID and
 same content hash is idempotent; the same ID with different content fails
-closed. No Pi state, database, journal, or local output file is written.
+closed. The imported snapshot still writes no Pi state, database, journal, or
+local output file. Review receipts use a separate explicit caller-owned
+append-only JSONL path with atomic compare-and-swap; source paths and private
+portfolio rows are not copied into it.
 
 ## Canonical import formats
 
