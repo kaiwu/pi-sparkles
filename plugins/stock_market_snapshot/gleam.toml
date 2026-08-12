@@ -25,7 +25,6 @@ runtime = "bun"
 tested_version = "0.83.0"
 
 [metadata.finance]
-status = "experimental"
 provider = "caller-supplied provider-adapter point-in-time breadth packet"
 access = "network-free"
 track = "cn,hk,us"

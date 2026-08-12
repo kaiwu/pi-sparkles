@@ -24,7 +24,6 @@ runtime = "bun"
 tested_version = "0.83.0"
 
 [metadata.finance]
-status = "experimental"
 provider = "caller-supplied finance_replay declarations and receipts"
 access = "stateless read-only inspection and requested calculation"
 track = "cn|hk|us"

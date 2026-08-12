@@ -25,7 +25,6 @@ runtime = "bun"
 tested_version = "0.83.0"
 
 [metadata.finance]
-status = "experimental"
 provider = "caller-supplied canonical finance_replay definitions and events"
 access = "stateless local scripted replay and bounded reproduction export"
 track = "cn|hk|us"

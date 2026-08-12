@@ -1,6 +1,6 @@
 # quant_research
 
-Experimental, stateless Pi shell over the resolved `finance_replay`
+Tier 4 ProductUseful, stateless Pi shell over the resolved `finance_replay`
 shared-research information contract. It registers exactly three tools:
 
 - `inspect_trial_ledger` reconstructs the supplied append-only core ledger,
@@ -52,7 +52,7 @@ research grading, edge/robustness claim, deployment choice, or next-operation
 selection. `pi_backtest` remains a separate later shell for run submission,
 event drill-down, and reproduction export.
 
-Lifecycle: **Experimental**. Additional metrics or statistics require an exact
+Lifecycle: **Tier 4 ProductUseful**. Additional metrics or statistics require an exact
 caller workflow and preserve the same calculation-only boundary. A new tutor
 gate is required if scope expands into research search/optimization, validation
 verdicts, or deployment decisions.

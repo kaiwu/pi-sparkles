@@ -1,7 +1,7 @@
 # stock_market_snapshot
 
-Experimental provider-neutral Pi plugin for inspecting one exact point-in-time
-market breadth packet on the `cn`, `hk`, or `us` track.
+Tier 4 ProductUseful provider-neutral Pi plugin for inspecting one exact
+point-in-time market breadth packet on the `cn`, `hk`, or `us` track.
 
 `market_snapshot` validates one explicit market/MIC scope and a bounded list of
 caller or provider-adapter member facts. It calculates overall and first-seen

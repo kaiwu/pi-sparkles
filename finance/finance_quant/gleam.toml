@@ -1,0 +1,25 @@
+name = "finance_quant"
+version = "0.1.0"
+target = "javascript"
+description = "Point-in-time event, factor, CN market, and screening laws"
+licences = ["Apache-2.0"]
+gleam = ">= 1.18.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0 and < 2.0.0"
+gleam_json = ">= 3.0.2 and < 4.0.0"
+finance_core = { path = "../finance_core" }
+finance_math = { path = "../finance_math" }
+finance_provenance = { path = "../finance_provenance" }
+finance_replay = { path = "../finance_replay" }
+finance_series = { path = "../finance_series" }
+finance_track = { path = "../finance_track" }
+
+[dev-dependencies]
+gleeunit = ">= 1.9.0 and < 2.0.0"
+
+[javascript]
+runtime = "bun"
+
+[metadata.finance]
+status = "experimental"

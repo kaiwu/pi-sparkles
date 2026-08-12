@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "active_tier": "T3",
+  "active_tier": "T4",
   "blocker_policy": "A tier is externally blocked only when no testable provider, public source, user-owned import, fixture, or scripted capability can prove a required contract. Missing alternative providers and production credentials are adapter backlog or runtime dependencies, not blockers. T6 real-time market behavior is the current exception.",
   "statuses": [
     "queued",
@@ -216,7 +216,7 @@
     {
       "id": "T4",
       "name": "Quant researcher product",
-      "status": "queued",
+      "status": "product_useful",
       "depends_on": ["T1"],
       "track_profile": "One US point-in-time dataset/replay anchor journey. Provider-neutral manifests preserve other declared tracks without three separate quant acceptance runs.",
       "product_outcome": "A quant researcher can bind a point-in-time universe and dataset, calculate explicit market/factor/event features, execute bounded replay and backtests, compare declared trials, and reproduce the complete run from canonical manifests without survivorship, vintage, or experiment-ledger ambiguity.",

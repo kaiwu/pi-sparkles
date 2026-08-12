@@ -1,6 +1,6 @@
 # pi_sparkles_cn_market_snapshot
 
-Status: **Designing** · CN market-packet slice · no package manifest or code
+Status: **Tier 4 ProductUseful** · CN market-packet implementation
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 41](../../../trading-course/sessions/41_market_structure_source_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
@@ -15,3 +15,7 @@ Partial/unknown membership, unavailable/conflicting prices, suspensions and dupl
 ## Explicit exclusions
 
 No source acquisition/fallback, market completion, sector-rotation/fund-flow inference, market strength/mood, ranking, forecast, recommendation, or trade action.
+
+The `cn_market_snapshot` Pi tool reads one bounded, content-hashed caller-owned
+JSON packet and delegates all calculations to the shared pure `finance_quant`
+core. Cancellation and byte limits are enforced by the import capability.

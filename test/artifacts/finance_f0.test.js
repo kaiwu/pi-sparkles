@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 for (const name of [
   "backtest",
+  "cn_market_snapshot",
+  "cn_stock_screener",
   "cn_stock_watch",
   "filing_monitor",
   "finance_alerts",
@@ -53,6 +55,8 @@ for (const name of [
   "stock_research_report",
   "stock_screener",
   "stock_history",
+  "stock_event_study",
+  "stock_factor_lab",
   "stock_market_calendar",
   "stock_order_book",
   "stock_market_snapshot",

@@ -1,6 +1,6 @@
 # backtest
 
-Status: **Experimental — Session 17 rank 9 complete 2026-08-08** · version: `0.1.0` · target:
+Status: **Tier 4 ProductUseful — completed 2026-08-12** · version: `0.1.0` · target:
 JavaScript/Bun
 
 `backtest` is a thin, stateless Pi shell over the completed-daily scripted
@@ -159,7 +159,7 @@ the tool promise. Namespaced domain modules contain all definition/event/run/
 manifest validation and rendering. They import no Pi or promises. No JavaScript
 FFI is required.
 
-Lifecycle: **Experimental**. Nine focused tests and four bundled adapter
+Lifecycle: **ProductUseful** in T4. Nine focused tests and four bundled adapter
 scenarios cover:
 
 - canonical definition/event acceptance and hash drift;
