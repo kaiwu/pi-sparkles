@@ -8,7 +8,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { DIST_DIR, WORK_DIR, requirePlugins } from "./modules.js";
 import { run } from "./process.js";
 
-const HOST_EXTERNALS = [
+export const HOST_EXTERNALS = [
   "@earendil-works/pi-coding-agent",
   "@earendil-works/pi-agent-core",
   "@earendil-works/pi-ai",

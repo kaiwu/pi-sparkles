@@ -282,6 +282,67 @@ provider/access metadata only. `tier:install` verifies the package and delegates
 to plain Pi's `pi install`, using user scope by default or Pi's project-local
 scope with `--scope project`.
 
+## Single-entry aggregate package
+
+For a single giant Pi extension entrypoint containing the complete T1-through-T5
+proposal inventory, build the aggregate package:
+
+```sh
+bun run aggregate:build -- T5
+pi --no-extensions -e ./dist/aggregate/t5 --list-models
+bun run aggregate:build -- T5 --verify-only
+```
+
+T5 is the default target. The generated `package.json` declares only
+`./index.js`; initialization follows deterministic tier-ledger order, and
+duplicate named registrations fail before the duplicate reaches Pi. This
+changes the bundle boundary only—the original plugins still own their domain,
+track, receipt, provider, and configuration contracts.
+
+T6 is opt-in:
+
+```sh
+bun run aggregate:build -- T6
+pi --no-extensions -e ./dist/aggregate/t6 --list-models
+```
+
+Until the real-time feed blocker is resolved, that artifact is explicitly a
+private, non-releasable `blocked_inventory_preview`. Its lock lists missing T6
+proposals, partial implementations, and open blockers; loading it does not
+promote T6. Both variants refuse broker order-mutation authority, exclude demo
+and reference extras, and include `aggregate-lock.json`, `CONFIGURATION.md`, and
+`SHA256SUMS` without copying credential values.
+
+## All-in-one npm package
+
+Prepare either aggregate selection under the stable npm identity
+`pi-sparkles-all-in-one`:
+
+```sh
+bun run npm:pack -- T5
+bun run npm:pack -- T6
+bun run npm:pack -- T5 --verify-only
+```
+
+The current T5 output at `dist/npm/t5/` is publish-ready. The current T6 output
+at `dist/npm/t6/` is a private npm-format preview and fails the publish gate
+until T6 becomes complete and ProductUseful. The selected target, maturity,
+plugin count, omissions, partials, and blockers remain visible in package
+metadata and locks even though both selections use one stable npm name.
+
+Each tarball contains one Pi entrypoint, an exact file allowlist, Apache-2.0 and
+third-party notices, configuration names without values, inner and outer
+checksums, npm integrity metadata, no lifecycle scripts, and an exact
+`pdfjs-dist` runtime dependency for PDF CMap assets. Validate npm publication
+rules and name/version availability without publishing:
+
+```sh
+bun run npm:pack -- T5 --no-build --publish-dry-run --check-registry
+```
+
+See [NPM_RELEASE.md](NPM_RELEASE.md) for clean-install testing, versioning, the
+first publication, and the manual tag-bound trusted-publisher workflow.
+
 ## The Hex model
 
 Hex distributes the Gleam **source**, not a directly loadable Pi plugin. A Hex
@@ -319,7 +380,9 @@ bun run tier:audit
 bun run tier:show -- T1
 bun run tier:checkpoint -- T1
 bun run tier:package -- T1
+bun run aggregate:build -- T5
 pi --no-extensions -e ./dist/tiers/t1 --list-models
+pi --no-extensions -e ./dist/aggregate/t5 --list-models
 pi --no-extensions -e ./dist/hello --list-models
 ```
 
@@ -897,6 +960,8 @@ Commands implemented now:
 | `bun run tier:verify -- T1` | preflight and run the expensive repository plus role-acceptance promotion matrix once for a complete tier |
 | `bun run tier:package -- T1` | build and content-lock one plain Pi package for a ProductUseful tier plus its ProductUseful dependencies |
 | `bun run tier:install -- T1 [--scope user|project]` | verify/build the tier package and delegate installation to plain Pi |
+| `bun run aggregate:build -- [T5\|T6]` | bundle tier-ledger plugins behind one Pi entrypoint; T5 is releasable and T6 is a blocked preview |
+| `bun run npm:pack -- [T5\|T6]` | produce and verify the stable all-in-one npm tarball for the selected aggregate without publishing |
 | `bun run check` | diagnostic formatting and warnings-as-errors builds for every package |
 | `bun run build [-- name]` | diagnostic build and bundle for every plugin or one plugin |
 | `bun run test:unit [-- name]` | diagnostic Gleam tests for the binding, finance libraries, and plugins |

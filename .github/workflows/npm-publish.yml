@@ -1,0 +1,105 @@
+name: Publish all-in-one npm package
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Aggregate target selected by the existing builder
+        required: true
+        default: T5
+        type: choice
+        options:
+          - T5
+          - T6
+      dist_tag:
+        description: npm distribution tag
+        required: true
+        default: latest
+        type: choice
+        options:
+          - latest
+          - next
+      confirmation:
+        description: Type publish to authorize the registry mutation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-pi-sparkles-all-in-one
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: inputs.confirmation == 'publish'
+    runs-on: ubuntu-24.04
+    environment: npm
+    steps:
+      - name: Check out the selected tag
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+
+      - name: Set up Gleam
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          otp-version: false
+          gleam-version: 1.18.0
+          version-type: strict
+
+      - name: Require an immutable version tag
+        shell: bash
+        run: |
+          version="$(node --input-type=module -e "import manifest from './package.json' with { type: 'json' }; process.stdout.write(manifest.version)")"
+          test "$GITHUB_REF" = "refs/tags/v${version}"
+
+      - name: Install locked build dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install the tested plain Pi host
+        run: npm install --global @earendil-works/pi-coding-agent@0.84.1
+
+      - name: Run the repository release matrix
+        run: bun run test
+
+      - name: Assemble the selected aggregate from tested artifacts
+        run: bun run aggregate:build -- "${{ inputs.target }}" --no-build
+
+      - name: Pack and validate the npm tarball
+        run: >-
+          bun run npm:pack -- "${{ inputs.target }}" --no-build
+          --publish-dry-run --check-registry
+
+      - name: Resolve the locked tarball path
+        id: tarball
+        shell: bash
+        run: |
+          target="$(printf '%s' '${{ inputs.target }}' | tr '[:upper:]' '[:lower:]')"
+          filename="$(node --input-type=module -e "import record from './dist/npm/${target}/npm-pack.json' with { type: 'json' }; process.stdout.write(record.tarball)")"
+          printf 'path=dist/npm/%s/%s\n' "$target" "$filename" >> "$GITHUB_OUTPUT"
+
+      - name: Retain the reviewed release artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pi-sparkles-all-in-one-${{ inputs.target }}
+          path: |
+            ${{ steps.tarball.outputs.path }}
+            dist/npm/*/npm-pack.json
+            dist/npm/*/RELEASE_SHA256SUMS
+          if-no-files-found: error
+
+      - name: Publish through npm trusted publishing
+        run: npm publish "${{ steps.tarball.outputs.path }}" --tag "${{ inputs.dist_tag }}" --access public --ignore-scripts

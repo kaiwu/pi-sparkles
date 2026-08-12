@@ -58,12 +58,29 @@ once. Add a track-owned adapter/module only when market semantics genuinely
 differ, and keep non-anchor coverage explicitly unsupported or `track_partial`.
 Never infer that one anchor journey proves another track.
 
-Only a ProductUseful tier may become a plain Pi distribution. Use
-`bun run tier:package -- Tn` to build one package containing that tier and its
-ProductUseful dependency closure. The manifest loads each version-locked
-extension separately; never collapse the tier into a boundary-breaking mega
-plugin. Reference/demo `extra_packages` are excluded. The generated lock,
-checksums, configuration inventory, and ProductUseful gate are mandatory.
+Only ProductUseful inventory may become a releasable plain Pi distribution. Use
+`bun run tier:package -- Tn` to build the normal package containing that tier
+and its ProductUseful dependency closure; its manifest loads each version-locked
+extension separately. The explicitly authorized aggregate alternative is
+`bun run aggregate:build -- T5`, which bundles the exact T1-through-T5 proposal
+inventory behind one Pi extension entrypoint. `aggregate:build -- T6` is a
+local, non-releasable blocked-inventory preview: it omits missing proposals and
+records every blocker and partial implementation. Aggregation may combine only
+compiled initialization and distribution; it must not introduce plugin source
+imports, weaken tier maturity, imply promotion, add broker order mutation, or
+change receipt/track/provider authority. Duplicate named registrations must
+fail before reaching Pi. Reference/demo `extra_packages` are excluded. The
+generated lock, checksums, configuration inventory, and applicable
+ProductUseful or blocked-preview gate are mandatory.
+`bun run npm:pack -- T5|T6` turns the selected aggregate into the stable
+`pi-sparkles-all-in-one` npm package. It must pack only a whitelisted,
+content-locked inventory, include the licence and third-party notices, declare
+exact runtime assets, contain no lifecycle scripts or credential values, and
+refuse publication unless the selected aggregate is releasable. T6 may produce
+a private npm-format preview while blocked; the same target becomes publishable
+only after it is complete and ProductUseful. Packaging and verification never
+publish. Registry publication remains a separate explicit, authenticated action
+over the exact verified tarball.
 `bun run tier:install -- Tn` must delegate to plain Pi's package installer and
 must never edit Pi settings, persist credentials, or publish externally itself.
 
@@ -275,6 +292,10 @@ and an annual-shaped complete window.
   a ProductUseful tier and all its ProductUseful tier dependencies.
 - `bun run tier:install -- T1 [--scope user|project]`: verify/build the tier
   package and delegate its local-path installation to the installed Pi CLI.
+- `bun run aggregate:build -- T5|T6`: bundle the selected ledger inventory
+  behind one Pi entrypoint without changing tier maturity.
+- `bun run npm:pack -- T5|T6`: prepare and verify the selected aggregate as the
+  stable all-in-one npm package; it never publishes.
 - `bun run check`, `bun run build [-- hello]`, and
   `bun run test:unit [-- hello]`: inner-loop diagnostics only; a package-level
   pass never changes delivery status.

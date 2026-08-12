@@ -238,6 +238,62 @@ scope is the default; project scope uses Pi's `--local` setting. It does not
 rewrite Pi settings directly, does not publish to npm/Hex/git, and does not
 weaken the ProductUseful gate.
 
+### 6. Build the optional single-entry aggregate
+
+The aggregate builder is an alternative distribution shape for users who want
+one giant Pi extension entrypoint instead of the generic package's separate
+entrypoints:
+
+```sh
+bun run aggregate:build -- T5
+bun run aggregate:build -- T5 --verify-only
+bun run aggregate:build -- T6
+```
+
+T5 is the default and includes every implemented proposal owned by T1 through
+T5 in deterministic tier-ledger order. The output at `dist/aggregate/t5/` has
+exactly one `pi.extensions` entry. It bundles compiled initialization only;
+source packages, typed receipts, market tracks, provider configuration, and
+maturity boundaries remain owned by their original plugins. A runtime guard
+rejects duplicate named commands, tools, shortcuts, flags, providers, and
+renderers before forwarding the conflicting registration to Pi.
+
+T6 must be selected explicitly. While T6 is blocked, its output at
+`dist/aggregate/t6/` is marked `private` and `blocked_inventory_preview`, is not
+a ProductUseful release, and omits proposals without implementation packages.
+Its lock records those omissions, every partial implementation, and every open
+blocker. Building or loading that preview does not alter the tier ledger.
+
+Both variants refuse any plugin that declares broker order-mutation authority,
+exclude `extra_packages`, include no credential values, and generate
+`aggregate-lock.json`, `CONFIGURATION.md`, and `SHA256SUMS`. The normal
+`tier:package` and `tier:install` paths remain unchanged.
+
+### 7. Prepare the selected aggregate for npm
+
+The npm packager consumes the T5 or T6 output selected above and gives either
+selection the stable package identity `pi-sparkles-all-in-one`:
+
+```sh
+bun run npm:pack -- T5
+bun run npm:pack -- T6
+bun run npm:pack -- T5 --verify-only
+```
+
+The selected target remains explicit in npm metadata and both content locks; a
+package name never erases its tier scope. The current T5 package is public and
+publish-ready. The current T6 package is a private, local preview, and the npm
+publish gate rejects it. When T6 has no omissions, partials, or blockers and is
+ProductUseful, the same T6 pipeline becomes releasable. An npm package version
+must be bumped before publishing different content under the stable name.
+
+The tarball has one Pi entrypoint, a strict file allowlist, no lifecycle
+scripts, no credential values, exact `pdfjs-dist` runtime assets, Apache-2.0 and
+third-party notices, npm integrity metadata, inner and outer SHA-256 inventories,
+and a clean-tarball re-verification step. Packaging never publishes. The manual
+tag-bound trusted-publisher workflow and first-release procedure are documented
+in [`NPM_RELEASE.md`](NPM_RELEASE.md).
+
 ## Active ledger decision
 
 T1 through T5 are **ProductUseful**. Their single declared role journeys,

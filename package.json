@@ -3,7 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kaiwu/pi-sparkles.git"
+  },
+  "homepage": "https://github.com/kaiwu/pi-sparkles#readme",
+  "bugs": {
+    "url": "https://github.com/kaiwu/pi-sparkles/issues"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "scripts": {
+    "aggregate:build": "bun scripts/aggregate-bundle.js",
     "build": "bun scripts/build.js",
     "check": "bun scripts/check.js",
     "test:unit": "bun scripts/test-unit.js",
@@ -23,10 +36,17 @@
     "tier:install": "bun scripts/tier-install.js",
     "tier:show": "bun scripts/tier.js show",
     "tier:verify": "bun scripts/tier.js verify",
+    "npm:pack": "bun scripts/npm-package.js",
     "test": "bun scripts/test.js",
     "clean": "bun scripts/clean.js"
   },
   "dependencies": {
     "pdfjs-dist": "6.2.108"
-  }
+  },
+  "description": "Gleam plugins for the Pi coding agent, compiled with Gleam and bundled for Pi with Bun.",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "keywords": []
 }
