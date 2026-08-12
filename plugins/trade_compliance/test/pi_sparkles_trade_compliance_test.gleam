@@ -105,3 +105,105 @@ pub fn market_depth_rule_fails_closed_test() {
   )
   |> should.be_error
 }
+
+pub fn overlapping_active_rule_versions_are_conflicts_test() {
+  let assert Ok(value) =
+    domain.evaluate(
+      EvaluationInput(
+        "evaluate",
+        "cn",
+        hash_a,
+        20,
+        hash_b,
+        [FactInput("caller_fact", "known", Some(True), hash_a)],
+        [
+          RuleInput(
+            "same-rule",
+            "v1",
+            10,
+            None,
+            "caller_fact",
+            True,
+            "caller_high",
+            hash_a,
+          ),
+          RuleInput(
+            "same-rule",
+            "v2",
+            15,
+            None,
+            "caller_fact",
+            True,
+            "caller_high",
+            hash_b,
+          ),
+        ],
+        [],
+      ),
+    )
+  let details = domain.details(value) |> json.to_string
+  details
+  |> string.contains("multiple supplied versions of this rule are active")
+  |> should.be_true
+  details
+  |> string.contains("\"state\":\"Conflict\"")
+  |> should.be_true
+}
+
+pub fn identical_duplicate_facts_are_counted_without_inventing_conflict_test() {
+  let fact = FactInput("caller_fact", "known", Some(True), hash_a)
+  let assert Ok(value) =
+    domain.evaluate(
+      EvaluationInput(
+        "evaluate",
+        "cn",
+        hash_a,
+        20,
+        hash_b,
+        [fact, fact],
+        [
+          RuleInput(
+            "caller-rule",
+            "v1",
+            10,
+            None,
+            "caller_fact",
+            True,
+            "caller_high",
+            hash_b,
+          ),
+        ],
+        [],
+      ),
+    )
+  let details = domain.details(value) |> json.to_string
+  details |> string.contains("\"state\":\"True\"") |> should.be_true
+  details |> string.contains("\"duplicateFactCount\":1") |> should.be_true
+}
+
+pub fn credential_shaped_fact_names_fail_closed_test() {
+  domain.evaluate(
+    EvaluationInput(
+      "evaluate",
+      "cn",
+      hash_a,
+      20,
+      hash_b,
+      [FactInput("access_token", "known", Some(True), hash_a)],
+      [
+        RuleInput(
+          "caller-rule",
+          "v1",
+          10,
+          None,
+          "access_token",
+          True,
+          "caller_high",
+          hash_b,
+        ),
+      ],
+      [],
+    ),
+  )
+  |> should.be_error
+}

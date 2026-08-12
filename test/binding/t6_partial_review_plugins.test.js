@@ -79,6 +79,32 @@ async function execute(tool, input) {
 }
 
 function reviewInput(definition) {
+  const facts =
+    definition.mode === "non_executable_handoff"
+      ? [
+          "instruction_side",
+          "instruction_kind",
+          "quantity",
+          "quantity_unit",
+          "time_in_force",
+          "plan_fingerprint",
+          "rule_reference",
+        ].map((name) => ({
+          name,
+          state: "known",
+          value: `caller:${name}`,
+          unit: "caller_lexeme",
+          sourceReference: hash("c"),
+        }))
+      : [
+          {
+            name: "caller_supplied_activity",
+            state: "known",
+            value: "present",
+            unit: "boolean_lexeme",
+            sourceReference: hash("c"),
+          },
+        ];
   return {
     operationId: `review-${definition.plugin}`,
     mode: definition.mode,
@@ -88,15 +114,7 @@ function reviewInput(definition) {
     listingId: `listing:${definition.plugin}`,
     mic: definition.mic,
     sourceContentHash: hash("b"),
-    facts: [
-      {
-        name: "caller_supplied_activity",
-        state: "known",
-        value: "present",
-        unit: "boolean_lexeme",
-        sourceReference: hash("c"),
-      },
-    ],
+    facts,
     events:
       definition.mode === "non_executable_handoff"
         ? []
@@ -140,6 +158,7 @@ describe("T6 track-partial review shells", () => {
             sourceContentHashVerifiedAgainstBytes: false,
             executable: false,
           });
+          expect(result.details.eventTimeOrder).toBe("not_applicable");
           expect(result.details.missingCapabilities.length).toBeGreaterThan(0);
           expect(result.details.semanticReceipt).toHaveLength(64);
         } finally {
@@ -184,6 +203,82 @@ describe("T6 track-partial review shells", () => {
     expect(result.details.aggregateVerdict).toBeNull();
     expect(result.details.networkPerformed).toBeFalse();
     expect(result.details.executable).toBeFalse();
+    expect(result.details.inputFacts).toHaveLength(1);
+    expect(result.details.suppliedRules).toHaveLength(1);
+    expect(result.details.outcomes[0].duplicateFactCount).toBe(0);
+  });
+
+  test("lifecycle projection distinguishes list order from occurred time", async () => {
+    const definition = partials[0];
+    const tools = await load(definition.plugin);
+    const input = reviewInput(definition);
+    input.events = [
+      {
+        eventReference: hash("d"),
+        statusLexeme: "newer_first",
+        occurredAtUnixMilliseconds: 2_000,
+        sourceReference: hash("e"),
+      },
+      {
+        eventReference: hash("f"),
+        statusLexeme: "older_last",
+        occurredAtUnixMilliseconds: 1_000,
+        sourceReference: hash("a"),
+      },
+    ];
+    const result = await execute(tools.get(definition.tool), input);
+    expect(result.details.eventTimeOrder).toBe("nonmonotonic");
+    expect(result.details.lastInputStatusLexeme).toBe("older_last");
+    expect(result.details.latestOccurredAtUnixMilliseconds).toBe(2_000);
+    expect(result.details.latestOccurredStatusLexemes).toEqual(["newer_first"]);
+    expect(result.details.latestStatusLexeme).toBeUndefined();
+  });
+
+  test("non-executable handoff rejects missing instruction context", async () => {
+    const definition = partials.find(
+      (candidate) => candidate.plugin === "broker_live",
+    );
+    const tools = await load(definition.plugin);
+    const input = reviewInput(definition);
+    input.facts = [input.facts[0]];
+    await expect(execute(tools.get(definition.tool), input)).rejects.toThrow(
+      "requires exactly one known fact",
+    );
+  });
+
+  test("overlapping active compliance versions are explicit conflicts", async () => {
+    const tools = await load("trade_compliance");
+    const baseRule = {
+      ruleId: "caller-rule",
+      effectiveFromUnixMilliseconds: 10,
+      factName: "caller_fact",
+      expected: true,
+      severity: "caller_high",
+    };
+    const result = await execute(tools.get("evaluate_supplied_trade_rules"), {
+      operationId: "overlap",
+      track: "cn",
+      accountReference: hash("a"),
+      asOfUnixMilliseconds: 20,
+      ruleSetContentHash: hash("b"),
+      facts: [
+        {
+          name: "caller_fact",
+          state: "known",
+          value: true,
+          sourceReference: hash("c"),
+        },
+      ],
+      rules: [
+        { ...baseRule, version: "v1", authorityReference: hash("d") },
+        { ...baseRule, version: "v2", authorityReference: hash("e") },
+      ],
+      missingCapabilities: [],
+    });
+    expect(result.details.outcomes.map((outcome) => outcome.state)).toEqual([
+      "Conflict",
+      "Conflict",
+    ]);
   });
 
   test("generic fact envelopes reject market-depth fields at runtime", async () => {

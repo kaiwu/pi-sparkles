@@ -16,6 +16,7 @@ import finance_replay/reproduction
 import finance_replay/scripted
 import finance_replay/trial
 import finance_track
+import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{None, Some}
@@ -121,6 +122,30 @@ pub fn batch_and_incremental_fold_have_identical_semantic_hashes_test() {
   let assert Ok(#(incremental, _, _)) = fold.append(two, third)
   fold.semantic_hash(batch) |> should.equal(fold.semantic_hash(incremental))
   fold.status(batch) |> should.equal(fold.Completed)
+}
+
+pub fn large_replay_and_trial_batches_preserve_input_order_test() {
+  let replay_events = large_replay_events(2000, [])
+  let assert Ok(#(replayed, replay_outcomes, _)) =
+    fold.append_many(fold.empty("run-1", sha("definition")), replay_events)
+  fold.revision(replayed) |> should.equal(2000)
+  list.length(replay_outcomes) |> should.equal(2000)
+  let ordered_replay = fold.events(replayed)
+  let assert Ok(first_replay) = list.first(ordered_replay)
+  let assert Ok(last_replay) = list.last(ordered_replay)
+  event.event_id(first_replay) |> should.equal("large-replay-1")
+  event.event_id(last_replay) |> should.equal("large-replay-2000")
+
+  let trial_events = large_trial_events(2000, [])
+  let assert Ok(#(ledger, trial_outcomes)) =
+    trial.append_many(trial.empty(), trial_events)
+  trial.revision(ledger) |> should.equal(2000)
+  list.length(trial_outcomes) |> should.equal(2000)
+  let ordered_trials = trial.events(ledger)
+  let assert Ok(first_trial) = list.first(ordered_trials)
+  let assert Ok(last_trial) = list.last(ordered_trials)
+  trial.event_id(first_trial) |> should.equal("large-trial-1")
+  trial.event_id(last_trial) |> should.equal("large-trial-2000")
 }
 
 pub fn unknown_required_times_are_reported_as_ambiguous_without_reordering_test() {
@@ -511,6 +536,44 @@ fn replay_event(
 ) -> event.Event {
   replay_event_with_key(id, "key-" <> id, clock, milliseconds, "source-row-1")
   |> event_with_kind(kind)
+}
+
+fn large_replay_events(
+  remaining: Int,
+  reversed: List(event.Event),
+) -> List(event.Event) {
+  case remaining {
+    0 -> reversed
+    value ->
+      large_replay_events(value - 1, [
+        replay_event_with_key(
+          "large-replay-" <> int.to_string(value),
+          "large-replay-key-" <> int.to_string(value),
+          value,
+          value,
+          "bounded",
+        ),
+        ..reversed
+      ])
+  }
+}
+
+fn large_trial_events(
+  remaining: Int,
+  reversed: List(trial.LedgerEvent),
+) -> List(trial.LedgerEvent) {
+  case remaining {
+    0 -> reversed
+    value ->
+      large_trial_events(value - 1, [
+        trial_event(
+          "large-trial-" <> int.to_string(value),
+          "large-trial-key-" <> int.to_string(value),
+          trial.Completed,
+        ),
+        ..reversed
+      ])
+  }
 }
 
 fn event_with_kind(value: event.Event, kind: event.Kind) -> event.Event {

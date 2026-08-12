@@ -11,3 +11,8 @@ The package implements caller-defined price scenarios, Brinson attribution,
 continuous and caller-grid rebalance deltas, and lot cost/gain/holding-period
 arithmetic. It does not select scenarios, benchmarks, targets, constraints,
 lots, tax rules, recommendations, orders, probabilities, or judgments.
+
+The durable review journal uses immutable event, idempotency, and review-ID
+indexes with chronological public projection. JSONL replay reapplies the same
+event budget, field, duplicate, prior-review, and supersession laws as normal
+append; canonical self-hashes do not bypass those invariants.

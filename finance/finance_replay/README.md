@@ -17,7 +17,8 @@ The first completed-daily, long-only cash-equity slice provides:
   omitted feature results, predicate facts, desired instructions, execution
   branches, position facts, benchmarks, and terminal facts;
 - a pure idempotent fold, explicit effects, ambiguity facts, batch/incremental
-  semantic equivalence, and definition/state-bound checkpoints;
+  semantic equivalence, definition/state-bound checkpoints, and immutable
+  indexed identity/idempotency lookup with chronological public projections;
 - append-only trial definitions and ledger events retaining completed, failed,
   cancelled, truncated, duplicate, and unperformed outcomes;
 - explicitly requested net return, win/loss/tie count, drawdown-series, and
@@ -40,9 +41,9 @@ Run the package tests with:
 gleam test
 ```
 
-The 23 offline tests cover exact wire round-trips, track preservation,
+The 24 offline tests cover exact wire round-trips, track preservation,
 partition relations, idempotency conflicts, deterministic folding, ambiguous
 ordering, checkpoint identity, complete trial-status accounting, requested
 calculations, comparison, reproduction portability, compact context, budgets,
-and cancellation.
-
+and cancellation. A scale regression retains order across 2,000 replay events
+and 2,000 trial-ledger events.

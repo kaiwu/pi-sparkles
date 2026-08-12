@@ -19,6 +19,8 @@ or decides a trade or next operation. The LLM owns all of those decisions.
 - `finance_journal/state` provides pure append, atomic in-memory batch append,
   idempotency, replay, current and point-in-time projections, bounded query, and
   caller-selected JSONL export. Contradictory events remain separate facts.
+  Append/replay uses immutable ID and idempotency indexes plus reverse internal
+  storage, while every public projection remains chronological.
 - `finance_journal/checklist` records versioned definitions and partial answer
   states without pass/fail, prompt selection, or scoring.
 - `finance_journal/comparison` calculates only caller-requested exact equality
@@ -55,11 +57,12 @@ gleam check
 gleam test --target javascript
 ```
 
-Twenty deterministic tests cover wire/hash round trips, attribution and
+Twenty-one deterministic tests cover wire/hash round trips, attribution and
 unresolved identity, correction/redaction structure, idempotency conflicts,
 atomic batch transitions, historical projections, replay failures, privacy
 selection, query bounds, partial checklists, requested comparisons and P&L,
-compact context, and same-symbol cross-track isolation.
+compact context, same-symbol cross-track isolation, and a 5,000-event ordered
+batch.
 
 ## Known incremental work
 

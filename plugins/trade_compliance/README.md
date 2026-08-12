@@ -10,12 +10,18 @@ effective intervals and unique rule/version pairs, then reports each rule as
 `True`, `False`, `Unknown`, `NotApplicable`, or `Conflict` with matched facts
 and a content receipt. Aggregate verdict is always absent, and the result is
 non-executable.
+Simultaneously active supplied versions of one rule ID are conflicts. Exact
+duplicate facts are counted without inventing a conflict, while different
+facts under one name remain conflicting. The output retains the full supplied
+fact and rule inventories. Aggregate payload, credential-shaped names,
+control-character text, and unsafe integer times fail closed.
 Market-depth fact/rule names are rejected; this plugin does not read
 bid/ask/offer data.
 
 Missing: authoritative rule acquisition and rule-set completeness evidence;
-rule-version comparison and individual predicate-explanation tools; and typed
-compound expressions beyond one named boolean fact per rule.
+rule-version comparison, correction lineage, and individual
+predicate-explanation tools; and typed compound expressions beyond one named
+boolean fact per rule.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 44](../../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 

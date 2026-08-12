@@ -340,7 +340,7 @@
           "available": [
             "Bounded validation of caller-supplied CN deterministic-scenario envelopes",
             "Bounded review of caller-owned external paper facts and lifecycle observations",
-            "Content receipts, duplicate detection and explicit conflict projection"
+            "Content receipts, duplicate/conflict projection, chronological ambiguity projection, track/MIC isolation and privacy/payload bounds"
           ],
           "missing": [
             "Named CN broker read-only or export contract and provider conformance evidence",
@@ -353,7 +353,7 @@
           "status": "track_partial",
           "available": [
             "Bounded caller-owned Alpaca account-activity fact and lifecycle import review",
-            "Exact provider status lexemes, content receipts, duplicate and conflict projection"
+            "Exact provider status lexemes, content receipts, duplicate/conflict and chronological ambiguity projection with privacy/payload bounds"
           ],
           "missing": [
             "Alpaca response decoders, pagination and provider conformance fixtures",
@@ -366,7 +366,7 @@
           "status": "track_partial",
           "available": [
             "Bounded caller-owned IBKR account-activity fact and lifecycle import review",
-            "Exact provider status lexemes, content receipts, duplicate and conflict projection"
+            "Exact provider status lexemes, content receipts, duplicate/conflict and chronological ambiguity projection with privacy/payload bounds"
           ],
           "missing": [
             "Client Portal or TWS/Gateway response decoders, pacing and session-state fixtures",
@@ -379,7 +379,7 @@
           "status": "track_partial",
           "available": [
             "Bounded validation of caller-supplied deterministic-scenario envelopes",
-            "Bounded caller-owned Alpaca paper receipt review with duplicate and conflict projection"
+            "Bounded caller-owned Alpaca paper receipt review with duplicate/conflict, chronological ambiguity, privacy and payload projection"
           ],
           "missing": [
             "Named fill-model execution rather than scenario-envelope validation only",
@@ -392,7 +392,7 @@
           "status": "track_partial",
           "available": [
             "Bounded validation of caller-supplied deterministic-scenario envelopes",
-            "Bounded caller-owned IBKR paper receipt review with duplicate and conflict projection"
+            "Bounded caller-owned IBKR paper receipt review with duplicate/conflict, chronological ambiguity, privacy and payload projection"
           ],
           "missing": [
             "Named fill-model execution rather than scenario-envelope validation only",
@@ -404,8 +404,8 @@
           "proposal": "broker_live",
           "status": "track_partial",
           "available": [
-            "Content-bound non-executable handoff projection from caller-supplied exact facts",
-            "Bounded caller-owned external execution-receipt review with duplicate and conflict projection"
+            "Content-bound non-executable handoff requiring one unambiguous known side, kind, quantity, unit, time-in-force, plan fingerprint and rule reference",
+            "Bounded caller-owned external execution-receipt review with duplicate/conflict and chronological ambiguity projection plus privacy/payload bounds"
           ],
           "missing": [
             "Private local import channel that keeps raw account data outside model context",
@@ -418,11 +418,11 @@
           "status": "track_partial",
           "available": [
             "Pure effective-interval evaluation of bounded caller-supplied boolean rules and facts",
-            "Independent True, False, Unknown, NotApplicable and Conflict outcomes with a content receipt"
+            "Independent True, False, Unknown, NotApplicable and Conflict outcomes, including overlapping active-version conflicts and exact-duplicate counts, with a content receipt"
           ],
           "missing": [
             "Authoritative rule acquisition and rule-set completeness evidence",
-            "Rule-version comparison and individual predicate-explanation tools",
+            "Rule-version comparison, correction lineage and individual predicate-explanation tools",
             "Typed compound expressions beyond one named boolean fact per rule"
           ]
         }

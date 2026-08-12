@@ -2,6 +2,7 @@ import finance_core/time.{type Instant}
 import finance_journal/event.{type Event}
 import finance_provenance/hash
 import finance_provenance/identity.{type Sha256}
+import gleam/dict.{type Dict}
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -10,7 +11,13 @@ import gleam/string
 pub const maximum_revision = 100_000
 
 pub opaque type State {
-  State(revision: Int, events: List(Event))
+  State(
+    revision: Int,
+    events_reversed: List(Event),
+    events_by_id: Dict(String, Event),
+    events_by_idempotency: Dict(String, Event),
+    journal: Option(String),
+  )
 }
 
 pub type AppendOutcome {
@@ -74,18 +81,21 @@ pub type ExportResult {
 }
 
 pub fn empty() -> State {
-  State(0, [])
+  State(0, [], dict.new(), dict.new(), None)
 }
 
 pub fn append(
   state state_value: State,
   event new_event: Event,
 ) -> Result(#(State, AppendOutcome), StateError) {
-  use _ <- result.try(validate_journal(state_value.events, new_event))
+  use _ <- result.try(validate_journal(state_value.journal, new_event))
   case
-    find_by_idempotency(state_value.events, event.idempotency_key(new_event))
+    dict.get(
+      state_value.events_by_idempotency,
+      event.idempotency_key(new_event),
+    )
   {
-    Some(existing) ->
+    Ok(existing) ->
       case
         event.semantic_content_hash(existing)
         == event.semantic_content_hash(new_event)
@@ -103,18 +113,32 @@ pub fn append(
               |> identity.sha256_value,
           ))
       }
-    None ->
-      case find_by_event_id(state_value.events, event.event_id(new_event)) {
-        Some(_) -> Error(DuplicateEventId(event.event_id(new_event)))
-        None -> {
-          use _ <- result.try(validate_supersedes(state_value.events, new_event))
+    Error(_) ->
+      case dict.has_key(state_value.events_by_id, event.event_id(new_event)) {
+        True -> Error(DuplicateEventId(event.event_id(new_event)))
+        False -> {
+          use _ <- result.try(validate_supersedes(
+            state_value.events_by_id,
+            new_event,
+          ))
           case state_value.revision >= maximum_revision {
             True -> Error(RevisionExhausted)
             False -> {
               let next =
                 State(
                   state_value.revision + 1,
-                  list.append(state_value.events, [new_event]),
+                  [new_event, ..state_value.events_reversed],
+                  dict.insert(
+                    state_value.events_by_id,
+                    event.event_id(new_event),
+                    new_event,
+                  ),
+                  dict.insert(
+                    state_value.events_by_idempotency,
+                    event.idempotency_key(new_event),
+                    new_event,
+                  ),
+                  Some(event.journal_id(new_event)),
                 )
               Ok(#(next, Stored(new_event)))
             }
@@ -231,7 +255,7 @@ pub fn query(state_value: State, request: Query) -> QueryResult {
     maximum,
   ) = request
   let source_events = case include_superseded {
-    True -> state_value.events
+    True -> events(state_value)
     False -> current_events(state_value)
   }
   let matched =
@@ -265,7 +289,7 @@ pub fn export_jsonl(
     include_superseded,
   ) = policy
   let source_events = case include_superseded {
-    True -> state_value.events
+    True -> events(state_value)
     False -> current_events(state_value)
   }
   let visible =
@@ -304,74 +328,70 @@ pub fn encode_jsonl(values: List(Event)) -> String {
 }
 
 pub fn current_events(value: State) -> List(Event) {
-  value.events
-  |> list.filter(fn(candidate) {
-    !list.any(value.events, fn(possible_correction) {
-      event.supersedes(possible_correction) == Some(event.event_id(candidate))
+  let superseded =
+    value.events_reversed
+    |> list.fold(dict.new(), fn(ids, possible_correction) {
+      case event.supersedes(possible_correction) {
+        Some(id) -> dict.insert(ids, id, Nil)
+        None -> ids
+      }
     })
+  value
+  |> events
+  |> list.filter(fn(candidate) {
+    !dict.has_key(superseded, event.event_id(candidate))
   })
 }
 
 pub fn events_as_of(value: State, cutoff: Instant) -> List(Event) {
   let included =
-    value.events
+    value
+    |> events
     |> list.filter(fn(candidate) {
       candidate
       |> event.recording_time
       |> time.unix_milliseconds
       <= time.unix_milliseconds(cutoff)
     })
+  let superseded =
+    included
+    |> list.fold(dict.new(), fn(ids, possible_correction) {
+      case event.supersedes(possible_correction) {
+        Some(id) -> dict.insert(ids, id, Nil)
+        None -> ids
+      }
+    })
   included
   |> list.filter(fn(candidate) {
-    !list.any(included, fn(possible_correction) {
-      event.supersedes(possible_correction) == Some(event.event_id(candidate))
-    })
+    !dict.has_key(superseded, event.event_id(candidate))
   })
 }
 
 fn validate_journal(
-  events: List(Event),
+  current: Option(String),
   new_event: Event,
 ) -> Result(Nil, StateError) {
-  case events {
-    [] -> Ok(Nil)
-    [first, ..] ->
-      case event.journal_id(first) == event.journal_id(new_event) {
+  case current {
+    None -> Ok(Nil)
+    Some(id) ->
+      case id == event.journal_id(new_event) {
         True -> Ok(Nil)
-        False ->
-          Error(JournalMismatch(
-            event.journal_id(first),
-            event.journal_id(new_event),
-          ))
+        False -> Error(JournalMismatch(id, event.journal_id(new_event)))
       }
   }
 }
 
 fn validate_supersedes(
-  events: List(Event),
+  events_by_id: Dict(String, Event),
   new_event: Event,
 ) -> Result(Nil, StateError) {
   case event.supersedes(new_event) {
     None -> Ok(Nil)
     Some(id) ->
-      case find_by_event_id(events, id) {
-        None -> Error(MissingSupersededEvent(id))
-        Some(_) -> Ok(Nil)
+      case dict.has_key(events_by_id, id) {
+        False -> Error(MissingSupersededEvent(id))
+        True -> Ok(Nil)
       }
-  }
-}
-
-fn find_by_event_id(events: List(Event), id: String) -> Option(Event) {
-  case list.find(events, fn(value) { event.event_id(value) == id }) {
-    Ok(value) -> Some(value)
-    Error(_) -> None
-  }
-}
-
-fn find_by_idempotency(events: List(Event), key: String) -> Option(Event) {
-  case list.find(events, fn(value) { event.idempotency_key(value) == key }) {
-    Ok(value) -> Some(value)
-    Error(_) -> None
   }
 }
 
@@ -410,18 +430,15 @@ pub fn revision(value: State) -> Int {
 }
 
 pub fn events(value: State) -> List(Event) {
-  value.events
+  list.reverse(value.events_reversed)
 }
 
 pub fn event_count(value: State) -> Int {
-  list.length(value.events)
+  value.revision
 }
 
 pub fn journal_id(value: State) -> Option(String) {
-  case value.events {
-    [] -> None
-    [first, ..] -> Some(event.journal_id(first))
-  }
+  value.journal
 }
 
 pub fn query_events(value: QueryResult) -> List(Event) {

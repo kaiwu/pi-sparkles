@@ -13,6 +13,9 @@ Caller-supplied source hashes are retained but are not verified against absent
 source bytes and do not authenticate IBKR.
 Market-depth fact names are rejected; this plugin does not read bid/ask/offer
 data.
+The shared boundary also enforces an aggregate semantic-payload budget,
+credential-shaped input rejection, JavaScript-safe event times, cross-track MIC
+exclusion, and separate input-order versus occurred-time lifecycle projections.
 
 Missing: Client Portal or TWS/Gateway response decoders plus pacing/session
 fixtures; reviewed proof of read-only gateway authority and an opt-in provider

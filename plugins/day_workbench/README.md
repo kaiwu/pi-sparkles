@@ -112,8 +112,14 @@ means; T6 can later reconcile only imported or read-only receipts.
 ## Budgets and exclusions
 
 The hard first-slice limits are one listing per packet, 10 MB payload bytes,
-100,000 input events, 10 depth levels per side, 1,000 returned event rows, 100
-workflow transitions, 100 condition codes, and 4,096 bytes per source lexeme.
+100,000 input events, 32 distinct conflicting variants per event ID, 10 depth
+levels per side, 1,000 returned event rows, 1,000 returned integrity issues,
+100 workflow transitions, 100 condition codes, and 4,096 bytes per source
+lexeme. Additional integrity issues are counted as omitted. Embedded times and
+sequences must be JavaScript-safe integers. Event deduplication and reference
+checks use bounded indexes rather than repeated whole-packet scans. A depth
+delta, correction, or cancel/bust may refer only to an earlier snapshot or
+original event; a later matching identifier cannot satisfy causality.
 The caller supplies lower event/output budgets. Exhaustion is explicit with a
 continuation offset; no sampling, hidden dropping, background acquisition,
 network, filesystem, credential, clock, sleep, broker, or order effect exists.

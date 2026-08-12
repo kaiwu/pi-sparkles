@@ -12,6 +12,7 @@ import finance_journal/state
 import finance_provenance/hash as provenance_hash
 import finance_provenance/identity
 import finance_track
+import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/string
@@ -122,6 +123,23 @@ pub fn batch_append_is_purely_atomic_before_storage_test() {
   let invalid = correction("event-2", "two", "key-2", "missing", 20)
   state.append_many(state.empty(), [first, invalid])
   |> should.equal(Error(state.MissingSupersededEvent("missing")))
+}
+
+pub fn large_batch_retains_chronological_order_and_indexed_identity_test() {
+  let events = large_declarations(5000, [])
+  let assert Ok(#(stored, outcomes)) = state.append_many(state.empty(), events)
+  state.event_count(stored) |> should.equal(5000)
+  list.length(outcomes) |> should.equal(5000)
+  let ordered = state.events(stored)
+  let assert Ok(first) = list.first(ordered)
+  let assert Ok(last) = list.last(ordered)
+  event.event_id(first) |> should.equal("large-event-1")
+  event.event_id(last) |> should.equal("large-event-5000")
+  state.append(
+    stored,
+    declaration("large-event-5000", "different", "different-key", 5001),
+  )
+  |> should.equal(Error(state.DuplicateEventId("large-event-5000")))
 }
 
 pub fn jsonl_replay_is_exact_and_blank_middle_line_fails_test() {
@@ -370,6 +388,26 @@ fn declaration(
   at: Int,
 ) -> event.Event {
   declaration_with_privacy(id, payload, key, at, event.Private)
+}
+
+fn large_declarations(
+  remaining: Int,
+  reversed: List(event.Event),
+) -> List(event.Event) {
+  case remaining {
+    0 -> reversed
+    value ->
+      large_declarations(value - 1, [large_declaration(value), ..reversed])
+  }
+}
+
+fn large_declaration(index: Int) -> event.Event {
+  declaration(
+    "large-event-" <> int.to_string(index),
+    "bounded",
+    "large-key-" <> int.to_string(index),
+    index,
+  )
 }
 
 fn declaration_with_privacy(

@@ -1,5 +1,6 @@
 import finance_provenance/hash
 import finance_provenance/identity
+import gleam/dict.{type Dict}
 import gleam/dynamic/decode
 import gleam/int
 import gleam/json
@@ -10,13 +11,22 @@ import gleam/string
 
 pub const maximum_events = 10_000
 
+const maximum_safe_integer = 9_007_199_254_740_991
+
+const maximum_safe_seconds = 9_007_199_254_740
+
 pub type AppendOutcome {
   Stored(event_id: String)
   AlreadyStored(event_id: String)
 }
 
 pub opaque type State {
-  State(revision: Int, events: List(Event))
+  State(
+    revision: Int,
+    events_reversed: List(Event),
+    events_by_id: Dict(String, Event),
+    events_by_idempotency: Dict(String, Event),
+  )
 }
 
 type Event {
@@ -143,6 +153,37 @@ type NotificationRecord {
     destination_ref: String,
     attempt: Int,
     status: String,
+    provider_receipt: String,
+    destination_privacy: String,
+  )
+}
+
+type EvaluationResult {
+  EvaluationResult(
+    observation_id: String,
+    event_identity: String,
+    content_hash: String,
+    corrects: Option(String),
+    result: String,
+    reason: String,
+    match_id: Option(String),
+    predicate_kind: String,
+  )
+}
+
+type EvaluationRecord {
+  EvaluationRecord(
+    batch_id: String,
+    monitor_id: String,
+    definition_event_id: String,
+    definition_content_hash: String,
+    evaluated_at_unix_ms: Int,
+    observation_count: Int,
+    match_count: Int,
+    results: List(EvaluationResult),
+    source_receipts: List(String),
+    source_batch_sha256: String,
+    silence_meaning: String,
   )
 }
 
@@ -171,7 +212,7 @@ pub type AlertError {
 }
 
 pub fn empty() -> State {
-  State(0, [])
+  State(0, [], dict.new(), dict.new())
 }
 
 pub fn revision(state: State) -> Int {
@@ -279,14 +320,20 @@ pub fn evaluate(
       False -> Error(InvalidBatch)
     },
   )
+  use _ <- result.try(case latest_evaluation_time(state, batch.monitor_id) {
+    Some(previous) if batch.evaluated_at_unix_ms < previous ->
+      Error(InvalidBatch)
+    _ -> Ok(Nil)
+  })
   let prior_match_time = latest_match_time(state, batch.monitor_id)
-  let #(rows, match_count) =
+  let seen_observations = observation_times(state, batch.monitor_id)
+  let #(rows, match_count, _) =
     evaluate_observations(
       batch.observations,
       definition,
-      state,
       batch.evaluated_at_unix_ms,
       prior_match_time,
+      seen_observations,
       [],
       0,
     )
@@ -444,11 +491,7 @@ pub fn notification_retry(
   occurred_at_unix_ms: Int,
   privacy: String,
 ) -> Result(Bool, AlertError) {
-  case
-    list.find(state.events, fn(event) {
-      event.idempotency_key == idempotency_key
-    })
-  {
+  case dict.get(state.events_by_idempotency, idempotency_key) {
     Error(_) -> Ok(False)
     Ok(event) ->
       case event.kind {
@@ -487,7 +530,8 @@ pub fn inspect(
   use definition_event <- result.try(current_definition_event(state, monitor_id))
   let assert Ok(definition) = parse_definition(definition_event.payload)
   let matching =
-    state.events
+    state
+    |> events
     |> list.filter(fn(event) {
       event.monitor_id == monitor_id
       && { include_private || event.privacy != "private" }
@@ -529,7 +573,7 @@ pub fn inspect(
 }
 
 pub fn encode_state(state: State) -> String {
-  case state.events {
+  case events(state) {
     [] -> ""
     events ->
       events
@@ -596,28 +640,36 @@ fn append(
   state: State,
   event: Event,
 ) -> Result(#(State, AppendOutcome), AlertError) {
-  case
-    list.find(state.events, fn(value) {
-      value.idempotency_key == event.idempotency_key
-    })
-  {
+  case dict.get(state.events_by_idempotency, event.idempotency_key) {
     Ok(existing) ->
       case
         existing.payload_hash == event.payload_hash
         && existing.kind == event.kind
+        && existing.event_id == event.event_id
+        && existing.monitor_id == event.monitor_id
+        && existing.occurred_at_unix_ms == event.occurred_at_unix_ms
+        && existing.privacy == event.privacy
+        && existing.parent_event_id == event.parent_event_id
       {
         True -> Ok(#(state, AlreadyStored(existing.event_id)))
         False -> Error(IdempotencyConflict(event.idempotency_key))
       }
     Error(_) ->
-      case
-        list.any(state.events, fn(value) { value.event_id == event.event_id })
-      {
+      case dict.has_key(state.events_by_id, event.event_id) {
         True -> Error(DuplicateEventId(event.event_id))
         False if state.revision >= maximum_events -> Error(TooManyEvents)
         False ->
           Ok(#(
-            State(state.revision + 1, list.append(state.events, [event])),
+            State(
+              state.revision + 1,
+              [event, ..state.events_reversed],
+              dict.insert(state.events_by_id, event.event_id, event),
+              dict.insert(
+                state.events_by_idempotency,
+                event.idempotency_key,
+                event,
+              ),
+            ),
             Stored(event.event_id),
           ))
       }
@@ -627,17 +679,22 @@ fn append(
 fn evaluate_observations(
   observations: List(Observation),
   definition: Definition,
-  state: State,
   evaluated_at: Int,
   last_match_at: Option(Int),
+  seen_observations: Dict(String, Int),
   reversed: List(json.Json),
   match_count: Int,
-) -> #(List(json.Json), Int) {
+) -> #(List(json.Json), Int, Dict(String, Int)) {
   case observations {
-    [] -> #(list.reverse(reversed), match_count)
+    [] -> #(list.reverse(reversed), match_count, seen_observations)
     [observation, ..rest] -> {
       let duplicate =
-        observation_seen(state, definition.monitor_id, observation.content_hash)
+        seen_within_window(
+          seen_observations,
+          observation.content_hash,
+          evaluated_at,
+          definition.dedupe.window_seconds,
+        )
       let within_cooldown = case last_match_at {
         Some(value) ->
           evaluated_at - value < definition.dedupe.cooldown_seconds * 1000
@@ -687,12 +744,12 @@ fn evaluate_observations(
       evaluate_observations(
         rest,
         definition,
-        state,
         evaluated_at,
         case allowed_match {
           True -> Some(evaluated_at)
           False -> last_match_at
         },
+        dict.insert(seen_observations, observation.content_hash, evaluated_at),
         [row, ..reversed],
         case allowed_match {
           True -> match_count + 1
@@ -758,70 +815,126 @@ fn evaluate_field(
   }
 }
 
-fn observation_seen(
-  state: State,
-  monitor_id: String,
+fn seen_within_window(
+  seen: Dict(String, Int),
   content_hash: String,
+  evaluated_at: Int,
+  window_seconds: Int,
 ) -> Bool {
-  state.events
-  |> list.any(fn(event) {
-    event.monitor_id == monitor_id
-    && event.kind == "evaluation"
-    && string.contains(event.payload, content_hash)
+  case dict.get(seen, content_hash) {
+    Ok(previous) -> evaluated_at - previous <= window_seconds * 1000
+    Error(_) -> False
+  }
+}
+
+fn observation_times(state: State, monitor_id: String) -> Dict(String, Int) {
+  state
+  |> events
+  |> list.fold(dict.new(), fn(seen, event) {
+    case parsed_evaluation(event) {
+      Some(record) if record.monitor_id == monitor_id ->
+        list.fold(record.results, seen, fn(index, value) {
+          dict.insert(index, value.content_hash, record.evaluated_at_unix_ms)
+        })
+      _ -> seen
+    }
   })
 }
 
+fn latest_evaluation_time(state: State, monitor_id: String) -> Option(Int) {
+  latest_evaluation_time_loop(state.events_reversed, monitor_id)
+}
+
+fn latest_evaluation_time_loop(
+  events: List(Event),
+  monitor_id: String,
+) -> Option(Int) {
+  case events {
+    [] -> None
+    [event, ..rest] ->
+      case parsed_evaluation(event) {
+        Some(record) if record.monitor_id == monitor_id ->
+          Some(record.evaluated_at_unix_ms)
+        _ -> latest_evaluation_time_loop(rest, monitor_id)
+      }
+  }
+}
+
 fn latest_match_time(state: State, monitor_id: String) -> Option(Int) {
-  let matched =
-    state.events
-    |> list.filter(fn(event) {
-      event.monitor_id == monitor_id
-      && event.kind == "evaluation"
-      && string.contains(event.payload, "\"result\":\"matched\"")
-    })
-  case list.last(matched) {
-    Ok(event) -> Some(event.occurred_at_unix_ms)
-    Error(_) -> None
+  latest_match_time_loop(state.events_reversed, monitor_id)
+}
+
+fn latest_match_time_loop(
+  events: List(Event),
+  monitor_id: String,
+) -> Option(Int) {
+  case events {
+    [] -> None
+    [event, ..rest] ->
+      case parsed_evaluation(event) {
+        Some(record) if record.monitor_id == monitor_id ->
+          case
+            list.any(record.results, fn(value) { value.result == "matched" })
+          {
+            True -> Some(record.evaluated_at_unix_ms)
+            False -> latest_match_time_loop(rest, monitor_id)
+          }
+        _ -> latest_match_time_loop(rest, monitor_id)
+      }
   }
 }
 
 fn match_exists(state: State, monitor_id: String, match_id: String) -> Bool {
-  state.events
+  state.events_reversed
   |> list.any(fn(event) {
-    event.monitor_id == monitor_id
-    && event.kind == "evaluation"
-    && string.contains(event.payload, "\"matchId\":\"" <> match_id <> "\"")
+    case parsed_evaluation(event) {
+      Some(record) if record.monitor_id == monitor_id ->
+        list.any(record.results, fn(value) {
+          value.match_id == Some(match_id) && value.result == "matched"
+        })
+      _ -> False
+    }
   })
+}
+
+fn parsed_evaluation(event: Event) -> Option(EvaluationRecord) {
+  case event.kind, json.parse(event.payload, evaluation_record_decoder()) {
+    "evaluation", Ok(record) -> Some(record)
+    _, _ -> None
+  }
 }
 
 fn current_definition_event(
   state: State,
   monitor_id: String,
 ) -> Result(Event, AlertError) {
-  state.events
-  |> list.filter(fn(event) {
+  state.events_reversed
+  |> list.find(fn(event) {
     event.monitor_id == monitor_id && event.kind == "definition"
   })
-  |> list.last
   |> result.map_error(fn(_) { MonitorNotFound(monitor_id) })
 }
 
 fn is_disabled(state: State, monitor_id: String) -> Bool {
-  let definitions =
-    state.events
-    |> list.filter(fn(event) {
+  let definition =
+    state.events_reversed
+    |> list.find(fn(event) {
       event.monitor_id == monitor_id && event.kind == "definition"
     })
   let disabled =
-    state.events
-    |> list.filter(fn(event) {
+    state.events_reversed
+    |> list.find(fn(event) {
       event.monitor_id == monitor_id && event.kind == "disabled"
     })
-  case list.last(definitions), list.last(disabled) {
+  case definition, disabled {
     Ok(definition), Ok(disable_event) ->
       disable_event.revision > definition.revision
     _, _ -> False
   }
+}
+
+fn events(state: State) -> List(Event) {
+  list.reverse(state.events_reversed)
 }
 
 fn validate_definition_lineage(
@@ -875,6 +988,7 @@ fn validate_definition(value: Definition) -> Result(Nil, AlertError) {
       value.schema_version == 1
       && value.contract_id == "finance_alerts_definition_v1"
       && value.version >= 1
+      && value.version <= maximum_safe_integer
     {
       True -> Ok(Nil)
       False -> Error(InvalidDefinition)
@@ -888,19 +1002,42 @@ fn validate_definition(value: Definition) -> Result(Nil, AlertError) {
       value.retention_policy,
     ]),
   )
+  use _ <- result.try(validate_texts(
+    listing_ids
+    |> list.append(sources)
+    |> list.append(event_kinds),
+  ))
+  use _ <- result.try(case value.parent_event_id {
+    Some(id) -> validate_texts([id])
+    None -> Ok(Nil)
+  })
+  use _ <- result.try(unique(listing_ids, "definition_listing_id"))
+  use _ <- result.try(unique(sources, "definition_source_scope"))
+  use _ <- result.try(unique(event_kinds, "definition_event_kind"))
   use _ <- result.try(
     case
       list.contains(["company", "portfolio"], scope_kind)
       && list.contains(["cn", "hk", "us"], track)
+      && predicate_kind == "caller_supplied"
       && list.contains(["exact_equals", "string_contains"], operator)
       && list.length(listing_ids) <= 1000
       && list.length(sources) >= 1
+      && list.length(sources) <= 1000
       && list.length(event_kinds) >= 1
+      && list.length(event_kinds) <= 1000
+      && list.length(value.source_entitlement_receipts) <= 1000
+      && dedupe_kind == "by_content_hash"
+      && cooldown_scope == "per_monitor"
+      && value.retention_policy == "caller_owned_append_only"
       && freshness >= 0
+      && freshness <= maximum_safe_seconds
       && start_at >= 0
+      && start_at <= maximum_safe_integer
       && end_after_start(end_at, start_at)
       && window >= 0
+      && window <= maximum_safe_seconds
       && cooldown >= 0
+      && cooldown <= maximum_safe_seconds
       && max_events >= 1
       && max_events <= 10_000
       && max_matches >= 1
@@ -914,8 +1051,12 @@ fn validate_definition(value: Definition) -> Result(Nil, AlertError) {
       False -> Error(InvalidDefinition)
     },
   )
+  use _ <- result.try(case portfolio_receipt {
+    Some(receipt) -> validate_receipt(receipt, "portfolio_receipt")
+    None -> Ok(Nil)
+  })
   use _ <- result.try(case scope_kind, portfolio_receipt {
-    "portfolio", Some(receipt) -> validate_receipt(receipt, "portfolio_receipt")
+    "portfolio", Some(_) -> Ok(Nil)
     "portfolio", None -> Error(InvalidDefinition)
     "company", _ ->
       case list.length(listing_ids) >= 1 {
@@ -936,6 +1077,8 @@ fn validate_batch(value: Batch) -> Result(Nil, AlertError) {
       && value.contract_id == "finance_alerts_batch_v1"
       && list.length(value.observations) <= 10_000
       && list.length(value.source_receipts) >= 1
+      && list.length(value.source_receipts) <= 1000
+      && safe_integer(value.evaluated_at_unix_ms)
     {
       True -> Ok(Nil)
       False -> Error(InvalidBatch)
@@ -962,27 +1105,40 @@ fn validate_observation(value: Observation) -> Result(Nil, AlertError) {
     value.content_hash,
     value.observation_id <> ".content_hash",
   ))
+  use _ <- result.try(
+    case
+      safe_integer(value.observed_at_unix_ms)
+      && safe_integer(value.knowledge_at_unix_ms)
+    {
+      True -> Ok(Nil)
+      False -> Error(InvalidBatch)
+    },
+  )
+  use _ <- result.try(case value.corrects {
+    Some(id) -> validate_texts([id])
+    None -> Ok(Nil)
+  })
+  use _ <- result.try(case list.length(value.fields) <= 1000 {
+    True -> Ok(Nil)
+    False -> Error(InvalidBatch)
+  })
   use _ <- result.try(unique(
     list.map(value.fields, fn(field) { field.name }),
     "observation_field",
   ))
   list.try_each(value.fields, fn(field) {
     use _ <- result.try(validate_texts([field.name, field.state]))
-    case
-      list.contains(
-        [
-          "known",
-          "unknown",
-          "not_obtained",
-          "conflicting",
-          "decode_failure",
-          "unavailable",
-        ],
-        field.state,
-      )
-    {
-      True -> Ok(Nil)
-      False -> Error(InvalidBatch)
+    case field.state, field.value {
+      "known", Some(value) -> validate_texts([value])
+      "known", None -> Error(InvalidBatch)
+      state, None
+        if state == "unknown"
+        || state == "not_obtained"
+        || state == "conflicting"
+        || state == "decode_failure"
+        || state == "unavailable"
+      -> Ok(Nil)
+      _, _ -> Error(InvalidBatch)
     }
   })
 }
@@ -1012,6 +1168,11 @@ fn new_event(
     case
       revision >= 1
       && occurred_at >= 0
+      && occurred_at <= maximum_safe_integer
+      && list.contains(
+        ["definition", "disabled", "evaluation", "notification"],
+        kind,
+      )
       && list.contains(["private", "review_visible", "exportable"], privacy)
     {
       True -> Ok(Nil)
@@ -1119,12 +1280,226 @@ fn decode_lines(
           {
             False -> Error(InvalidJournal(line))
             True ->
-              case append(state, event) {
-                Ok(#(next, Stored(_))) -> decode_lines(rest, next, line + 1)
-                _ -> Error(InvalidJournal(line))
+              case validate_replayed_event(state, event) {
+                Error(_) -> Error(InvalidJournal(line))
+                Ok(Nil) ->
+                  case append(state, event) {
+                    Ok(#(next, Stored(_))) -> decode_lines(rest, next, line + 1)
+                    _ -> Error(InvalidJournal(line))
+                  }
               }
           }
       }
+  }
+}
+
+fn validate_replayed_event(
+  state: State,
+  event: Event,
+) -> Result(Nil, AlertError) {
+  case event.kind {
+    "definition" -> {
+      use definition <- result.try(parse_definition(event.payload))
+      use _ <- result.try(validate_definition(definition))
+      use _ <- result.try(validate_definition_lineage(state, definition))
+      case
+        definition.monitor_id == event.monitor_id,
+        definition.parent_event_id == event.parent_event_id
+      {
+        True, True -> Ok(Nil)
+        _, _ -> Error(InvalidEvent)
+      }
+    }
+    "disabled" -> {
+      use record <- result.try(
+        json.parse(event.payload, disabled_record_decoder())
+        |> result.map_error(fn(_) { InvalidEvent }),
+      )
+      let #(monitor_id, reason, definition_event_id) = record
+      use _ <- result.try(
+        validate_texts([monitor_id, reason, definition_event_id]),
+      )
+      use definition <- result.try(current_definition_event(state, monitor_id))
+      case
+        monitor_id == event.monitor_id,
+        event.parent_event_id == Some(definition_event_id),
+        definition.event_id == definition_event_id
+      {
+        True, True, True -> Ok(Nil)
+        _, _, _ -> Error(InvalidEvent)
+      }
+    }
+    "evaluation" -> {
+      use record <- result.try(
+        json.parse(event.payload, evaluation_record_decoder())
+        |> result.map_error(fn(_) { InvalidEvent }),
+      )
+      use definition_event <- result.try(current_definition_event(
+        state,
+        record.monitor_id,
+      ))
+      let assert Ok(definition) = parse_definition(definition_event.payload)
+      use _ <- result.try(validate_evaluation_record(record, definition))
+      use _ <- result.try(case is_disabled(state, record.monitor_id) {
+        True -> Error(MonitorDisabled(record.monitor_id))
+        False -> Ok(Nil)
+      })
+      case
+        record.monitor_id == event.monitor_id,
+        event.parent_event_id == Some(record.definition_event_id),
+        definition_event.event_id == record.definition_event_id,
+        definition_event.payload_hash == record.definition_content_hash
+      {
+        True, True, True, True -> Ok(Nil)
+        _, _, _, _ -> Error(InvalidEvent)
+      }
+    }
+    "notification" -> {
+      use record <- result.try(
+        json.parse(event.payload, notification_record_decoder())
+        |> result.map_error(fn(_) { InvalidEvent }),
+      )
+      use _ <- result.try(
+        case
+          record.monitor_id == event.monitor_id && event.parent_event_id == None
+        {
+          True -> Ok(Nil)
+          False -> Error(InvalidEvent)
+        },
+      )
+      use _ <- result.try(
+        validate_texts([
+          record.monitor_id,
+          record.match_id,
+          record.authorization_id,
+          record.channel,
+          record.destination_ref,
+          record.status,
+          record.provider_receipt,
+        ]),
+      )
+      use _ <- result.try(case record.destination_privacy {
+        "opaque_reference_only" -> Ok(Nil)
+        _ -> Error(InvalidEvent)
+      })
+      authorize_notification(
+        state,
+        record.monitor_id,
+        record.match_id,
+        record.authorization_id,
+        record.channel,
+        record.destination_ref,
+        record.attempt,
+      )
+    }
+    _ -> Error(InvalidEvent)
+  }
+}
+
+fn validate_evaluation_record(
+  record: EvaluationRecord,
+  definition: Definition,
+) -> Result(Nil, AlertError) {
+  use _ <- result.try(
+    validate_texts([
+      record.batch_id, record.monitor_id, record.definition_event_id,
+    ]),
+  )
+  use _ <- result.try(validate_receipt(
+    record.definition_content_hash,
+    "evaluation_definition_content_hash",
+  ))
+  use _ <- result.try(validate_receipt(
+    record.source_batch_sha256,
+    "evaluation_source_batch_sha256",
+  ))
+  let actual_matches =
+    record.results
+    |> list.filter(fn(value) { value.result == "matched" })
+    |> list.length
+  use _ <- result.try(
+    case
+      safe_integer(record.evaluated_at_unix_ms)
+      && record.observation_count == list.length(record.results)
+      && record.observation_count >= 0
+      && record.observation_count <= definition.budgets.max_events_per_batch
+      && record.match_count == actual_matches
+      && record.match_count >= 0
+      && record.match_count <= definition.budgets.max_matches_per_batch
+      && list.length(record.source_receipts) >= 1
+      && record.silence_meaning
+      == "no_supplied_observation_matched_not_all_clear"
+    {
+      True -> Ok(Nil)
+      False -> Error(InvalidEvent)
+    },
+  )
+  use _ <- result.try(unique(
+    list.map(record.results, fn(value) { value.observation_id }),
+    "evaluation_observation_id",
+  ))
+  use _ <- result.try(
+    list.try_each(record.source_receipts, fn(value) {
+      validate_receipt(value, "evaluation_source_receipt")
+    }),
+  )
+  list.try_each(record.results, fn(value) {
+    validate_evaluation_result(value, definition)
+  })
+}
+
+fn validate_evaluation_result(
+  value: EvaluationResult,
+  definition: Definition,
+) -> Result(Nil, AlertError) {
+  use _ <- result.try(
+    validate_texts([
+      value.observation_id,
+      value.event_identity,
+      value.result,
+      value.reason,
+      value.predicate_kind,
+    ]),
+  )
+  use _ <- result.try(validate_receipt(
+    value.content_hash,
+    "evaluation_result_content_hash",
+  ))
+  use _ <- result.try(case value.corrects {
+    Some(id) -> validate_texts([id])
+    None -> Ok(Nil)
+  })
+  use _ <- result.try(
+    case
+      list.contains(
+        [
+          "matched",
+          "no_match",
+          "cannot_evaluate",
+          "duplicate_suppressed",
+          "cooldown_suppressed",
+          "match_budget_suppressed",
+          "error",
+        ],
+        value.result,
+      )
+      && value.predicate_kind == definition.predicate.kind
+    {
+      True -> Ok(Nil)
+      False -> Error(InvalidEvent)
+    },
+  )
+  let expected_match_id =
+    definition.monitor_id
+    <> ":"
+    <> value.observation_id
+    <> ":v"
+    <> int.to_string(definition.version)
+  case value.result, value.match_id {
+    "matched", Some(id) if id == expected_match_id -> Ok(Nil)
+    "matched", _ -> Error(InvalidEvent)
+    _, None -> Ok(Nil)
+    _, Some(_) -> Error(InvalidEvent)
   }
 }
 
@@ -1428,6 +1803,8 @@ fn notification_record_decoder() -> decode.Decoder(NotificationRecord) {
   use destination <- decode.field("destinationRef", decode.string)
   use attempt <- decode.field("attempt", decode.int)
   use status <- decode.field("status", decode.string)
+  use provider_receipt <- decode.field("providerReceipt", decode.string)
+  use destination_privacy <- decode.field("destinationPrivacy", decode.string)
   decode.success(NotificationRecord(
     monitor_id,
     match_id,
@@ -1436,6 +1813,77 @@ fn notification_record_decoder() -> decode.Decoder(NotificationRecord) {
     destination,
     attempt,
     status,
+    provider_receipt,
+    destination_privacy,
+  ))
+}
+
+fn disabled_record_decoder() -> decode.Decoder(#(String, String, String)) {
+  use monitor_id <- decode.field("monitorId", decode.string)
+  use reason <- decode.field("reason", decode.string)
+  use definition_event_id <- decode.field("definitionEventId", decode.string)
+  decode.success(#(monitor_id, reason, definition_event_id))
+}
+
+fn evaluation_record_decoder() -> decode.Decoder(EvaluationRecord) {
+  use batch_id <- decode.field("batchId", decode.string)
+  use monitor_id <- decode.field("monitorId", decode.string)
+  use definition_event_id <- decode.field("definitionEventId", decode.string)
+  use definition_hash <- decode.field("definitionContentHash", decode.string)
+  use evaluated_at <- decode.field("evaluatedAtUnixMilliseconds", decode.int)
+  use observation_count <- decode.field("observationCount", decode.int)
+  use match_count <- decode.field("matchCount", decode.int)
+  use results <- decode.field(
+    "results",
+    decode.list(of: evaluation_result_decoder()),
+  )
+  use source_receipts <- decode.field(
+    "sourceReceipts",
+    decode.list(of: decode.string),
+  )
+  use source_batch_sha256 <- decode.field("sourceBatchSha256", decode.string)
+  use silence_meaning <- decode.field("silenceMeaning", decode.string)
+  decode.success(EvaluationRecord(
+    batch_id,
+    monitor_id,
+    definition_event_id,
+    definition_hash,
+    evaluated_at,
+    observation_count,
+    match_count,
+    results,
+    source_receipts,
+    source_batch_sha256,
+    silence_meaning,
+  ))
+}
+
+fn evaluation_result_decoder() -> decode.Decoder(EvaluationResult) {
+  use observation_id <- decode.field("observationId", decode.string)
+  use event_identity <- decode.field("eventIdentity", decode.string)
+  use content_hash <- decode.field("contentHash", decode.string)
+  use corrects <- decode.optional_field(
+    "corrects",
+    None,
+    decode.optional(decode.string),
+  )
+  use result_name <- decode.field("result", decode.string)
+  use reason <- decode.field("reason", decode.string)
+  use match_id <- decode.optional_field(
+    "matchId",
+    None,
+    decode.optional(decode.string),
+  )
+  use predicate_kind <- decode.field("predicateKind", decode.string)
+  decode.success(EvaluationResult(
+    observation_id,
+    event_identity,
+    content_hash,
+    corrects,
+    result_name,
+    reason,
+    match_id,
+    predicate_kind,
   ))
 }
 
@@ -1541,6 +1989,10 @@ fn verify_hash(bytes: String, expected: String) -> Result(Nil, AlertError) {
 fn end_after_start(end: Option(Int), start: Int) -> Bool {
   case end {
     None -> True
-    Some(value) -> value >= start
+    Some(value) -> value >= start && value <= maximum_safe_integer
   }
+}
+
+fn safe_integer(value: Int) -> Bool {
+  value >= 0 && value <= maximum_safe_integer
 }

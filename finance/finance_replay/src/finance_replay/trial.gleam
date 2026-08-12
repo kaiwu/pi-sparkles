@@ -3,6 +3,7 @@ import finance_provenance/hash
 import finance_provenance/identity.{type Sha256}
 import finance_replay/fact.{type Fact}
 import finance_replay/wire
+import gleam/dict.{type Dict}
 import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -75,7 +76,12 @@ pub opaque type LedgerEvent {
 }
 
 pub opaque type Ledger {
-  Ledger(revision: Int, events: List(LedgerEvent))
+  Ledger(
+    revision: Int,
+    events_reversed: List(LedgerEvent),
+    events_by_id: Dict(String, LedgerEvent),
+    events_by_idempotency: Dict(String, LedgerEvent),
+  )
 }
 
 pub type Counts {
@@ -247,15 +253,15 @@ pub fn ledger_event(
 }
 
 pub fn empty() -> Ledger {
-  Ledger(0, [])
+  Ledger(0, [], dict.new(), dict.new())
 }
 
 pub fn append(
   ledger: Ledger,
   new_event: LedgerEvent,
 ) -> Result(#(Ledger, AppendOutcome), LedgerError) {
-  case find_by_idempotency(ledger.events, new_event.idempotency_key) {
-    Some(existing) ->
+  case dict.get(ledger.events_by_idempotency, new_event.idempotency_key) {
+    Ok(existing) ->
       case existing.semantic_content_hash == new_event.semantic_content_hash {
         True -> Ok(#(ledger, AlreadyStored(existing)))
         False ->
@@ -266,17 +272,27 @@ pub fn append(
             identity.sha256_value(new_event.semantic_content_hash),
           ))
       }
-    None ->
-      case find_by_event_id(ledger.events, new_event.ledger_event_id) {
-        Some(_) -> Error(DuplicateLedgerEventId(new_event.ledger_event_id))
-        None ->
+    Error(_) ->
+      case dict.has_key(ledger.events_by_id, new_event.ledger_event_id) {
+        True -> Error(DuplicateLedgerEventId(new_event.ledger_event_id))
+        False ->
           case ledger.revision >= maximum_revision {
             True -> Error(RevisionExhausted)
             False ->
               Ok(#(
                 Ledger(
                   ledger.revision + 1,
-                  list.append(ledger.events, [new_event]),
+                  [new_event, ..ledger.events_reversed],
+                  dict.insert(
+                    ledger.events_by_id,
+                    new_event.ledger_event_id,
+                    new_event,
+                  ),
+                  dict.insert(
+                    ledger.events_by_idempotency,
+                    new_event.idempotency_key,
+                    new_event,
+                  ),
                 ),
                 Stored(new_event),
               ))
@@ -307,7 +323,7 @@ fn append_many_loop(
 }
 
 pub fn counts(value: Ledger) -> Counts {
-  count_loop(value.events, Counts(0, 0, 0, 0, 0, 0, 0))
+  count_loop(value.events_reversed, Counts(0, 0, 0, 0, 0, 0, 0))
 }
 
 fn count_loop(values: List(LedgerEvent), counts: Counts) -> Counts {
@@ -393,7 +409,8 @@ fn count_loop(values: List(LedgerEvent), counts: Counts) -> Counts {
 /// All caller-supplied parameter values remain visible. This function does not
 /// rank, select, or label any value.
 pub fn parameter_values_seen(value: Ledger) -> List(ParameterValue) {
-  value.events
+  value
+  |> events
   |> list.flat_map(fn(value) { value.trial.parameter_values })
 }
 
@@ -403,7 +420,7 @@ pub fn cursor(value: Ledger) -> Sha256 {
       #("revision", json.int(value.revision)),
       #(
         "ordered_ledger_event_hashes",
-        json.array(value.events, fn(value) {
+        json.array(events(value), fn(value) {
           wire.sha_json(value.canonical_content_hash)
         }),
       ),
@@ -691,34 +708,6 @@ fn validate_count(field: String, values: List(a)) -> Result(Nil, TrialError) {
   }
 }
 
-fn find_by_idempotency(
-  values: List(LedgerEvent),
-  key: String,
-) -> Option(LedgerEvent) {
-  case values {
-    [] -> None
-    [value, ..rest] ->
-      case value.idempotency_key == key {
-        True -> Some(value)
-        False -> find_by_idempotency(rest, key)
-      }
-  }
-}
-
-fn find_by_event_id(
-  values: List(LedgerEvent),
-  id: String,
-) -> Option(LedgerEvent) {
-  case values {
-    [] -> None
-    [value, ..rest] ->
-      case value.ledger_event_id == id {
-        True -> Some(value)
-        False -> find_by_event_id(rest, id)
-      }
-  }
-}
-
 fn privacy_name(value: Privacy) -> String {
   case value {
     Private -> "private"
@@ -744,5 +733,5 @@ pub fn revision(value: Ledger) -> Int {
 }
 
 pub fn events(value: Ledger) -> List(LedgerEvent) {
-  value.events
+  list.reverse(value.events_reversed)
 }

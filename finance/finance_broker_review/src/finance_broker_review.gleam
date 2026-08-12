@@ -7,7 +7,7 @@ import finance_provenance/identity
 import gleam/int
 import gleam/json.{type Json}
 import gleam/list
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 
@@ -25,6 +25,10 @@ pub type ReviewError {
 const maximum_facts = 200
 
 const maximum_events = 500
+
+const maximum_payload_bytes = 250_000
+
+const maximum_safe_unix_milliseconds = 9_007_199_254_740_991
 
 pub fn review(
   input: ReviewInput,
@@ -45,6 +49,7 @@ pub fn review(
   })
   use _ <- result.try(valid_text("listingId", input.listing_id, 1, 500))
   use _ <- result.try(valid_text("mic", input.mic, 1, 50))
+  use _ <- result.try(valid_track_mic(input.track, input.mic))
   use _ <- result.try(valid_hash("sourceContentHash", input.source_content_hash))
   use _ <- result.try(
     case
@@ -93,6 +98,16 @@ pub fn review(
         valid_text("missingCapabilities[]", value, 1, 200)
       })
   })
+  let semantic = semantic_json(input, provider, missing)
+  let semantic_text = json.to_string(semantic)
+  use _ <- result.try(
+    case
+      string.byte_size(input.operation_id) + string.byte_size(semantic_text)
+    {
+      total if total <= maximum_payload_bytes -> Ok(Nil)
+      _ -> Error(BudgetExceeded("payloadBytes", maximum_payload_bytes))
+    },
+  )
 
   let duplicate_event_count = duplicate_event_count(input.events)
   let duplicate_fact_count = duplicate_fact_count(input.facts)
@@ -102,26 +117,13 @@ pub fn review(
     [], [] -> "reviewed"
     _, _ -> "conflicting"
   }
-  let latest_status = case list.last(input.events) {
+  let last_input_status = case list.last(input.events) {
     Ok(value) -> Some(value.status_lexeme)
     Error(_) -> None
   }
-  let semantic =
-    json.object([
-      #("contractVersion", json.string("broker_review_v1")),
-      #("provider", json.string(provider)),
-      #("mode", json.string(input.mode)),
-      #("environment", json.string(input.environment)),
-      #("accountReference", json.string(input.account_reference)),
-      #("track", json.string(input.track)),
-      #("listingId", json.string(input.listing_id)),
-      #("mic", json.string(input.mic)),
-      #("sourceContentHash", json.string(input.source_content_hash)),
-      #("facts", json.array(input.facts, fact_json)),
-      #("events", json.array(input.events, event_json)),
-      #("missingCapabilities", json.array(missing, json.string)),
-    ])
-  use digest <- result.try(case semantic |> json.to_string |> hash.text {
+  let #(latest_occurred_at, latest_occurred_statuses) =
+    latest_event_projection(input.events)
+  use digest <- result.try(case hash.text(semantic_text) {
     Ok(value) -> Ok(identity.sha256_value(value))
     Error(_) ->
       Error(InvalidField(
@@ -149,7 +151,16 @@ pub fn review(
       #("duplicateFactCount", json.int(duplicate_fact_count)),
       #("conflictingEventReferences", json.array(event_conflicts, json.string)),
       #("conflictingFactNames", json.array(fact_conflicts, json.string)),
-      #("latestStatusLexeme", json.nullable(latest_status, json.string)),
+      #("lastInputStatusLexeme", json.nullable(last_input_status, json.string)),
+      #("eventTimeOrder", json.string(event_time_order(input.events))),
+      #(
+        "latestOccurredAtUnixMilliseconds",
+        json.nullable(latest_occurred_at, json.int),
+      ),
+      #(
+        "latestOccurredStatusLexemes",
+        json.array(latest_occurred_statuses, json.string),
+      ),
       #("semanticReceipt", json.string(digest)),
       #("missingCapabilities", json.array(missing, json.string)),
       #("networkPerformed", json.bool(False)),
@@ -177,6 +188,28 @@ pub fn receipt(value: Review) -> String {
   value.receipt
 }
 
+pub fn require_unique_known_fact_names(
+  input: ReviewInput,
+  required_names: List(String),
+) -> Result(Nil, ReviewError) {
+  let invalid =
+    list.filter(required_names, fn(name) {
+      let matches = list.filter(input.facts, fn(fact) { fact.name == name })
+      case matches {
+        [fact] -> fact.state != "known"
+        _ -> True
+      }
+    })
+  case invalid {
+    [] -> Ok(Nil)
+    _ ->
+      Error(InvalidField(
+        "facts",
+        "requires exactly one known fact for: " <> string.join(invalid, ", "),
+      ))
+  }
+}
+
 pub fn error_message(value: ReviewError) -> String {
   case value {
     InvalidField(field, reason) ->
@@ -202,6 +235,14 @@ fn validate_fact(value: FactInput) -> Result(Nil, ReviewError) {
       Error(InvalidField(
         "facts[].name",
         "market-depth fields are outside every broker-review plugin scope",
+      ))
+    False -> Ok(Nil)
+  })
+  use _ <- result.try(case field.is_sensitive_name(value.name) {
+    True ->
+      Error(InvalidField(
+        "facts[].name",
+        "credential, secret, and direct-account identifiers are forbidden",
       ))
     False -> Ok(Nil)
   })
@@ -248,12 +289,15 @@ fn validate_event(value: EventInput) -> Result(Nil, ReviewError) {
     "events[].sourceReference",
     value.source_reference,
   ))
-  case value.occurred_at_unix_milliseconds >= 0 {
+  case
+    value.occurred_at_unix_milliseconds >= 0
+    && value.occurred_at_unix_milliseconds <= maximum_safe_unix_milliseconds
+  {
     True -> Ok(Nil)
     False ->
       Error(InvalidField(
         "events[].occurredAtUnixMilliseconds",
-        "must be non-negative",
+        "must be a non-negative JavaScript-safe integer",
       ))
   }
 }
@@ -262,6 +306,26 @@ fn valid_track(value: String) -> Result(Nil, ReviewError) {
   case list.contains(["cn", "hk", "us"], value) {
     True -> Ok(Nil)
     False -> Error(InvalidField("track", "must be cn, hk, or us"))
+  }
+}
+
+fn valid_track_mic(track: String, mic: String) -> Result(Nil, ReviewError) {
+  let normalized = mic |> string.trim |> string.uppercase
+  let known_cn = ["XSHG", "XSHE", "XBSE"]
+  case track {
+    "cn" ->
+      case list.contains(known_cn, normalized) {
+        True -> Ok(Nil)
+        False -> Error(WrongProviderScope("mic", "XSHG, XSHE, or XBSE", mic))
+      }
+    "hk" if normalized == "XHKG" -> Ok(Nil)
+    "hk" -> Error(WrongProviderScope("mic", "XHKG", mic))
+    "us" ->
+      case list.contains(["XSHG", "XSHE", "XBSE", "XHKG"], normalized) {
+        True -> Error(WrongProviderScope("mic", "a non-CN/HK MIC", mic))
+        False -> Ok(Nil)
+      }
+    _ -> Ok(Nil)
   }
 }
 
@@ -280,10 +344,94 @@ fn valid_text(
 ) -> Result(Nil, ReviewError) {
   let normalized = string.trim(value)
   case
-    string.length(normalized) >= minimum && string.length(normalized) <= maximum
+    string.length(normalized) >= minimum
+    && string.length(normalized) <= maximum
+    && !field.has_control_characters(value)
+    && !field.contains_sensitive_lexeme(value)
   {
     True -> Ok(Nil)
-    False -> Error(InvalidField(field, "outside bounded text length"))
+    False ->
+      Error(InvalidField(
+        field,
+        "outside bounded plain-text policy or contains credential-shaped data",
+      ))
+  }
+}
+
+fn semantic_json(
+  input: ReviewInput,
+  provider: String,
+  missing: List(String),
+) -> Json {
+  json.object([
+    #("contractVersion", json.string("broker_review_v1")),
+    #("provider", json.string(provider)),
+    #("mode", json.string(input.mode)),
+    #("environment", json.string(input.environment)),
+    #("accountReference", json.string(input.account_reference)),
+    #("track", json.string(input.track)),
+    #("listingId", json.string(input.listing_id)),
+    #("mic", json.string(input.mic)),
+    #("sourceContentHash", json.string(input.source_content_hash)),
+    #("facts", json.array(input.facts, fact_json)),
+    #("events", json.array(input.events, event_json)),
+    #("missingCapabilities", json.array(missing, json.string)),
+  ])
+}
+
+fn event_time_order(events: List(EventInput)) -> String {
+  case events {
+    [] -> "not_applicable"
+    [_] -> "not_applicable"
+    [first, ..rest] ->
+      event_time_order_loop(first.occurred_at_unix_milliseconds, rest)
+  }
+}
+
+fn event_time_order_loop(previous: Int, events: List(EventInput)) -> String {
+  case events {
+    [] -> "nondecreasing"
+    [event, ..] if event.occurred_at_unix_milliseconds < previous ->
+      "nonmonotonic"
+    [event, ..rest] ->
+      event_time_order_loop(event.occurred_at_unix_milliseconds, rest)
+  }
+}
+
+fn latest_event_projection(
+  events: List(EventInput),
+) -> #(Option(Int), List(String)) {
+  case events {
+    [] -> #(None, [])
+    [first, ..rest] ->
+      latest_event_projection_loop(
+        first.occurred_at_unix_milliseconds,
+        [first.status_lexeme],
+        rest,
+      )
+  }
+}
+
+fn latest_event_projection_loop(
+  latest: Int,
+  statuses: List(String),
+  events: List(EventInput),
+) -> #(Option(Int), List(String)) {
+  case events {
+    [] -> #(Some(latest), list.unique(statuses))
+    [event, ..rest] if event.occurred_at_unix_milliseconds > latest ->
+      latest_event_projection_loop(
+        event.occurred_at_unix_milliseconds,
+        [event.status_lexeme],
+        rest,
+      )
+    [event, ..rest] if event.occurred_at_unix_milliseconds == latest ->
+      latest_event_projection_loop(
+        latest,
+        list.append(statuses, [event.status_lexeme]),
+        rest,
+      )
+    [_, ..rest] -> latest_event_projection_loop(latest, statuses, rest)
   }
 }
 

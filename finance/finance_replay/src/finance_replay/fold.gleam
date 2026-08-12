@@ -4,6 +4,7 @@ import finance_provenance/identity.{type Sha256}
 import finance_replay/event.{type Event}
 import finance_replay/fact.{type Fact, Known}
 import finance_replay/wire
+import gleam/dict.{type Dict}
 import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -31,9 +32,11 @@ pub opaque type State {
     run_id: String,
     run_definition_hash: Sha256,
     revision: Int,
-    events: List(Event),
+    events_reversed: List(Event),
+    events_by_id: Dict(String, Event),
+    events_by_idempotency: Dict(String, Event),
     status: Status,
-    ordering_facts: List(OrderingFact),
+    ordering_facts_reversed: List(OrderingFact),
   )
 }
 
@@ -84,7 +87,7 @@ pub type CheckpointError {
 pub const maximum_revision = 1_000_000
 
 pub fn empty(run_id: String, run_definition_hash: Sha256) -> State {
-  State(run_id, run_definition_hash, 0, [], Open, [])
+  State(run_id, run_definition_hash, 0, [], dict.new(), dict.new(), Open, [])
 }
 
 pub fn append(
@@ -93,9 +96,12 @@ pub fn append(
 ) -> Result(#(State, AppendOutcome, List(Effect)), FoldError) {
   use _ <- result.try(validate_run(state_value, new_event))
   case
-    find_by_idempotency(state_value.events, event.idempotency_key(new_event))
+    dict.get(
+      state_value.events_by_idempotency,
+      event.idempotency_key(new_event),
+    )
   {
-    Some(existing) ->
+    Ok(existing) ->
       case
         event.semantic_content_hash(existing)
         == event.semantic_content_hash(new_event)
@@ -113,10 +119,10 @@ pub fn append(
               |> identity.sha256_value,
           ))
       }
-    None ->
-      case find_by_event_id(state_value.events, event.event_id(new_event)) {
-        Some(_) -> Error(DuplicateEventId(event.event_id(new_event)))
-        None -> append_fresh(state_value, new_event)
+    Error(_) ->
+      case dict.has_key(state_value.events_by_id, event.event_id(new_event)) {
+        True -> Error(DuplicateEventId(event.event_id(new_event)))
+        False -> append_fresh(state_value, new_event)
       }
   }
 }
@@ -129,7 +135,9 @@ fn append_fresh(
     True -> Error(RevisionExhausted)
     False -> {
       use new_ordering <- result.try(ordering_against_last(
-        state_value.events,
+        list.first(state_value.events_reversed)
+          |> result.map(Some)
+          |> result.unwrap(None),
         new_event,
       ))
       let next_status = status_after(state_value.status, event.kind(new_event))
@@ -145,9 +153,22 @@ fn append_fresh(
           state_value.run_id,
           state_value.run_definition_hash,
           state_value.revision + 1,
-          list.append(state_value.events, [new_event]),
+          [new_event, ..state_value.events_reversed],
+          dict.insert(
+            state_value.events_by_id,
+            event.event_id(new_event),
+            new_event,
+          ),
+          dict.insert(
+            state_value.events_by_idempotency,
+            event.idempotency_key(new_event),
+            new_event,
+          ),
           next_status,
-          list.append(state_value.ordering_facts, new_ordering),
+          list.append(
+            list.reverse(new_ordering),
+            state_value.ordering_facts_reversed,
+          ),
         )
       Ok(#(next, Stored(new_event), effects))
     }
@@ -198,12 +219,12 @@ fn validate_run(
 }
 
 fn ordering_against_last(
-  previous: List(Event),
+  previous: Option(Event),
   received: Event,
 ) -> Result(List(OrderingFact), FoldError) {
-  case list.last(previous) {
-    Error(_) -> Ok([])
-    Ok(last) ->
+  case previous {
+    None -> Ok([])
+    Some(last) ->
       case event.replay_clock(received) < event.replay_clock(last) {
         True ->
           Error(ReplayClockMovedBackward(
@@ -291,28 +312,6 @@ fn status_after(previous: Status, kind: event.Kind) -> Status {
   }
 }
 
-fn find_by_idempotency(values: List(Event), key: String) -> Option(Event) {
-  case values {
-    [] -> None
-    [value, ..rest] ->
-      case event.idempotency_key(value) == key {
-        True -> Some(value)
-        False -> find_by_idempotency(rest, key)
-      }
-  }
-}
-
-fn find_by_event_id(values: List(Event), id: String) -> Option(Event) {
-  case values {
-    [] -> None
-    [value, ..rest] ->
-      case event.event_id(value) == id {
-        True -> Some(value)
-        False -> find_by_event_id(rest, id)
-      }
-  }
-}
-
 pub fn semantic_hash(value: State) -> Sha256 {
   let payload =
     json.object([
@@ -320,7 +319,7 @@ pub fn semantic_hash(value: State) -> Sha256 {
       #("run_definition_hash", wire.sha_json(value.run_definition_hash)),
       #(
         "ordered_event_semantic_hashes",
-        json.array(value.events, fn(value) {
+        json.array(events(value), fn(value) {
           value |> event.semantic_content_hash |> wire.sha_json
         }),
       ),
@@ -340,13 +339,13 @@ pub fn checkpoint(
   case wire.valid_text(checkpoint_id, 512) {
     False -> Error(InvalidCheckpointId)
     True -> {
-      let last_event_id = case list.last(state_value.events) {
-        Ok(value) -> Known(event.event_id(value))
-        Error(_) -> fact.NotObtained("run has no replay events")
+      let last_event_id = case state_value.events_reversed {
+        [value, ..] -> Known(event.event_id(value))
+        [] -> fact.NotObtained("run has no replay events")
       }
-      let last_event_time = case list.last(state_value.events) {
-        Ok(value) -> event.event_time(value)
-        Error(_) -> fact.NotObtained("run has no replay events")
+      let last_event_time = case state_value.events_reversed {
+        [value, ..] -> event.event_time(value)
+        [] -> fact.NotObtained("run has no replay events")
       }
       let state_hash = semantic_hash(state_value)
       let payload =
@@ -461,11 +460,11 @@ pub fn status(value: State) -> Status {
 }
 
 pub fn events(value: State) -> List(Event) {
-  value.events
+  list.reverse(value.events_reversed)
 }
 
 pub fn ordering_facts(value: State) -> List(OrderingFact) {
-  value.ordering_facts
+  list.reverse(value.ordering_facts_reversed)
 }
 
 pub fn run_id(value: State) -> String {

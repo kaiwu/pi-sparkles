@@ -26,17 +26,31 @@ type Outcome {
     state: String,
     reason: String,
     matched_facts: List(FactInput),
+    duplicate_fact_count: Int,
   )
 }
+
+const maximum_payload_bytes = 150_000
+
+const maximum_safe_unix_milliseconds = 9_007_199_254_740_991
 
 pub fn evaluate(input: EvaluationInput) -> Result(Response, DomainError) {
   use _ <- result.try(valid_text("operationId", input.operation_id, 1, 500))
   use _ <- result.try(valid_track(input.track))
   use _ <- result.try(valid_hash("accountReference", input.account_reference))
-  use _ <- result.try(case input.as_of_unix_milliseconds >= 0 {
-    True -> Ok(Nil)
-    False -> Error(InvalidField("asOfUnixMilliseconds", "must be non-negative"))
-  })
+  use _ <- result.try(
+    case
+      input.as_of_unix_milliseconds >= 0
+      && input.as_of_unix_milliseconds <= maximum_safe_unix_milliseconds
+    {
+      True -> Ok(Nil)
+      False ->
+        Error(InvalidField(
+          "asOfUnixMilliseconds",
+          "must be a non-negative JavaScript-safe integer",
+        ))
+    },
+  )
   use _ <- result.try(valid_hash(
     "ruleSetContentHash",
     input.rule_set_content_hash,
@@ -60,7 +74,7 @@ pub fn evaluate(input: EvaluationInput) -> Result(Response, DomainError) {
       [
         "authoritative_rule_acquisition",
         "rule_set_completeness_proof",
-        "version_comparison_and_predicate_explanation",
+        "version_comparison_predicate_explanation_and_correction_lineage",
       ],
       input.missing_capabilities,
     )
@@ -70,22 +84,26 @@ pub fn evaluate(input: EvaluationInput) -> Result(Response, DomainError) {
       valid_text("missingCapabilities[]", value, 1, 200)
     }),
   )
+  let semantic = semantic_json(input, missing)
+  let semantic_text = json.to_string(semantic)
+  use _ <- result.try(
+    case
+      string.byte_size(input.operation_id) + string.byte_size(semantic_text)
+    {
+      total if total <= maximum_payload_bytes -> Ok(Nil)
+      _ -> Error(BudgetExceeded("payloadBytes", maximum_payload_bytes))
+    },
+  )
   let outcomes =
     list.map(input.rules, fn(rule) {
-      evaluate_rule(rule, input.facts, input.as_of_unix_milliseconds)
+      evaluate_rule(
+        rule,
+        input.rules,
+        input.facts,
+        input.as_of_unix_milliseconds,
+      )
     })
-  let semantic =
-    json.object([
-      #("contractVersion", json.string("supplied_rule_evaluation_v1")),
-      #("track", json.string(input.track)),
-      #("accountReference", json.string(input.account_reference)),
-      #("asOfUnixMilliseconds", json.int(input.as_of_unix_milliseconds)),
-      #("ruleSetContentHash", json.string(input.rule_set_content_hash)),
-      #("facts", json.array(input.facts, fact_json)),
-      #("rules", json.array(input.rules, rule_json)),
-      #("missingCapabilities", json.array(missing, json.string)),
-    ])
-  use receipt <- result.try(case semantic |> json.to_string |> hash.text {
+  use receipt <- result.try(case hash.text(semantic_text) {
     Ok(value) -> Ok(identity.sha256_value(value))
     Error(_) ->
       Error(InvalidField("semanticReceipt", "could not hash evaluation"))
@@ -100,6 +118,8 @@ pub fn evaluate(input: EvaluationInput) -> Result(Response, DomainError) {
       #("accountReference", json.string(input.account_reference)),
       #("asOfUnixMilliseconds", json.int(input.as_of_unix_milliseconds)),
       #("ruleSetContentHash", json.string(input.rule_set_content_hash)),
+      #("inputFacts", json.array(input.facts, fact_json)),
+      #("suppliedRules", json.array(input.rules, rule_json)),
       #("outcomes", json.array(outcomes, outcome_json)),
       #("semanticReceipt", json.string(receipt)),
       #("missingCapabilities", json.array(missing, json.string)),
@@ -130,43 +150,96 @@ pub fn error_message(value: DomainError) -> String {
 
 fn evaluate_rule(
   rule: RuleInput,
+  rules: List(RuleInput),
   facts: List(FactInput),
   as_of: Int,
 ) -> Outcome {
   let matches = list.filter(facts, fn(fact) { fact.name == rule.fact_name })
-  case active(rule, as_of), matches {
-    False, _ ->
+  let unique_matches = list.unique(matches)
+  let duplicate_count = list.length(matches) - list.length(unique_matches)
+  let overlapping_versions =
+    list.filter(rules, fn(other) {
+      other.rule_id == rule.rule_id
+      && other.version != rule.version
+      && active(other, as_of)
+    })
+  case active(rule, as_of), overlapping_versions, unique_matches {
+    False, _, _ ->
       Outcome(
         rule,
         "NotApplicable",
         "outside supplied effective interval",
         matches,
+        duplicate_count,
       )
-    True, [] -> Outcome(rule, "Unknown", "required fact is missing", [])
-    True, [fact] ->
-      case fact.state, fact.value {
-        "known", Some(value) if value == rule.expected ->
-          Outcome(rule, "True", "known fact matches expected boolean", [fact])
-        "known", Some(_) ->
-          Outcome(rule, "False", "known fact differs from expected boolean", [
-            fact,
-          ])
-        "unknown", _ ->
-          Outcome(rule, "Unknown", "supplied fact is unknown", [fact])
-        "conflicting", _ ->
-          Outcome(rule, "Conflict", "supplied fact is conflicting", [fact])
-        "not_applicable", _ ->
-          Outcome(rule, "NotApplicable", "supplied fact is not applicable", [
-            fact,
-          ])
-        _, _ -> Outcome(rule, "Unknown", "supplied fact is unavailable", [fact])
-      }
-    True, values ->
+    True, [_first, ..], _ ->
       Outcome(
         rule,
         "Conflict",
-        "multiple facts share the required name",
-        values,
+        "multiple supplied versions of this rule are active",
+        matches,
+        duplicate_count,
+      )
+    True, [], [] ->
+      Outcome(rule, "Unknown", "required fact is missing", [], duplicate_count)
+    True, [], [fact] ->
+      case fact.state, fact.value {
+        "known", Some(value) if value == rule.expected ->
+          Outcome(
+            rule,
+            "True",
+            "known fact matches expected boolean",
+            matches,
+            duplicate_count,
+          )
+        "known", Some(_) ->
+          Outcome(
+            rule,
+            "False",
+            "known fact differs from expected boolean",
+            matches,
+            duplicate_count,
+          )
+        "unknown", _ ->
+          Outcome(
+            rule,
+            "Unknown",
+            "supplied fact is unknown",
+            matches,
+            duplicate_count,
+          )
+        "conflicting", _ ->
+          Outcome(
+            rule,
+            "Conflict",
+            "supplied fact is conflicting",
+            matches,
+            duplicate_count,
+          )
+        "not_applicable", _ ->
+          Outcome(
+            rule,
+            "NotApplicable",
+            "supplied fact is not applicable",
+            matches,
+            duplicate_count,
+          )
+        _, _ ->
+          Outcome(
+            rule,
+            "Unknown",
+            "supplied fact is unavailable",
+            matches,
+            duplicate_count,
+          )
+      }
+    True, [], _values ->
+      Outcome(
+        rule,
+        "Conflict",
+        "different facts share the required name",
+        matches,
+        duplicate_count,
       )
   }
 }
@@ -182,6 +255,7 @@ fn active(rule: RuleInput, as_of: Int) -> Bool {
 fn validate_fact(value: FactInput) -> Result(Nil, DomainError) {
   use _ <- result.try(valid_text("facts[].name", value.name, 1, 200))
   use _ <- result.try(non_depth_name("facts[].name", value.name))
+  use _ <- result.try(non_sensitive_name("facts[].name", value.name))
   use _ <- result.try(valid_hash(
     "facts[].sourceReference",
     value.source_reference,
@@ -206,13 +280,15 @@ fn validate_rule(value: RuleInput) -> Result(Nil, DomainError) {
   use _ <- result.try(valid_text("rules[].version", value.version, 1, 100))
   use _ <- result.try(valid_text("rules[].factName", value.fact_name, 1, 200))
   use _ <- result.try(non_depth_name("rules[].factName", value.fact_name))
+  use _ <- result.try(non_sensitive_name("rules[].factName", value.fact_name))
   use _ <- result.try(valid_text("rules[].severity", value.severity, 1, 100))
   use _ <- result.try(valid_hash(
     "rules[].authorityReference",
     value.authority_reference,
   ))
   case
-    value.effective_from_unix_milliseconds >= 0,
+    value.effective_from_unix_milliseconds >= 0
+    && value.effective_from_unix_milliseconds <= maximum_safe_unix_milliseconds,
     value.effective_until_unix_milliseconds
   {
     False, _ ->
@@ -224,6 +300,11 @@ fn validate_rule(value: RuleInput) -> Result(Nil, DomainError) {
       Error(InvalidField(
         "rules[].effectiveUntilUnixMilliseconds",
         "precedes effective start",
+      ))
+    True, Some(until) if until > maximum_safe_unix_milliseconds ->
+      Error(InvalidField(
+        "rules[].effectiveUntilUnixMilliseconds",
+        "must be a JavaScript-safe integer",
       ))
     True, _ -> Ok(Nil)
   }
@@ -259,6 +340,20 @@ fn non_depth_name(
   }
 }
 
+fn non_sensitive_name(
+  field_name: String,
+  value: String,
+) -> Result(Nil, DomainError) {
+  case field.is_sensitive_name(value) {
+    True ->
+      Error(InvalidField(
+        field_name,
+        "credential, secret, and direct-account identifiers are forbidden",
+      ))
+    False -> Ok(Nil)
+  }
+}
+
 fn valid_hash(field: String, value: String) -> Result(Nil, DomainError) {
   case identity.sha256(value) {
     Ok(_) -> Ok(Nil)
@@ -274,11 +369,31 @@ fn valid_text(
 ) -> Result(Nil, DomainError) {
   let normalized = string.trim(value)
   case
-    string.length(normalized) >= minimum && string.length(normalized) <= maximum
+    string.length(normalized) >= minimum
+    && string.length(normalized) <= maximum
+    && !field.has_control_characters(value)
+    && !field.contains_sensitive_lexeme(value)
   {
     True -> Ok(Nil)
-    False -> Error(InvalidField(field, "outside bounded text length"))
+    False ->
+      Error(InvalidField(
+        field,
+        "outside bounded plain-text policy or contains credential-shaped data",
+      ))
   }
+}
+
+fn semantic_json(input: EvaluationInput, missing: List(String)) -> Json {
+  json.object([
+    #("contractVersion", json.string("supplied_rule_evaluation_v1")),
+    #("track", json.string(input.track)),
+    #("accountReference", json.string(input.account_reference)),
+    #("asOfUnixMilliseconds", json.int(input.as_of_unix_milliseconds)),
+    #("ruleSetContentHash", json.string(input.rule_set_content_hash)),
+    #("facts", json.array(input.facts, fact_json)),
+    #("rules", json.array(input.rules, rule_json)),
+    #("missingCapabilities", json.array(missing, json.string)),
+  ])
 }
 
 fn within_budget(
@@ -329,5 +444,6 @@ fn outcome_json(value: Outcome) -> Json {
     #("severity", json.string(value.rule.severity)),
     #("authorityReference", json.string(value.rule.authority_reference)),
     #("matchedFacts", json.array(value.matched_facts, fact_json)),
+    #("duplicateFactCount", json.int(value.duplicate_fact_count)),
   ])
 }

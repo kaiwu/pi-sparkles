@@ -11,6 +11,9 @@ gleam_javascript = ">= 1.0.0 and < 2.0.0"
 finance_broker_review = { path = "../../finance/finance_broker_review" }
 pi_gleam = { path = "../../pi_gleam" }
 
+[dev-dependencies]
+gleeunit = ">= 1.9.0 and < 2.0.0"
+
 [javascript]
 runtime = "bun"
 

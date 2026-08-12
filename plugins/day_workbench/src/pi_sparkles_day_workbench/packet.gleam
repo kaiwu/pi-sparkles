@@ -22,6 +22,12 @@ pub const maximum_condition_codes = 100
 
 pub const maximum_source_lexeme_bytes = 4096
 
+const maximum_conflicting_variants_per_event_id = 32
+
+const maximum_safe_integer = 9_007_199_254_740_991
+
+const maximum_output_issues = 1000
+
 pub type Entitlement {
   RealTime
   Delayed(minutes: Int)
@@ -310,10 +316,14 @@ pub fn integrity_current(packet: Packet) -> Bool {
 }
 
 pub fn calculation_events(packet: Packet) -> List(Event) {
+  let conflict_ids =
+    list.fold(packet.conflicting_event_ids, dict.new(), fn(values, id) {
+      dict.insert(values, id, Nil)
+    })
   packet.events
   |> list.filter(fn(event) {
     event_matches_packet(packet, event)
-    && !list.contains(packet.conflicting_event_ids, event_id(event))
+    && !dict.has_key(conflict_ids, event_id(event))
   })
 }
 
@@ -398,6 +408,7 @@ pub fn inspection_json(
       |> list.map(fn(event) { event_json(event, include_source_lexemes) })
     False -> []
   }
+  let selected_issues = list.take(issue_values, maximum_output_issues)
   json.object([
     #("schemaVersion", json.string("pi_day_inspection_v1")),
     #("packetId", json.string(packet_id)),
@@ -441,7 +452,12 @@ pub fn inspection_json(
       "integrity",
       json.object([
         #("current", json.bool(issue_values == [] && declared_complete)),
-        #("issues", json.array(issue_values, issue_json)),
+        #("issues", json.array(selected_issues, issue_json)),
+        #("returnedIssueCount", json.int(list.length(selected_issues))),
+        #(
+          "omittedIssueCount",
+          json.int(list.length(issue_values) - list.length(selected_issues)),
+        ),
         #(
           "meaning",
           json.string(
@@ -616,6 +632,13 @@ fn validate_raw(
       False -> Error("sequenceScope must be per_feed or per_listing")
     },
   )
+  use _ <- result.try(case expected_heartbeat {
+    Some(value) if value < 1 || value > maximum_safe_integer ->
+      Error(
+        "expectedHeartbeatIntervalMilliseconds must be a positive JavaScript-safe integer",
+      )
+    _ -> Ok(Nil)
+  })
   use _ <- result.try(validate_licence(licence, mic))
   use _ <- result.try(validate_hash("acquisitionReceipt", acquisition_receipt))
   use _ <- result.try(case list.length(raw_events) <= event_budget {
@@ -628,7 +651,8 @@ fn validate_raw(
   })
   use _ <- result.try(phases |> list.try_each(validate_phase))
   use _ <- result.try(raw_events |> list.try_each(validate_event))
-  let #(events, duplicate_count, conflicts) = collapse_events(raw_events)
+  use collapsed <- result.try(collapse_events(raw_events))
+  let #(events, duplicate_count, conflicts) = collapsed
   Ok(Packet(
     packet_id,
     packet_hash,
@@ -681,10 +705,21 @@ fn validate_phase(phase: PhaseInterval) -> Result(Nil, String) {
     True -> Ok(Nil)
     False -> Error("phase has an unsupported name")
   })
-  use _ <- result.try(case start < finish {
-    True -> Ok(Nil)
-    False -> Error("phase interval start must be before end")
-  })
+  use _ <- result.try(
+    case
+      start >= 0
+      && finish >= 0
+      && start <= maximum_safe_integer
+      && finish <= maximum_safe_integer
+      && start < finish
+    {
+      True -> Ok(Nil)
+      False ->
+        Error(
+          "phase interval times must be JavaScript-safe and start before end",
+        )
+    },
+  )
   validate_hash("phase.ruleReceipt", receipt)
 }
 
@@ -721,12 +756,20 @@ fn validate_event(event: Event) -> Result(Nil, String) {
       #("event.sizeUnit", size_unit),
     ]),
   )
-  use _ <- result.try(case provider_time >= 0 && receipt_time >= 0 {
-    True -> Ok(Nil)
-    False -> Error("event timestamps must be non-negative")
+  use _ <- result.try(
+    case safe_integer(provider_time) && safe_integer(receipt_time) {
+      True -> Ok(Nil)
+      False -> Error("event timestamps must be JavaScript-safe integers")
+    },
+  )
+  use _ <- result.try(case common_value.exchange_time_unix_ms {
+    Some(value) if value < 0 || value > maximum_safe_integer ->
+      Error("event exchange time must be a JavaScript-safe integer")
+    _ -> Ok(Nil)
   })
   use _ <- result.try(case sequence {
-    Some(value) if value < 0 -> Error("event sequence must be non-negative")
+    Some(value) if value < 0 || value > maximum_safe_integer ->
+      Error("event sequence must be a JavaScript-safe integer")
     _ -> Ok(Nil)
   })
   use _ <- result.try(case entitlement {
@@ -740,6 +783,12 @@ fn validate_event(event: Event) -> Result(Nil, String) {
     True -> Ok(Nil)
     False -> Error("event condition count exceeds 100")
   })
+  use _ <- result.try(
+    conditions
+    |> list.try_each(fn(value) {
+      validate_texts([#("event.conditions[]", value)])
+    }),
+  )
   use _ <- result.try(
     lexemes
     |> dict.to_list
@@ -775,11 +824,12 @@ fn validate_body(body: Body) -> Result(Nil, String) {
     }
     DepthDelta(base, changes) ->
       case
-        base >= 0,
+        safe_integer(base),
         list.length(changes) <= maximum_depth_levels_per_side * 2
       {
         True, True -> Ok(Nil)
-        False, _ -> Error("depth delta baseSequence must be non-negative")
+        False, _ ->
+          Error("depth delta baseSequence must be a JavaScript-safe integer")
         _, False -> Error("depth delta exceeds 20 changes")
       }
     Correction(original, fields) ->
@@ -793,8 +843,14 @@ fn validate_body(body: Body) -> Result(Nil, String) {
         True -> Ok(Nil)
         False -> Error("cancel/bust originalEventId and reason are required")
       }
+    Halt(_, Some(value)) if value < 0 || value > maximum_safe_integer ->
+      Error("halt resumption time must be a JavaScript-safe integer")
     _ -> Ok(Nil)
   }
+}
+
+fn safe_integer(value: Int) -> Bool {
+  value >= 0 && value <= maximum_safe_integer
 }
 
 fn validate_texts(values: List(#(String, String))) -> Result(Nil, String) {
@@ -815,30 +871,82 @@ fn validate_hash(name: String, value: String) -> Result(Nil, String) {
   |> result.map_error(fn(_) { name <> " must be a SHA-256 hex value" })
 }
 
-fn collapse_events(events: List(Event)) -> #(List(Event), Int, List(String)) {
-  events
-  |> list.fold(#([], 0, []), fn(acc, event) {
-    let #(retained, duplicates, conflicts) = acc
-    case find_event(retained, event_id(event)) {
-      None -> #(list.append(retained, [event]), duplicates, conflicts)
-      Some(existing) if existing == event -> #(
-        retained,
-        duplicates + 1,
-        conflicts,
-      )
-      Some(_) -> #(
-        list.append(retained, [event]),
-        duplicates,
-        list.append(conflicts, [event_id(event)]),
-      )
-    }
-  })
+fn collapse_events(
+  events: List(Event),
+) -> Result(#(List(Event), Int, List(String)), String) {
+  collapse_events_loop(events, [], 0, dict.new(), [], dict.new())
 }
 
-fn find_event(events: List(Event), id: String) -> Option(Event) {
-  case events |> list.find(fn(event) { event_id(event) == id }) {
-    Ok(value) -> Some(value)
-    Error(_) -> None
+fn collapse_events_loop(
+  remaining: List(Event),
+  retained_reversed: List(Event),
+  duplicates: Int,
+  variants_by_id: Dict(String, List(Event)),
+  conflicts_reversed: List(String),
+  conflict_ids: Dict(String, Nil),
+) -> Result(#(List(Event), Int, List(String)), String) {
+  case remaining {
+    [] ->
+      Ok(#(
+        list.reverse(retained_reversed),
+        duplicates,
+        list.reverse(conflicts_reversed),
+      ))
+    [event, ..rest] -> {
+      let id = event_id(event)
+      case dict.get(variants_by_id, id) {
+        Error(_) ->
+          collapse_events_loop(
+            rest,
+            [event, ..retained_reversed],
+            duplicates,
+            dict.insert(variants_by_id, id, [event]),
+            conflicts_reversed,
+            conflict_ids,
+          )
+        Ok(variants) ->
+          case list.contains(variants, event) {
+            True ->
+              collapse_events_loop(
+                rest,
+                retained_reversed,
+                duplicates + 1,
+                variants_by_id,
+                conflicts_reversed,
+                conflict_ids,
+              )
+            False ->
+              case
+                list.length(variants)
+                >= maximum_conflicting_variants_per_event_id
+              {
+                True ->
+                  Error(
+                    "eventId exceeds the 32 distinct conflicting-variant limit",
+                  )
+                False -> {
+                  let #(next_conflicts, next_conflict_ids) = case
+                    dict.has_key(conflict_ids, id)
+                  {
+                    True -> #(conflicts_reversed, conflict_ids)
+                    False -> #(
+                      [id, ..conflicts_reversed],
+                      dict.insert(conflict_ids, id, Nil),
+                    )
+                  }
+                  collapse_events_loop(
+                    rest,
+                    [event, ..retained_reversed],
+                    duplicates,
+                    dict.insert(variants_by_id, id, [event, ..variants]),
+                    next_conflicts,
+                    next_conflict_ids,
+                  )
+                }
+              }
+          }
+      }
+    }
   }
 }
 
@@ -880,16 +988,13 @@ fn event_matches_packet(packet: Packet, event: Event) -> Bool {
 }
 
 fn sequence_issues(events: List(Event)) -> List(SequenceIssue) {
-  let #(_, values) =
+  let #(_, reversed_values) =
     events
     |> list.fold(#(None, []), fn(acc, event) {
       let #(prior, issues) = acc
       let value = common(event)
       case value.sequence, prior {
-        None, _ -> #(
-          prior,
-          list.append(issues, [MissingSequence(value.event_id)]),
-        )
+        None, _ -> #(prior, [MissingSequence(value.event_id), ..issues])
         Some(sequence), None -> #(Some(#(value.event_id, sequence)), issues)
         Some(sequence), Some(#(prior_id, prior_sequence)) -> {
           let next_issues = case int.compare(sequence, prior_sequence) {
@@ -921,53 +1026,63 @@ fn sequence_issues(events: List(Event)) -> List(SequenceIssue) {
             ]
             Gt -> []
           }
-          #(Some(#(value.event_id, sequence)), list.append(issues, next_issues))
+          #(Some(#(value.event_id, sequence)), list.append(next_issues, issues))
         }
       }
     })
-  values
+  list.reverse(reversed_values)
 }
 
 fn depth_issues(events: List(Event)) -> List(SequenceIssue) {
-  let snapshot_sequences =
+  let #(_, issues_reversed) =
     events
-    |> list.filter_map(fn(event) {
+    |> list.fold(#(dict.new(), []), fn(acc, event) {
+      let #(snapshot_sequences, issues) = acc
       case body(event), common(event).sequence {
-        DepthSnapshot(_), Some(sequence) -> Ok(sequence)
-        _, _ -> Error(Nil)
+        DepthSnapshot(_), Some(sequence) -> #(
+          dict.insert(snapshot_sequences, sequence, Nil),
+          issues,
+        )
+        DepthDelta(base, _), _ ->
+          case dict.has_key(snapshot_sequences, base) {
+            True -> #(snapshot_sequences, issues)
+            False -> #(snapshot_sequences, [
+              UnboundDepthDelta(event_id(event), base),
+              ..issues
+            ])
+          }
+        _, _ -> #(snapshot_sequences, issues)
       }
     })
-  events
-  |> list.filter_map(fn(event) {
-    case body(event) {
-      DepthDelta(base, _) ->
-        case list.contains(snapshot_sequences, base) {
-          True -> Error(Nil)
-          False -> Ok(UnboundDepthDelta(event_id(event), base))
-        }
-      _ -> Error(Nil)
-    }
-  })
+  list.reverse(issues_reversed)
 }
 
 fn reference_issues(events: List(Event)) -> List(SequenceIssue) {
-  let ids = list.map(events, event_id)
-  events
-  |> list.filter_map(fn(event) {
-    case body(event) {
-      Correction(original, _) ->
-        case list.contains(ids, original) {
-          True -> Error(Nil)
-          False -> Ok(UnknownOriginalReference(event_id(event), original))
-        }
-      CancelBust(original, _) ->
-        case list.contains(ids, original) {
-          True -> Error(Nil)
-          False -> Ok(UnknownOriginalReference(event_id(event), original))
-        }
-      _ -> Error(Nil)
-    }
-  })
+  let #(_, issues_reversed) =
+    list.fold(events, #(dict.new(), []), fn(acc, event) {
+      let #(seen_ids, issues) = acc
+      let next_issues = case body(event) {
+        Correction(original, _) ->
+          missing_reference_issue(seen_ids, event_id(event), original, issues)
+        CancelBust(original, _) ->
+          missing_reference_issue(seen_ids, event_id(event), original, issues)
+        _ -> issues
+      }
+      #(dict.insert(seen_ids, event_id(event), Nil), next_issues)
+    })
+  list.reverse(issues_reversed)
+}
+
+fn missing_reference_issue(
+  seen_ids: Dict(String, Nil),
+  event: String,
+  original: String,
+  issues: List(SequenceIssue),
+) -> List(SequenceIssue) {
+  case dict.has_key(seen_ids, original) {
+    True -> issues
+    False -> [UnknownOriginalReference(event, original), ..issues]
+  }
 }
 
 fn last_heartbeat(events: List(Event)) -> Option(Int) {

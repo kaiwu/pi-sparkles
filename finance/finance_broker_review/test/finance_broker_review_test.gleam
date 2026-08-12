@@ -4,6 +4,7 @@ import finance_broker_review/decode.{
 }
 import finance_broker_review/field
 import gleam/json
+import gleam/list
 import gleam/option.{Some}
 import gleam/string
 import gleeunit
@@ -152,6 +153,169 @@ pub fn market_depth_name_guard_avoids_unrelated_task_names_test() {
   field.is_market_depth_name("review_task") |> should.be_false
   field.is_market_depth_name("currentBidPrice") |> should.be_true
   field.is_market_depth_name("best_offer_size") |> should.be_true
+}
+
+pub fn event_projection_never_confuses_input_order_with_time_order_test() {
+  let events = [
+    EventInput(hash_b, "newer_first", 20, hash_c),
+    EventInput(hash_c, "older_last", 10, hash_b),
+  ]
+  let assert Ok(value) =
+    finance_broker_review.review(
+      input(events),
+      "fixture_provider",
+      "cn",
+      [#("activity_import", "paper")],
+      ["provider_network_observation"],
+    )
+  let details = finance_broker_review.details(value) |> json.to_string
+  details
+  |> string.contains("\"lastInputStatusLexeme\":\"older_last\"")
+  |> should.be_true
+  details
+  |> string.contains("\"eventTimeOrder\":\"nonmonotonic\"")
+  |> should.be_true
+  details
+  |> string.contains("\"latestOccurredStatusLexemes\":[\"newer_first\"]")
+  |> should.be_true
+}
+
+pub fn equal_latest_event_times_preserve_all_status_lexemes_test() {
+  let events = [
+    EventInput(hash_a, "submitted", 10, hash_a),
+    EventInput(hash_b, "working", 20, hash_b),
+    EventInput(hash_c, "cancelled", 20, hash_c),
+  ]
+  let assert Ok(value) =
+    finance_broker_review.review(
+      input(events),
+      "fixture_provider",
+      "cn",
+      [#("activity_import", "paper")],
+      ["provider_network_observation"],
+    )
+  let details = finance_broker_review.details(value) |> json.to_string
+  details
+  |> string.contains(
+    "\"latestOccurredStatusLexemes\":[\"working\",\"cancelled\"]",
+  )
+  |> should.be_true
+}
+
+pub fn credential_shaped_names_and_values_fail_closed_test() {
+  let base = input([])
+  let named_secret =
+    ReviewInput(
+      base.operation_id,
+      base.mode,
+      base.environment,
+      base.account_reference,
+      base.track,
+      base.listing_id,
+      base.mic,
+      base.source_content_hash,
+      [FactInput("api_key", "known", Some("opaque"), Some("text"), hash_c)],
+      [],
+      [],
+    )
+  finance_broker_review.review(
+    named_secret,
+    "fixture_provider",
+    "cn",
+    [#("activity_import", "paper")],
+    ["provider_network_observation"],
+  )
+  |> should.be_error
+
+  let embedded_secret =
+    ReviewInput(
+      base.operation_id,
+      base.mode,
+      base.environment,
+      base.account_reference,
+      base.track,
+      base.listing_id,
+      base.mic,
+      base.source_content_hash,
+      [
+        FactInput(
+          "note",
+          "known",
+          Some("authorization: Bearer not-allowed"),
+          Some("text"),
+          hash_c,
+        ),
+      ],
+      [],
+      [],
+    )
+  finance_broker_review.review(
+    embedded_secret,
+    "fixture_provider",
+    "cn",
+    [#("activity_import", "paper")],
+    ["provider_network_observation"],
+  )
+  |> should.be_error
+}
+
+pub fn cross_track_mic_fails_closed_test() {
+  let base = input([])
+  finance_broker_review.review(
+    ReviewInput(
+      base.operation_id,
+      base.mode,
+      base.environment,
+      base.account_reference,
+      base.track,
+      base.listing_id,
+      "XNAS",
+      base.source_content_hash,
+      base.facts,
+      base.events,
+      base.missing_capabilities,
+    ),
+    "fixture_provider",
+    "cn",
+    [#("activity_import", "paper")],
+    ["provider_network_observation"],
+  )
+  |> should.be_error
+}
+
+pub fn total_semantic_payload_is_bounded_test() {
+  let base = input([])
+  let facts =
+    list.repeat(
+      FactInput(
+        "oversized_field",
+        "known",
+        Some(string.repeat("x", 3000)),
+        Some("text"),
+        hash_c,
+      ),
+      times: 100,
+    )
+  finance_broker_review.review(
+    ReviewInput(
+      base.operation_id,
+      base.mode,
+      base.environment,
+      base.account_reference,
+      base.track,
+      base.listing_id,
+      base.mic,
+      base.source_content_hash,
+      facts,
+      [],
+      [],
+    ),
+    "fixture_provider",
+    "cn",
+    [#("activity_import", "paper")],
+    ["provider_network_observation"],
+  )
+  |> should.be_error
 }
 
 pub fn missing_scope_changes_the_semantic_receipt_test() {

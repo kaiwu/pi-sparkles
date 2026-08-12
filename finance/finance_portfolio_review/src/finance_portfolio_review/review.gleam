@@ -1,5 +1,6 @@
 import finance_provenance/hash
 import finance_provenance/identity
+import gleam/dict.{type Dict}
 import gleam/dynamic/decode
 import gleam/int
 import gleam/json
@@ -9,7 +10,13 @@ import gleam/result
 import gleam/string
 
 pub opaque type State {
-  State(revision: Int, events: List(Event))
+  State(
+    revision: Int,
+    events_reversed: List(Event),
+    events_by_id: Dict(String, Event),
+    events_by_idempotency: Dict(String, Event),
+    events_by_review_id: Dict(String, Event),
+  )
 }
 
 pub type Outcome {
@@ -77,7 +84,7 @@ pub type ReviewError {
 }
 
 pub fn empty() -> State {
-  State(0, [])
+  State(0, [], dict.new(), dict.new(), dict.new())
 }
 
 pub fn revision(state: State) -> Int {
@@ -97,11 +104,7 @@ pub fn append(
     json.parse(packet, draft_decoder())
     |> result.map_error(fn(_) { InvalidJson }),
   )
-  case
-    list.find(state.events, fn(value) {
-      value.idempotency_key == idempotency_key
-    })
-  {
+  case dict.get(state.events_by_idempotency, idempotency_key) {
     Ok(existing) ->
       case same_draft(existing, draft) {
         True ->
@@ -150,14 +153,10 @@ fn append_new(
   case state.revision >= 10_000 {
     True -> Error(TooManyEvents)
     False ->
-      case list.any(state.events, fn(value) { value.event_id == event_id }) {
+      case dict.has_key(state.events_by_id, event_id) {
         True -> Error(DuplicateEventId(event_id))
         False ->
-          Ok(#(
-            State(next_revision, list.append(state.events, [event])),
-            Stored(event_id),
-            event_json(event),
-          ))
+          Ok(#(retain_event(state, event), Stored(event_id), event_json(event)))
       }
   }
 }
@@ -170,7 +169,8 @@ pub fn inspect(
 ) -> Result(json.Json, ReviewError) {
   use current <- result.try(find_review(state, review_id))
   let history =
-    state.events
+    state
+    |> events
     |> list.filter(fn(event) {
       { event.review_id == review_id || event.supersedes == Some(review_id) }
       && { include_private || event.privacy != "private" }
@@ -210,7 +210,7 @@ pub fn inspect(
 }
 
 pub fn encode_state(state: State) -> String {
-  case state.events {
+  case events(state) {
     [] -> ""
     events ->
       events
@@ -297,9 +297,7 @@ fn validate_draft(state: State, draft: Draft) -> Result(Nil, ReviewError) {
     }),
   )
   use _ <- result.try(
-    case
-      list.any(state.events, fn(value) { value.review_id == draft.review_id })
-    {
+    case dict.has_key(state.events_by_review_id, draft.review_id) {
       True -> Error(DuplicateReviewId(draft.review_id))
       False -> Ok(Nil)
     },
@@ -307,7 +305,7 @@ fn validate_draft(state: State, draft: Draft) -> Result(Nil, ReviewError) {
   use _ <- result.try(case draft.prior_review_id {
     None -> Ok(Nil)
     Some(id) ->
-      case list.any(state.events, fn(value) { value.review_id == id }) {
+      case dict.has_key(state.events_by_review_id, id) {
         True -> Ok(Nil)
         False -> Error(PriorReviewMissing(id))
       }
@@ -315,7 +313,7 @@ fn validate_draft(state: State, draft: Draft) -> Result(Nil, ReviewError) {
   case draft.supersedes {
     None -> Ok(Nil)
     Some(id) ->
-      case list.any(state.events, fn(value) { value.review_id == id }) {
+      case dict.has_key(state.events_by_review_id, id) {
         True -> Ok(Nil)
         False -> Error(SupersededReviewMissing(id))
       }
@@ -323,8 +321,8 @@ fn validate_draft(state: State, draft: Draft) -> Result(Nil, ReviewError) {
 }
 
 fn find_review(state: State, review_id: String) -> Result(Event, ReviewError) {
-  state.events
-  |> list.find(fn(value) { value.review_id == review_id })
+  state.events_by_review_id
+  |> dict.get(review_id)
   |> result.map_error(fn(_) { ReviewNotFound(review_id) })
 }
 
@@ -450,14 +448,66 @@ fn decode_lines(
           case event.revision == state.revision + 1 && verify_event(event) {
             False -> Error(InvalidJournal(line))
             True ->
-              decode_lines(
-                rest,
-                State(event.revision, list.append(state.events, [event])),
-                line + 1,
-              )
+              case validate_decoded_event(state, event) {
+                Error(_) -> Error(InvalidJournal(line))
+                Ok(next) -> decode_lines(rest, next, line + 1)
+              }
           }
       }
   }
+}
+
+fn validate_decoded_event(
+  state: State,
+  event: Event,
+) -> Result(State, ReviewError) {
+  let draft =
+    Draft(
+      1,
+      "portfolio_review_v1",
+      event.review_id,
+      event.snapshot_id,
+      event.review_as_of,
+      event.reviewer_kind,
+      event.reviewer_id,
+      event.prior_review_id,
+      event.supersedes,
+      event.changed_sections,
+      event.receipt_links,
+      event.conclusion_ref,
+      event.privacy,
+    )
+  use _ <- result.try(case state.revision >= 10_000 {
+    True -> Error(TooManyEvents)
+    False -> Ok(Nil)
+  })
+  use _ <- result.try(validate_draft(state, draft))
+  use _ <- result.try(validate_texts([event.event_id, event.idempotency_key]))
+  use _ <- result.try(case dict.has_key(state.events_by_id, event.event_id) {
+    True -> Error(DuplicateEventId(event.event_id))
+    False -> Ok(Nil)
+  })
+  use _ <- result.try(
+    case dict.has_key(state.events_by_idempotency, event.idempotency_key) {
+      True -> Error(IdempotencyConflict(event.idempotency_key))
+      False -> Ok(Nil)
+    },
+  )
+  Ok(retain_event(state, event))
+}
+
+fn retain_event(state: State, event: Event) -> State {
+  State(
+    event.revision,
+    [event, ..state.events_reversed],
+    dict.insert(state.events_by_id, event.event_id, event),
+    dict.insert(state.events_by_idempotency, event.idempotency_key, event),
+    dict.insert(state.events_by_review_id, event.review_id, event),
+  )
+}
+
+fn events(state: State) -> List(Event) {
+  list.reverse(state.events_reversed)
 }
 
 fn event_decoder() -> decode.Decoder(Event) {

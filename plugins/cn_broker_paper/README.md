@@ -14,6 +14,9 @@ Caller-supplied source hashes are retained but are not verified against absent
 source bytes and do not authenticate a provider.
 Market-depth fact names are rejected; this plugin does not read bid/ask/offer
 data.
+The shared boundary also enforces an aggregate semantic-payload budget,
+credential-shaped input rejection, JavaScript-safe event times, exact CN/MIC
+scope, and separate input-order versus occurred-time lifecycle projections.
 
 Missing: a named CN broker read-only/export contract and conformance fixtures;
 named fill-model execution joined to exact CN rules, calendar, and settlement

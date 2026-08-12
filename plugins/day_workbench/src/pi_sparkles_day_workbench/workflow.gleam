@@ -10,6 +10,8 @@ import pi_sparkles_day_workbench/decode as input_decode
 
 pub const maximum_transitions = 100
 
+const maximum_safe_integer = 9_007_199_254_740_991
+
 const maximum_payload_bytes = 20_000
 
 const maximum_references = 50
@@ -72,10 +74,13 @@ pub fn transition(input: input_decode.TransitionInput) -> Result(Json, String) {
   use _ <- result.try(validate_text("branchId", branch_id, 200))
   use _ <- result.try(validate_text("transitionId", transition_id, 200))
   use _ <- result.try(validate_text("idempotencyKey", idempotency_key, 200))
-  use _ <- result.try(case occurred_at >= 0 {
-    True -> Ok(Nil)
-    False -> Error("occurredAtUnixMilliseconds must be non-negative")
-  })
+  use _ <- result.try(
+    case occurred_at >= 0 && occurred_at <= maximum_safe_integer {
+      True -> Ok(Nil)
+      False ->
+        Error("occurredAtUnixMilliseconds must be a JavaScript-safe integer")
+    },
+  )
   use _ <- result.try(case string.byte_size(payload) <= maximum_payload_bytes {
     True -> Ok(Nil)
     False -> Error("transition payload exceeds 20000 bytes")
@@ -480,10 +485,16 @@ fn validate_record_fields(record: Record) -> Result(Nil, String) {
     record.idempotency_key,
     200,
   ))
-  use _ <- result.try(case record.occurred_at_unix_ms >= 0 {
-    True -> Ok(Nil)
-    False -> Error("current workflow history contains a negative time")
-  })
+  use _ <- result.try(
+    case
+      record.occurred_at_unix_ms >= 0
+      && record.occurred_at_unix_ms <= maximum_safe_integer
+    {
+      True -> Ok(Nil)
+      False ->
+        Error("current workflow history contains a non-safe integer time")
+    },
+  )
   use _ <- result.try(
     identity.sha256(record.payload_hash)
     |> result.map(fn(_) { Nil })

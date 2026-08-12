@@ -1,6 +1,7 @@
 import finance_provenance/hash
 import finance_provenance/identity
 import gleam/dynamic/decode as dynamic_decode
+import gleam/int
 import gleam/json.{type Json}
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -108,6 +109,64 @@ pub fn duplicates_conflicts_and_sequence_gaps_remain_explicit_test() {
   text |> string.contains("\"kind\":\"event_id_conflict\"") |> should.be_true
   text |> string.contains("\"kind\":\"sequence_gap\"") |> should.be_true
   text |> string.contains("\"current\":false") |> should.be_true
+}
+
+pub fn conflicting_event_variants_have_a_hard_per_id_budget_test() {
+  let events = conflicting_trades(33, [])
+  let #(payload, digest) = packet_with(events, True)
+  case packet.parse(payload, digest, 100) {
+    Error(message) ->
+      message
+      |> string.contains("32 distinct conflicting-variant limit")
+      |> should.be_true
+    Ok(_) -> should.fail()
+  }
+}
+
+pub fn unsafe_embedded_packet_integers_fail_closed_test() {
+  let #(payload, _) =
+    packet_with([trade("t1", 1, "10", "1", False, False, [])], True)
+  let unsafe =
+    string.replace(
+      payload,
+      "\"providerTimeUnixMilliseconds\":1001",
+      "\"providerTimeUnixMilliseconds\":9007199254740992",
+    )
+  packet.parse(unsafe, content_hash(unsafe), 10) |> should.be_error
+}
+
+pub fn future_snapshot_and_original_references_do_not_satisfy_causality_test() {
+  let events = [
+    depth_delta("delta-before-snapshot", 1, 2),
+    depth_snapshot("snapshot-later", 2),
+    event("correction-before-original", 3, "correction", [
+      #("originalEventId", json.string("trade-later")),
+      #("correctedFields", json.array(["price"], json.string)),
+    ]),
+    trade("trade-later", 4, "10", "1", False, False, []),
+  ]
+  let #(payload, digest) = packet_with(events, True)
+  let assert Ok(value) = packet.parse(payload, digest, 100)
+  let text =
+    packet.inspect(value, 5000, 0)
+    |> packet.inspection_json(False, False, 0, 20)
+    |> json.to_string
+  text |> string.contains("\"kind\":\"unbound_depth_delta\"") |> should.be_true
+  text
+  |> string.contains("\"kind\":\"unknown_original_reference\"")
+  |> should.be_true
+}
+
+pub fn integrity_issue_output_is_paged_even_for_large_packets_test() {
+  let events = gapped_trades(1002, [])
+  let #(payload, digest) = packet_with(events, True)
+  let assert Ok(value) = packet.parse(payload, digest, 2000)
+  let text =
+    packet.inspect(value, 10_000, 0)
+    |> packet.inspection_json(False, False, 0, 10)
+    |> json.to_string
+  text |> string.contains("\"returnedIssueCount\":1000") |> should.be_true
+  text |> string.contains("\"omittedIssueCount\":1") |> should.be_true
 }
 
 pub fn quote_and_trade_calculations_retain_formula_operands_test() {
@@ -461,6 +520,36 @@ fn coherent_packet() -> #(String, String) {
     ],
     True,
   )
+}
+
+fn conflicting_trades(remaining: Int, reversed: List(Json)) -> List(Json) {
+  case remaining {
+    0 -> list.reverse(reversed)
+    value ->
+      conflicting_trades(value - 1, [
+        trade("same-id", value, int.to_string(value), "1", False, False, []),
+        ..reversed
+      ])
+  }
+}
+
+fn gapped_trades(remaining: Int, reversed: List(Json)) -> List(Json) {
+  case remaining {
+    0 -> list.reverse(reversed)
+    value ->
+      gapped_trades(value - 1, [
+        trade(
+          "gap-" <> int.to_string(value),
+          value * 2,
+          "10",
+          "1",
+          False,
+          False,
+          [],
+        ),
+        ..reversed
+      ])
+  }
 }
 
 fn packet_with(events: List(Json), complete: Bool) -> #(String, String) {

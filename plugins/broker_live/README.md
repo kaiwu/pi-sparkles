@@ -13,6 +13,13 @@ Caller-supplied source hashes are retained but are not verified against absent
 source bytes and do not authenticate any provider.
 Market-depth fact names are rejected; this plugin does not read bid/ask/offer
 data.
+Non-executable handoff mode requires exactly one known
+`instruction_side`, `instruction_kind`, `quantity`, `quantity_unit`,
+`time_in_force`, `plan_fingerprint`, and `rule_reference` fact. Missing,
+non-known, or duplicate instruction fields fail closed. The shared boundary
+also enforces an aggregate semantic-payload budget, credential-shaped input
+rejection, JavaScript-safe event times, exact track/MIC isolation, and separate
+input-order versus occurred-time lifecycle projections.
 
 Missing: a private local import channel that keeps raw account data outside
 model context; named read-only provider adapters and rights review; and
@@ -30,8 +37,9 @@ the user to inspect and act on outside Pi, then imports caller-owned execution
 receipts or observes lifecycle state through a demonstrably read-only provider
 capability. It never sends an order operation.
 
-The handoff binds declared account context, external environment, instrument,
-side, type, quantity, prices, time-in-force, rule versions and plan fingerprint.
+The completed handoff target binds declared account context, external
+environment, instrument, side, type, quantity, caller-declared price context
+when applicable, time-in-force, rule versions and plan fingerprint.
 Any change creates a different artifact. Imported/read-only results retain
 provider IDs/statuses, acknowledgements, fills, partial fills, rejection,
 timeout/disconnect ambiguity, externally performed cancel/replace/fill races,
