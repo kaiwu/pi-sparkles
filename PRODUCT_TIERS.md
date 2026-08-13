@@ -272,7 +272,7 @@ exclude `extra_packages`, include no credential values, and generate
 ### 7. Prepare the selected aggregate for npm
 
 The npm packager consumes the T5 or T6 output selected above and gives either
-selection the stable package identity `pi-sparkles-all-in-one`:
+selection the stable package identity `@pi-sparkles/pi-sparkles`:
 
 ```sh
 bun run npm:pack -- T5

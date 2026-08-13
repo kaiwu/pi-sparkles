@@ -87,7 +87,7 @@ function fixturePlan(root, { throughTierId = "T5", releasable = true } = {}) {
     packageVersion: "0.1.0",
     outputDirectory: aggregateDirectory,
     aggregateDirectory,
-    npmPackageName: "pi-sparkles-all-in-one",
+    npmPackageName: "@pi-sparkles/pi-sparkles",
     npmOutputDirectory: join(root, "npm"),
     artifactDirectory: join(root, "artifacts"),
   };
@@ -110,12 +110,12 @@ describe("all-in-one npm packaging", () => {
   test("derives either selected aggregate while preserving the current release gate", () => {
     const manifest = readTierManifest();
     const t5 = npmPackagePlan(manifest, "T5");
-    expect(t5.npmPackageName).toBe("pi-sparkles-all-in-one");
+    expect(t5.npmPackageName).toBe("@pi-sparkles/pi-sparkles");
     expect(t5.plugins).toHaveLength(124);
     expect(t5.releasable).toBeTrue();
 
     const t6 = npmPackagePlan(manifest, "T6");
-    expect(t6.npmPackageName).toBe("pi-sparkles-all-in-one");
+    expect(t6.npmPackageName).toBe("@pi-sparkles/pi-sparkles");
     expect(t6.plugins).toHaveLength(133);
     expect(t6.releasable).toBeFalse();
     expect(t6.omittedProposals).toHaveLength(2);
@@ -126,7 +126,7 @@ describe("all-in-one npm packaging", () => {
     const plan = fixturePlan(root);
     const summary = await buildFixture(plan);
     expect(summary).toMatchObject({
-      name: "pi-sparkles-all-in-one",
+      name: "@pi-sparkles/pi-sparkles",
       version: "0.1.0",
       throughTierId: "T5",
       pluginCount: 1,

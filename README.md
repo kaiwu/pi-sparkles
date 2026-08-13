@@ -316,7 +316,7 @@ and reference extras, and include `aggregate-lock.json`, `CONFIGURATION.md`, and
 ## All-in-one npm package
 
 Prepare either aggregate selection under the stable npm identity
-`pi-sparkles-all-in-one`:
+`@pi-sparkles/pi-sparkles`:
 
 ```sh
 bun run npm:pack -- T5

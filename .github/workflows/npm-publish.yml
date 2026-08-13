@@ -29,7 +29,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: npm-publish-pi-sparkles-all-in-one
+  group: npm-publish-pi-sparkles-pi-sparkles
   cancel-in-progress: false
 
 jobs:
@@ -94,7 +94,7 @@ jobs:
       - name: Retain the reviewed release artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: pi-sparkles-all-in-one-${{ inputs.target }}
+          name: pi-sparkles-pi-sparkles-${{ inputs.target }}
           path: |
             ${{ steps.tarball.outputs.path }}
             dist/npm/*/npm-pack.json

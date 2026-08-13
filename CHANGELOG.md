@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the `pi-sparkles-all-in-one` npm package are recorded
+All notable changes to the `@pi-sparkles/pi-sparkles` npm package are recorded
 here. Versions follow Semantic Versioning. The exact selected tier, plugin
 inventory, maturity, and content hashes remain authoritative in each tarball's
 `release-lock.json` and `aggregate-lock.json`.

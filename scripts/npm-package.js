@@ -37,7 +37,7 @@ import {
 import { readTierManifest } from "./tiers.js";
 
 const NPM_RELEASE_SCHEMA_VERSION = 1;
-const NPM_PACKAGE_NAME = "pi-sparkles-all-in-one";
+const NPM_PACKAGE_NAME = "@pi-sparkles/pi-sparkles";
 const NPM_REGISTRY = "https://registry.npmjs.org/";
 const NPM_PACKAGE_FILES = [
   "CHANGELOG.md",
