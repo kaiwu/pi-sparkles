@@ -315,20 +315,19 @@ and reference extras, and include `aggregate-lock.json`, `CONFIGURATION.md`, and
 
 ## All-in-one npm package
 
-Prepare either aggregate selection under the stable npm identity
+Prepare the releasable T5 aggregate under the stable npm identity
 `@pi-sparkles/pi-sparkles`:
 
 ```sh
 bun run npm:pack -- T5
-bun run npm:pack -- T6
 bun run npm:pack -- T5 --verify-only
 ```
 
-The current T5 output at `dist/npm/t5/` is publish-ready. The current T6 output
-at `dist/npm/t6/` is a private npm-format preview and fails the publish gate
-until T6 becomes complete and ProductUseful. The selected target, maturity,
-plugin count, omissions, partials, and blockers remain visible in package
-metadata and locks even though both selections use one stable npm name.
+The current T5 output at `dist/npm/t5/` is publish-ready. T6 can be packed
+locally as a private npm-format preview, but it is not a release-pipeline choice
+until T6 becomes complete and ProductUseful. The selected maturity, plugin
+count, omissions, partials, and blockers remain visible in package metadata and
+locks.
 
 Each tarball contains one Pi entrypoint, an exact file allowlist, Apache-2.0 and
 third-party notices, configuration names without values, inner and outer
@@ -339,8 +338,13 @@ loading, npm publication rules, and name/version availability without
 publishing:
 
 ```sh
-bun run npm:pack -- T5 --no-build --install-smoke --publish-dry-run --check-registry
+bun run npm:release:verify
 ```
+
+This release gate builds and tests the one all-in-one npm product. Its clean
+install asks plain Pi to load the single aggregate `index.js`, which initializes
+all 124 plugins and fails on any duplicate named registration. It intentionally
+does not run the per-plugin Pi-load matrix.
 
 See [NPM_RELEASE.md](NPM_RELEASE.md) for clean-install testing, versioning, the
 first publication, and the manual tag-bound trusted-publisher workflow.

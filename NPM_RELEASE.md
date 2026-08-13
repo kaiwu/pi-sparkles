@@ -28,12 +28,20 @@ bun run npm:pack -- T5 --no-build
 bun run npm:pack -- T5 --verify-only
 ```
 
-Before a release, exercise npm's publication validation and confirm that the
-exact name/version does not already exist:
+Before a release, run the dedicated all-in-one gate. It exercises only the npm
+product boundary: focused aggregate/package laws, a fresh T5 build, one exact
+tarball, a clean install, one plain-Pi aggregate entrypoint load, npm's publish
+dry-run, and exact name/version availability:
 
 ```sh
-bun run npm:pack -- T5 --no-build --install-smoke --publish-dry-run --check-registry
+bun run npm:release:verify
 ```
+
+The release workflow does not run the per-plugin Pi-load matrix. That matrix is
+a development diagnostic and can miss aggregate registration collisions; the
+published product is the single T5 entrypoint containing all 124 plugins. T6
+can still be built locally as a private preview, but it is not a selectable npm
+release target while blocked.
 
 The current T5 selection passes the publish gate. The current T6 selection is
 still useful as a local npm-format preview, but remains `private: true` and the
@@ -67,7 +75,7 @@ An npm name/version is immutable. Before preparing another release:
 1. update the root `package.json` version using Semantic Versioning;
 2. update `CHANGELOG.md`;
 3. commit, create the matching `v<version>` tag, and rebuild from that tag;
-4. run the repository tests plus the npm dry-run and registry checks; and
+4. run `bun run npm:release:verify`; and
 5. publish the exact content-locked tarball, never the repository root.
 
 The first registry publication must be performed by an authenticated maintainer

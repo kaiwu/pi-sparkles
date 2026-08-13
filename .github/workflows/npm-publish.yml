@@ -3,14 +3,6 @@ name: Publish all-in-one npm package
 on:
   workflow_dispatch:
     inputs:
-      target:
-        description: Aggregate target selected by the existing builder
-        required: true
-        default: T5
-        type: choice
-        options:
-          - T5
-          - T6
       dist_tag:
         description: npm distribution tag
         required: true
@@ -72,29 +64,20 @@ jobs:
       - name: Install the tested plain Pi host
         run: npm install --global @earendil-works/pi-coding-agent@0.84.1
 
-      - name: Run the repository release matrix
-        run: bun run test
-
-      - name: Assemble the selected aggregate from tested artifacts
-        run: bun run aggregate:build -- "${{ inputs.target }}" --no-build
-
-      - name: Pack and validate the npm tarball
-        run: >-
-          bun run npm:pack -- "${{ inputs.target }}" --no-build
-          --install-smoke --publish-dry-run --check-registry
+      - name: Build and verify the all-in-one T5 release
+        run: bun run npm:release:verify
 
       - name: Resolve the locked tarball path
         id: tarball
         shell: bash
         run: |
-          target="$(printf '%s' '${{ inputs.target }}' | tr '[:upper:]' '[:lower:]')"
-          filename="$(node --input-type=module -e "import record from './dist/npm/${target}/npm-pack.json' with { type: 'json' }; process.stdout.write(record.tarball)")"
-          printf 'path=dist/npm/%s/%s\n' "$target" "$filename" >> "$GITHUB_OUTPUT"
+          filename="$(node --input-type=module -e "import record from './dist/npm/t5/npm-pack.json' with { type: 'json' }; process.stdout.write(record.tarball)")"
+          printf 'path=dist/npm/t5/%s\n' "$filename" >> "$GITHUB_OUTPUT"
 
       - name: Retain the reviewed release artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: pi-sparkles-pi-sparkles-${{ inputs.target }}
+          name: pi-sparkles-pi-sparkles-T5
           path: |
             ${{ steps.tarball.outputs.path }}
             dist/npm/*/npm-pack.json

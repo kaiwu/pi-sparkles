@@ -37,6 +37,7 @@
     "tier:show": "bun scripts/tier.js show",
     "tier:verify": "bun scripts/tier.js verify",
     "npm:pack": "bun scripts/npm-package.js",
+    "npm:release:verify": "bun test test/workflow/aggregate_bundle.test.js test/workflow/npm_package.test.js && bun scripts/npm-package.js T5 --install-smoke --publish-dry-run --check-registry",
     "test": "bun scripts/test.js",
     "clean": "bun scripts/clean.js"
   },
