@@ -1,8 +1,5 @@
 pub fn product() -> String {
-  case read_product() {
-    "" -> "pi-sparkles-hk-disclosures/0.1"
-    value -> value
-  }
+  "pi-sparkles-hk-disclosures/0.1"
 }
 
 pub fn contact() -> String {
@@ -12,9 +9,6 @@ pub fn contact() -> String {
 pub fn now_milliseconds() -> Int {
   read_now_milliseconds()
 }
-
-@external(javascript, "./environment_ffi.mjs", "read_product")
-fn read_product() -> String
 
 @external(javascript, "./environment_ffi.mjs", "read_contact")
 fn read_contact() -> String

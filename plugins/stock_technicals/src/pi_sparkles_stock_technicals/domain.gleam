@@ -7,6 +7,7 @@ import finance_indicators/model
 import finance_indicators/receipt
 import finance_indicators/rsi
 import finance_indicators/sma
+import finance_provenance/hash
 import finance_provenance/identity
 import finance_track
 import gleam/int
@@ -33,6 +34,11 @@ type Projection {
   Intermediate(prior_offset: Int)
 }
 
+type InstructionRefOrigin {
+  CallerSuppliedInstructionRef
+  DerivedFromCanonicalRequest
+}
+
 type FactCounts {
   FactCounts(
     known: Int,
@@ -46,6 +52,13 @@ type FactCounts {
 
 pub fn summary(value: Response) -> String {
   value.summary
+}
+
+/// Pi renders only the first content line by default, but sends every content
+/// line to the LLM. Keep the first line concise for the user and place the
+/// exact structured projection on the second line for model consumption.
+pub fn model_content(value: Response) -> String {
+  value.summary <> "\nMODEL_DATA " <> json.to_string(value.details)
 }
 
 pub fn details(value: Response) -> Json {
@@ -79,20 +92,21 @@ pub fn run_sma(value: decode.SmaInput) -> Result(Response, DomainError) {
   use slots <- result.try(price_slots(value.observations))
   use _ <- result.try(input_bound(list.length(slots)))
   let spec = model.SmaV1(value.period, model.SlotWindowV1)
-  use request <- result.try(request(
+  use request_value <- result.try(request(
     value.context,
     spec,
     value.parseable_policy,
     value.rounding,
     projection_offset(projection),
   ))
+  let #(request, instruction_ref_origin) = request_value
   use calculated <- result.try(
     sma.calculate(request, slots)
     |> result.map_error(fn(error) {
       OperationFailed("sma_v1", string.inspect(error))
     }),
   )
-  response(request, calculated, projection, [
+  response(request, calculated, projection, instruction_ref_origin, [
     #("windowVariant", json.string("slot_window_v1")),
     #("seedVariant", json.string("not_applicable:non_recursive_formula")),
     #("gapPolicy", json.string("not_applicable:non_recursive_formula")),
@@ -135,20 +149,21 @@ pub fn run_rsi(value: decode.RsiInput) -> Result(Response, DomainError) {
       model.StopAtGapV1,
       model.ZeroZeroUnperformedV1,
     )
-  use request <- result.try(request(
+  use request_value <- result.try(request(
     value.context,
     spec,
     value.parseable_policy,
     value.rounding,
     projection_offset(projection),
   ))
+  let #(request, instruction_ref_origin) = request_value
   use calculated <- result.try(
     rsi.calculate(request, slots)
     |> result.map_error(fn(error) {
       OperationFailed("rsi_wilder_v1", string.inspect(error))
     }),
   )
-  response(request, calculated, projection, [
+  response(request, calculated, projection, instruction_ref_origin, [
     #("windowVariant", json.string("slot_window_v1")),
     #("seedVariant", json.string("seed_wilder_first_n")),
     #("gapPolicy", json.string("stop_at_gap_v1")),
@@ -187,20 +202,21 @@ pub fn run_atr(value: decode.AtrInput) -> Result(Response, DomainError) {
   use _ <- result.try(input_bound(list.length(slots)))
   let spec =
     model.WilderAtrV1(value.period, model.SlotWindowV1, model.StopAtGapV1)
-  use request <- result.try(request(
+  use request_value <- result.try(request(
     value.context,
     spec,
     value.parseable_policy,
     value.rounding,
     projection_offset(projection),
   ))
+  let #(request, instruction_ref_origin) = request_value
   use calculated <- result.try(
     atr.calculate(request, slots)
     |> result.map_error(fn(error) {
       OperationFailed("atr_wilder_v1", string.inspect(error))
     }),
   )
-  response(request, calculated, projection, [
+  response(request, calculated, projection, instruction_ref_origin, [
     #("windowVariant", json.string("slot_window_v1")),
     #("seedVariant", json.string("seed_wilder_tr_mean_v1")),
     #("firstTrueRange", json.string("tr_first_hl_v1")),
@@ -214,21 +230,73 @@ fn request(
   parseable_input: String,
   rounding_input: decode.RoundingInput,
   prior_offset: Int,
-) -> Result(model.Request, DomainError) {
-  use instruction_ref <- result.try(sha(
-    "context.instructionRef",
-    context_input.instruction_ref,
-  ))
+) -> Result(#(model.Request, InstructionRefOrigin), DomainError) {
   use context <- result.try(context(context_input))
   use parseable <- result.try(parseable_policy(parseable_input))
   use rounding <- result.try(rounding(rounding_input))
+  use instruction <- result.try(instruction_ref(
+    context_input,
+    spec,
+    parseable_input,
+    rounding_input,
+    prior_offset,
+  ))
+  let #(instruction_ref, origin) = instruction
   model.request(instruction_ref, context, spec, parseable, rounding, [
     model.LatestValue,
     model.PriorValue(prior_offset),
   ])
+  |> result.map(fn(value) { #(value, origin) })
   |> result.map_error(fn(error) {
     InvalidField("calculation", string.inspect(error))
   })
+}
+
+fn instruction_ref(
+  context: decode.ContextInput,
+  spec: model.CalculationSpec,
+  parseable_policy: String,
+  rounding: decode.RoundingInput,
+  prior_offset: Int,
+) -> Result(#(identity.Sha256, InstructionRefOrigin), DomainError) {
+  case context.instruction_ref {
+    Some(value) ->
+      sha("context.instructionRef", value)
+      |> result.map(fn(reference) { #(reference, CallerSuppliedInstructionRef) })
+    None -> {
+      let canonical =
+        json.object([
+          #("schema", json.string("pi-sparkles/derived-indicator-instruction")),
+          #("schemaVersion", json.int(1)),
+          #("track", json.string(context.track)),
+          #("instrumentId", json.string(context.instrument_id)),
+          #("mic", json.string(context.mic)),
+          #("dateStart", json.string(context.date_start)),
+          #("dateEnd", json.string(context.date_end)),
+          #("provider", json.string(context.source.provider)),
+          #("sourceReference", json.string(context.source.source_reference)),
+          #(
+            "acquisitionReceipt",
+            json.string(context.source.acquisition_receipt),
+          ),
+          #("inputField", json.string(context.input_field)),
+          #("calculationId", json.string(model.calculation_id(spec))),
+          #("period", json.int(model.period(spec))),
+          #("parseablePolicy", json.string(parseable_policy)),
+          #("roundingMode", json.string(rounding.mode)),
+          #("roundingPolicy", json.string(rounding.policy)),
+          #("outputScale", json.int(rounding.output_scale)),
+          #("intermediateScale", json.int(rounding.intermediate_scale)),
+          #("priorOffset", json.int(prior_offset)),
+        ])
+        |> json.to_string
+      hash.text(canonical)
+      |> result.map(fn(reference) { #(reference, DerivedFromCanonicalRequest) })
+      |> result.map_error(fn(error) {
+        OperationFailed("instruction_ref", string.inspect(error))
+      })
+    }
+  }
 }
 
 fn context(value: decode.ContextInput) -> Result(model.Context, DomainError) {
@@ -248,9 +316,13 @@ fn context(value: decode.ContextInput) -> Result(model.Context, DomainError) {
   ))
   use unit <- result.try(unit(value.input_unit))
   use basis <- result.try(basis(value.basis))
+  let context_root_inputs = case value.basis.kind {
+    "raw" -> list.append(value.evidence_roots, value.basis.evidence_roots)
+    _ -> value.evidence_roots
+  }
   use roots <- result.try(evidence_roots(
     "context.evidenceRoots",
-    value.evidence_roots,
+    list.unique(context_root_inputs),
   ))
   use _ <- result.try(text_list(
     "context.retainedAlternatives",
@@ -325,15 +397,7 @@ fn basis(value: decode.BasisInput) -> Result(model.InputBasis, DomainError) {
     value.evidence_roots,
   ))
   case value.kind, value.label, value.instruction_ref {
-    "raw", None, None ->
-      case roots {
-        [] -> Ok(model.Raw)
-        _ ->
-          Error(InvalidField(
-            "context.basis.evidenceRoots",
-            "raw basis does not consume factor roots",
-          ))
-      }
+    "raw", None, None -> Ok(model.Raw)
     "split_adjusted", None, None -> Ok(model.SplitAdjusted(roots))
     "dividend_adjusted", None, None -> Ok(model.DividendAdjusted(roots))
     "total_return", None, None -> Ok(model.TotalReturn(roots))
@@ -537,6 +601,7 @@ fn response(
   request: model.Request,
   calculated: calculation.ResultData,
   projection: Projection,
+  instruction_ref_origin: InstructionRefOrigin,
   explicit_policies: List(#(String, Json)),
 ) -> Result(Response, DomainError) {
   use request_receipt <- result.try(
@@ -575,6 +640,15 @@ fn response(
     #("inputField", json.string(model.input_field(context))),
     #("inputUnit", unit_json(model.input_unit(context))),
     #("adjustmentBasis", basis_json(model.adjustment_basis(context))),
+    #("evidenceRoots", roots_json(model.evidence_roots(context))),
+    #(
+      "instructionRef",
+      model.instruction_ref(request) |> identity.sha256_value |> json.string,
+    ),
+    #(
+      "instructionRefOrigin",
+      json.string(instruction_ref_origin_name(instruction_ref_origin)),
+    ),
     #(
       "requestReceiptHandle",
       receipt.canonical_content_hash(request_receipt)
@@ -587,8 +661,6 @@ fn response(
         |> identity.sha256_value
         |> json.string,
     ),
-    #("requestReceiptJson", json.string(receipt.encode(request_receipt))),
-    #("semanticReceiptJson", json.string(receipt.encode(semantic_receipt))),
     #(
       "counts",
       counts_json(
@@ -612,10 +684,31 @@ fn response(
     #("limitations", json.array(limitations(), json.string)),
   ]
   let details = case projection {
-    Compact(_) -> json.object(base_fields)
+    Compact(_) ->
+      json.object(
+        list.append(base_fields, [
+          #(
+            "receiptPayloads",
+            json.object([
+              #("state", json.string("omitted")),
+              #(
+                "reason",
+                json.string(
+                  "compact_projection_returns_content_hash_handles_without_duplicating_full_inputs_and_outputs",
+                ),
+              ),
+            ]),
+          ),
+        ]),
+      )
     Intermediate(_) ->
       json.object(
         list.append(base_fields, [
+          #("requestReceiptJson", json.string(receipt.encode(request_receipt))),
+          #(
+            "semanticReceiptJson",
+            json.string(receipt.encode(semantic_receipt)),
+          ),
           #("orderedOutputs", json.array(calculated.outputs, output_json)),
         ]),
       )
@@ -636,6 +729,13 @@ fn response(
     <> int.to_string(list.length(unperformed_outputs))
     <> " | values and evidence only; interpretation belongs to the LLM"
   Ok(Response(summary, details))
+}
+
+fn instruction_ref_origin_name(value: InstructionRefOrigin) -> String {
+  case value {
+    CallerSuppliedInstructionRef -> "caller_supplied"
+    DerivedFromCanonicalRequest -> "derived_from_canonical_request"
+  }
 }
 
 fn output_json(value: calculation.Output) -> Json {

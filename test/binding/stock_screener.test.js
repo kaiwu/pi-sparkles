@@ -13,7 +13,7 @@ beforeEach(() => {
   requests.length = 0;
   process.env.ALPACA_API_KEY_ID = "test-key-id";
   process.env.ALPACA_API_SECRET_KEY = "test-secret-key";
-  process.env.ALPACA_USER_AGENT_CONTACT = "universe@example.test";
+  process.env.AGENT_CONTACT = "universe@example.test";
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
@@ -32,7 +32,7 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
   delete process.env.ALPACA_API_KEY_ID;
   delete process.env.ALPACA_API_SECRET_KEY;
-  delete process.env.ALPACA_USER_AGENT_CONTACT;
+  delete process.env.AGENT_CONTACT;
 });
 
 async function harness() {

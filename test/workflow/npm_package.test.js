@@ -162,6 +162,23 @@ describe("all-in-one npm packaging", () => {
       access: "public",
       registry: "https://registry.npmjs.org/",
     });
+    expect(packageManifest.description).toBe(
+      "Turn Pi into a finance research assistant for China, Hong Kong, and US markets",
+    );
+    const packageReadme = readFileSync(
+      join(plan.npmOutputDirectory, "package", "README.md"),
+      "utf8",
+    );
+    expect(packageReadme).toContain("## Data sources");
+    expect(packageReadme).toContain("## What it gives you");
+    expect(packageReadme).toContain("## Optional data-service setup");
+    expect(packageReadme).toContain('AGENT_CONTACT="you@example.com"');
+    expect(packageReadme).toContain("You do not need to ask it");
+    expect(packageReadme).not.toContain("T5");
+    expect(packageReadme).not.toContain("ProductUseful");
+    expect(packageReadme).not.toContain("tier");
+    expect(packageReadme).not.toContain("aggregate");
+    expect(packageReadme).not.toContain("receipt");
     expect(() => assertNpmPublishable(summary)).not.toThrow();
 
     const rebuilt = await assembleNpmRelease(

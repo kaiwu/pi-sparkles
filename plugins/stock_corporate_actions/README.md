@@ -43,9 +43,9 @@ that still have missing fields. See the official
 
 - `ALPACA_API_KEY_ID` (required)
 - `ALPACA_API_SECRET_KEY` (required)
-- `ALPACA_USER_AGENT_CONTACT` (required)
-- `ALPACA_USER_AGENT_PRODUCT` (optional; defaults to
-  `pi-sparkles-stock-corporate-actions/0.1`)
+- `AGENT_CONTACT` (required shared non-secret operator identity)
+
+The plugin supplies its fixed outbound product label.
 
 Credentials are secret request headers and are not emitted in results or safe
 request identities. The shared Alpaca runtime enforces the exact data origin,

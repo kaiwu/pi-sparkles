@@ -54,9 +54,9 @@ Official evidence:
 
 - `ALPACA_API_KEY_ID` (required)
 - `ALPACA_API_SECRET_KEY` (required)
-- `ALPACA_USER_AGENT_CONTACT` (required)
-- `ALPACA_USER_AGENT_PRODUCT` (optional; defaults to
-  `pi-sparkles-finance-news/0.1`)
+- `AGENT_CONTACT` (required shared non-secret operator identity)
+
+The plugin supplies its fixed outbound product label.
 
 Credentials remain secret request headers. The shared Alpaca runtime enforces
 the exact origin and path, 15-second request timeout, 2 MB response limit,

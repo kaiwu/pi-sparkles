@@ -9,8 +9,7 @@ const artifact = resolve(
 const originalFetch = globalThis.fetch;
 const originalKeyId = process.env.ALPACA_API_KEY_ID;
 const originalSecretKey = process.env.ALPACA_API_SECRET_KEY;
-const originalContact = process.env.ALPACA_USER_AGENT_CONTACT;
-const originalProduct = process.env.ALPACA_USER_AGENT_PRODUCT;
+const originalContact = process.env.AGENT_CONTACT;
 const requests = [];
 
 const firstPage =
@@ -23,8 +22,7 @@ beforeEach(() => {
   requests.length = 0;
   process.env.ALPACA_API_KEY_ID = "test-key-id";
   process.env.ALPACA_API_SECRET_KEY = "test-secret-key";
-  process.env.ALPACA_USER_AGENT_CONTACT = "research@example.test";
-  process.env.ALPACA_USER_AGENT_PRODUCT = "pi-sparkles-test/0.1";
+  process.env.AGENT_CONTACT = "research@example.test";
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
@@ -46,8 +44,7 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
   restore("ALPACA_API_KEY_ID", originalKeyId);
   restore("ALPACA_API_SECRET_KEY", originalSecretKey);
-  restore("ALPACA_USER_AGENT_CONTACT", originalContact);
-  restore("ALPACA_USER_AGENT_PRODUCT", originalProduct);
+  restore("AGENT_CONTACT", originalContact);
 });
 
 async function harness() {

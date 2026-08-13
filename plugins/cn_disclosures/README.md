@@ -5,9 +5,9 @@ security catalogue and announcement-query surface. It exposes
 `cn_security_search` and `cn_disclosure_search`; every result is visibly `cn`
 and never borrows an HK or US identity tool.
 
-Set `CNINFO_USER_AGENT_CONTACT` to a non-secret operational contact.
-`CNINFO_USER_AGENT_PRODUCT` is optional and defaults to
-`pi-sparkles-cn-disclosures/0.1`. Missing/invalid caller identity leaves tools
+Set the shared non-secret `AGENT_CONTACT` operator identity.
+The outbound product label is fixed as `pi-sparkles-cn-disclosures/0.1`.
+Missing/invalid caller identity leaves tools
 registered but fail-closed.
 
 The adapter is caller-identified, HTTPS-only, host/path allowlisted,

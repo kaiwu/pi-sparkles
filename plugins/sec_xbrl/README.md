@@ -109,8 +109,7 @@ HTTP stack.
 ## Provider and configuration
 
 ```sh
-export SEC_USER_AGENT_CONTACT="ops@example.com"
-export SEC_USER_AGENT_PRODUCT="my-research-agent/1.0" # optional
+export AGENT_CONTACT="ops@example.com"
 ```
 
 The contact is required for SEC fair-access identification and is transmitted

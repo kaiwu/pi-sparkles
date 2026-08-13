@@ -3,10 +3,27 @@ import finance_indicators/calculation.{type CalculationError, type Output}
 import finance_indicators/input.{type PriceSlot}
 import finance_indicators/model.{type Request}
 import finance_indicators/numeric
-import finance_math/exact
 import gleam/int
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleam/result
+
+type WindowEntry {
+  WindowEntry(
+    slot: PriceSlot,
+    usable: Result(decimal.Decimal, input.Unavailable),
+  )
+}
+
+type Window {
+  Window(
+    front: List(WindowEntry),
+    back: List(WindowEntry),
+    size: Int,
+    sum: decimal.Decimal,
+    unavailable_count: Int,
+  )
+}
 
 pub fn calculate(
   request request_value: Request,
@@ -17,7 +34,7 @@ pub fn calculate(
     model.SmaV1(period, model.SlotWindowV1) -> {
       use _ <- result.try(validate_slots(request_value, slots))
       use outputs <- result.try(
-        calculate_outputs(request_value, slots, period, [], []),
+        calculate_outputs(request_value, slots, period, empty_window(), []),
       )
       Ok(
         calculation.ResultData(
@@ -48,18 +65,16 @@ fn calculate_outputs(
   request: Request,
   remaining: List(PriceSlot),
   period: Int,
-  seen: List(PriceSlot),
+  window: Window,
   outputs_reversed: List(Output),
 ) -> Result(List(Output), CalculationError) {
   case remaining {
     [] -> Ok(list.reverse(outputs_reversed))
     [slot, ..rest] -> {
-      let seen = list.append(seen, [slot])
-      let window =
-        seen
-        |> list.drop(int.max(list.length(seen) - period, 0))
-      use output <- result.try(output_for(request, slot, window, period))
-      calculate_outputs(request, rest, period, seen, [
+      let usable = input.usable(slot.value, model.parseable_policy(request))
+      let window = push_window(window, WindowEntry(slot, usable), period)
+      use output <- result.try(output_for(request, slot, usable, window, period))
+      calculate_outputs(request, rest, period, window, [
         output,
         ..outputs_reversed
       ])
@@ -70,11 +85,12 @@ fn calculate_outputs(
 fn output_for(
   request: Request,
   slot: PriceSlot,
-  window: List(PriceSlot),
+  current: Result(decimal.Decimal, input.Unavailable),
+  window: Window,
   period: Int,
 ) -> Result(Output, CalculationError) {
-  let input.PriceSlot(date, current) = slot
-  case input.usable(current, model.parseable_policy(request)) {
+  let input.PriceSlot(date, _) = slot
+  case current {
     Error(reason) ->
       Ok(
         calculation.Unperformed(
@@ -84,22 +100,18 @@ fn output_for(
         ),
       )
     Ok(_) ->
-      case list.length(window) < period {
+      case window.size < period {
         True ->
           Ok(
             calculation.Unperformed(
               date,
-              calculation.InsufficientInputs(list.length(window), period),
+              calculation.InsufficientInputs(window.size, period),
               [],
             ),
           )
         False ->
-          case
-            list.try_map(window, fn(value) {
-              input.usable(value.value, model.parseable_policy(request))
-            })
-          {
-            Error(reason) ->
+          case first_unavailable(window) {
+            Some(reason) ->
               Ok(
                 calculation.Unperformed(
                   date,
@@ -107,11 +119,12 @@ fn output_for(
                   [model.input_field(model.request_context(request))],
                 ),
               )
-            Ok(values) -> {
+            None -> {
               let rounding = model.rounding(request)
               case
-                numeric.mean(
-                  values,
+                numeric.ratio(
+                  window.sum,
+                  numeric.from_int(period),
                   model.intermediate_scale(rounding),
                   model.rounding_mode(rounding),
                 )
@@ -138,11 +151,11 @@ fn output_for(
                           [
                             calculation.Intermediate(
                               "sum",
-                              values |> exact.sum |> decimal.to_string,
+                              decimal.to_string(window.sum),
                             ),
                             calculation.Intermediate(
                               "count",
-                              list.length(values) |> int.to_string,
+                              period |> int.to_string,
                             ),
                           ],
                         ),
@@ -151,6 +164,80 @@ fn output_for(
               }
             }
           }
+      }
+  }
+}
+
+fn empty_window() -> Window {
+  Window([], [], 0, decimal.zero(), 0)
+}
+
+fn push_window(window: Window, entry: WindowEntry, maximum: Int) -> Window {
+  let #(sum, unavailable_count) = case entry.usable {
+    Ok(value) -> #(decimal.add(window.sum, value), window.unavailable_count)
+    Error(_) -> #(window.sum, window.unavailable_count + 1)
+  }
+  let grown =
+    Window(
+      ..window,
+      back: [entry, ..window.back],
+      size: window.size + 1,
+      sum: sum,
+      unavailable_count: unavailable_count,
+    )
+  case grown.size > maximum {
+    True -> drop_oldest(grown)
+    False -> grown
+  }
+}
+
+fn drop_oldest(window: Window) -> Window {
+  case window.front {
+    [entry, ..rest] -> remove_entry(Window(..window, front: rest), entry)
+    [] ->
+      case list.reverse(window.back) {
+        [entry, ..rest] ->
+          remove_entry(Window(..window, front: rest, back: []), entry)
+        [] -> window
+      }
+  }
+}
+
+fn remove_entry(window: Window, entry: WindowEntry) -> Window {
+  case entry.usable {
+    Ok(value) ->
+      Window(
+        ..window,
+        size: window.size - 1,
+        sum: decimal.subtract(window.sum, value),
+      )
+    Error(_) ->
+      Window(
+        ..window,
+        size: window.size - 1,
+        unavailable_count: window.unavailable_count - 1,
+      )
+  }
+}
+
+fn first_unavailable(window: Window) -> Option(input.Unavailable) {
+  case window.unavailable_count {
+    0 -> None
+    _ ->
+      case unavailable_in(window.front) {
+        Some(reason) -> Some(reason)
+        None -> unavailable_in(list.reverse(window.back))
+      }
+  }
+}
+
+fn unavailable_in(entries: List(WindowEntry)) -> Option(input.Unavailable) {
+  case entries {
+    [] -> None
+    [entry, ..rest] ->
+      case entry.usable {
+        Error(reason) -> Some(reason)
+        Ok(_) -> unavailable_in(rest)
       }
   }
 }

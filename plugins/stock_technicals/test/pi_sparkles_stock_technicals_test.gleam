@@ -262,7 +262,7 @@ fn context(
   unit: String,
 ) -> decode.ContextInput {
   decode.ContextInput(
-    hash("1"),
+    Some(hash("1")),
     track,
     instrument,
     mic,

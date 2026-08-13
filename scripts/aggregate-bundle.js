@@ -415,8 +415,10 @@ function configurationMarkdown(pluginRecords) {
   return `# Runtime configuration
 
 The aggregate contains variable names only. It never reads or copies credential
-values while building. A variable listed here belongs only to the adapter that
-explicitly selects it; providers never silently fall back or share authority.
+values while building. \`AGENT_CONTACT\` is one shared non-secret operator identity
+used across tracks and adapters; it grants no provider authority. Credentials
+remain owned by the adapter that explicitly selects them, and providers never
+silently fall back or share authority.
 Required-versus-optional behavior and entitlement limits remain controlled by
 the named plugin's contract.
 

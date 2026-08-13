@@ -157,7 +157,7 @@ fn provider() -> Provider {
   case finance_eastmoney.access(environment.product(), environment.contact()) {
     Error(_) ->
       InvalidConfiguration(
-        "Eastmoney access requires EASTMONEY_USER_AGENT_CONTACT (for example ops@example.com); EASTMONEY_USER_AGENT_PRODUCT is optional",
+        "Eastmoney access requires AGENT_CONTACT (for example ops@example.com)",
       )
     Ok(access) ->
       case runtime.new(access) {

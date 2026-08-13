@@ -37,8 +37,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "cn_stock_symbol_search",
     "CN stock symbol search",
-    "Search current or historical-status mainland listing candidates by exact code plus venue or by name; preserve ambiguity and vendor identity evidence",
-    "No code prefix, name match, or vendor venue field is silently upgraded to exchange-authenticated identity",
+    "Use only when a mainland listing identity is unresolved or ambiguous, including lookup by name or historical status; preserve ambiguity and vendor identity evidence. Do not call this for a caller-supplied exact venue and code merely to fetch prices or technical indicators",
+    "Known exact venue-plus-code market-data requests bypass this tool; no code prefix, name match, or vendor venue field is silently upgraded to exchange-authenticated identity",
     tool.parameters(search_schema(), search_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {

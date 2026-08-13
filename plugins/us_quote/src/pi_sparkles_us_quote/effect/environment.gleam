@@ -7,10 +7,7 @@ pub fn secret_key() -> String {
 }
 
 pub fn product() -> String {
-  case read_product() {
-    "" -> "pi-sparkles-us-quote/0.1"
-    value -> value
-  }
+  "pi-sparkles-us-quote/0.1"
 }
 
 pub fn contact() -> String {
@@ -26,9 +23,6 @@ fn read_key_id() -> String
 
 @external(javascript, "./environment_ffi.mjs", "read_secret_key")
 fn read_secret_key() -> String
-
-@external(javascript, "./environment_ffi.mjs", "read_product")
-fn read_product() -> String
 
 @external(javascript, "./environment_ffi.mjs", "read_contact")
 fn read_contact() -> String

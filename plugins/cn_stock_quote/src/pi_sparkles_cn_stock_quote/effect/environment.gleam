@@ -1,8 +1,5 @@
 pub fn eastmoney_product() -> String {
-  case read_eastmoney_product() {
-    "" -> "pi-sparkles-cn-stock-quote/0.1"
-    value -> value
-  }
+  "pi-sparkles-cn-stock-quote/0.1"
 }
 
 pub fn eastmoney_contact() -> String {
@@ -16,9 +13,6 @@ pub fn tushare_token() -> String {
 pub fn now_milliseconds() -> Int {
   read_now_milliseconds()
 }
-
-@external(javascript, "./environment_ffi.mjs", "read_eastmoney_product")
-fn read_eastmoney_product() -> String
 
 @external(javascript, "./environment_ffi.mjs", "read_eastmoney_contact")
 fn read_eastmoney_contact() -> String

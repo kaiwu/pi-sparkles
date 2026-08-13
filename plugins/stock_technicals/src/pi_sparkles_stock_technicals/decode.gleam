@@ -1,5 +1,5 @@
 import gleam/dynamic/decode as decoder
-import gleam/option.{type Option, None}
+import gleam/option.{type Option, None, Some}
 
 pub type AlternativeInput {
   AlternativeInput(raw: String, source_reference: String)
@@ -40,7 +40,7 @@ pub type SourceInput {
 
 pub type ContextInput {
   ContextInput(
-    instruction_ref: String,
+    instruction_ref: Option(String),
     track: String,
     instrument_id: String,
     mic: String,
@@ -192,7 +192,7 @@ pub fn atr() -> decoder.Decoder(AtrInput) {
 }
 
 fn context_decoder() -> decoder.Decoder(ContextInput) {
-  use instruction_ref <- decoder.field("instructionRef", decoder.string)
+  use instruction_ref <- optional_string("instructionRef")
   use track <- decoder.field("track", decoder.string)
   use instrument_id <- decoder.field("instrumentId", decoder.string)
   use mic <- decoder.field("mic", decoder.string)
@@ -326,7 +326,16 @@ fn sma_calculation_decoder() -> decoder.Decoder(
   use window <- decoder.field("windowVariant", decoder.string)
   use parseable <- decoder.field("parseablePolicy", decoder.string)
   use rounding <- decoder.field("rounding", rounding_decoder())
-  decoder.success(#(formula, period, window, parseable, rounding))
+  use policy <- optional_string("policy")
+  use output_scale <- optional_int("outputScale")
+  use intermediate_scale <- optional_int("intermediateScale")
+  let decoded = #(formula, period, window, parseable, rounding)
+  case
+    rounding_aliases_match(rounding, policy, output_scale, intermediate_scale)
+  {
+    True -> decoder.success(decoded)
+    False -> decoder.failure(decoded, "rounding aliases must match rounding")
+  }
 }
 
 fn rsi_calculation_decoder() -> decoder.Decoder(
@@ -340,7 +349,10 @@ fn rsi_calculation_decoder() -> decoder.Decoder(
   use zero_zero <- decoder.field("zeroZeroConvention", decoder.string)
   use parseable <- decoder.field("parseablePolicy", decoder.string)
   use rounding <- decoder.field("rounding", rounding_decoder())
-  decoder.success(#(
+  use policy <- optional_string("policy")
+  use output_scale <- optional_int("outputScale")
+  use intermediate_scale <- optional_int("intermediateScale")
+  let decoded = #(
     formula,
     period,
     window,
@@ -349,7 +361,13 @@ fn rsi_calculation_decoder() -> decoder.Decoder(
     zero_zero,
     parseable,
     rounding,
-  ))
+  )
+  case
+    rounding_aliases_match(rounding, policy, output_scale, intermediate_scale)
+  {
+    True -> decoder.success(decoded)
+    False -> decoder.failure(decoded, "rounding aliases must match rounding")
+  }
 }
 
 fn atr_calculation_decoder() -> decoder.Decoder(
@@ -363,7 +381,10 @@ fn atr_calculation_decoder() -> decoder.Decoder(
   use gap <- decoder.field("gapPolicy", decoder.string)
   use parseable <- decoder.field("parseablePolicy", decoder.string)
   use rounding <- decoder.field("rounding", rounding_decoder())
-  decoder.success(#(
+  use policy <- optional_string("policy")
+  use output_scale <- optional_int("outputScale")
+  use intermediate_scale <- optional_int("intermediateScale")
+  let decoded = #(
     formula,
     period,
     window,
@@ -372,7 +393,13 @@ fn atr_calculation_decoder() -> decoder.Decoder(
     gap,
     parseable,
     rounding,
-  ))
+  )
+  case
+    rounding_aliases_match(rounding, policy, output_scale, intermediate_scale)
+  {
+    True -> decoder.success(decoded)
+    False -> decoder.failure(decoded, "rounding aliases must match rounding")
+  }
 }
 
 fn optional_string(
@@ -380,4 +407,32 @@ fn optional_string(
   next: fn(Option(String)) -> decoder.Decoder(value),
 ) -> decoder.Decoder(value) {
   decoder.optional_field(name, None, decoder.optional(decoder.string), next)
+}
+
+fn optional_int(
+  name: String,
+  next: fn(Option(Int)) -> decoder.Decoder(value),
+) -> decoder.Decoder(value) {
+  decoder.optional_field(name, None, decoder.optional(decoder.int), next)
+}
+
+fn rounding_aliases_match(
+  rounding: RoundingInput,
+  policy: Option(String),
+  output_scale: Option(Int),
+  intermediate_scale: Option(Int),
+) -> Bool {
+  let RoundingInput(
+    mode: _,
+    policy: nested_policy,
+    output_scale: nested_output_scale,
+    intermediate_scale: nested_intermediate_scale,
+  ) = rounding
+
+  case policy, output_scale, intermediate_scale {
+    Some(alias), _, _ if alias != nested_policy -> False
+    _, Some(alias), _ if alias != nested_output_scale -> False
+    _, _, Some(alias) if alias != nested_intermediate_scale -> False
+    _, _, _ -> True
+  }
 }

@@ -99,7 +99,10 @@ visible in intermediate output.
 All three tools require the following caller/LLM-supplied information; there
 are no ambient defaults:
 
-- `instructionRef`: SHA-256 reference to the instruction choosing this query;
+- optional `instructionRef`: a retained caller/LLM SHA-256 reference when one
+  already exists. Ordinary history-to-indicator handoffs omit it; the plugin
+  deterministically derives and labels a reference from the canonical request,
+  so the LLM must not run a script merely to create this field;
 - `track`: exactly `cn`, `hk`, or `us`;
 - `instrumentId`, `mic`, `timezone`, and inclusive `dateStart`/`dateEnd`;
 - `sourceProvider`, `sourceReference`, `acquisitionReceipt`, and the source's
@@ -109,6 +112,9 @@ are no ambient defaults:
 - an explicit input basis: raw, split-adjusted, dividend-adjusted,
   total-return, provider-defined, or an LLM-requested projection, with the
   applicable label, instruction reference, and factor evidence roots;
+- raw-basis `evidenceRoots` copied from an upstream history handoff are accepted
+  and promoted to context evidence rather than rejected or treated as adjustment
+  factors;
 - retained alternatives, gap facts, and evidence roots, including explicit
   empty lists;
 - one named formula variant, period, window, and applicable seed/gap/true-range
@@ -116,7 +122,9 @@ are no ambient defaults:
 - `parseablePolicy`: include or exclude exact parseable values that carry
   failed mechanical checks;
 - `roundingMode`, `outputScale`, `intermediateScale`, and the first supported
-  `per_step` rounding policy;
+  `per_step` rounding policy. Matching `policy`, `outputScale`, and
+  `intermediateScale` aliases repeated beside the canonical `rounding` object
+  are accepted for LLM handoff compatibility; a conflict fails closed;
 - `projection`: `compact` or `intermediate`, plus a positive `priorOffset`;
   and
 - one to 2,000 ascending, non-duplicated dated input observations.
@@ -143,7 +151,6 @@ Both projections return a versioned plugin result with:
 - calculation/formula identifiers and every explicit policy identifier;
 - track, instrument, MIC, input field, input unit, and adjustment basis;
 - request-receipt and semantic-receipt SHA-256 handles;
-- a copyable canonical semantic receipt envelope;
 - input, calculated-output, unperformed-output, unknown, conflict,
   decode-failure, and failed-mechanical-check counts;
 - the first calculated date when one exists;
@@ -153,13 +160,17 @@ Both projections return a versioned plugin result with:
   source correctness or provider authentication.
 
 `compact` additionally returns only the explicitly requested latest and prior
-calculated values. It does not add change, percentage change, crossover, or
-other derived relations.
+calculated values. It omits the full receipt envelopes—which duplicate bounded
+inputs and outputs—from the model-visible response while retaining their exact
+content-hash handles. It does not add change, percentage change, crossover, or
+other derived relations. The concise first content line is the default TUI
+render; a second structured content line supplies these exact values to the LLM
+rather than hiding them only in Pi's retained `details` object.
 
 `intermediate` additionally returns every ordered calculated or unperformed
 output exposed by `finance_indicators`, including exact intermediate values and
-missing operands. It is bounded by the input limit and never silently
-truncates.
+missing operands, plus the copyable canonical request and semantic receipt
+envelopes. It is bounded by the input limit and never silently truncates.
 
 If no calculated value exists, the corresponding compact slot is an explicit
 `not_applicable` fact. A prior offset is counted over calculated outputs, not

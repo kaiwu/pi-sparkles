@@ -196,7 +196,7 @@ fn provider() -> Provider {
   case finance_hkex.access(environment.product(), environment.contact()) {
     Error(_) ->
       InvalidConfiguration(
-        "HKEXnews access requires HKEX_USER_AGENT_CONTACT (for example ops@example.com); HKEX_USER_AGENT_PRODUCT is optional",
+        "HKEXnews access requires AGENT_CONTACT (for example ops@example.com)",
       )
     Ok(access) ->
       case

@@ -43,8 +43,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "us_stock_quote",
     "US exact latest quote",
-    "Fetch one latest Alpaca US stock best bid and ask for an exact symbol and explicit IEX or SIP feed; preserve source numeric lexemes, market codes, entitlement scope, and unknown freshness",
-    "Inspect a bounded latest US quote without feed fallback, symbol search, session inference, or guessed size units",
+    "Fetch one latest Alpaca US stock best bid and ask for an exact symbol and explicit IEX or SIP feed; use current quote evidence by default for ordinary buy-now, sell-timing, entry, exit, stop, or target questions even when the user does not explicitly request tools; preserve source numeric lexemes, market codes, entitlement scope, and unknown freshness",
+    "Inspect a bounded latest US quote for a current-price-dependent opinion without feed fallback, symbol search, session inference, or guessed size units",
     tool.parameters(input_schema(), input_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
@@ -120,7 +120,7 @@ fn provider() -> Provider {
   {
     Error(_) ->
       InvalidConfiguration(
-        "Alpaca quote requires ALPACA_API_KEY_ID, ALPACA_API_SECRET_KEY, and ALPACA_USER_AGENT_CONTACT; ALPACA_USER_AGENT_PRODUCT is optional",
+        "Alpaca quote requires AGENT_CONTACT, ALPACA_API_KEY_ID, and ALPACA_API_SECRET_KEY",
       )
     Ok(access) ->
       case runtime.new() {

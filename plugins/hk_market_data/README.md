@@ -19,5 +19,5 @@ retrieval timestamps, local-analysis entitlement, unknown latency/service
 level/redistribution rights, unverified volume semantics, and all limitations.
 They are not HKEX observations and do not borrow the CN shell.
 
-Set non-secret `EASTMONEY_USER_AGENT_CONTACT`; optionally set
-`EASTMONEY_USER_AGENT_PRODUCT`. Normal tests never make live requests.
+Set the shared non-secret `AGENT_CONTACT`; the plugin supplies its product
+label. Normal tests never make live requests.

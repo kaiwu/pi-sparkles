@@ -295,8 +295,7 @@ documentation cannot silently diverge from executable policy.
 ## Provider, configuration, and trust
 
 ```sh
-export SEC_USER_AGENT_CONTACT="ops@example.com"
-export SEC_USER_AGENT_PRODUCT="my-research-agent/1.0" # optional
+export AGENT_CONTACT="ops@example.com"
 ```
 
 The data tool uses `finance_sec`: eight requests/second, two concurrent
@@ -349,7 +348,7 @@ non-contiguous quarters, and zero denominators reject explicitly.
 The repository also provides a separate production-read compatibility runner:
 
 ```sh
-SEC_USER_AGENT_CONTACT="you@your-real-domain.com" bun run test:live:sec
+AGENT_CONTACT="you@your-real-domain.com" bun run test:live:sec
 ```
 
 This is not a unit test or an SEC sandbox. It invokes the built `sec_edgar`,
@@ -388,7 +387,7 @@ artifact, Pi-load, and concise `/fundamentals` workflow are implemented.
   Supply a real fair-access contact and run:
 
   ```sh
-  SEC_USER_AGENT_CONTACT="you@your-real-domain.com" bun run test:live:sec
+  AGENT_CONTACT="you@your-real-domain.com" bun run test:live:sec
   ```
 
   Completion requires every company, filing, raw-XBRL, and normalized-metric

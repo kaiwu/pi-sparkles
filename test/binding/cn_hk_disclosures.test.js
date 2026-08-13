@@ -12,26 +12,17 @@ const saved = {};
 beforeEach(() => {
   saved.fetch = globalThis.fetch;
   for (const name of [
-    "CNINFO_USER_AGENT_PRODUCT",
-    "CNINFO_USER_AGENT_CONTACT",
-    "HKEX_USER_AGENT_PRODUCT",
-    "HKEX_USER_AGENT_CONTACT",
+    "AGENT_CONTACT",
   ]) {
     saved[name] = process.env[name];
   }
-  process.env.CNINFO_USER_AGENT_PRODUCT = "pi-sparkles-cn-test/0.1";
-  process.env.CNINFO_USER_AGENT_CONTACT = "fixtures@example.com";
-  process.env.HKEX_USER_AGENT_PRODUCT = "pi-sparkles-hk-test/0.1";
-  process.env.HKEX_USER_AGENT_CONTACT = "fixtures@example.com";
+  process.env.AGENT_CONTACT = "fixtures@example.com";
 });
 
 afterEach(() => {
   globalThis.fetch = saved.fetch;
   for (const name of [
-    "CNINFO_USER_AGENT_PRODUCT",
-    "CNINFO_USER_AGENT_CONTACT",
-    "HKEX_USER_AGENT_PRODUCT",
-    "HKEX_USER_AGENT_CONTACT",
+    "AGENT_CONTACT",
   ]) {
     restore(name, saved[name]);
   }
@@ -163,7 +154,7 @@ describe("CN/HK official disclosure boundaries", () => {
     );
     for (const call of calls) {
       expect(call.init.headers.get("user-agent")).toBe(
-        "pi-sparkles-cn-test/0.1 fixtures@example.com",
+        "pi-sparkles-cn-disclosures/0.1 fixtures@example.com",
       );
     }
   });
@@ -428,7 +419,7 @@ describe("CN/HK official disclosure boundaries", () => {
     expect(calls[1].url).toContain("/search/titlesearch.xhtml?");
     for (const call of calls) {
       expect(call.init.headers.get("user-agent")).toBe(
-        "pi-sparkles-hk-test/0.1 fixtures@example.com",
+        "pi-sparkles-hk-disclosures/0.1 fixtures@example.com",
       );
     }
   });

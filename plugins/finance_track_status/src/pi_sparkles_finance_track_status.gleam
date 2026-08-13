@@ -22,6 +22,7 @@ import pi/schema
 import pi/session
 import pi/tool
 import pi/ui
+import pi_sparkles_finance_track_status/effect/environment
 import pi_sparkles_finance_track_status/effect/store
 import pi_sparkles_finance_track_status/readiness
 import pi_sparkles_finance_track_status/state
@@ -45,14 +46,17 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     "Initial active finance track: cn, hk, or us",
     "us",
   )
-  pi.register_string_flag(
-    api,
-    "finance-agent-contact",
-    "Non-secret agent contact label shown in finance track status",
-    "unconfigured",
-  )
-
   let runtime = store.new(state.new(configured_track(api)))
+
+  event.respond(api, event.before_agent_start, fn(_event, ctx) {
+    let prompt =
+      context.get_system_prompt(ctx)
+      <> "\n\nPi Sparkles finance routing: Treat AGENT_CONTACT as one shared operator identity across cn, hk, and us. Tool use gathers evidence; it does not delegate the final judgment. The user never needs to say 'use tools', 'use current data', or 'provide tool evidence'. When a user asks whether to buy now, what happens if they buy now, when to sell, or requests an entry, exit, stop, target, or timing opinion about a security, treat that ordinary wording itself as a request for current read-only evidence. Do not answer from general knowledge alone and do not skip tools merely because the LLM owns the recommendation. Unless the user explicitly requests a general educational answer or declines current-data lookup, first resolve the exact active-track identity once if necessary, fetch a current quote and a bounded recent daily OHLCV/history series, then call the relevant installed sma, rsi, and atr tools before giving a conditional scenario-based answer. Use plan_loss or other trade-plan calculations only when their exact required entry, stop, account, risk, or trade-unit facts are available; use simulate_bar_paths only for an exact proposed order and completed bar, never as a prerequisite for an ordinary timing question. For CN price or technical-analysis requests with an exact venue and code, call the market-data tool directly and do not call symbol search or CNINFO first. When the user supplies only a familiar canonical security name and its code/venue mapping is sufficiently certain, state that mapping as an assumption and proceed directly; the absence of a code in the original wording does not by itself require symbol search. Otherwise resolve the identity at most once with cn_stock_symbol_search, then do not repeat it. Use CNINFO tools only when the user explicitly requests announcements, disclosures, filings, or event evidence; CNINFO is never a prerequisite for quotes, OHLCV, or indicators. After a history/OHLCV tool returns rows, call installed sma, rsi, and atr tools for requested calculations instead of writing or executing a program or calculating indicators yourself. Omit stock-technicals instructionRef unless a real retained hash already exists; the tool derives it, so never pause to calculate that hash."
+    prompt
+    |> event.system_prompt
+    |> Some
+    |> promise.resolve
+  })
 
   event.on_session_start(api, fn(_start, ctx) {
     restore(api, runtime, ctx)
@@ -100,7 +104,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     tool.parameters(schema.object([]), decode.success(StatusInput)),
     tool.Parallel,
     fn(_id, _input, _signal, _updates, ctx) {
-      let value = current_profile(api, runtime)
+      let value = current_profile(runtime)
       let receipt = current_receipt(api, value.0)
       refresh_status(ctx, value.0, receipt)
       tool.text_result(
@@ -126,7 +130,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     tool.Sequential,
     fn(_id, input, _signal, _updates, ctx) {
       switch_track(api, runtime, input.track, ctx, persist: True)
-      let value = current_profile(api, runtime)
+      let value = current_profile(runtime)
       let receipt = current_receipt(api, value.0)
       tool.text_result(
         describe(value.0, receipt),
@@ -161,7 +165,7 @@ fn show_command(
   runtime: store.Store(state.State),
   ctx: pi.CommandContext,
 ) -> Nil {
-  let value = current_profile(api, runtime)
+  let value = current_profile(runtime)
   let receipt = current_receipt(api, value.0)
   refresh_status(ctx, value.0, receipt)
   notify(ctx, describe(value.0, receipt), notification(value.1))
@@ -174,7 +178,7 @@ fn switch_command(
   ctx: pi.CommandContext,
 ) -> Nil {
   switch_track(api, runtime, track, ctx, persist: True)
-  let value = current_profile(api, runtime)
+  let value = current_profile(runtime)
   notify(
     ctx,
     describe(value.0, current_receipt(api, value.0)),
@@ -204,7 +208,7 @@ fn switch_track(
     state.Unchanged(_), False -> publish(api, track)
     _, _ -> Nil
   }
-  let value = current_profile(api, runtime)
+  let value = current_profile(runtime)
   refresh_status(ctx, value.0, current_receipt(api, value.0))
 }
 
@@ -262,11 +266,10 @@ fn restore_warning(
 }
 
 fn current_profile(
-  api: pi.ExtensionApi,
   runtime: store.Store(state.State),
 ) -> #(profile.Profile, Bool) {
   let track = runtime |> store.read |> state.active_track
-  case profile.defaults(track, configured_contact(api)) {
+  case profile.defaults(track, environment.contact()) {
     Ok(value) -> #(value, True)
     Error(_) -> {
       let assert Ok(value) = profile.defaults(track, "invalid-contact")
@@ -283,13 +286,6 @@ fn configured_track(api: pi.ExtensionApi) -> finance_track.Track {
         Error(_) -> finance_track.Us
       }
     _ -> finance_track.Us
-  }
-}
-
-fn configured_contact(api: pi.ExtensionApi) -> String {
-  case pi.get_flag(api, "finance-agent-contact") {
-    Some(pi.StringFlag(value)) -> value
-    _ -> "unconfigured"
   }
 }
 

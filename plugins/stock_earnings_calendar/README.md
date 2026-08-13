@@ -21,8 +21,8 @@ to issuer announcements for the controlling record. The plugin calculates only
 the earliest retained date in the requested range; the LLM owns interpretation
 and next action.
 
-Set `HKEX_USER_AGENT_CONTACT` to a non-secret operational contact.
-`HKEX_USER_AGENT_PRODUCT` is optional and defaults to
+Set the shared non-secret `AGENT_CONTACT` operator identity.
+The outbound product label is fixed as
 `pi-sparkles-stock-earnings-calendar/0.1`. The request is HTTPS-only,
 host/path allowlisted, limited to 2 MB and 30 seconds, one request per second,
 one in flight, retry-bounded, cancellation-aware, and captured as

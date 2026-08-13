@@ -45,7 +45,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     "cn_stock_history",
     "CN stock history",
     "Fetch bounded raw unadjusted daily bars for one exact mainland A-share through an explicitly selected Eastmoney or Tushare Pro adapter with a content-bound canonical receipt",
-    "Use after identity resolution; provider failure never triggers fallback, gap filling, adjustment, or suspension inference",
+    "Call directly when the caller supplies an exact mainland venue and code; do not repeat symbol search or CNINFO discovery. Provider failure never triggers fallback, gap filling, adjustment, or suspension inference",
     tool.parameters(input_schema(), input_decoder()),
     tool.Parallel,
     fn(id, plan, signal, _updates, _ctx) {
@@ -69,7 +69,7 @@ fn eastmoney_provider() -> EastmoneyProvider {
   {
     Error(_) ->
       EastmoneyUnavailable(
-        "Selected Eastmoney adapter requires EASTMONEY_USER_AGENT_CONTACT; no fallback was attempted",
+        "Selected Eastmoney adapter requires AGENT_CONTACT; no fallback was attempted",
       )
     Ok(access) ->
       case eastmoney_runtime.new(access) {

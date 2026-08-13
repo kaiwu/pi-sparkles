@@ -13,7 +13,7 @@ const hkFixture =
 
 beforeEach(() => {
   requests.length = 0;
-  process.env.EASTMONEY_USER_AGENT_CONTACT = "market-data@example.test";
+  process.env.AGENT_CONTACT = "market-data@example.test";
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
@@ -30,7 +30,7 @@ beforeEach(() => {
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
-  delete process.env.EASTMONEY_USER_AGENT_CONTACT;
+  delete process.env.AGENT_CONTACT;
 });
 
 async function harness(name) {
@@ -131,6 +131,12 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
       "Complete bounded daily rows follow as CSV",
     );
     expect(result.content[0].text).toContain(
+      "call the installed Pi tools sma, rsi, and atr",
+    );
+    expect(result.content[0].text).toContain(
+      "do not write or execute a program",
+    );
+    expect(result.content[0].text).toContain(
       "2024-08-01,1350.6000,1363.35,1346.00,1358.98,36147,4898665275.00",
     );
 
@@ -158,6 +164,10 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
     });
     expect(receipt.sourceReference).toBe(
       "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=1.600519&klt=101&fqt=0&beg=20240801&end=20240802&lmt=3",
+    );
+    expect(result.details.sourceReference).toBe(receipt.sourceReference);
+    expect(result.content[0].text).toContain(
+      `sourceReference=${receipt.sourceReference}`,
     );
     expect(receipt.pages).toEqual([
       {
@@ -212,6 +222,12 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
     expect(result.details.providerRows[0].turnoverPercent).toBe("0.25");
     expect(result.content[0].text).toContain(
       "Complete bounded daily rows follow as CSV",
+    );
+    expect(result.content[0].text).toContain(
+      "call the installed Pi tools sma, rsi, and atr",
+    );
+    expect(result.content[0].text).toContain(
+      "do not write or execute a program",
     );
     expect(result.content[0].text).toContain(
       "2024-08-01,370.200,375.000,368.600,372.400,15432100,5743210000.00",

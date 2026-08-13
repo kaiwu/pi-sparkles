@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 
 const originalFetch = globalThis.fetch;
-const originalContact = process.env.EASTMONEY_USER_AGENT_CONTACT;
+const originalContact = process.env.AGENT_CONTACT;
 
 const historyBody = JSON.stringify({
   rc: 0,
@@ -22,7 +22,7 @@ const historyBody = JSON.stringify({
 const hash = (digit) => digit.repeat(64);
 
 beforeAll(() => {
-  process.env.EASTMONEY_USER_AGENT_CONTACT = "t1-swing@example.test";
+  process.env.AGENT_CONTACT = "t1-swing@example.test";
   globalThis.fetch = async (input) => {
     const url = new URL(String(input));
     if (
@@ -41,9 +41,9 @@ beforeAll(() => {
 afterAll(() => {
   globalThis.fetch = originalFetch;
   if (originalContact === undefined) {
-    delete process.env.EASTMONEY_USER_AGENT_CONTACT;
+    delete process.env.AGENT_CONTACT;
   } else {
-    process.env.EASTMONEY_USER_AGENT_CONTACT = originalContact;
+    process.env.AGENT_CONTACT = originalContact;
   }
 });
 

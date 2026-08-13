@@ -55,13 +55,12 @@ if (import.meta.main) {
 }
 
 async function main() {
-  const product = liveProduct(process.env);
+  validateLiveContact(process.env);
   const startedAt = new Date().toISOString();
   const requests = [];
   const checks = [];
   const originalFetch = globalThis.fetch;
 
-  process.env.SEC_USER_AGENT_PRODUCT = product;
   globalThis.fetch = guardedFetch(originalFetch, requests);
 
   try {
@@ -227,13 +226,11 @@ async function main() {
   }
 }
 
-function liveProduct(environment) {
-  const contact = environment.SEC_USER_AGENT_CONTACT?.trim() ?? "";
-  const product =
-    environment.SEC_USER_AGENT_PRODUCT?.trim() || "pi-sparkles-live-sec/0.1";
+function validateLiveContact(environment) {
+  const contact = environment.AGENT_CONTACT?.trim() ?? "";
   if (contact === "") {
     throw new Error(
-      'Live SEC tests require SEC_USER_AGENT_CONTACT, for example: SEC_USER_AGENT_CONTACT="you@your-real-domain.com" bun run test:live:sec',
+      'Live SEC tests require AGENT_CONTACT, for example: AGENT_CONTACT="you@your-real-domain.com" bun run test:live:sec',
     );
   }
   if (
@@ -241,10 +238,9 @@ function liveProduct(environment) {
     contact.includes("your-real-domain")
   ) {
     throw new Error(
-      "SEC_USER_AGENT_CONTACT must identify a real contact, not a placeholder",
+      "AGENT_CONTACT must identify a real contact, not a placeholder",
     );
   }
-  return product;
 }
 
 function guardedFetch(fetchImplementation, requests) {

@@ -20,7 +20,7 @@ redistribution rights remain unknown. There is no generated or stale fallback.
 The feature receipt therefore measures installed workflow breadth, not statement
 or issuer completeness and not truth probability.
 
-Set non-secret `EASTMONEY_USER_AGENT_CONTACT`; optionally set
-`EASTMONEY_USER_AGENT_PRODUCT`. Requests are read-only, caller-identified,
+Set the shared non-secret `AGENT_CONTACT`. The plugin supplies its product
+label. Requests are read-only, caller-identified,
 origin/path/size/time/rate/retry/queue bounded, and cancellable. Normal tests use
 fixtures or mocked fetch only.

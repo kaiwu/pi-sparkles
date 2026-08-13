@@ -44,7 +44,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     "cn_stock_quote",
     "CN stock price snapshot",
     "Fetch one dated mainland A-share price snapshot through an explicitly selected Eastmoney quote or Tushare Pro end-of-day adapter while retaining unavailable fields and a content receipt",
-    "Tushare daily is labelled end-of-day rather than realtime; no selected-provider failure triggers fallback",
+    "Call directly when the caller supplies an exact mainland venue and code; do not repeat symbol search or CNINFO discovery. Tushare daily is labelled end-of-day rather than realtime; no selected-provider failure triggers fallback",
     tool.parameters(input_schema(), input_decoder()),
     tool.Parallel,
     fn(id, plan, signal, _updates, _ctx) {
@@ -68,7 +68,7 @@ fn eastmoney_provider() -> EastmoneyProvider {
   {
     Error(_) ->
       EastmoneyUnavailable(
-        "Selected Eastmoney adapter requires EASTMONEY_USER_AGENT_CONTACT; no fallback was attempted",
+        "Selected Eastmoney adapter requires AGENT_CONTACT; no fallback was attempted",
       )
     Ok(access) ->
       case eastmoney_runtime.new(access) {

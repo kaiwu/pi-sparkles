@@ -30,9 +30,10 @@ function context({
   timezone = "Asia/Shanghai",
   inputField = "close",
   unit = "CNY",
+  instructionRef = hash("1"),
 } = {}) {
   return {
-    instructionRef: hash("1"),
+    ...(instructionRef === null ? {} : { instructionRef }),
     track,
     instrumentId,
     mic,
@@ -164,8 +165,25 @@ describe("stock technicals bundled boundary", () => {
   test("supports compact then intermediate evidence queries without making a decision", async () => {
     const tools = await harness();
     expect([...tools.keys()]).toEqual(["sma", "rsi", "atr"]);
+    for (const name of ["sma", "rsi", "atr"]) {
+      expect(tools.get(name).description).toContain(
+        "instead of writing or executing calculation code",
+      );
+      expect(tools.get(name).promptSnippet).toContain(
+        "copy its model-visible source/receipt metadata",
+      );
+      expect(tools.get(name).promptSnippet).toContain(
+        "omit instructionRef unless a real retained hash already exists",
+      );
+      const calculation =
+        tools.get(name).parameters.properties.calculation.properties;
+      expect(calculation.policy).toBeDefined();
+      expect(calculation.outputScale).toBeDefined();
+      expect(calculation.intermediateScale).toBeDefined();
+    }
 
     const compact = await execute(tools.get("sma"), smaInput("compact"));
+    expect(compact.details.instructionRefOrigin).toBe("caller_supplied");
     expect(compact.details.projection).toBe("compact");
     expect(compact.details.latestValue.output).toMatchObject({
       date: "2026-02-25",
@@ -177,6 +195,22 @@ describe("stock technicals bundled boundary", () => {
       value: "10.92",
     });
     expect(compact.details.orderedOutputs).toBeUndefined();
+    expect(compact.details.semanticReceiptJson).toBeUndefined();
+    expect(compact.details.requestReceiptJson).toBeUndefined();
+    expect(compact.details.receiptPayloads).toEqual({
+      state: "omitted",
+      reason:
+        "compact_projection_returns_content_hash_handles_without_duplicating_full_inputs_and_outputs",
+    });
+    expect(compact.content[0].text.split("\n")[0]).toContain(
+      "calculated 3, unperformed 2",
+    );
+    const compactModelData = JSON.parse(
+      compact.content[0].text.split("\nMODEL_DATA ")[1],
+    );
+    expect(compactModelData.latestValue.output.value).toBe("10.91");
+    expect(compactModelData.priorValue.output.value).toBe("10.92");
+    expect(compact.content[0].text).not.toContain("semanticReceiptJson");
 
     const drilldown = await execute(
       tools.get("sma"),
@@ -185,6 +219,9 @@ describe("stock technicals bundled boundary", () => {
     expect(drilldown.details.semanticReceiptHandle).toBe(
       compact.details.semanticReceiptHandle,
     );
+    expect(drilldown.details.semanticReceiptJson).toBeString();
+    expect(drilldown.details.requestReceiptJson).toBeString();
+    expect(drilldown.content[0].text).toContain('"orderedOutputs"');
     expect(drilldown.details.orderedOutputs).toHaveLength(5);
     expect(drilldown.details.orderedOutputs.at(-1)).toMatchObject({
       state: "calculated",
@@ -198,6 +235,74 @@ describe("stock technicals bundled boundary", () => {
     expect(JSON.stringify(drilldown.details)).not.toMatch(
       /"(signal|rank|recommended|correct|ready|nextAction)"/,
     );
+  });
+
+  test("accepts matching redundant rounding fields and rejects conflicts", async () => {
+    const tools = await harness();
+    const compatible = smaInput("compact");
+    Object.assign(compatible.calculation, {
+      policy: "per_step",
+      outputScale: 2,
+      intermediateScale: 6,
+    });
+
+    const result = await execute(tools.get("sma"), compatible);
+    expect(result.details.latestValue.state).toBe("known");
+
+    const conflicting = smaInput("compact");
+    conflicting.calculation.outputScale = 4;
+    await expect(execute(tools.get("sma"), conflicting)).rejects.toThrow(
+      "Invalid parameters for tool sma",
+    );
+  });
+
+  test("keeps a bounded large SMA request fast and its compact result small", async () => {
+    const tools = await harness();
+    const observations = Array.from({ length: 1_000 }, (_, index) => ({
+      date: new Date(Date.UTC(2020, 0, index + 1)).toISOString().slice(0, 10),
+      value: known((100 + (index % 17) / 10).toFixed(2)),
+    }));
+    const input = smaInput("compact");
+    input.context.dateStart = observations[0].date;
+    input.context.dateEnd = observations.at(-1).date;
+    input.calculation.period = 60;
+    input.observations = observations;
+
+    const started = performance.now();
+    const result = await execute(tools.get("sma"), input);
+    const duration = performance.now() - started;
+
+    expect(result.details.latestValue.state).toBe("known");
+    expect(duration).toBeLessThan(5_000);
+    expect(Buffer.byteLength(JSON.stringify(result))).toBeLessThan(10_000);
+  });
+
+  test("derives a deterministic instruction reference without LLM-side hashing", async () => {
+    const tools = await harness();
+    const input = smaInput("compact");
+    input.context = context({ instructionRef: null });
+
+    const first = await execute(tools.get("sma"), input);
+    const second = await execute(tools.get("sma"), input);
+
+    expect(first.details.instructionRef).toMatch(/^[0-9a-f]{64}$/);
+    expect(first.details.instructionRefOrigin).toBe(
+      "derived_from_canonical_request",
+    );
+    expect(second.details.instructionRef).toBe(first.details.instructionRef);
+  });
+
+  test("promotes raw-basis roots to context evidence instead of blocking", async () => {
+    const tools = await harness();
+    const input = smaInput("compact");
+    input.context.evidenceRoots = [];
+    input.context.basis.evidenceRoots = [hash("3")];
+
+    const result = await execute(tools.get("sma"), input);
+
+    expect(result.details.adjustmentBasis).toEqual({ kind: "raw" });
+    expect(result.details.evidenceRoots).toEqual([hash("3")]);
+    expect(result.details.latestValue.state).toBe("known");
   });
 
   test("runs the explicit Wilder RSI and ATR paths and rejects missing policies", async () => {

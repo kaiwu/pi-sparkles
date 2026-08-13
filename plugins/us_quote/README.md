@@ -11,10 +11,9 @@ Required environment variables:
 
 - `ALPACA_API_KEY_ID`
 - `ALPACA_API_SECRET_KEY`
-- `ALPACA_USER_AGENT_CONTACT`
+- `AGENT_CONTACT` (shared non-secret operator identity)
 
-`ALPACA_USER_AGENT_PRODUCT` is optional and defaults to
-`pi-sparkles-us-quote/0.1`.
+The plugin supplies its fixed outbound product label.
 
 The tool preserves exact provider JSON tokens for bid/ask prices and sizes,
 along with provider time, exchange codes, condition codes, tape, selected feed,

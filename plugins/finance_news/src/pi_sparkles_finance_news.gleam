@@ -93,7 +93,7 @@ fn provider() -> Provider {
   {
     Error(_) ->
       InvalidConfiguration(
-        "Alpaca news requires ALPACA_API_KEY_ID, ALPACA_API_SECRET_KEY, and ALPACA_USER_AGENT_CONTACT; ALPACA_USER_AGENT_PRODUCT is optional",
+        "Alpaca news requires AGENT_CONTACT, ALPACA_API_KEY_ID, and ALPACA_API_SECRET_KEY",
       )
     Ok(access) ->
       case runtime.new() {

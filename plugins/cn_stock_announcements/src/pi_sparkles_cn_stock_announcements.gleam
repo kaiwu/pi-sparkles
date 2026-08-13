@@ -49,8 +49,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "cn_stock_announcement_search",
     "CN stock announcements",
-    "Search bounded official CNINFO announcement metadata after resolving an exact code and organization association",
-    "Preserves Chinese titles, document identities, paging and receipts; ambiguity and malformed provider data fail closed",
+    "Use only when the user explicitly requests announcements, disclosures, filings, or event evidence for an exact mainland issuer. Never use CNINFO as a prerequisite for quotes, price history, OHLCV, or technical indicators, and never use it as symbol search",
+    "Market-data and indicator requests bypass this tool; announcement results preserve Chinese titles, document identities, paging and receipts, while ambiguity and malformed provider data fail closed",
     tool.parameters(input_schema(), input_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
@@ -92,7 +92,7 @@ fn provider() -> Provider {
   case finance_cninfo.access(environment.product(), environment.contact()) {
     Error(_) ->
       Unavailable(
-        "CNINFO_USER_AGENT_CONTACT is required for responsible public access; it is operator identification, not a provider credential",
+        "AGENT_CONTACT is required for responsible public access; it is shared operator identification, not a provider credential",
       )
     Ok(access) ->
       case discovery_runtime.new(access) {

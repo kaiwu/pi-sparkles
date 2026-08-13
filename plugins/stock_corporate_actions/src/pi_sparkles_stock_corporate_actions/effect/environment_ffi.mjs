@@ -6,12 +6,8 @@ export function read_secret_key() {
   return process.env.ALPACA_API_SECRET_KEY ?? "";
 }
 
-export function read_product() {
-  return process.env.ALPACA_USER_AGENT_PRODUCT ?? "";
-}
-
 export function read_contact() {
-  return process.env.ALPACA_USER_AGENT_CONTACT ?? "";
+  return process.env.AGENT_CONTACT ?? "";
 }
 
 export function read_now_milliseconds() {

@@ -8,9 +8,9 @@ Securities. It exposes `hk_security_search`, `hk_security_profile`,
 `hk_recent_listing_event`, and `hk_disclosure_search`; every result is visibly
 `hk` and cannot borrow a CN or US identity surface.
 
-Set `HKEX_USER_AGENT_CONTACT` to a non-secret operational contact.
-`HKEX_USER_AGENT_PRODUCT` is optional and defaults to
-`pi-sparkles-hk-disclosures/0.1`. Missing/invalid identity leaves tools
+Set the shared non-secret `AGENT_CONTACT` operator identity.
+The outbound product label is fixed as `pi-sparkles-hk-disclosures/0.1`.
+Missing/invalid identity leaves tools
 registered but fail-closed.
 
 The adapter is caller-identified, HTTPS-only, host/path allowlisted,

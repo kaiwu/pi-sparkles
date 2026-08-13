@@ -33,9 +33,9 @@ coherence check, not an Eastmoney signature or HKEX proof.
 
 Runtime configuration:
 
-- `EASTMONEY_USER_AGENT_CONTACT` (for example `ops@example.com`)
-- optional `EASTMONEY_USER_AGENT_PRODUCT` (defaults to
-  `pi-sparkles-hk-ohlcv/0.1`)
+- `AGENT_CONTACT` (shared non-secret operator identity, for example `ops@example.com`)
+
+The plugin supplies its fixed outbound product label.
 
 Eastmoney is vendor-origin public-web evidence with unknown service level,
 licence, and redistribution rights. Normal tests use fixtures only.

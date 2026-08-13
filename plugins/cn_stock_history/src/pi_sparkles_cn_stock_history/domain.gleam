@@ -479,7 +479,7 @@ fn eastmoney_model_content(
   receipt: acquisition_receipt.Receipt,
 ) -> String {
   summary
-  <> "\nComplete bounded daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable.\n"
+  <> "\nComplete bounded daily rows follow as CSV; do not claim the daily values are unavailable. For requested indicators, call the installed Pi tools sma, rsi, and atr with these exact rows; do not write or execute a program and do not calculate the indicators yourself. Map close to sma/rsi observations and high,low,close to atr bars.\n"
   <> model_metadata(plan, "eastmoney", retrieved_at, receipt)
   <> "\ndate,open,high,low,close,volume,amount\n"
   <> {
@@ -528,7 +528,7 @@ fn tushare_model_content(
   receipt: acquisition_receipt.Receipt,
 ) -> String {
   summary
-  <> "\nComplete bounded daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable.\n"
+  <> "\nComplete bounded daily rows follow as CSV; do not claim the daily values are unavailable. For requested indicators, call the installed Pi tools sma, rsi, and atr with these exact rows; do not write or execute a program and do not calculate the indicators yourself. Map close to sma/rsi observations and high,low,close to atr bars.\n"
   <> model_metadata(plan, "tushare_pro", retrieved_at, receipt)
   <> "\ndate,open,high,low,close,volume,amount\n"
   <> {

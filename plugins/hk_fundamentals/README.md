@@ -20,7 +20,7 @@ history, service level, licence, and redistribution rights remain unknown. No
 generated or stale fallback exists. Feature coverage measures installed workflow
 breadth, not complete statement coverage and not truth probability.
 
-Set non-secret `EASTMONEY_USER_AGENT_CONTACT`; optionally set
-`EASTMONEY_USER_AGENT_PRODUCT`. Requests are read-only, caller-identified,
+Set the shared non-secret `AGENT_CONTACT`. The plugin supplies its product
+label. Requests are read-only, caller-identified,
 origin/path/size/time/rate/retry/queue bounded, and cancellable. Normal tests use
 fixtures or mocked fetch only.

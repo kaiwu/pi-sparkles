@@ -69,8 +69,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "us_stock_ohlcv",
     "US exact daily OHLCV",
-    "Fetch bounded raw-adjustment Alpaca daily US stock bars for an exact symbol/as-of identity and explicit IEX or SIP feed; preserve source numeric lexemes, page-body hashes, a canonical gap-projection digest, pagination, entitlement, and unassessed calendar gaps",
-    "Retrieve reproducible daily US OHLCV without feed fallback, adjustment, synthetic bars, or guessed closures and suspensions",
+    "Fetch bounded raw-adjustment Alpaca daily US stock bars for an exact symbol/as-of identity and explicit IEX or SIP feed; use OHLCV evidence by default for ordinary buy-now, sell-timing, entry, exit, stop, target, trend, momentum, or volatility questions even when the user does not explicitly request tools; preserve source numeric lexemes, page-body hashes, a canonical gap-projection digest, pagination, entitlement, and unassessed calendar gaps",
+    "Retrieve reproducible daily US OHLCV for current-data-dependent opinions without feed fallback, adjustment, synthetic bars, or guessed closures and suspensions",
     tool.parameters(input_schema(), input_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
@@ -139,6 +139,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                               query_plan,
                               batch,
                               retrieved_at,
+                              receipt,
                               digest,
                             ),
                             details,
@@ -168,7 +169,7 @@ fn provider() -> Provider {
   {
     Error(_) ->
       InvalidConfiguration(
-        "Alpaca OHLCV requires ALPACA_API_KEY_ID, ALPACA_API_SECRET_KEY, and ALPACA_USER_AGENT_CONTACT; ALPACA_USER_AGENT_PRODUCT is optional",
+        "Alpaca OHLCV requires AGENT_CONTACT, ALPACA_API_KEY_ID, and ALPACA_API_SECRET_KEY",
       )
     Ok(access) ->
       case runtime.new() {
@@ -612,10 +613,11 @@ fn model_content(
   plan: query.DailyBarsQuery,
   batch: finance_ohlcv.Batch,
   retrieved_at: time.Instant,
+  receipt: gap_receipt.Receipt,
   receipt_digest: identity.Sha256,
 ) -> String {
   summary
-  <> "\nComplete bounded, exact de-duplicated daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable.\n"
+  <> "\nComplete bounded, exact de-duplicated daily rows follow as CSV. For requested indicators, call the installed Pi tools sma, rsi, and atr with these exact rows; do not write or execute a program and do not calculate the indicators yourself. Map close to sma/rsi observations and high,low,close to atr bars.\n"
   <> "track=us;provider=alpaca;feed="
   <> query.feed_name(query.feed(plan))
   <> ";symbol="
@@ -624,6 +626,10 @@ fn model_content(
   <> int.to_string(time.unix_milliseconds(retrieved_at))
   <> ";gapAssessmentReceiptDigest="
   <> identity.sha256_value(receipt_digest)
+  <> ";acquisitionReceipt="
+  <> identity.sha256_value(receipt_digest)
+  <> ";sourceReference="
+  <> gap_receipt.source_reference(receipt)
   <> "\ndate,provider_timestamp,open,high,low,close,volume,trade_count,vwap\n"
   <> {
     finance_ohlcv.observations(batch)
@@ -711,6 +717,11 @@ fn result_json(
       #(
         "gapAssessmentReceipt",
         gap_assessment_receipt_json(receipt, receipt_digest),
+      ),
+      #("sourceReference", json.string(gap_receipt.source_reference(receipt))),
+      #(
+        "acquisitionReceipt",
+        json.string(identity.sha256_value(receipt_digest)),
       ),
       #(
         "gapStates",

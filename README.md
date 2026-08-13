@@ -210,7 +210,7 @@ current-two-week table and establishes a listing start only for an exact,
 non-tentative `New Listing` row. It does not establish historical completeness,
 a listing end, or positive per-session trading status.
 `sec_edgar` likewise performs no request until invoked and requires an SEC
-fair-access contact in `SEC_USER_AGENT_CONTACT`; `sec_xbrl` shares that contract
+fair-access contact in `AGENT_CONTACT`; `sec_xbrl` shares that contract
 and preserves SEC numeric source lexemes rather than converting through binary
 floats. `stock_fundamentals` adds inspectable exact-period mappings, explicit
 filing policies, strict source-retaining Q4 derivation, and comparable direct-fact
@@ -450,7 +450,7 @@ real `sec_edgar`, `sec_xbrl`, and `stock_fundamentals` bundles without an LLM,
 allows only bounded HTTPS GETs to SEC hosts, and requires a real caller contact:
 
 ```sh
-SEC_USER_AGENT_CONTACT="you@your-real-domain.com" bun run test:live:sec
+AGENT_CONTACT="you@your-real-domain.com" bun run test:live:sec
 ```
 
 The runner makes at most ten sequential attempts, refuses redirects, and emits
@@ -464,12 +464,13 @@ plugin bundle. This repository does not load `.env` files. Reload or restart Pi
 after changing provider configuration because plugins capture it when their
 extension factory initializes.
 
-There is intentionally no generic `AGENT_CONTACT` or `API_KEY` variable.
-Caller identity and credentials are provider-scoped so one track cannot
-silently borrow another provider's authority. `*_USER_AGENT_CONTACT` and
-`*_USER_AGENT_PRODUCT` values are non-secret and are sent to the named provider.
-API keys and secret keys are credentials: inject them with a secret manager or
-the process supervisor, never commit them or place real values in documentation.
+`AGENT_CONTACT` is the one non-secret operator identity reused by every CN, HK,
+and US provider adapter and by the finance status line. It can cross tracks
+because it identifies the caller; it grants no provider or market authority.
+Outbound product labels are fixed by each plugin, so callers do not configure
+them. API keys and secret keys remain provider-scoped credentials: inject them with a
+secret manager or process supervisor, never commit them or place real values in
+documentation.
 
 ### Shared and reference plugins
 
@@ -478,7 +479,7 @@ the process supervisor, never commit them or place real values in documentation.
 | `finance_symbols` | None | `OPENFIGI_API_KEY` (**secret**) | Uses anonymous OpenFIGI access with its lower limits. |
 | `finance_setup` | None | None | Reports configuration/capability state without ambient credentials. |
 | `finance_guardrails` | None | None | Pure evidence and freshness policy. |
-| `finance_track_status` | None | None | Its visible agent contact is explicit session/tool state, not an environment variable. |
+| `finance_track_status` | `AGENT_CONTACT` | None | Shows the same shared operator identity used by provider adapters; reports `unconfigured` when absent. |
 | `day_workbench` | None | None | Stateless network-free inspection, calculation, and caller-retained workflow transitions over exact supplied packets; it performs no provider, persistence, alert, broker, or order effect. |
 | `stock_research_report` | None | None | Composes caller-supplied tool receipts without direct provider access; `/us-research` queues the agent workflow. |
 | `watchlist` | None | None | Uses versioned Pi session-branch entries; no provider, credential, or external storage configuration. |
@@ -488,49 +489,47 @@ the process supervisor, never commit them or place real values in documentation.
 
 | Plugin | Required variables | Optional variables | Notes |
 | --- | --- | --- | --- |
-| `cn_disclosures` | `CNINFO_USER_AGENT_CONTACT` | `CNINFO_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-cn-disclosures/0.1`. |
-| `cn_market_data` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-cn-market-data/0.1`. |
-| `cn_fundamentals` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-cn-fundamentals/0.1`. |
-| `cn_ohlcv` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-cn-ohlcv/0.1`. |
+| `cn_disclosures` | `AGENT_CONTACT` | None | Uses a fixed plugin product label. |
+| `cn_market_data` | `AGENT_CONTACT` | None | Uses a fixed plugin product label. |
+| `cn_fundamentals` | `AGENT_CONTACT` | None | Uses a fixed plugin product label. |
+| `cn_ohlcv` | `AGENT_CONTACT` | None | Uses a fixed plugin product label. |
 | `cn_ohlcv_gaps` | None | None | Verifies and composes copied CN acquisition/calendar/listing/status receipts locally; performs no environment lookup or runtime provider request. |
 | `cn_setup`, `cn_market_calendar`, `cn_market_rules` | None | None | Local capability, reviewed-calendar, and rule data require no ambient provider access. |
 
-The three Eastmoney plugins share the same caller identity variables, but keep
-independent Pi shells and track contracts. CNINFO configuration does not grant
-Eastmoney access, and neither configuration is accepted as HKEX or US authority.
+All adapters reuse `AGENT_CONTACT`, but keep independent Pi shells and track
+contracts. The contact identifies the operator and grants no CNINFO, Eastmoney,
+HKEX, SEC, Alpaca, market, or entitlement authority.
 
 ### HK track
 
 | Plugin | Required variables | Optional variables | Notes |
 | --- | --- | --- | --- |
-| `hk_disclosures` | `HKEX_USER_AGENT_CONTACT` | `HKEX_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-disclosures/0.1`; the same identity covers its HKEXnews searches, HKEX Full List workbook, and rolling current-two-week listing-event page. |
-| `stock_earnings_calendar` | `HKEX_USER_AGENT_CONTACT` | `HKEX_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-earnings-calendar/0.1`; the first slice reads only the exact HKEX Main Board or GEM Board Meeting Notifications page selected by the caller. |
-| `hk_market_data` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-market-data/0.1`. |
-| `hk_fundamentals` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-fundamentals/0.1`. |
-| `hk_ohlcv` | `EASTMONEY_USER_AGENT_CONTACT` | `EASTMONEY_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-hk-ohlcv/0.1`. |
+| `hk_disclosures` | `AGENT_CONTACT` | None | The same identity covers its HKEXnews searches, HKEX Full List workbook, and rolling current-two-week listing-event page. |
+| `stock_earnings_calendar` | `AGENT_CONTACT` | None | Reads only the exact HKEX Main Board or GEM Board Meeting Notifications page selected by the caller. |
+| `hk_market_data` | `AGENT_CONTACT` | None | Uses a fixed plugin product label. |
+| `hk_fundamentals` | `AGENT_CONTACT` | None | Uses a fixed plugin product label. |
+| `hk_ohlcv` | `AGENT_CONTACT` | None | Uses a fixed plugin product label. |
 | `hk_ohlcv_gaps` | None | None | Verifies and composes copied HK acquisition/calendar/listing/status receipts locally; performs no environment lookup or runtime provider request. |
 | `hk_setup`, `hk_market_calendar`, `hk_market_rules` | None | None | Local capability, reviewed-calendar, and rule data require no ambient provider access. |
 
-Eastmoney variables are shared at the provider layer across CN and HK, but a
-configured caller identity never permits cross-track fallback or relabelling.
-HKEX configuration applies only to the HK disclosure and earnings-calendar
-plugins; it never enables CN or US source access.
+The shared operator identity never permits cross-track fallback or relabelling.
+Provider-specific product labels and credentials do not enable sibling sources.
 
 ### US track
 
 | Plugin | Required variables | Optional variables | Notes |
 | --- | --- | --- | --- |
-| `sec_edgar` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-sec-edgar/0.1`. |
-| `sec_xbrl` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-sec-xbrl/0.1`. |
-| `stock_fundamentals` | `SEC_USER_AGENT_CONTACT` | `SEC_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-fundamentals/0.1`. |
+| `sec_edgar` | `AGENT_CONTACT` | None | Uses a fixed plugin product label. |
+| `sec_xbrl` | `AGENT_CONTACT` | None | Uses a fixed plugin product label. |
+| `stock_fundamentals` | `AGENT_CONTACT` | None | Uses a fixed plugin product label. |
 | `us_market_calendar` | None | None | Uses source-reviewed local NYSE/Nasdaq 2026 schedule data; performs no runtime provider request. |
 | `us_market_rules` | None | None | Uses source-reviewed local NYSE/Nasdaq/SEC rule data; performs no runtime provider request. |
 | `us_ohlcv_gaps` | None | None | Composes copied Alpaca/calendar/listing/status receipts locally; performs no environment lookup or runtime provider request. |
-| `us_quote` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-quote/0.1`; feed entitlement and recency depend on the requested IEX/SIP feed and account. |
-| `us_ohlcv` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-us-ohlcv/0.1`; feed entitlement still depends on the Alpaca account and requested IEX/SIP feed. |
-| `stock_screener` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-screener/0.1`; `stock_universe` uses the explicitly selected paper/live Trading API environment and returns provider rows without interpreting capability flags. |
-| `stock_corporate_actions` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-stock-corporate-actions/0.1`; the first slice fixes `region=us`, explicit Alpaca process-date/data-quality/action-type filters, and caller-visible page/action budgets. |
-| `finance_news` | `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**), `ALPACA_USER_AGENT_CONTACT` | `ALPACA_USER_AGENT_PRODUCT` | The optional product defaults to `pi-sparkles-finance-news/0.1`; the first slice fixes `track=us`, one exact symbol, an inclusive UTC interval, ascending provider-update order, and caller-visible page/article budgets. |
+| `us_quote` | `AGENT_CONTACT`, `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**) | None | Feed entitlement and recency depend on the requested IEX/SIP feed and account. |
+| `us_ohlcv` | `AGENT_CONTACT`, `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**) | None | Feed entitlement still depends on the Alpaca account and requested IEX/SIP feed. |
+| `stock_screener` | `AGENT_CONTACT`, `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**) | None | `stock_universe` uses the explicitly selected paper/live Trading API environment and returns provider rows without interpreting capability flags. |
+| `stock_corporate_actions` | `AGENT_CONTACT`, `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**) | None | The first slice fixes `region=us`, explicit Alpaca process-date/data-quality/action-type filters, and caller-visible page/action budgets. |
+| `finance_news` | `AGENT_CONTACT`, `ALPACA_API_KEY_ID` (**credential**), `ALPACA_API_SECRET_KEY` (**secret**) | None | The first slice fixes `track=us`, one exact symbol, an inclusive UTC interval, ascending provider-update order, and caller-visible page/article budgets. |
 | `company_profile` | `TWELVE_DATA_API_KEY` (**credential**) | None | Requires caller subscription access to Twelve Data `/profile` and `/statistics`; the first slice fixes `country=US`, requires an exact supported MIC, preserves Nasdaq segment MICs, and makes no automatic retry or fallback. |
 | `stock_technicals` | None | None | Stateless calculation-only shell over exact caller/LLM-supplied observations and receipts; every formula, parameter, policy, and projection is explicit. |
 | `finance_sources` | None | None | Stateless read-only shell over an exact caller/LLM-supplied provenance catalogue; it performs no hidden capture, fetch, verification, or persistence. |
@@ -552,11 +551,7 @@ credential placeholders through a secret manager rather than committing a
 shell file:
 
 ```sh
-export CNINFO_USER_AGENT_CONTACT="ops@example.com"
-export HKEX_USER_AGENT_CONTACT="ops@example.com"
-export EASTMONEY_USER_AGENT_CONTACT="ops@example.com"
-export SEC_USER_AGENT_CONTACT="ops@example.com"
-export ALPACA_USER_AGENT_CONTACT="ops@example.com"
+export AGENT_CONTACT="ops@example.com"
 
 export OPENFIGI_API_KEY="<secret-manager:openfigi>"       # optional
 export ALPACA_API_KEY_ID="<secret-manager:alpaca-key-id>"

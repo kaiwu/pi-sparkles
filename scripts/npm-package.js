@@ -168,40 +168,100 @@ function requireSuccess(result, label) {
 }
 
 function packageReadme(plan) {
-  const releaseStatement = plan.releasable
-    ? `This package is releasable: every included tier through ${plan.throughTierId} is ProductUseful.`
-    : `This package is a private blocked preview. It cannot be published until ${plan.throughTierId} is complete and ProductUseful.`;
-  return `# Pi Sparkles All-in-One
+  const previewNotice = plan.releasable
+    ? ""
+    : "> Development preview: this build is not intended for publication.\n\n";
+  return `# Pi Sparkles
 
-One Pi extension entrypoint containing ${plan.plugins.length} tier-ledger plugins
-through **${plan.throughTierId}**. ${releaseStatement}
+${previewNotice}Turn [Pi](https://github.com/badlogic/pi-mono) into a finance research
+assistant for mainland China, Hong Kong, and US markets.
 
-## Install
+Ask about a stock or ETF in everyday language. Pi Sparkles brings current market
+data, price history, company filings, fundamentals, and financial calculations
+into the conversation, so you can spend less time moving between websites,
+spreadsheets, and one-off scripts.
 
-Install the published package through plain Pi:
+## What it gives you
+
+- Current quotes and recent price history for supported CN, HK, and US sources.
+- Trend, momentum, and volatility analysis with SMA, RSI, and ATR.
+- SEC, CNINFO, and HKEXnews filing and disclosure research.
+- Fundamental, valuation, portfolio-risk, scenario, event-study, and backtest
+  calculations when the required data is available.
+- Clear source, timestamp, currency, freshness, and data-limit context in answers.
+
+Pi automatically looks up current evidence for questions about price, trend,
+buying now, or when to sell. You do not need to ask it to "use tools" first.
+
+## Quick start
 
 \`\`\`sh
 pi install npm:${NPM_PACKAGE_NAME}
 \`\`\`
 
-For a project-local installation, add \`--local\`. To inspect an unpacked package
-without changing Pi settings:
+For most mainland China and Hong Kong quote/history research, and for SEC filing
+research, the only setup is a contact address used to identify requests to public
+data services:
 
 \`\`\`sh
-pi --no-extensions --extension ./index.js --list-models
+AGENT_CONTACT="you@example.com" pi --finance-track=cn
 \`\`\`
 
-## Boundaries
+Choose \`cn\`, \`hk\`, or \`us\`. You can switch later with \`/cn-track\`,
+\`/hk-track\`, or \`/us-track\` inside Pi.
 
-The aggregate changes initialization and distribution only. Every source plugin
-retains its domain, market-track, receipt, provider, entitlement, licence, and
-configuration contracts. No plugin may place, submit, route, cancel, replace,
-or otherwise mutate a paper or live broker order. Runtime guards reject duplicate
-named Pi registrations before forwarding the conflicting registration.
+Then ask naturally:
 
-Review \`CONFIGURATION.md\` before provider-backed use. \`aggregate-lock.json\`,
-\`release-lock.json\`, and \`SHA256SUMS\` identify the exact content. No credential
-value is read or copied during packaging.
+- \`分析一下科创50ETF的走势\`
+- \`588000 如果现在买，什么时候卖比较好？\`
+- \`分析腾讯 00700.HK 最近半年的趋势、动量和波动\`
+- \`Summarize AAPL's latest SEC fundamentals and cite the evidence.\`
+- \`Compare this portfolio with its benchmark and explain the largest risks.\`
+
+## Data sources
+
+| Research area | Available sources |
+| --- | --- |
+| Mainland China | Eastmoney quotes and daily history; CNINFO disclosures; optional Tushare symbol, name, corporate-action, earnings, quote, and history data; SSE, SZSE, and BSE calendars and rules |
+| Hong Kong | Eastmoney quotes and daily history; HKEXnews disclosures; HKEX calendar and rules |
+| United States | SEC EDGAR and XBRL filings; optional Alpaca quotes, bars, news, corporate actions, and asset data; optional OpenFIGI identity mapping and Twelve Data company profiles; NYSE and Nasdaq calendars and rules |
+| Macroeconomics | Optional Federal Reserve Bank of St. Louis FRED series |
+| Your own data | Portfolio files and supported structured imports for research and calculation |
+
+Availability and history depth depend on the selected provider and your account's
+permissions. Public-web sources do not promise uptime, completeness, or real-time
+delivery.
+
+## Optional data-service setup
+
+The package loads without provider credentials. Add only the services you want;
+you do not need every variable below.
+
+| Variable | What it enables |
+| --- | --- |
+| \`AGENT_CONTACT\` | Identified access to supported public services, including Eastmoney, CNINFO, SEC, and HKEXnews. Use one email address everywhere. |
+| \`TUSHARE_TOKEN\` | Optional Tushare data for mainland China. Tushare permissions and points apply. |
+| \`ALPACA_API_KEY_ID\`, \`ALPACA_API_SECRET_KEY\` | Optional Alpaca US prices, bars, news, corporate actions, and assets. Feed permissions apply. |
+| \`OPENFIGI_API_KEY\` | Optional OpenFIGI identity mapping. |
+| \`TWELVE_DATA_API_KEY\` | Optional Twelve Data company profiles. |
+| \`FRED_API_KEY\` | Optional FRED macroeconomic series. |
+
+Example:
+
+\`\`\`sh
+AGENT_CONTACT="you@example.com" \\
+ALPACA_API_KEY_ID="..." \\
+ALPACA_API_SECRET_KEY="..." \\
+pi --finance-track=us
+\`\`\`
+
+Your credentials stay in your runtime environment. Pi Sparkles does not add them
+to the package or save them in Pi settings. For a project-local installation,
+add \`--local\` to \`pi install\`.
+
+Pi Sparkles is read-only research software: it cannot place, change, or cancel
+broker orders. It is not investment, legal, accounting, or tax advice. See
+\`CONFIGURATION.md\` for the complete source and configuration reference.
 `;
 }
 
@@ -215,7 +275,7 @@ function npmManifest(plan) {
     name: NPM_PACKAGE_NAME,
     version: plan.packageVersion,
     description:
-      "All-in-one Pi extension bundle for the ProductUseful Pi Sparkles finance tiers",
+      "Turn Pi into a finance research assistant for China, Hong Kong, and US markets",
     private: !plan.releasable,
     type: "module",
     main: "./index.js",

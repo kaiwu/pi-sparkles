@@ -351,220 +351,25 @@ fn compare_unsigned(left: String, right: String) -> Order {
   string.compare(left, right)
 }
 
-fn add_unsigned(left: String, right: String) -> String {
-  add_reversed(
-    left |> string.to_graphemes |> list.reverse,
-    right |> string.to_graphemes |> list.reverse,
-    0,
-    [],
-  )
-}
+@external(javascript, "./decimal_ffi.mjs", "add_unsigned")
+fn add_unsigned(left: String, right: String) -> String
 
-fn add_reversed(
-  left: List(String),
-  right: List(String),
-  carry: Int,
-  accumulated: List(String),
-) -> String {
-  case left, right {
-    [], [] -> {
-      let accumulated = case carry {
-        0 -> accumulated
-        _ -> [int.to_string(carry), ..accumulated]
-      }
-      string.concat(accumulated)
-    }
-    [left_digit, ..left_rest], [] ->
-      add_digit_step(left_digit, "0", left_rest, [], carry, accumulated)
-    [], [right_digit, ..right_rest] ->
-      add_digit_step("0", right_digit, [], right_rest, carry, accumulated)
-    [left_digit, ..left_rest], [right_digit, ..right_rest] ->
-      add_digit_step(
-        left_digit,
-        right_digit,
-        left_rest,
-        right_rest,
-        carry,
-        accumulated,
-      )
-  }
-}
+@external(javascript, "./decimal_ffi.mjs", "subtract_unsigned")
+fn subtract_unsigned(left: String, right: String) -> String
 
-fn add_digit_step(
-  left_digit: String,
-  right_digit: String,
-  left_rest: List(String),
-  right_rest: List(String),
-  carry: Int,
-  accumulated: List(String),
-) -> String {
-  let total = digit_value(left_digit) + digit_value(right_digit) + carry
-  add_reversed(left_rest, right_rest, total / 10, [
-    int.to_string(total % 10),
-    ..accumulated
-  ])
-}
-
-fn subtract_unsigned(left: String, right: String) -> String {
-  let width = int.max(string.length(left), string.length(right))
-  subtract_reversed(
-    left
-      |> string.pad_start(to: width, with: "0")
-      |> string.to_graphemes
-      |> list.reverse,
-    right
-      |> string.pad_start(to: width, with: "0")
-      |> string.to_graphemes
-      |> list.reverse,
-    0,
-    [],
-  )
-  |> string.to_graphemes
-  |> drop_zeroes
-  |> string.concat
-  |> non_empty_zero
-}
-
-fn subtract_reversed(
-  left: List(String),
-  right: List(String),
-  borrow: Int,
-  accumulated: List(String),
-) -> String {
-  case left, right {
-    [], [] -> string.concat(accumulated)
-    [left_digit, ..left_rest], [right_digit, ..right_rest] -> {
-      let difference =
-        digit_value(left_digit) - digit_value(right_digit) - borrow
-      let #(digit, next_borrow) = case difference < 0 {
-        True -> #(difference + 10, 1)
-        False -> #(difference, 0)
-      }
-      subtract_reversed(left_rest, right_rest, next_borrow, [
-        int.to_string(digit),
-        ..accumulated
-      ])
-    }
-    _, _ -> string.concat(accumulated)
-  }
-}
-
-fn multiply_unsigned(left: String, right: String) -> String {
-  case left, right {
-    "0", _ | _, "0" -> "0"
-    _, _ ->
-      multiply_reversed(
-        left,
-        right |> string.to_graphemes |> list.reverse,
-        0,
-        "0",
-      )
-  }
-}
-
-fn multiply_reversed(
-  left: String,
-  right: List(String),
-  position: Int,
-  accumulated: String,
-) -> String {
-  case right {
-    [] -> accumulated
-    [digit, ..rest] -> {
-      let partial =
-        multiply_by_digit(left, digit_value(digit))
-        <> string.repeat("0", times: position)
-      multiply_reversed(
-        left,
-        rest,
-        position + 1,
-        add_unsigned(accumulated, partial),
-      )
-    }
-  }
-}
+@external(javascript, "./decimal_ffi.mjs", "multiply_unsigned")
+fn multiply_unsigned(left: String, right: String) -> String
 
 fn multiply_by_digit(value: String, multiplier: Int) -> String {
-  multiply_digit_reversed(
-    value |> string.to_graphemes |> list.reverse,
-    multiplier,
-    0,
-    [],
-  )
-}
-
-fn multiply_digit_reversed(
-  digits: List(String),
-  multiplier: Int,
-  carry: Int,
-  accumulated: List(String),
-) -> String {
-  case digits {
-    [] -> {
-      let accumulated = case carry {
-        0 -> accumulated
-        _ -> [int.to_string(carry), ..accumulated]
-      }
-      string.concat(accumulated)
-    }
-    [digit, ..rest] -> {
-      let total = digit_value(digit) * multiplier + carry
-      multiply_digit_reversed(rest, multiplier, total / 10, [
-        int.to_string(total % 10),
-        ..accumulated
-      ])
-    }
-  }
+  multiply_unsigned(value, int.to_string(multiplier))
 }
 
 fn increment_unsigned(value: String) -> String {
   add_unsigned(non_empty_zero(value), "1")
 }
 
-fn divide_unsigned(
-  numerator: String,
-  denominator: String,
-) -> #(String, String) {
-  divide_digits(string.to_graphemes(numerator), denominator, [], "0")
-}
-
-fn divide_digits(
-  digits: List(String),
-  denominator: String,
-  quotient: List(String),
-  remainder: String,
-) -> #(String, String) {
-  case digits {
-    [] -> #(quotient |> string.concat |> normalize_unsigned, remainder)
-    [digit, ..rest] -> {
-      let current = normalize_unsigned(remainder <> digit)
-      let #(quotient_digit, next_remainder) =
-        consume_denominator(current, denominator, 0)
-      divide_digits(
-        rest,
-        denominator,
-        list.append(quotient, [int.to_string(quotient_digit)]),
-        next_remainder,
-      )
-    }
-  }
-}
-
-fn consume_denominator(
-  remainder: String,
-  denominator: String,
-  quotient_digit: Int,
-) -> #(Int, String) {
-  case compare_unsigned(remainder, denominator) {
-    Lt -> #(quotient_digit, remainder)
-    Eq | Gt ->
-      consume_denominator(
-        subtract_unsigned(remainder, denominator),
-        denominator,
-        quotient_digit + 1,
-      )
-  }
-}
+@external(javascript, "./decimal_ffi.mjs", "divide_unsigned")
+fn divide_unsigned(numerator: String, denominator: String) -> #(String, String)
 
 fn should_increment_division(
   quotient: String,

@@ -102,8 +102,7 @@ share-class, or historical-symbol evidence.
 Set a contact that the SEC can use for fair-access questions:
 
 ```sh
-export SEC_USER_AGENT_CONTACT="ops@example.com"
-export SEC_USER_AGENT_PRODUCT="my-research-agent/1.0" # optional
+export AGENT_CONTACT="ops@example.com"
 ```
 
 If the product is absent, the plugin uses `pi-sparkles-sec-edgar/0.1`. Empty,

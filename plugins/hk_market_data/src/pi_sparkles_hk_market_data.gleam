@@ -8,6 +8,8 @@ import finance_eastmoney/runtime
 import finance_hk_identity/identity
 import finance_http/response as http_response
 import finance_http/transport
+import finance_provenance/hash
+import finance_provenance/identity as provenance_identity
 import finance_track
 import finance_track/context as track_context
 import finance_track/json as track_json
@@ -56,8 +58,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "hk_stock_quote",
     "HK raw vendor quote",
-    "Fetch an exact five-digit Eastmoney Hong Kong quote with a mandatory independently verified declared currency; expose exact scaled prices, timestamps, unknown latency/rights, and unverified volume semantics",
-    "Get a bounded current or delayed raw vendor quote without assuming every HK listing trades in HKD",
+    "Fetch an exact five-digit Eastmoney Hong Kong quote with a mandatory independently verified declared currency; use current quote evidence by default for ordinary buy-now, sell-timing, entry, exit, stop, or target questions even when the user does not explicitly request tools; expose exact scaled prices, timestamps, unknown latency/rights, and unverified volume semantics",
+    "Get a bounded current or delayed raw vendor quote for a current-price-dependent opinion without assuming every HK listing trades in HKD",
     tool.parameters(quote_schema(), quote_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
@@ -92,8 +94,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "hk_stock_history",
     "HK raw vendor history",
-    "Fetch bounded Eastmoney raw unadjusted Hong Kong daily bars with a mandatory independently verified declared currency; preserve every numeric source lexeme and visible provider/rights limits",
-    "Get raw unadjusted HK daily bars without assuming HKD or inventing suspensions and adjustment factors",
+    "Fetch bounded Eastmoney raw unadjusted Hong Kong daily bars with a mandatory independently verified declared currency; use recent history by default for ordinary buy-now, sell-timing, entry, exit, stop, target, trend, or momentum questions even when the user does not explicitly request tools; preserve every numeric source lexeme and visible provider/rights limits",
+    "Get raw unadjusted HK daily bars for current-data-dependent opinions without assuming HKD or inventing suspensions and adjustment factors",
     tool.parameters(history_schema(), history_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
@@ -147,7 +149,7 @@ fn provider() -> Provider {
   case finance_eastmoney.access(environment.product(), environment.contact()) {
     Error(_) ->
       InvalidConfiguration(
-        "Eastmoney access requires EASTMONEY_USER_AGENT_CONTACT (for example ops@example.com); EASTMONEY_USER_AGENT_PRODUCT is optional",
+        "Eastmoney access requires AGENT_CONTACT (for example ops@example.com)",
       )
     Ok(access) ->
       case runtime.new(access) {
@@ -384,16 +386,32 @@ fn history_model_content(
   value: history.History,
   retrieved_at: Int,
 ) -> String {
+  let #(source_reference, receipt_digest, rows) =
+    history_handoff(input, value, retrieved_at)
   summary
-  <> "\nComplete bounded daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable.\n"
+  <> "\nComplete bounded daily rows follow as CSV. For requested indicators, call the installed Pi tools sma, rsi, and atr with these exact rows; do not write or execute a program and do not calculate the indicators yourself. Map close to sma/rsi observations and high,low,close to atr bars.\n"
   <> "track=hk;provider=eastmoney;venue=XHKG;code="
   <> history.code(value)
   <> ";currency="
   <> currency_name(input.currency)
   <> ";currencyEvidence=caller_declared_not_provider_verified;frequency=daily;adjustment=raw;retrievedAtUnixMilliseconds="
   <> int.to_string(retrieved_at)
+  <> ";sourceReference="
+  <> source_reference
+  <> ";acquisitionReceiptCanonicalSha256="
+  <> receipt_digest
+  <> ";acquisitionReceipt="
+  <> receipt_digest
   <> "\ndate,open,high,low,close,volume,amount\n"
-  <> {
+  <> rows
+}
+
+fn history_handoff(
+  input: HistoryInput,
+  value: history.History,
+  retrieved_at: Int,
+) -> #(String, String, String) {
+  let rows =
     history.bars(value)
     |> list.map(fn(bar) {
       [
@@ -408,7 +426,22 @@ fn history_model_content(
       |> string.join(",")
     })
     |> string.join("\n")
-  }
+  let source_reference =
+    "eastmoney:hk:XHKG:"
+    <> history.code(value)
+    <> ":"
+    <> date_text(input.start_date)
+    <> ":"
+    <> date_text(input.end_date)
+    <> ":raw_unadjusted_fqt_0"
+  let canonical =
+    source_reference
+    <> "\nretrievedAtUnixMilliseconds="
+    <> int.to_string(retrieved_at)
+    <> "\ndate,open,high,low,close,volume,amount\n"
+    <> rows
+  let assert Ok(digest) = hash.text(canonical)
+  #(source_reference, provenance_identity.sha256_value(digest), rows)
 }
 
 fn quote_json(
@@ -452,6 +485,8 @@ fn history_json(
   value: history.History,
   retrieved_at: Int,
 ) -> json.Json {
+  let #(source_reference, receipt_digest, _) =
+    history_handoff(input, value, retrieved_at)
   json.object(
     list.append(track_json.result_fields(result_context("hk_stock_history")), [
       #("provider", json.string("eastmoney")),
@@ -467,6 +502,15 @@ fn history_json(
       #("frequency", json.string("daily")),
       #("adjustment", json.string("raw_unadjusted_fqt_0")),
       #("retrievedAtUnixMilliseconds", json.int(retrieved_at)),
+      #("sourceReference", json.string(source_reference)),
+      #(
+        "acquisitionReceipt",
+        json.object([
+          #("canonicalSha256", json.string(receipt_digest)),
+          #("scope", json.string("bounded_raw_daily_csv_v1")),
+          #("providerAuthenticated", json.bool(False)),
+        ]),
+      ),
       #("bars", json.array(history.bars(value), bar_json)),
       #("entitlement", json.string("public_web_local_analysis")),
       #("redistribution", json.string("unknown")),

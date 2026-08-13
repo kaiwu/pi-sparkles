@@ -62,7 +62,7 @@ function historyFixture(code) {
 
 beforeEach(() => {
   requests.length = 0;
-  process.env.EASTMONEY_USER_AGENT_CONTACT = "market-data@example.test";
+  process.env.AGENT_CONTACT = "market-data@example.test";
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
@@ -80,7 +80,7 @@ beforeEach(() => {
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
-  delete process.env.EASTMONEY_USER_AGENT_CONTACT;
+  delete process.env.AGENT_CONTACT;
 });
 
 async function harness(track) {
@@ -114,6 +114,9 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       "cn_raw_vendor_history",
       "cn_raw_vendor_quote",
     ]);
+    expect(tools.get("cn_raw_vendor_history").description).toContain(
+      "do not call cn_stock_symbol_search, Tushare, or any CNINFO tool first",
+    );
 
     const quote = await execute(tools.get("cn_raw_vendor_quote"), {
       venue: "bse",
@@ -140,11 +143,33 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
     expect(history.details.adjustment).toBe("raw_unadjusted_fqt_0");
     expect(history.details.bars[0].amount).toBe("1350000.00");
     expect(history.details.bars[1].close).toBe("15.16");
+    expect(history.details.sourceReference).toBe(
+      "eastmoney:cn:cn_bse:920079:2026-08-01:2026-08-05:raw_unadjusted_fqt_0",
+    );
+    expect(history.details.acquisitionReceipt).toMatchObject({
+      scope: "bounded_raw_daily_csv_v1",
+      providerAuthenticated: false,
+    });
+    expect(history.details.acquisitionReceipt.canonicalSha256).toMatch(
+      /^[0-9a-f]{64}$/,
+    );
     expect(history.content[0].text).toContain(
       "Complete bounded daily rows follow as CSV",
     );
     expect(history.content[0].text).toContain(
-      "do not request TUSHARE_TOKEN or CNINFO for this returned series",
+      "Do not request TUSHARE_TOKEN or CNINFO for this returned series",
+    );
+    expect(history.content[0].text).toContain(
+      "call the installed Pi tools sma, rsi, and atr",
+    );
+    expect(history.content[0].text).toContain(
+      "do not write or execute a program",
+    );
+    expect(history.content[0].text).toContain(
+      `sourceReference=${history.details.sourceReference}`,
+    );
+    expect(history.content[0].text).toContain(
+      `acquisitionReceiptCanonicalSha256=${history.details.acquisitionReceipt.canonicalSha256}`,
     );
     expect(history.content[0].text).toContain(
       "2026-08-04,14.91,15.31,14.80,15.16,100327,1516000.00",
@@ -215,8 +240,20 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       "caller_declared_not_provider_verified",
     );
     expect(history.details.bars).toHaveLength(2);
+    expect(history.details.sourceReference).toBe(
+      "eastmoney:hk:XHKG:00700:2026-08-01:2026-08-05:raw_unadjusted_fqt_0",
+    );
+    expect(history.details.acquisitionReceipt.canonicalSha256).toMatch(
+      /^[0-9a-f]{64}$/,
+    );
     expect(history.content[0].text).toContain(
       "Complete bounded daily rows follow as CSV",
+    );
+    expect(history.content[0].text).toContain(
+      "call the installed Pi tools sma, rsi, and atr",
+    );
+    expect(history.content[0].text).toContain(
+      "do not write or execute a program",
     );
     expect(history.content[0].text).toContain(
       "2026-08-04,14.91,15.31,14.80,15.16,100327,1516000.00",

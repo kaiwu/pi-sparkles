@@ -19,7 +19,7 @@ decode failures without pretending the two sources have identical fields.
 The plugin-facing request/result and canonical provider port remain stable.
 Provider-specific request plans and decoders map into `finance_ohlcv` only after
 their own identity, time, adjustment and unit facts pass conformance tests.
-Eastmoney uses `EASTMONEY_USER_AGENT_CONTACT` and optional product identity;
+Eastmoney uses the shared `AGENT_CONTACT` and optional product identity;
 Tushare Pro reads caller-owned `TUSHARE_TOKEN` only from the runtime or opt-in-
 test environment. No credentials enter source receipts or persisted state.
 

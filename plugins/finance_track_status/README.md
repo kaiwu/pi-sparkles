@@ -53,8 +53,8 @@ between market plugins.
 
 - `--finance-track=cn|hk|us` selects the initial track; invalid values fail safe
   to `us`.
-- `--finance-agent-contact=<label>` supplies a non-secret status label. It is
-  not read from SEC or provider environment variables and defaults visibly to
+- `AGENT_CONTACT=<label>` supplies the one shared non-secret operator identity
+  used by the status line and all provider adapters; it defaults visibly to
   `unconfigured`.
 - `/finance-track` shows status; `/finance-track cn` switches strictly.
 - `/cn-track`, `/hk-track`, and `/us-track` are explicit shortcuts.

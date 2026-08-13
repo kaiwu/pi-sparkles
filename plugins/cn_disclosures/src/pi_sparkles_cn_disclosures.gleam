@@ -127,7 +127,7 @@ fn provider() -> Provider {
   case finance_cninfo.access(environment.product(), environment.contact()) {
     Error(_) ->
       InvalidConfiguration(
-        "CNINFO access requires CNINFO_USER_AGENT_CONTACT (for example ops@example.com); CNINFO_USER_AGENT_PRODUCT is optional",
+        "CNINFO access requires AGENT_CONTACT (for example ops@example.com)",
       )
     Ok(access) ->
       case discovery_runtime.new(access) {

@@ -79,10 +79,8 @@ async function harness({
   const tools = new Map();
   const handlers = new Map();
   const events = [];
-  const flags = new Map([
-    ["finance-track", initial],
-    ["finance-agent-contact", contact],
-  ]);
+  process.env.AGENT_CONTACT = contact;
+  const flags = new Map([["finance-track", initial]]);
   let nextId = entries.length;
   const api = {
     events: {
@@ -122,6 +120,43 @@ async function harness({
 }
 
 describe("finance track status binding", () => {
+  test("injects one pre-tool routing policy for advice, names, CNINFO, and indicators", async () => {
+    const instance = await harness();
+    const result = await instance.handlers.get("before_agent_start")(
+      { type: "before_agent_start" },
+      { getSystemPrompt: () => "base prompt" },
+    );
+
+    expect(result.systemPrompt).toContain("base prompt");
+    expect(result.systemPrompt).toContain(
+      "the absence of a code in the original wording does not by itself require symbol search",
+    );
+    expect(result.systemPrompt).toContain("resolve the identity at most once");
+    expect(result.systemPrompt).toContain(
+      "CNINFO is never a prerequisite for quotes, OHLCV, or indicators",
+    );
+    expect(result.systemPrompt).toContain("call installed sma, rsi, and atr");
+    expect(result.systemPrompt).toContain("instead of writing or executing a program");
+    expect(result.systemPrompt).toContain(
+      "When a user asks whether to buy now, what happens if they buy now, when to sell",
+    );
+    expect(result.systemPrompt).toContain(
+      "The user never needs to say 'use tools', 'use current data', or 'provide tool evidence'",
+    );
+    expect(result.systemPrompt).toContain(
+      "do not skip tools merely because the LLM owns the recommendation",
+    );
+    expect(result.systemPrompt).toContain(
+      "fetch a current quote and a bounded recent daily OHLCV/history series",
+    );
+    expect(result.systemPrompt).toContain(
+      "use simulate_bar_paths only for an exact proposed order and completed bar",
+    );
+    expect(result.systemPrompt).toContain(
+      "never pause to calculate that hash",
+    );
+  });
+
   test("renders and switches all three isolated track profiles", async () => {
     const instance = await harness();
     const statuses = [];

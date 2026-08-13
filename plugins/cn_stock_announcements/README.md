@@ -28,6 +28,6 @@ Results preserve original Chinese titles, organization/document IDs, CNINFO
 type codes, provider timestamps with unverified semantics, canonical PDF URLs,
 attachment sizes, total/page counts, retrieval time, response byte length and
 content SHA-256. Missing report-period/correction/translation facts remain
-null. `CNINFO_USER_AGENT_CONTACT` is responsible public-source identification,
+null. `AGENT_CONTACT` is the shared responsible public-source identification,
 not a credential or product dependency; arbitrary attachment download, OCR and
 materiality interpretation remain outside this operation.

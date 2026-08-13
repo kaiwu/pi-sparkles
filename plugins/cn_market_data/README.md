@@ -18,8 +18,8 @@ level/redistribution rights, unverified volume semantics, and every limitation.
 They are not exchange observations and do not silently use AKShare as origin,
 though the contract follows the same endpoints used by its Eastmoney functions.
 
-Set non-secret `EASTMONEY_USER_AGENT_CONTACT`; optionally set
-`EASTMONEY_USER_AGENT_PRODUCT`. Normal tests never make live requests.
+Set the shared non-secret `AGENT_CONTACT`; the plugin supplies its product
+label. Normal tests never make live requests.
 
 `cn_raw_vendor_history` emits every bounded daily OHLCV row in model-visible
 tool content as well as structured result details; the count-only first line is

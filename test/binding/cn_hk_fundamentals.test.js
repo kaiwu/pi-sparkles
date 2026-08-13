@@ -29,7 +29,7 @@ const hkIncome =
 
 beforeEach(() => {
   requests.length = 0;
-  process.env.EASTMONEY_USER_AGENT_CONTACT = "fundamentals@example.test";
+  process.env.AGENT_CONTACT = "fundamentals@example.test";
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
@@ -50,7 +50,7 @@ beforeEach(() => {
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
-  delete process.env.EASTMONEY_USER_AGENT_CONTACT;
+  delete process.env.AGENT_CONTACT;
 });
 
 async function harness(track) {

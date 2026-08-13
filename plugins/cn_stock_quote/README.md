@@ -18,8 +18,8 @@ entitlement/licence, receipt hash, and unavailable/conflicting states.
 The plugin-facing request/result and canonical provider port do not change by
 provider. Each adapter owns request planning, decoding, pacing, cancellation and
 source-specific limitations, then must pass the same conformance vectors.
-Eastmoney uses `EASTMONEY_USER_AGENT_CONTACT` and optional
-`EASTMONEY_USER_AGENT_PRODUCT`; Tushare Pro reads caller-owned `TUSHARE_TOKEN`
+Eastmoney uses the shared `AGENT_CONTACT` and a fixed plugin product label;
+Tushare Pro reads caller-owned `TUSHARE_TOKEN`
 only from the runtime or opt-in-test environment. Credentials never enter
 fixtures, results, logs or persisted state.
 

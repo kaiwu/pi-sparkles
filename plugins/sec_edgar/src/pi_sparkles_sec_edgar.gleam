@@ -148,7 +148,7 @@ fn provider() -> Provider {
   case finance_sec.access(environment.product(), environment.contact()) {
     Error(_) ->
       InvalidConfiguration(
-        "SEC access requires SEC_USER_AGENT_CONTACT (for example ops@example.com); SEC_USER_AGENT_PRODUCT is optional",
+        "SEC access requires AGENT_CONTACT (for example ops@example.com)",
       )
     Ok(access) ->
       case runtime.new(access) {

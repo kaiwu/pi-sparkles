@@ -44,9 +44,9 @@ Configure credentials only through the runtime environment:
 
 - `ALPACA_API_KEY_ID`
 - `ALPACA_API_SECRET_KEY`
-- `ALPACA_USER_AGENT_CONTACT` (for example `ops@example.com`)
-- optional `ALPACA_USER_AGENT_PRODUCT` (defaults to
-  `pi-sparkles-us-ohlcv/0.1`)
+- `AGENT_CONTACT` (shared non-secret operator identity, for example `ops@example.com`)
+
+The plugin supplies its fixed outbound product label.
 
 Secrets are sent only as sensitive request headers and never enter tool details,
 safe request identities, errors, fixtures, or session output. Normal tests mock

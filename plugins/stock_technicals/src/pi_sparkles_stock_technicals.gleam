@@ -17,8 +17,8 @@ fn register_sma(api: pi.ExtensionApi) -> Nil {
     api,
     "sma",
     "Exact simple moving average",
-    "Calculate explicitly requested sma_v1 values over exact caller-supplied observations; return compact or intermediate facts, provenance receipts, unknowns, and omissions without interpretation or a next-action decision",
-    "Supply the exact series, source evidence, formula identifiers, period, precision, and projection; the LLM interprets the returned values",
+    "Calculate explicitly requested sma_v1 values over exact caller-supplied observations. When CN, HK, or US history/OHLCV rows are available, use SMA evidence for ordinary buy-now, sell-timing, entry, exit, trend, or timing questions even when the user does not name an indicator or explicitly request tools; call this tool instead of writing or executing calculation code",
+    "Map the returned CSV close column to observations for relevant current-data-dependent opinions and copy its model-visible source/receipt metadata; omit instructionRef unless a real retained hash already exists—the plugin derives it, so never calculate it with a script",
     tool.parameters(sma_schema(), decode.sma()),
     tool.Parallel,
     fn(_id, input, _signal, _updates, _ctx) { complete(domain.run_sma(input)) },
@@ -30,8 +30,8 @@ fn register_rsi(api: pi.ExtensionApi) -> Nil {
     api,
     "rsi",
     "Exact Wilder RSI",
-    "Calculate explicitly requested rsi_wilder_v1 values over exact caller-supplied observations; expose the Wilder seed, omissions, and intermediate facts without overbought/oversold, signal, or workflow conclusions",
-    "Supply every input and policy explicitly; the plugin calculates requested evidence and the LLM decides what it means",
+    "Calculate explicitly requested rsi_wilder_v1 values over exact caller-supplied observations. When CN, HK, or US history/OHLCV rows are available, use RSI evidence for ordinary buy-now, sell-timing, entry, exit, momentum, or timing questions even when the user does not name an indicator or explicitly request tools; call this tool instead of writing or executing calculation code",
+    "Map the returned CSV close column to observations for relevant current-data-dependent opinions and copy its model-visible source/receipt metadata; omit instructionRef unless a real retained hash already exists—the plugin derives it, so never calculate it with a script",
     tool.parameters(rsi_schema(), decode.rsi()),
     tool.Parallel,
     fn(_id, input, _signal, _updates, _ctx) { complete(domain.run_rsi(input)) },
@@ -43,8 +43,8 @@ fn register_atr(api: pi.ExtensionApi) -> Nil {
     api,
     "atr",
     "Exact Wilder ATR",
-    "Calculate explicitly requested atr_wilder_v1 values over exact caller-supplied high/low/close facts; expose true-range components, receipts, and omissions without volatility or trade-planning conclusions",
-    "Supply every input and policy explicitly; the plugin calculates requested evidence and the LLM decides what it means",
+    "Calculate explicitly requested atr_wilder_v1 values over exact caller-supplied high/low/close facts. When CN, HK, or US history/OHLCV rows are available, use ATR evidence for ordinary buy-now, sell-timing, stop, target, volatility, or timing questions even when the user does not name an indicator or explicitly request tools; call this tool instead of writing or executing calculation code",
+    "Map the returned CSV high, low, and close columns to bars for relevant current-data-dependent opinions and copy its model-visible source/receipt metadata; omit instructionRef unless a real retained hash already exists—the plugin derives it, so never calculate it with a script",
     tool.parameters(atr_schema(), decode.atr()),
     tool.Parallel,
     fn(_id, input, _signal, _updates, _ctx) { complete(domain.run_atr(input)) },
@@ -56,7 +56,7 @@ fn complete(
 ) -> Promise(tool.ToolResult) {
   case value {
     Ok(value) ->
-      tool.text_result(domain.summary(value), domain.details(value))
+      tool.text_result(domain.model_content(value), domain.details(value))
       |> promise.resolve
     Error(error) -> tool.reject(domain.error_message(error))
   }
@@ -100,11 +100,11 @@ fn atr_schema() -> schema.Schema {
 
 fn context_schema() -> schema.Schema {
   schema.object([
-    schema.Required(
+    schema.Optional(
       "instructionRef",
-      hash_schema()
+      schema.nullable(hash_schema())
         |> schema.described(
-          "SHA-256 of the caller/LLM instruction that selected this query and its parameters",
+          "Optional SHA-256 of a retained caller/LLM instruction. Omit it during ordinary history-to-indicator handoff; the plugin derives a deterministic reference from the canonical calculation request",
         ),
     ),
     schema.Required("track", schema.string_enum(["cn", "hk", "us"])),
@@ -185,7 +185,7 @@ fn basis_schema() -> schema.Schema {
     ),
   ])
   |> schema.described(
-    "Exact input basis supplied by the LLM; this tool does not adjust the observations",
+    "Exact input basis supplied by the LLM; this tool does not adjust observations. For raw basis, evidenceRoots may be empty or contain source evidence accidentally copied during handoff; such roots are preserved as context evidence, not treated as adjustment factors",
   )
 }
 
@@ -196,6 +196,7 @@ fn sma_calculation_schema() -> schema.Schema {
     schema.Required("windowVariant", schema.string_enum(["slot_window_v1"])),
     schema.Required("parseablePolicy", parseable_schema()),
     schema.Required("rounding", rounding_schema()),
+    ..rounding_alias_schema()
   ])
 }
 
@@ -212,6 +213,7 @@ fn rsi_calculation_schema() -> schema.Schema {
     ),
     schema.Required("parseablePolicy", parseable_schema()),
     schema.Required("rounding", rounding_schema()),
+    ..rounding_alias_schema()
   ])
 }
 
@@ -228,7 +230,34 @@ fn atr_calculation_schema() -> schema.Schema {
     schema.Required("gapPolicy", schema.string_enum(["stop_at_gap_v1"])),
     schema.Required("parseablePolicy", parseable_schema()),
     schema.Required("rounding", rounding_schema()),
+    ..rounding_alias_schema()
   ])
+}
+
+fn rounding_alias_schema() -> List(schema.Property) {
+  [
+    schema.Optional(
+      "policy",
+      schema.nullable(schema.string_enum(["per_step"]))
+        |> schema.described(
+          "Compatibility alias sometimes repeated by an LLM; when present it must match rounding.policy",
+        ),
+    ),
+    schema.Optional(
+      "outputScale",
+      schema.nullable(schema.integer() |> schema.with_number_range(0.0, 30.0))
+        |> schema.described(
+          "Compatibility alias sometimes repeated by an LLM; when present it must match rounding.outputScale",
+        ),
+    ),
+    schema.Optional(
+      "intermediateScale",
+      schema.nullable(schema.integer() |> schema.with_number_range(0.0, 30.0))
+        |> schema.described(
+          "Compatibility alias sometimes repeated by an LLM; when present it must match rounding.intermediateScale",
+        ),
+    ),
+  ]
 }
 
 fn parseable_schema() -> schema.Schema {

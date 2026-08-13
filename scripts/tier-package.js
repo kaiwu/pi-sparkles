@@ -244,7 +244,7 @@ function configurationMarkdown(extensionRecords) {
         : extension.environmentVariables.map((name) => `\`${name}\``).join(", ");
     return `| \`${extension.shortName}\` | ${provider} | ${access} | ${variables} |`;
   });
-  return `# Runtime configuration\n\nThe package contains variable names only. It never reads or copies credential\nvalues while building. A variable listed here belongs only to the adapter that\nexplicitly selects it; providers never silently fall back or share authority.\nRequired-versus-optional behavior and entitlement limits remain controlled by\nthe named extension's contract.\n\n| Extension | Provider | Access | Referenced environment variables |\n| --- | --- | --- | --- |\n${rows.join("\n")}\n`;
+  return `# Runtime configuration\n\nThe package contains variable names only. It never reads or copies credential\nvalues while building. \`AGENT_CONTACT\` is one shared non-secret operator identity\nused across tracks and adapters; it grants no provider authority. Credentials\nremain owned by the adapter that explicitly selects them, and providers never\nsilently fall back or share authority. Required-versus-optional behavior and\nentitlement limits remain controlled by the named extension's contract.\n\n| Extension | Provider | Access | Referenced environment variables |\n| --- | --- | --- | --- |\n${rows.join("\n")}\n`;
 }
 
 function packageReadme(plan, extensionRecords) {

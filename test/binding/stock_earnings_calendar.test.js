@@ -6,25 +6,18 @@ const artifact = resolve(
   "../../dist/stock_earnings_calendar/index.js",
 );
 const originalFetch = globalThis.fetch;
-const originalContact = process.env.HKEX_USER_AGENT_CONTACT;
-const originalProduct = process.env.HKEX_USER_AGENT_PRODUCT;
+const originalContact = process.env.AGENT_CONTACT;
 
 beforeEach(() => {
-  process.env.HKEX_USER_AGENT_CONTACT = "research@example.com";
-  process.env.HKEX_USER_AGENT_PRODUCT = "pi-sparkles-test/0.1";
+  process.env.AGENT_CONTACT = "research@example.com";
 });
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
   if (originalContact === undefined) {
-    delete process.env.HKEX_USER_AGENT_CONTACT;
+    delete process.env.AGENT_CONTACT;
   } else {
-    process.env.HKEX_USER_AGENT_CONTACT = originalContact;
-  }
-  if (originalProduct === undefined) {
-    delete process.env.HKEX_USER_AGENT_PRODUCT;
-  } else {
-    process.env.HKEX_USER_AGENT_PRODUCT = originalProduct;
+    process.env.AGENT_CONTACT = originalContact;
   }
 });
 
@@ -112,7 +105,7 @@ describe("stock earnings calendar boundary", () => {
     );
     expect(requests[0].options.method).toBe("GET");
     expect(requests[0].options.headers.get("user-agent")).toBe(
-      "pi-sparkles-test/0.1 research@example.com",
+      "pi-sparkles-stock-earnings-calendar/0.1 research@example.com",
     );
     expect(result.details).toMatchObject({
       operation: "earnings_calendar",

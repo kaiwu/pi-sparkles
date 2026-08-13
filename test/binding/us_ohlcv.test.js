@@ -16,7 +16,7 @@ beforeEach(() => {
   requests.length = 0;
   process.env.ALPACA_API_KEY_ID = "test-key-id";
   process.env.ALPACA_API_SECRET_KEY = "test-secret-key";
-  process.env.ALPACA_USER_AGENT_CONTACT = "market-data@example.test";
+  process.env.AGENT_CONTACT = "market-data@example.test";
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
@@ -36,7 +36,7 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
   delete process.env.ALPACA_API_KEY_ID;
   delete process.env.ALPACA_API_SECRET_KEY;
-  delete process.env.ALPACA_USER_AGENT_CONTACT;
+  delete process.env.AGENT_CONTACT;
 });
 
 async function harness() {
@@ -140,6 +140,18 @@ describe("US Alpaca OHLCV boundary", () => {
     expect(JSON.stringify(result.details)).not.toContain("test-secret-key");
     expect(result.content[0].text).toContain(
       "Complete bounded, exact de-duplicated daily rows follow as CSV",
+    );
+    expect(result.content[0].text).toContain(
+      "call the installed Pi tools sma, rsi, and atr",
+    );
+    expect(result.content[0].text).toContain(
+      "do not write or execute a program",
+    );
+    expect(result.details.sourceReference).toBe(
+      result.details.gapAssessmentReceipt.sourceReference,
+    );
+    expect(result.content[0].text).toContain(
+      `sourceReference=${result.details.sourceReference}`,
     );
     expect(result.content[0].text).toContain(
       "2024-08-01,2024-08-01T04:00:00Z,185.6200,188.10,184.22,187.12,50292117,612345,186.432100",

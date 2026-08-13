@@ -77,18 +77,16 @@ export async function loadBundledMarketReceipts() {
   const originalFetch = globalThis.fetch;
   const originalNow = Date.now;
   const savedEnvironment = {
-    EASTMONEY_USER_AGENT_CONTACT: process.env.EASTMONEY_USER_AGENT_CONTACT,
+    AGENT_CONTACT: process.env.AGENT_CONTACT,
     ALPACA_API_KEY_ID: process.env.ALPACA_API_KEY_ID,
     ALPACA_API_SECRET_KEY: process.env.ALPACA_API_SECRET_KEY,
-    ALPACA_USER_AGENT_CONTACT: process.env.ALPACA_USER_AGENT_CONTACT,
   };
   const requests = [];
   try {
     Date.now = () => retrievedAtUnixMs;
-    process.env.EASTMONEY_USER_AGENT_CONTACT = "acceptance@example.test";
+    process.env.AGENT_CONTACT = "acceptance@example.test";
     process.env.ALPACA_API_KEY_ID = "acceptance-key-id";
     process.env.ALPACA_API_SECRET_KEY = "acceptance-secret-key";
-    process.env.ALPACA_USER_AGENT_CONTACT = "acceptance@example.test";
     globalThis.fetch = async (input, init) => {
       const url = new URL(String(input));
       const headers = new Headers(init?.headers);

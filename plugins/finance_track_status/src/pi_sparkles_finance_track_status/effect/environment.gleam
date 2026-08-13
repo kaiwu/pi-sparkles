@@ -1,9 +1,8 @@
-pub fn product() -> String {
-  "pi-sparkles-stock-fundamentals/0.1"
-}
-
 pub fn contact() -> String {
-  read_contact()
+  case read_contact() {
+    "" -> "unconfigured"
+    value -> value
+  }
 }
 
 @external(javascript, "./environment_ffi.mjs", "read_contact")

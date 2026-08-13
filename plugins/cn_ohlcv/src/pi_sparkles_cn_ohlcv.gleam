@@ -65,8 +65,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "cn_stock_ohlcv",
     "CN exact daily OHLCV",
-    "Fetch bounded raw Eastmoney mainland daily bars for an exact caller-declared venue, board, share class, code, and currency; preserve provider rows and expose unknown volume/session/calendar/rights facts",
-    "Retrieve exact raw mainland OHLCV without cross-venue fallback, adjustment, synthetic bars, or guessed timestamps and suspensions",
+    "Fetch bounded raw Eastmoney mainland daily bars for an exact caller-declared venue, board, share class, code, and currency; use OHLCV evidence by default for ordinary buy-now, sell-timing, entry, exit, stop, target, trend, momentum, or volatility questions even when the user does not explicitly request tools; preserve provider rows and expose unknown volume/session/calendar/rights facts",
+    "For a caller-supplied exact mainland venue and code, call this directly for current-data-dependent opinions without symbol search or CNINFO discovery; never cross venues, adjust, synthesize bars, or guess timestamps and suspensions",
     tool.parameters(input_schema(), input_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
@@ -130,6 +130,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                               input,
                               outcome.history,
                               retrieved_at,
+                              receipt,
                               digest,
                             ),
                             details,
@@ -150,10 +151,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
 
 fn provider() -> Provider {
   case finance_eastmoney.access(environment.product(), environment.contact()) {
-    Error(_) ->
-      InvalidConfiguration(
-        "CN OHLCV requires EASTMONEY_USER_AGENT_CONTACT; EASTMONEY_USER_AGENT_PRODUCT is optional",
-      )
+    Error(_) -> InvalidConfiguration("CN OHLCV requires AGENT_CONTACT")
     Ok(access) ->
       case runtime.new(access) {
         Ok(provider_runtime) -> Ready(access, provider_runtime)
@@ -519,10 +517,11 @@ fn model_content(
   input: Input,
   value: history.History,
   retrieved_at: time.Instant,
+  receipt: gap_receipt.Receipt,
   receipt_digest: provenance_identity.Sha256,
 ) -> String {
   summary
-  <> "\nComplete bounded daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable.\n"
+  <> "\nComplete bounded daily rows follow as CSV. For requested indicators, call the installed Pi tools sma, rsi, and atr with these exact rows; do not write or execute a program and do not calculate the indicators yourself. Map close to sma/rsi observations and high,low,close to atr bars.\n"
   <> "track=cn;provider=eastmoney;venue="
   <> query.market_name(input.market)
   <> ";board="
@@ -537,6 +536,10 @@ fn model_content(
   <> int.to_string(time.unix_milliseconds(retrieved_at))
   <> ";gapAssessmentReceiptDigest="
   <> provenance_identity.sha256_value(receipt_digest)
+  <> ";acquisitionReceipt="
+  <> provenance_identity.sha256_value(receipt_digest)
+  <> ";sourceReference="
+  <> gap_receipt.source_reference(receipt)
   <> "\ndate,open,high,low,close,volume,amount\n"
   <> {
     history.bars(value)
@@ -618,6 +621,11 @@ fn result_json(
       #(
         "gapAssessmentReceipt",
         gap_assessment_receipt_json(receipt, receipt_digest),
+      ),
+      #("sourceReference", json.string(gap_receipt.source_reference(receipt))),
+      #(
+        "acquisitionReceipt",
+        json.string(provenance_identity.sha256_value(receipt_digest)),
       ),
       #(
         "gapStates",

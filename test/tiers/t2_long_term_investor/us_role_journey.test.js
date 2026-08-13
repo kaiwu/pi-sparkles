@@ -5,8 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const originalFetch = globalThis.fetch;
-const originalProduct = process.env.SEC_USER_AGENT_PRODUCT;
-const originalContact = process.env.SEC_USER_AGENT_CONTACT;
+const originalContact = process.env.AGENT_CONTACT;
 let directory;
 
 const sha256 = (text) => createHash("sha256").update(text).digest("hex");
@@ -58,8 +57,7 @@ const companyConcept = `{
 
 beforeAll(async () => {
   directory = await mkdtemp(join(tmpdir(), "pi-sparkles-t2-"));
-  process.env.SEC_USER_AGENT_PRODUCT = "pi-sparkles-t2-acceptance/0.1";
-  process.env.SEC_USER_AGENT_CONTACT = "t2-investor@example.test";
+  process.env.AGENT_CONTACT = "t2-investor@example.test";
   globalThis.fetch = async (input) => {
     const url = String(input);
     let body;
@@ -85,8 +83,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   globalThis.fetch = originalFetch;
-  restore("SEC_USER_AGENT_PRODUCT", originalProduct);
-  restore("SEC_USER_AGENT_CONTACT", originalContact);
+  restore("AGENT_CONTACT", originalContact);
   if (directory) await rm(directory, { recursive: true, force: true });
 });
 

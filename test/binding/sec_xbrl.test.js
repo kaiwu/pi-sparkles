@@ -4,21 +4,17 @@ import { resolve } from "node:path";
 const artifact = resolve(import.meta.dir, "../../dist/sec_xbrl/index.js");
 
 let originalFetch;
-let originalProduct;
 let originalContact;
 
 beforeEach(() => {
   originalFetch = globalThis.fetch;
-  originalProduct = process.env.SEC_USER_AGENT_PRODUCT;
-  originalContact = process.env.SEC_USER_AGENT_CONTACT;
-  process.env.SEC_USER_AGENT_PRODUCT = "pi-sparkles-test/0.1";
-  process.env.SEC_USER_AGENT_CONTACT = "fixtures@example.com";
+  originalContact = process.env.AGENT_CONTACT;
+  process.env.AGENT_CONTACT = "fixtures@example.com";
 });
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
-  restore("SEC_USER_AGENT_PRODUCT", originalProduct);
-  restore("SEC_USER_AGENT_CONTACT", originalContact);
+  restore("AGENT_CONTACT", originalContact);
 });
 
 describe("sec_xbrl provider boundary", () => {
@@ -95,7 +91,7 @@ describe("sec_xbrl provider boundary", () => {
     ]);
     for (const call of calls) {
       expect(call.init.headers.get("user-agent")).toBe(
-        "pi-sparkles-test/0.1 fixtures@example.com",
+        "pi-sparkles-sec-xbrl/0.1 fixtures@example.com",
       );
     }
   });
