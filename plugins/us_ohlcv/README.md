@@ -29,6 +29,10 @@ Every result includes:
   guesses that a missing session is a closure, suspension, provider omission,
   or unavailable history.
 
+The de-duplicated bounded rows are also emitted as exact model-visible CSV for
+indicator calculations. Pi renders only the summary line by default; expansion
+reveals the CSV while the complete structured evidence remains in `details`.
+
 The separately loadable, network-free `us_ohlcv_gaps` plugin can now compose
 copied output fields with the reviewed 2026 venue calendar, an exact listing
 interval, and explicit status receipts. It does not mutate this tool's result,

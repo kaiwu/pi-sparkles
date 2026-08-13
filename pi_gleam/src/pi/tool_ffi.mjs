@@ -1,3 +1,19 @@
+class CompactText {
+  constructor(text = "") {
+    this.text = text;
+  }
+
+  setText(text) {
+    this.text = text;
+  }
+
+  invalidate() {}
+
+  render() {
+    return this.text.trim() === "" ? [] : this.text.split("\n");
+  }
+}
+
 export function register(
   api,
   name,
@@ -16,6 +32,39 @@ export function register(
     parameters,
     ...(executionMode === "" ? {} : { executionMode }),
     execute,
+  });
+}
+
+export function register_compact(
+  api,
+  name,
+  label,
+  description,
+  promptSnippet,
+  parameters,
+  executionMode,
+  execute,
+) {
+  api.registerTool({
+    name,
+    label,
+    description,
+    ...(promptSnippet === "" ? {} : { promptSnippet }),
+    parameters,
+    ...(executionMode === "" ? {} : { executionMode }),
+    execute,
+    renderResult(result, { expanded }, theme, context) {
+      const text = result.content
+        ?.filter((item) => item?.type === "text" && typeof item.text === "string")
+        .map((item) => item.text)
+        .join("\n") ?? "";
+      const visible = expanded ? text : (text.split("\n", 1)[0] || "Completed");
+      const component = context.lastComponent instanceof CompactText
+        ? context.lastComponent
+        : new CompactText();
+      component.setText(expanded ? visible : theme.fg("muted", visible));
+      return component;
+    },
   });
 }
 

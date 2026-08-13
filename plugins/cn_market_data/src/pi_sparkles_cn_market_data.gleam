@@ -46,9 +46,9 @@ type Provider {
 
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   let provider = provider()
-  tool.register(
+  tool.register_compact(
     api,
-    "cn_stock_quote",
+    "cn_raw_vendor_quote",
     "CN raw vendor quote",
     "Fetch an exact-code Eastmoney mainland A-share quote after an explicit SSE/SZSE/BSE choice; expose exact scaled prices, provider timestamp, retrieval time, unknown latency/rights, and unverified volume semantics",
     "Get a bounded current or delayed raw vendor quote for an independently proven mainland A-share identity",
@@ -83,12 +83,12 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
       }
     },
   )
-  tool.register(
+  tool.register_compact(
     api,
-    "cn_stock_history",
+    "cn_raw_vendor_history",
     "CN raw vendor history",
-    "Fetch bounded Eastmoney raw unadjusted mainland A-share daily bars for an explicit SSE/SZSE/BSE identity; preserve every numeric source lexeme and visible provider/rights limits",
-    "Get raw unadjusted daily bars without inventing suspensions or adjustment factors",
+    "Fetch bounded Eastmoney raw unadjusted daily bars for an exact caller-identified SSE/SZSE/BSE-listed instrument, including an already-identified ETF; preserve every numeric source lexeme and visible provider/rights limits without classifying the security",
+    "Use cn_raw_vendor_history for a known exact CN venue and code when daily OHLCV is needed; it requires Eastmoney caller identity, not Tushare or CNINFO",
     tool.parameters(history_schema(), history_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
@@ -117,12 +117,15 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
               ))
               case outcome {
                 Error(message) -> tool.reject(message)
-                Ok(value) ->
+                Ok(value) -> {
+                  let retrieved_at = environment.now_milliseconds()
+                  let details = history_json(input, value, retrieved_at)
                   tool.text_result(
-                    render_history(input, value),
-                    history_json(input, value, environment.now_milliseconds()),
+                    history_model_content(input, value, retrieved_at),
+                    details,
                   )
                   |> promise.resolve
+                }
               }
             }
           }
@@ -330,7 +333,7 @@ fn result_context(
 fn limitations() -> List(String) {
   [
     "vendor_origin_not_exchange_evidence",
-    "a_share_identity_and_cny_scope_must_be_independently_proven",
+    "security_kind_identity_and_cny_scope_must_be_independently_proven",
     "realtime_and_delay_status_unknown",
     "provider_volume_unit_not_verified",
     "service_level_and_redistribution_rights_unknown",
@@ -362,6 +365,38 @@ fn render_history(input: HistoryInput, value: history.History) -> String {
   <> " bars"
 }
 
+fn history_model_content(
+  input: HistoryInput,
+  value: history.History,
+  retrieved_at: Int,
+) -> String {
+  render_history(input, value)
+  <> "\nComplete bounded daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable and do not request TUSHARE_TOKEN or CNINFO for this returned series.\n"
+  <> "track=cn;provider=eastmoney;market="
+  <> query.market_name(input.market)
+  <> ";code="
+  <> history.code(value)
+  <> ";currency=CNY;frequency=daily;adjustment=raw_unadjusted_fqt_0;retrievedAtUnixMilliseconds="
+  <> int.to_string(retrieved_at)
+  <> "\ndate,open,high,low,close,volume,amount\n"
+  <> {
+    history.bars(value)
+    |> list.map(fn(bar) {
+      [
+        date_text(history.date(bar)),
+        history.open(bar),
+        history.high(bar),
+        history.low(bar),
+        history.close(bar),
+        history.volume(bar),
+        history.amount(bar),
+      ]
+      |> string.join(",")
+    })
+    |> string.join("\n")
+  }
+}
+
 fn quote_json(
   input: QuoteInput,
   value: quote.Quote,
@@ -369,7 +404,10 @@ fn quote_json(
 ) -> json.Json {
   json.object(
     list.append(
-      track_json.result_fields(result_context(input.market, "cn_stock_quote")),
+      track_json.result_fields(result_context(
+        input.market,
+        "cn_raw_vendor_quote",
+      )),
       [
         #("provider", json.string("eastmoney")),
         #("route", json.string("direct")),
@@ -404,7 +442,10 @@ fn history_json(
 ) -> json.Json {
   json.object(
     list.append(
-      track_json.result_fields(result_context(input.market, "cn_stock_history")),
+      track_json.result_fields(result_context(
+        input.market,
+        "cn_raw_vendor_history",
+      )),
       [
         #("provider", json.string("eastmoney")),
         #("route", json.string("direct")),

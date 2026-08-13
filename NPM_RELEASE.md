@@ -49,7 +49,7 @@ provider variable from the child environment, and asks plain Pi to load the
 entrypoint with `--list-models`. For a manual equivalent:
 
 ```sh
-npm install ./dist/npm/t5/pi-sparkles-pi-sparkles-0.1.0.tgz
+npm install ./dist/npm/t5/pi-sparkles-pi-sparkles-0.1.1.tgz
 pi --no-extensions \
   --extension ./node_modules/@pi-sparkles/pi-sparkles/index.js \
   --list-models
@@ -75,7 +75,7 @@ because a trusted-publisher relationship cannot be attached until the package
 exists. The explicit command is:
 
 ```sh
-npm publish ./dist/npm/t5/pi-sparkles-pi-sparkles-0.1.0.tgz --access public
+npm publish ./dist/npm/t5/pi-sparkles-pi-sparkles-0.1.1.tgz --access public
 ```
 
 Publishing changes external state and is never performed by builds, tests, or
@@ -87,7 +87,7 @@ protected GitHub `npm` environment if review approval is required.
 After publication, verify the registry artifact and install through Pi:
 
 ```sh
-npm view @pi-sparkles/pi-sparkles@0.1.0 \
+npm view @pi-sparkles/pi-sparkles@0.1.1 \
   name version dist.integrity repository --json
-pi install npm:@pi-sparkles/pi-sparkles@0.1.0
+pi install npm:@pi-sparkles/pi-sparkles@0.1.1
 ```

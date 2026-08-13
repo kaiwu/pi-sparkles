@@ -45,6 +45,19 @@ fn do_register(
     Promise(ToolResult),
 ) -> Nil
 
+@external(javascript, "./tool_ffi.mjs", "register_compact")
+fn do_register_compact(
+  api: ExtensionApi,
+  name: String,
+  label: String,
+  description: String,
+  prompt_snippet: String,
+  schema: Schema,
+  execution_mode: String,
+  execute: fn(String, Dynamic, AbortSignal, UpdateSink, Context) ->
+    Promise(ToolResult),
+) -> Nil
+
 /// Register a typed tool. Invalid raw parameters reject before `execute` runs.
 pub fn register(
   api: ExtensionApi,
@@ -59,6 +72,44 @@ pub fn register(
 ) -> Nil {
   let Parameters(schema, decoder) = parameters
   do_register(
+    api,
+    name,
+    label,
+    description,
+    prompt_snippet,
+    schema,
+    execution_mode_name(execution_mode),
+    fn(tool_call_id, raw, signal, updates, context) {
+      case decode.run(raw, decoder) {
+        Ok(value) -> execute(tool_call_id, value, signal, updates, context)
+        Error(errors) ->
+          reject(
+            "Invalid parameters for tool "
+            <> name
+            <> ": "
+            <> string.inspect(errors),
+          )
+      }
+    },
+  )
+}
+
+/// Register a typed tool whose default TUI result is only the first content
+/// line. Pi still sends the complete content to the LLM and keeps details in
+/// session state; users can explicitly expand the result to inspect content.
+pub fn register_compact(
+  api: ExtensionApi,
+  name: String,
+  label: String,
+  description: String,
+  prompt_snippet: String,
+  parameters: Parameters(value),
+  execution_mode: ExecutionMode,
+  execute: fn(String, value, AbortSignal, UpdateSink, Context) ->
+    Promise(ToolResult),
+) -> Nil {
+  let Parameters(schema, decoder) = parameters
+  do_register_compact(
     api,
     name,
     label,

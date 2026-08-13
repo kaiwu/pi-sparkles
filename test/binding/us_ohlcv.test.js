@@ -138,6 +138,29 @@ describe("US Alpaca OHLCV boundary", () => {
     expect(result.details.bars[1].raw.close).toBe("189.840");
     expect(result.details.bars[2].normalized.close).toBe("209.27");
     expect(JSON.stringify(result.details)).not.toContain("test-secret-key");
+    expect(result.content[0].text).toContain(
+      "Complete bounded, exact de-duplicated daily rows follow as CSV",
+    );
+    expect(result.content[0].text).toContain(
+      "2024-08-01,2024-08-01T04:00:00Z,185.6200,188.10,184.22,187.12,50292117,612345,186.432100",
+    );
+    expect(result.content[0].text.match(/2024-08-02T04:00:00Z/g)).toHaveLength(
+      1,
+    );
+    expect(typeof tools.get("us_stock_ohlcv").renderResult).toBe("function");
+    const theme = { fg: (_color, text) => text };
+    const collapsed = tools
+      .get("us_stock_ohlcv")
+      .renderResult(
+        result,
+        { expanded: false, isPartial: false },
+        theme,
+        {},
+      )
+      .render(500)
+      .join("\n");
+    expect(collapsed).toContain("3 bars");
+    expect(collapsed).not.toContain("date,provider_timestamp,open");
 
     expect(requests).toHaveLength(2);
     expect(requests[0].url.pathname).toBe("/v2/stocks/bars");

@@ -65,7 +65,7 @@ type FetchOutcome {
 
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   let provider = provider()
-  tool.register(
+  tool.register_compact(
     api,
     "us_stock_ohlcv",
     "US exact daily OHLCV",
@@ -123,9 +123,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                         )
                       {
                         Error(message) -> tool.reject(message)
-                        Ok(#(receipt, digest)) ->
-                          tool.text_result(
-                            render(query_plan, batch, outcome),
+                        Ok(#(receipt, digest)) -> {
+                          let details =
                             result_json(
                               query_plan,
                               batch,
@@ -133,9 +132,19 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                               retrieved_at,
                               receipt,
                               digest,
+                            )
+                          tool.text_result(
+                            model_content(
+                              render(query_plan, batch, outcome),
+                              query_plan,
+                              batch,
+                              retrieved_at,
+                              digest,
                             ),
+                            details,
                           )
                           |> promise.resolve
+                        }
                       }
                   }
                 }
@@ -596,6 +605,59 @@ fn render(
   <> int.to_string(list.length(finance_ohlcv.observations(batch)))
   <> " bars | calendar gaps not assessed | "
   <> pagination_name(fetched.pagination)
+}
+
+fn model_content(
+  summary: String,
+  plan: query.DailyBarsQuery,
+  batch: finance_ohlcv.Batch,
+  retrieved_at: time.Instant,
+  receipt_digest: identity.Sha256,
+) -> String {
+  summary
+  <> "\nComplete bounded, exact de-duplicated daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable.\n"
+  <> "track=us;provider=alpaca;feed="
+  <> query.feed_name(query.feed(plan))
+  <> ";symbol="
+  <> query.symbol(plan)
+  <> ";currency=USD;volumeUnit=shares;frequency=daily;adjustment=raw;retrievedAtUnixMilliseconds="
+  <> int.to_string(time.unix_milliseconds(retrieved_at))
+  <> ";gapAssessmentReceiptDigest="
+  <> identity.sha256_value(receipt_digest)
+  <> "\ndate,provider_timestamp,open,high,low,close,volume,trade_count,vwap\n"
+  <> {
+    finance_ohlcv.observations(batch)
+    |> list.map(fn(observation) {
+      let bar = observation.value
+      [
+        date_text(finance_ohlcv.session_date(bar)),
+        finance_ohlcv.source_timestamp(bar),
+        finance_ohlcv.raw(finance_ohlcv.open(bar)),
+        finance_ohlcv.raw(finance_ohlcv.high(bar)),
+        finance_ohlcv.raw(finance_ohlcv.low(bar)),
+        finance_ohlcv.raw(finance_ohlcv.close(bar)),
+        finance_ohlcv.raw(finance_ohlcv.volume(bar)),
+        optional_count_raw(finance_ohlcv.trade_count(bar)),
+        optional_exact_raw(finance_ohlcv.vwap(bar)),
+      ]
+      |> string.join(",")
+    })
+    |> string.join("\n")
+  }
+}
+
+fn optional_count_raw(value: Option(finance_ohlcv.ExactCount)) -> String {
+  case value {
+    Some(value) -> finance_ohlcv.count_raw(value)
+    None -> ""
+  }
+}
+
+fn optional_exact_raw(value: Option(finance_ohlcv.ExactValue)) -> String {
+  case value {
+    Some(value) -> finance_ohlcv.raw(value)
+    None -> ""
+  }
 }
 
 fn result_json(

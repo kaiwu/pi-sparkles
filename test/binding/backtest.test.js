@@ -185,7 +185,7 @@ describe("backtest bundled boundary", () => {
     expect([...tools.keys()]).toEqual([
       "submit_run",
       "inspect_events",
-      "export_manifest",
+      "export_backtest_manifest",
     ]);
   });
 
@@ -259,7 +259,7 @@ describe("backtest bundled boundary", () => {
 
   test("exports canonical receipts and marks bounded JSONL pages partial", async () => {
     const tools = await harness();
-    const full = await execute(tools.get("export_manifest"), {
+    const full = await execute(tools.get("export_backtest_manifest"), {
       run: runInput(),
       manifest: manifestInput(),
       offset: 0,
@@ -286,7 +286,7 @@ describe("backtest bundled boundary", () => {
       checkpointDirectory: "checkpoints/",
     });
 
-    const partial = await execute(tools.get("export_manifest"), {
+    const partial = await execute(tools.get("export_backtest_manifest"), {
       run: runInput(),
       manifest: manifestInput(),
       offset: 0,

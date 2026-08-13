@@ -175,7 +175,7 @@ pub fn submit_run(input: decode.RunInput) -> Result(Response, DomainError) {
       #(
         "availableOperations",
         json.array(
-          ["submit_run", "inspect_events", "export_manifest"],
+          ["submit_run", "inspect_events", "export_backtest_manifest"],
           json.string,
         ),
       ),
@@ -232,7 +232,7 @@ pub fn inspect_events(
       #(
         "availableOperations",
         json.array(
-          ["submit_run", "inspect_events", "export_manifest"],
+          ["submit_run", "inspect_events", "export_backtest_manifest"],
           json.string,
         ),
       ),
@@ -281,7 +281,7 @@ pub fn export_manifest(
       <> int.to_string(total)
       <> " retained events in this JSONL page",
     json.object([
-      #("operation", json.string("export_manifest")),
+      #("operation", json.string("export_backtest_manifest")),
       #("cadencePolicy", json.string(cadence_policy)),
       #("definition", definition_json(prepared.definition)),
       #("runResultHandle", wire.sha_json(prepared.result_handle)),
@@ -314,7 +314,7 @@ pub fn export_manifest(
       #(
         "availableOperations",
         json.array(
-          ["submit_run", "inspect_events", "export_manifest"],
+          ["submit_run", "inspect_events", "export_backtest_manifest"],
           json.string,
         ),
       ),

@@ -37,6 +37,10 @@ Runtime configuration:
 Eastmoney is vendor-origin public-web evidence with unknown service level,
 licence, and redistribution rights. Normal tests use fixtures only.
 
+The tool emits its complete bounded provider rows and normalized OHLCV bars in
+model-visible content as well as structured details, so agents can consume the
+exact series rather than only the compact bar-count summary.
+
 ## T1 provider-port migration
 
 This implementation is the first adapter evidence. T1 introduces one canonical

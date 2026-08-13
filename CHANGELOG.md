@@ -5,6 +5,19 @@ here. Versions follow Semantic Versioning. The exact selected tier, plugin
 inventory, maturity, and content hashes remain authoritative in each tarball's
 `release-lock.json` and `aggregate-lock.json`.
 
+## 0.1.1 - 2026-08-13
+
+- Fix aggregate startup by giving the legacy raw CN Eastmoney quote/history
+  tools names distinct from the ProductUseful provider-port tools.
+- Rename the backtest reproduction export so it no longer collides with the
+  provenance source-manifest export.
+- Restore plain-Pi loading of the complete T1-through-T5 npm entrypoint.
+- Emit complete bounded CN, HK, and US daily OHLCV rows in model-visible tool
+  content, not only in renderer/session details, so agents can construct
+  SMA/RSI/ATR inputs while Pi keeps collapsed results to one summary line.
+- Clarify that known exact CN codes, including already-identified ETFs, can use
+  the raw Eastmoney history path without Tushare or CNINFO configuration.
+
 ## 0.1.0 - 2026-08-12
 
 - Add the first single-entry all-in-one Pi extension package.

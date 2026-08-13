@@ -60,7 +60,7 @@ type FetchOutcome {
 
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   let provider = provider()
-  tool.register(
+  tool.register_compact(
     api,
     "hk_stock_ohlcv",
     "HK exact daily OHLCV",
@@ -112,9 +112,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                         )
                       {
                         Error(message) -> tool.reject(message)
-                        Ok(#(receipt, digest)) ->
-                          tool.text_result(
-                            render(outcome.history, batch),
+                        Ok(#(receipt, digest)) -> {
+                          let details =
                             result_json(
                               input,
                               query_plan,
@@ -123,9 +122,19 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                               retrieved_at,
                               receipt,
                               digest,
+                            )
+                          tool.text_result(
+                            model_content(
+                              render(outcome.history, batch),
+                              input,
+                              outcome.history,
+                              retrieved_at,
+                              digest,
                             ),
+                            details,
                           )
                           |> promise.resolve
+                        }
                       }
                   }
                 }
@@ -449,6 +458,46 @@ fn render(
   <> int.to_string(list.length(finance_ohlcv.observations(batch)))
   <> " bars | volume unit and calendar gaps unknown | "
   <> pagination_name(finance_ohlcv.pagination(batch))
+}
+
+fn model_content(
+  summary: String,
+  input: Input,
+  value: history.History,
+  retrieved_at: time.Instant,
+  receipt_digest: provenance_identity.Sha256,
+) -> String {
+  summary
+  <> "\nComplete bounded daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable.\n"
+  <> "track=hk;provider=eastmoney;venue=XHKG;board="
+  <> input.board
+  <> ";shareClass="
+  <> input.share_class
+  <> ";code="
+  <> history.code(value)
+  <> ";currency="
+  <> currency.code(input.declared_currency)
+  <> ";currencyEvidence=caller_declared_not_provider_verified;frequency=daily;adjustment=raw;retrievedAtUnixMilliseconds="
+  <> int.to_string(time.unix_milliseconds(retrieved_at))
+  <> ";gapAssessmentReceiptDigest="
+  <> provenance_identity.sha256_value(receipt_digest)
+  <> "\ndate,open,high,low,close,volume,amount\n"
+  <> {
+    history.bars(value)
+    |> list.map(fn(bar) {
+      [
+        date_text(history.date(bar)),
+        history.open(bar),
+        history.high(bar),
+        history.low(bar),
+        history.close(bar),
+        history.volume(bar),
+        history.amount(bar),
+      ]
+      |> string.join(",")
+    })
+    |> string.join("\n")
+  }
 }
 
 fn result_json(

@@ -111,11 +111,11 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
   test("CN preserves explicit BSE identity, source scaling, and raw bars", async () => {
     const tools = await harness("cn");
     expect([...tools.keys()].sort()).toEqual([
-      "cn_stock_history",
-      "cn_stock_quote",
+      "cn_raw_vendor_history",
+      "cn_raw_vendor_quote",
     ]);
 
-    const quote = await execute(tools.get("cn_stock_quote"), {
+    const quote = await execute(tools.get("cn_raw_vendor_quote"), {
       venue: "bse",
       code: "920079",
     });
@@ -129,7 +129,7 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
     expect(quote.details.redistribution).toBe("unknown");
     expect(quote.details.retrievedAtUnixMilliseconds).toBeGreaterThan(0);
 
-    const history = await execute(tools.get("cn_stock_history"), {
+    const history = await execute(tools.get("cn_raw_vendor_history"), {
       venue: "bse",
       code: "920079",
       startDate: "2026-08-01",
@@ -140,6 +140,42 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
     expect(history.details.adjustment).toBe("raw_unadjusted_fqt_0");
     expect(history.details.bars[0].amount).toBe("1350000.00");
     expect(history.details.bars[1].close).toBe("15.16");
+    expect(history.content[0].text).toContain(
+      "Complete bounded daily rows follow as CSV",
+    );
+    expect(history.content[0].text).toContain(
+      "do not request TUSHARE_TOKEN or CNINFO for this returned series",
+    );
+    expect(history.content[0].text).toContain(
+      "2026-08-04,14.91,15.31,14.80,15.16,100327,1516000.00",
+    );
+    expect(typeof tools.get("cn_raw_vendor_history").renderResult).toBe(
+      "function",
+    );
+    const theme = { fg: (_color, text) => text };
+    const collapsed = tools
+      .get("cn_raw_vendor_history")
+      .renderResult(
+        history,
+        { expanded: false, isPartial: false },
+        theme,
+        {},
+      )
+      .render(500)
+      .join("\n");
+    expect(collapsed).toContain("2 bars");
+    expect(collapsed).not.toContain("date,open,high,low,close");
+    const expanded = tools
+      .get("cn_raw_vendor_history")
+      .renderResult(
+        history,
+        { expanded: true, isPartial: false },
+        theme,
+        {},
+      )
+      .render(500)
+      .join("\n");
+    expect(expanded).toContain("date,open,high,low,close,volume,amount");
     expect(requests[0].url.searchParams.get("secid")).toBe("0.920079");
     expect(requests[0].headers.get("user-agent")).toContain(
       "market-data@example.test",
@@ -179,5 +215,36 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       "caller_declared_not_provider_verified",
     );
     expect(history.details.bars).toHaveLength(2);
+    expect(history.content[0].text).toContain(
+      "Complete bounded daily rows follow as CSV",
+    );
+    expect(history.content[0].text).toContain(
+      "2026-08-04,14.91,15.31,14.80,15.16,100327,1516000.00",
+    );
+    expect(typeof tools.get("hk_stock_history").renderResult).toBe("function");
+    const theme = { fg: (_color, text) => text };
+    const collapsed = tools
+      .get("hk_stock_history")
+      .renderResult(
+        history,
+        { expanded: false, isPartial: false },
+        theme,
+        {},
+      )
+      .render(500)
+      .join("\n");
+    expect(collapsed).toContain("2 bars");
+    expect(collapsed).not.toContain("date,open,high,low,close");
+    const expanded = tools
+      .get("hk_stock_history")
+      .renderResult(
+        history,
+        { expanded: true, isPartial: false },
+        theme,
+        {},
+      )
+      .render(500)
+      .join("\n");
+    expect(expanded).toContain("date,open,high,low,close,volume,amount");
   });
 });

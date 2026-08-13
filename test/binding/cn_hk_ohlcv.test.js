@@ -127,6 +127,12 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
     expect(result.details.bars[0].raw.open).toBe("1350.6000");
     expect(result.details.bars[0].normalized.open).toBe("1350.6");
     expect(result.details.providerRows[0].amount).toBe("4898665275.00");
+    expect(result.content[0].text).toContain(
+      "Complete bounded daily rows follow as CSV",
+    );
+    expect(result.content[0].text).toContain(
+      "2024-08-01,1350.6000,1363.35,1346.00,1358.98,36147,4898665275.00",
+    );
 
     const receipt = result.details.gapAssessmentReceipt;
     expect(receipt).toMatchObject({
@@ -204,6 +210,26 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
     expect(result.details.bars[0].raw.close).toBe("372.400");
     expect(result.details.bars[0].normalized.close).toBe("372.4");
     expect(result.details.providerRows[0].turnoverPercent).toBe("0.25");
+    expect(result.content[0].text).toContain(
+      "Complete bounded daily rows follow as CSV",
+    );
+    expect(result.content[0].text).toContain(
+      "2024-08-01,370.200,375.000,368.600,372.400,15432100,5743210000.00",
+    );
+    expect(typeof tools.get("hk_stock_ohlcv").renderResult).toBe("function");
+    const theme = { fg: (_color, text) => text };
+    const collapsed = tools
+      .get("hk_stock_ohlcv")
+      .renderResult(
+        result,
+        { expanded: false, isPartial: false },
+        theme,
+        {},
+      )
+      .render(500)
+      .join("\n");
+    expect(collapsed).toContain("2 bars");
+    expect(collapsed).not.toContain("date,open,high,low,close");
 
     const receipt = result.details.gapAssessmentReceipt;
     expect(receipt).toMatchObject({

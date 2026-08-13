@@ -34,6 +34,18 @@ pub fn both_adapters_project_one_stable_product_contract_test() {
   |> string.contains("\"fallbackPerformed\":false")
   |> should.be_true
   eastmoney_json |> string.contains("\"canonicalSha256\"") |> should.be_true
+  let eastmoney_content = domain.model_content(eastmoney_output)
+  eastmoney_content
+  |> string.contains("do not claim the daily values are unavailable")
+  |> should.be_true
+  eastmoney_content
+  |> string.contains(
+    "date,open,high,low,close,volume,amount\n2026-08-03,1350.60,1363.35,1346.00,1358.98,36147,4898665275.00",
+  )
+  |> should.be_true
+  eastmoney_content
+  |> string.contains("acquisitionReceiptCanonicalSha256=")
+  |> should.be_true
 
   let tushare_plan = plan("tushare")
   let assert Ok(tushare_query) = domain.tushare_plan(tushare_plan)
@@ -57,6 +69,11 @@ pub fn both_adapters_project_one_stable_product_contract_test() {
   |> should.be_true
   tushare_json
   |> string.contains("\"amountUnit\":\"thousand_cny\"")
+  |> should.be_true
+  domain.model_content(tushare_output)
+  |> string.contains(
+    "2026-08-05,1328.3600,1333.80,1303.50,1306.45,42689.00,5600615.349",
+  )
   |> should.be_true
 }
 

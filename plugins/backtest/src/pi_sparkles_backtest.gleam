@@ -42,7 +42,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   )
   tool.register(
     api,
-    "export_manifest",
+    "export_backtest_manifest",
     "Export a bounded reproduction page",
     "Reconstruct the exact replay, bind primary receipts from its verified definition, construct the canonical finance_replay reproduction manifest, and export a bounded canonical event-JSONL page",
     "Supply all reproduction metadata and export limits explicitly; the plugin returns bytes but writes no files and makes no origin, quality, or research claim",

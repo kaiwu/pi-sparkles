@@ -40,7 +40,7 @@ pub opaque type Plan {
 }
 
 pub opaque type Output {
-  Output(summary: String, details: json.Json)
+  Output(summary: String, model_content: String, details: json.Json)
 }
 
 pub type Error {
@@ -182,12 +182,15 @@ pub fn assemble_eastmoney(
     content_sha256,
     dates,
   ))
-  Ok(Output(
+  let summary =
     "CN "
-      <> plan.code
-      <> " | Eastmoney raw unadjusted daily | "
-      <> int.to_string(list.length(bars))
-      <> " rows",
+    <> plan.code
+    <> " | Eastmoney raw unadjusted daily | "
+    <> int.to_string(list.length(bars))
+    <> " rows"
+  Ok(Output(
+    summary,
+    eastmoney_model_content(summary, plan, bars, retrieved_at, receipt),
     base_json(
       plan,
       "eastmoney",
@@ -221,12 +224,15 @@ pub fn assemble_tushare(
     content_sha256,
     dates,
   ))
-  Ok(Output(
+  let summary =
     "CN "
-      <> plan.code
-      <> " | Tushare Pro raw unadjusted daily | "
-      <> int.to_string(list.length(bars))
-      <> " rows",
+    <> plan.code
+    <> " | Tushare Pro raw unadjusted daily | "
+    <> int.to_string(list.length(bars))
+    <> " rows"
+  Ok(Output(
+    summary,
+    tushare_model_content(summary, plan, bars, retrieved_at, receipt),
     base_json(
       plan,
       "tushare_pro",
@@ -243,6 +249,10 @@ pub fn assemble_tushare(
 
 pub fn summary(value: Output) -> String {
   value.summary
+}
+
+pub fn model_content(value: Output) -> String {
+  value.model_content
 }
 
 pub fn details(value: Output) -> json.Json {
@@ -461,6 +471,35 @@ fn eastmoney_bar_json(value: eastmoney_history.Bar) -> json.Json {
   ])
 }
 
+fn eastmoney_model_content(
+  summary: String,
+  plan: Plan,
+  bars: List(eastmoney_history.Bar),
+  retrieved_at: time.Instant,
+  receipt: acquisition_receipt.Receipt,
+) -> String {
+  summary
+  <> "\nComplete bounded daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable.\n"
+  <> model_metadata(plan, "eastmoney", retrieved_at, receipt)
+  <> "\ndate,open,high,low,close,volume,amount\n"
+  <> {
+    bars
+    |> list.map(fn(bar) {
+      [
+        date_text(eastmoney_history.date(bar)),
+        eastmoney_history.open(bar),
+        eastmoney_history.high(bar),
+        eastmoney_history.low(bar),
+        eastmoney_history.close(bar),
+        eastmoney_history.volume(bar),
+        eastmoney_history.amount(bar),
+      ]
+      |> string.join(",")
+    })
+    |> string.join("\n")
+  }
+}
+
 fn tushare_bar_json(value: tushare_daily.Bar) -> json.Json {
   json.object([
     #("date", json.string(date_text(tushare_daily.date(value)))),
@@ -479,6 +518,58 @@ fn tushare_bar_json(value: tushare_daily.Bar) -> json.Json {
       ]),
     ),
   ])
+}
+
+fn tushare_model_content(
+  summary: String,
+  plan: Plan,
+  bars: List(tushare_daily.Bar),
+  retrieved_at: time.Instant,
+  receipt: acquisition_receipt.Receipt,
+) -> String {
+  summary
+  <> "\nComplete bounded daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable.\n"
+  <> model_metadata(plan, "tushare_pro", retrieved_at, receipt)
+  <> "\ndate,open,high,low,close,volume,amount\n"
+  <> {
+    bars
+    |> list.map(fn(bar) {
+      [
+        date_text(tushare_daily.date(bar)),
+        tushare_daily.open(bar),
+        tushare_daily.high(bar),
+        tushare_daily.low(bar),
+        tushare_daily.close(bar),
+        tushare_daily.volume_lots(bar),
+        tushare_daily.amount_thousand_cny(bar),
+      ]
+      |> string.join(",")
+    })
+    |> string.join("\n")
+  }
+}
+
+fn model_metadata(
+  plan: Plan,
+  provider: String,
+  retrieved_at: time.Instant,
+  receipt: acquisition_receipt.Receipt,
+) -> String {
+  let assert Ok(digest) = hash.text(acquisition_receipt.canonical_text(receipt))
+  "track=cn;provider="
+  <> provider
+  <> ";venue="
+  <> venue_name(plan.venue)
+  <> ";venueMic="
+  <> venue_mic(plan.venue)
+  <> ";code="
+  <> plan.code
+  <> ";currency=CNY;frequency=daily;adjustment=raw_unadjusted;retrievedAtUnixMilliseconds="
+  <> int.to_string(time.unix_milliseconds(retrieved_at))
+  <> ";acquisitionReceiptCanonicalSha256="
+  <> identity.sha256_value(digest)
+  <> ";sourceReference="
+  <> acquisition_receipt.source_reference(receipt)
 }
 
 fn provider_from_name(value: String) -> Result(Provider, Error) {

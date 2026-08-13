@@ -462,7 +462,7 @@ describe("Tier 4 US point-in-time quant researcher product", () => {
     expect(compared.details.outputDifferenceCount).toBe(1);
     expect(compared.details.interpretation).toBe("llm_owned");
 
-    const exported = await execute(backtestTools.get("export_manifest"), { run, manifest: manifestInput(featureReceipts), offset: 0, maximumEvents: 100, maximumCharacters: 1_000_000 });
+    const exported = await execute(backtestTools.get("export_backtest_manifest"), { run, manifest: manifestInput(featureReceipts), offset: 0, maximumEvents: 100, maximumCharacters: 1_000_000 });
     const reproduction = JSON.parse(exported.details.manifestJson).payload;
     expect(reproduction.universe_manifest_hash).toBe(manifests.universe.manifestHash);
     expect(reproduction.dataset_manifest_hash).toBe(manifests.dataset.manifestHash);

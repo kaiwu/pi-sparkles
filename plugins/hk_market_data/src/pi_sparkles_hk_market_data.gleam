@@ -52,7 +52,7 @@ type Provider {
 
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   let provider = provider()
-  tool.register(
+  tool.register_compact(
     api,
     "hk_stock_quote",
     "HK raw vendor quote",
@@ -88,7 +88,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
       }
     },
   )
-  tool.register(
+  tool.register_compact(
     api,
     "hk_stock_history",
     "HK raw vendor history",
@@ -121,12 +121,19 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
               ))
               case outcome {
                 Error(message) -> tool.reject(message)
-                Ok(value) ->
+                Ok(value) -> {
+                  let retrieved_at = environment.now_milliseconds()
                   tool.text_result(
-                    render_history(input, value),
-                    history_json(input, value, environment.now_milliseconds()),
+                    history_model_content(
+                      render_history(input, value),
+                      input,
+                      value,
+                      retrieved_at,
+                    ),
+                    history_json(input, value, retrieved_at),
                   )
                   |> promise.resolve
+                }
               }
             }
           }
@@ -369,6 +376,39 @@ fn render_history(input: HistoryInput, value: history.History) -> String {
   <> " | "
   <> int.to_string(list.length(history.bars(value)))
   <> " bars"
+}
+
+fn history_model_content(
+  summary: String,
+  input: HistoryInput,
+  value: history.History,
+  retrieved_at: Int,
+) -> String {
+  summary
+  <> "\nComplete bounded daily rows follow as CSV. Use close for SMA/RSI and high,low,close for ATR; do not claim the daily values are unavailable.\n"
+  <> "track=hk;provider=eastmoney;venue=XHKG;code="
+  <> history.code(value)
+  <> ";currency="
+  <> currency_name(input.currency)
+  <> ";currencyEvidence=caller_declared_not_provider_verified;frequency=daily;adjustment=raw;retrievedAtUnixMilliseconds="
+  <> int.to_string(retrieved_at)
+  <> "\ndate,open,high,low,close,volume,amount\n"
+  <> {
+    history.bars(value)
+    |> list.map(fn(bar) {
+      [
+        date_text(history.date(bar)),
+        history.open(bar),
+        history.high(bar),
+        history.low(bar),
+        history.close(bar),
+        history.volume(bar),
+        history.amount(bar),
+      ]
+      |> string.join(",")
+    })
+    |> string.join("\n")
+  }
 }
 
 fn quote_json(

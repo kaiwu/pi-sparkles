@@ -40,7 +40,7 @@ type TushareProvider {
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   let eastmoney = eastmoney_provider()
   let tushare = tushare_provider()
-  tool.register(
+  tool.register_compact(
     api,
     "cn_stock_history",
     "CN stock history",
@@ -272,7 +272,7 @@ fn capture_metadata(body: String, _response: http_response.Response) {
 }
 
 fn render(output: domain.Output) -> Promise(tool.ToolResult) {
-  tool.text_result(domain.summary(output), domain.details(output))
+  tool.text_result(domain.model_content(output), domain.details(output))
   |> promise.resolve
 }
 

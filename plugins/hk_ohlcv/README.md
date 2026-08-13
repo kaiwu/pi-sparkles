@@ -14,6 +14,10 @@ observations use a visibly labelled UTC-midnight ordering anchor. The provider
 volume unit and session membership remain unknown; the plugin does not infer
 half-days or suspensions, fill gaps, or apply adjustments.
 
+Every bounded provider row is also emitted as model-visible CSV so an agent can
+calculate indicators from exact values. Pi renders only the summary line by
+default; expansion reveals the CSV while the full receipt stays in `details`.
+
 The request is read-only, caller-identified, limited to 1–1000 rows, bounded to
 2 MB, cancellable, conservatively paced, and never retried through another
 provider. If the response reaches the row limit, pagination is reported as

@@ -13,7 +13,7 @@ exactly three tools:
   state.
 - `inspect_events` reconstructs the same run and pages only the processed event
   prefix in fold order, with event payloads omitted unless explicitly requested.
-- `export_manifest` reconstructs the run, builds one canonical reproduction
+- `export_backtest_manifest` reconstructs the run, builds one canonical reproduction
   manifest whose primary run receipts come from the verified definition, and
   exports a bounded page of canonical event JSONL.
 
@@ -98,7 +98,7 @@ Events beyond a budget or cancellation stop are not presented as processed.
 The result reports their exact omitted count and the stop cursor so the LLM can
 distinguish run truncation from page continuation.
 
-## `export_manifest`
+## `export_backtest_manifest`
 
 The caller supplies the same run declaration, reproduction-only metadata, and
 an event-export page budget. The plugin constructs

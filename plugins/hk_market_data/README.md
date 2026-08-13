@@ -10,6 +10,10 @@ payload does not establish currency, so the result labels it
 retain the provider's integer scale. History is daily, raw, and unadjusted
 (`fqt=0`) and preserves exact numeric response lexemes.
 
+History results put every bounded daily row in model-visible CSV content while
+keeping the default Pi display to one summary line. Expanding the tool result
+shows the CSV; structured provider evidence remains in `details`.
+
 Results visibly report Eastmoney as vendor origin, direct route, provider and
 retrieval timestamps, local-analysis entitlement, unknown latency/service
 level/redistribution rights, unverified volume semantics, and all limitations.

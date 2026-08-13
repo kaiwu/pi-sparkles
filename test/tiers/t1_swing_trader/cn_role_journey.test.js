@@ -304,6 +304,12 @@ describe("T1 CN swing-trader role journey", () => {
       omissionAssessment: "not_performed_no_calendar_join",
     });
     expect(historyResult.details.bars).toHaveLength(5);
+    expect(historyResult.content[0].text).toContain(
+      "Complete bounded daily rows follow as CSV",
+    );
+    expect(historyResult.content[0].text).toContain(
+      "2026-08-07,13.00,14.50,12.80,14.00,1400,19000.00",
+    );
     expect(providerEntries).toHaveLength(1);
     expect(providerEntries[0].customType).toBe(
       "pi_sparkles_finance_cache.event.v1",

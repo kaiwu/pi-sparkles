@@ -38,6 +38,11 @@ CNY. Eastmoney-specific amplitude/turnover fields and Tushare-specific previous
 close/change fields are preserved under `providerFields`. Rows retain provider
 order and exact numeric lexemes.
 
+The complete bounded structured result, including every returned daily bar and
+its exact OHLCV lexemes, is emitted in the model-visible tool `content` as well
+as retained in `details`. This allows the agent to construct explicit `sma`,
+`rsi`, and `atr` inputs instead of seeing only a row-count summary.
+
 After successful schema validation, the shell appends the bounded redacted
 request identity and exact provider response to the shared branch-local cache
 ledger. The cache receipt preserves its original source/rights/timestamps and
