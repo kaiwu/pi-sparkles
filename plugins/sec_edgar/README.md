@@ -153,7 +153,7 @@ Build from the monorepo:
 ```sh
 bun run test:unit -- sec_edgar
 bun run build -- sec_edgar
-bun run test:pi -- sec_edgar
+bun run test:aggregate:pi
 ```
 
 Pi loads `dist/sec_edgar/index.js`. Hex distribution contains Gleam and FFI

@@ -180,15 +180,16 @@ This tarball contains ${plan.plugins.length} present plugin ${plan.plugins.lengt
 T6. Its content locks record ${plan.omittedProposals.length} omitted proposals,
 ${plan.partialImplementations.length} partial implementations, and
 ${plan.openBlockers.length} open ${plan.openBlockers.length === 1 ? "blocker" : "blockers"}. The repository work behind this target
-includes private transaction-tape/stream laws, deterministic possible-fill
+includes transaction-tape/stream laws, deterministic possible-fill
 simulation, evidence-first compliance evaluation, and exact-hash caller-owned
-receipt review. Those foundations do not prove a live day-trading product and
-do not make private code a public Pi tool.
+receipt review. The tier must still complete ProductUseful promotion before
+this private inventory build can be published.
 
-Promotion still requires independently conformed CN, HK, and US transaction-tape
-legs. OpenD is development-only and is not included or required. Provider
-acquisition is transaction prints only—never quotes, bid/offer, or an order
-book—and no plugin can mutate a paper or live order.
+CN, HK, and US transaction-tape packets require an explicitly selected external
+provider capability. OpenD, provider SDKs, credentials, and provider
+certification are not included. Provider acquisition is transaction prints
+only—never quotes, bid/offer, or an order book—and no plugin can mutate a paper
+or live order.
 
 `
       : "";
@@ -224,6 +225,9 @@ spreadsheets, and one-off scripts.
 - SEC, CNINFO, and HKEXnews filing and disclosure research.
 - Fundamental, valuation, portfolio-risk, scenario, event-study, and backtest
   calculations when the required data is available.
+- Bounded CN/HK/US transaction-tape packet review, local possible-fill
+  simulation, read-only broker evidence review, compound compliance checks,
+  non-executable handoffs, and receipt reconciliation.
 - Clear source, timestamp, currency, freshness, and data-limit context in answers.
 
 Pi automatically looks up current evidence for questions about price, trend,
@@ -258,6 +262,7 @@ Then ask naturally:
 | Hong Kong | Eastmoney quotes and daily history; HKEXnews disclosures; HKEX calendar and rules |
 | United States | SEC EDGAR and XBRL filings; optional Alpaca quotes, bars, news, corporate actions, and asset data; optional OpenFIGI identity mapping and Twelve Data company profiles; NYSE and Nasdaq calendars and rules |
 | Macroeconomics | Optional Federal Reserve Bank of St. Louis FRED series |
+| Day-trader and execution review | Exact bounded packets supplied by a caller-selected external market-data or broker capability; the package validates declared identity, rights, clocks, sequence, conditions, corrections, limits, and receipts without authenticating the provider |
 | Your own data | Portfolio files and supported structured imports for research and calculation |
 
 Availability and history depth depend on the selected provider and your account's
@@ -290,6 +295,16 @@ pi --finance-track=us
 Your credentials stay in your runtime environment. Pi Sparkles does not add them
 to the package or save them in Pi settings. For a project-local installation,
 add \`--local\` to \`pi install\`.
+
+## External day-trader and broker dependencies
+
+Transaction-tape and broker-review tools require exact caller-supplied packets
+or receipts from an explicitly selected provider, gateway, export, or adapter.
+Futu OpenD, Alpaca, IBKR, their SDKs, credentials, login state, and equivalent
+provider components are external dependencies and are not included in this npm
+package. Results preserve the declared provider, entitlement, track, venue,
+clocks, limits, and unsupported claims; Pi Sparkles never silently selects or
+falls back to another provider.
 
 Pi Sparkles is read-only research software: it cannot place, change, or cancel
 broker orders. It is not investment, legal, accounting, or tax advice. See
@@ -958,7 +973,7 @@ function usage() {
     "Usage: bun run npm:pack -- [T5|T6] [--no-build] [--output <directory>]",
     "       bun run npm:pack -- [T5|T6] --verify-only [--output <directory>]",
     "       bun run npm:pack -- [T5|T6] --no-build --install-smoke [--publish-dry-run] [--check-registry]",
-    "T6 is the next-release default. It packs as private while blocked and becomes publishable only after ProductUseful promotion; select T5 explicitly for the prior release.",
+    "T6 is the next-release default and becomes publishable only after ProductUseful promotion; select T5 explicitly for the prior release.",
   ].join("\n");
 }
 

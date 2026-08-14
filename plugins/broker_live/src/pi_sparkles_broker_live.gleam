@@ -35,20 +35,25 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   tool.register(
     api,
     "review_external_execution_evidence",
-    "Create or review non-executing evidence",
-    "Content-bind a non-executable external handoff or review a caller-owned execution receipt; this legacy-named plugin has no network or broker authority and every result is track_partial",
-    "For a handoff, supply no events and include exact instruction facts. For a receipt import, preserve provider status lexemes and hashed references.",
-    tool.parameters(review_schema(), decode.review_input()),
+    "Create or reconcile non-executing external evidence",
+    "Content-bind a non-executable handoff for one explicit external provider capability or reconcile its caller-owned execution receipt while preserving exact track, instruction, capability, entitlement, status, chronology, duplicate, conflict, and receipt facts",
+    "The selected provider is an external runtime dependency. This plugin ships no SDK, credential, adapter, transport, or ability to place, route, cancel, replace, or otherwise mutate an order.",
+    tool.parameters(review_schema(), decode.explicit_capability_input()),
     tool.Parallel,
-    fn(_id, input, _signal, _updates, _ctx) {
-      case domain.run(input) {
-        Ok(value) ->
-          tool.text_result(
-            finance_broker_review.summary(value),
-            finance_broker_review.details(value),
-          )
-          |> promise.resolve
-        Error(error) -> tool.reject(finance_broker_review.error_message(error))
+    fn(_id, input, signal, _updates, _ctx) {
+      case tool.is_cancelled(signal) {
+        True -> tool.reject("External execution evidence review was cancelled")
+        False ->
+          case domain.run(input) {
+            Ok(value) ->
+              tool.text_result(
+                finance_broker_review.summary(value),
+                finance_broker_review.details(value),
+              )
+              |> promise.resolve
+            Error(error) ->
+              tool.reject(finance_broker_review.error_message(error))
+          }
       }
     },
   )
@@ -57,6 +62,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
 
 fn review_schema() -> schema.Schema {
   schema.object([
+    schema.Required("provider", bounded_string(1, 100)),
     schema.Required("operationId", bounded_string(1, 500)),
     schema.Required(
       "mode",

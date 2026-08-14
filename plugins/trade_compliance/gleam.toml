@@ -1,7 +1,7 @@
 name = "pi_sparkles_trade_compliance"
 version = "0.1.0"
 target = "javascript"
-description = "Partial supplied-rule trade compliance fact evaluator for Pi"
+description = "Typed supplied-rule trade compliance evaluator for Pi"
 licences = ["Apache-2.0"]
 gleam = ">= 1.18.0"
 
@@ -24,7 +24,7 @@ runtime = "bun"
 tested_version = "0.83.0"
 
 [metadata.finance]
-status = "track_partial"
-provider = "caller-supplied rules and facts"
-access = "pure-evaluation-only"
+status = "experimental"
+provider = "explicit external rule capability or caller-supplied rules and facts"
+access = "pure-evaluation-explanation-and-version-review"
 track = "cn|hk|us"

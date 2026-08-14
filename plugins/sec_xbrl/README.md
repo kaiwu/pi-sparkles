@@ -162,7 +162,7 @@ No test contacts the live SEC service or performs real sleeps.
 ```sh
 bun run test:unit -- sec_xbrl
 bun run build -- sec_xbrl
-bun run test:pi -- sec_xbrl
+bun run test:aggregate:pi
 ```
 
 Hex distributes Gleam/FFI source; Pi loads the generated

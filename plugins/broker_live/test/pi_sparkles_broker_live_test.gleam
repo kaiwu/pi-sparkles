@@ -1,5 +1,6 @@
 import finance_broker_review/decode.{
-  type FactInput, type ReviewInput, FactInput, ReviewInput,
+  type ExplicitCapabilityInput, type FactInput, ExplicitCapabilityInput,
+  FactInput, ReviewInput,
 }
 import gleam/option.{Some}
 import gleeunit
@@ -46,19 +47,39 @@ pub fn duplicate_instruction_fields_fail_closed_test() {
   |> should.be_error
 }
 
-fn input(facts: List(FactInput)) -> ReviewInput {
-  ReviewInput(
-    "handoff",
-    "non_executable_handoff",
-    "external_live",
-    hash_a,
-    "cn",
-    "000001",
-    "XSHE",
-    hash_b,
-    facts,
-    [],
-    [],
+fn input(facts: List(FactInput)) -> ExplicitCapabilityInput {
+  ExplicitCapabilityInput(
+    "futu",
+    ReviewInput(
+      "handoff",
+      "non_executable_handoff",
+      "external_live",
+      hash_a,
+      "cn",
+      "000001",
+      "XSHE",
+      hash_b,
+      [
+        FactInput(
+          "broker_provider",
+          "known",
+          Some("futu"),
+          Some("provider_identifier"),
+          hash_a,
+        ),
+        FactInput(
+          "read_only_authority",
+          "known",
+          Some("read_only"),
+          Some("authority_scope"),
+          hash_a,
+        ),
+        known("provider_capability_receipt"),
+        ..facts
+      ],
+      [],
+      [],
+    ),
   )
 }
 

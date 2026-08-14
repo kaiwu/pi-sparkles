@@ -14,9 +14,9 @@ products and their blocker-first workflow are governed by
 
 ## Status
 
-This approach is feasible and five complete role products now work. The
+This approach is feasible and six complete role products now work. The
 repository currently contains 140 plugin implementation packages and
-**ProductUseful tiers T1 through T5**. Package-level Experimental labels remain
+**ProductUseful tiers T1 through T6**. Package-level Experimental labels remain
 implementation inventory; they are not individual product promotions.
 Experimental code must satisfy its exact implemented contract; ProductUseful
 applies only to a whole tier with a supported repeatable input path and complete
@@ -126,12 +126,13 @@ The repository includes:
   calculation, and advances content-bound caller-retained workflow state
   without authenticating the feed, deciding readiness or a trade, persisting
   state, or mutating an order/account;
-- seven T6 `track_partial` offline/import-only packages for bounded external
-  activity review, scenario-envelope validation, non-executable handoff, and
-  supplied-rule evaluation. They reject market-depth facts, have no transport
-  or credential surface, and cannot mutate an order. T6 remains blocked on its
-  authentic CN transaction feed; `stock_tape` and `cn_broker_readonly` remain
-  README-only;
+- the complete eleven-package T6 inventory for bounded CN/HK/US transaction-tape
+  packet review, shared day workflow, named local simulation, explicit
+  read-only account capability review, compound compliance evaluation,
+  non-executable handoff, and external-receipt reconciliation. Providers,
+  gateways, SDKs, credentials, and live-provider certification remain explicit
+  caller-owned runtime dependencies and are never bundled; no plugin can mutate
+  an order;
 - a stateless `portfolio_risk` calculation shell over exact supplied account
   and `cn`/`hk`/`us` position facts, with explicit long-only single-currency
   exposure, weight, signed heat, denominator, partiality, contribution,
@@ -173,7 +174,8 @@ The repository includes:
 - `hello`, a reference command and typed tool;
 - `safety_gate`, a reference result-bearing event handler with asynchronous UI;
 - `lifecycle`, a reference for typed state restoration and safe cleanup;
-- Bun-driven checking, testing, bundling, artifact tests, and Pi load tests.
+- Bun-driven checking, testing, bundling, artifact tests, and one all-in-one Pi
+  aggregate load test.
 
 The implementation was developed against Pi `0.83.0` at commit `305c014dc`,
 Gleam `1.18.0`, and Bun `1.3.14`. The reference and F0 plugins build to
@@ -284,8 +286,8 @@ scope with `--scope project`.
 
 ## Single-entry aggregate package
 
-T6 is the next single-entry aggregate release target. Build its current guarded
-preview with:
+T6 is the current single-entry aggregate release target. It always means the
+cumulative T1-through-T6 inventory:
 
 ```sh
 bun run aggregate:build
@@ -299,11 +301,11 @@ duplicate named registrations fail before the duplicate reaches Pi. This
 changes the bundle boundary only—the original plugins still own their domain,
 track, receipt, provider, and configuration contracts.
 
-Until the real-time feed blocker is resolved, T6 is explicitly a private,
-non-releasable `blocked_inventory_preview`. Its lock lists missing proposals,
-partial implementations, and open blockers; loading it does not promote T6.
-After T6 is complete and ProductUseful, the same default command produces the
-exact releasable T1-through-T6 aggregate for the next release.
+The T6 aggregate is ProductUseful and releasable. Provider binaries, SDKs,
+gateways, credentials, entitlements, login state, and remembered provider state
+are never aggregate assets. T6 validates explicitly selected, caller-supplied
+capability packets and receipts; it does not silently select or authenticate a
+provider.
 
 The prior ProductUseful T5 aggregate remains explicitly selectable:
 
@@ -318,7 +320,7 @@ and reference extras, and include `aggregate-lock.json`, `CONFIGURATION.md`, and
 
 ## All-in-one npm package
 
-Prepare the next T6 aggregate under the stable npm identity
+Prepare the T6 aggregate under the stable npm identity
 `@pi-sparkles/pi-sparkles`:
 
 ```sh
@@ -326,11 +328,10 @@ bun run npm:pack
 bun run npm:pack -- --verify-only
 ```
 
-The current T6 output at `dist/npm/t6/` is a private npm-format preview. The
-same default target becomes publishable only when T6 is complete and
-ProductUseful. T5 remains available explicitly as the prior publish-ready
-target. Selected maturity, plugin count, omissions, partials, and blockers
-remain visible in package metadata and locks.
+The T6 output at `dist/npm/t6/` is the current publishable cumulative
+T1-through-T6 product. T5 remains available explicitly only to reproduce the
+prior release boundary. Selected maturity, plugin count, omissions, partials,
+and blockers remain visible in package metadata and locks.
 
 Each tarball contains one Pi entrypoint, an exact file allowlist, Apache-2.0 and
 third-party notices, configuration names without values, inner and outer
@@ -344,12 +345,11 @@ publishing:
 bun run npm:release:verify
 ```
 
-While T6 is blocked, this release gate targets the complete ProductUseful T5
-aggregate. After T6 promotion the gate can move to that inventory. In either
-case it builds and tests one all-in-one npm product; its clean install asks plain
+This release gate targets T6 and builds and tests one all-in-one npm product;
+its clean install asks plain
 Pi to load the single aggregate `index.js`, which initializes the exact selected
 proposal inventory and fails on any duplicate named registration. It
-intentionally does not run the per-plugin Pi-load matrix.
+cannot run a per-plugin or earlier-tier Pi-load matrix.
 
 See [NPM_RELEASE.md](NPM_RELEASE.md) for clean-install testing, versioning, the
 first publication, and the manual tag-bound trusted-publisher workflow.
@@ -397,13 +397,13 @@ pi --no-extensions -e ./dist/aggregate/t6 --list-models
 pi --no-extensions -e ./dist/hello --list-models
 ```
 
-Build or test one plugin by its directory or Gleam package name only as a
-focused development diagnostic:
+Focused package builds and pure-law tests remain cheap development diagnostics;
+Pi-load verification is always all-in-one:
 
 ```sh
 bun run build -- hello
 bun run test:unit -- safety_gate
-bun run test:pi -- pi_sparkles_hello
+bun run test:aggregate:pi
 ```
 
 The delivery and promotion unit is a complete role tier, not a plugin. Resolve
@@ -412,7 +412,9 @@ all active-tier blockers first, keep every touched package coherent with
 whole tier reaches `verifying`. The six tiers each have one anchor track/profile;
 they do not expand into eighteen CN/HK/US products.
 
-`test:pi` uses `PI_SOURCE_DIR` when that checkout has its dependencies. It
+`test:aggregate:pi` builds the cumulative T1-through-T6 aggregate and loads its
+one entrypoint; it accepts no earlier tier target.
+It uses `PI_SOURCE_DIR` when that checkout has its dependencies. It
 defaults to `/home/kaiwu/Documents/github/pi-mono` in this workspace and falls
 back to the installed Pi when the source checkout is not hydrated.
 
@@ -575,7 +577,7 @@ pi --no-extensions \
   -e ./dist/us_ohlcv
 ```
 
-`PI_SOURCE_DIR` is development-only configuration for `bun run test:pi`; no
+`PI_SOURCE_DIR` is development-only configuration for `bun run test:aggregate:pi`; no
 runtime plugin reads it. Normal tests supply fixture values and mocked
 transports and do not require real provider credentials.
 
@@ -968,7 +970,7 @@ Commands implemented now:
 | `bun run tier:verify -- T1` | preflight and run the expensive repository plus role-acceptance promotion matrix once for a complete tier |
 | `bun run tier:package -- T1` | build and content-lock one plain Pi package for a ProductUseful tier plus its ProductUseful dependencies |
 | `bun run tier:install -- T1 [--scope user|project]` | verify/build the tier package and delegate installation to plain Pi |
-| `bun run aggregate:build -- [T5\|T6]` | bundle tier-ledger plugins behind one Pi entrypoint; T5 is releasable and T6 is a blocked preview |
+| `bun run aggregate:build -- [T5\|T6]` | bundle tier-ledger plugins behind one Pi entrypoint; T6 is the current cumulative T1-through-T6 target and T5 reproduces the prior release boundary |
 | `bun run npm:pack -- [T5\|T6]` | produce and verify the stable all-in-one npm tarball for the selected aggregate without publishing |
 | `bun run check` | diagnostic formatting and warnings-as-errors builds for every package |
 | `bun run build [-- name]` | diagnostic build and bundle for every plugin or one plugin |
@@ -977,7 +979,7 @@ Commands implemented now:
 | `bun run test:ffi` | build and run JavaScript binding contracts |
 | `bun run test:artifacts` | build and inspect the generated extension modules |
 | `bun run test:acceptance [-- swing]` | run deterministic CN/HK/US journeys through bundled plugin tools |
-| `bun run test:pi [-- name]` | load artifacts in Pi without invoking a model |
+| `bun run test:aggregate:pi` | load cumulative T1-through-T6 once in Pi through its one entrypoint; earlier-tier and per-plugin Pi loads are forbidden |
 | `bun run test:live:tutor` | run an opt-in multi-stage bounded journey through Pi's configured LLM and plugin tools |
 | `bun run test:live:sec` | run opt-in bounded compatibility checks against live read-only SEC APIs |
 | `bun run test:workflow` | validate the tier manifest and blocker/promotion laws |

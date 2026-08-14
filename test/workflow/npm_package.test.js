@@ -107,7 +107,7 @@ async function buildFixture(plan) {
 }
 
 describe("all-in-one npm packaging", () => {
-  test("derives either selected aggregate while preserving the current release gate", () => {
+  test("derives the complete selected aggregate and preserves the maturity gate", () => {
     const manifest = readTierManifest();
     const t5 = npmPackagePlan(manifest, "T5");
     expect(t5.npmPackageName).toBe("@pi-sparkles/pi-sparkles");
@@ -116,9 +116,13 @@ describe("all-in-one npm packaging", () => {
 
     const t6 = npmPackagePlan(manifest, "T6");
     expect(t6.npmPackageName).toBe("@pi-sparkles/pi-sparkles");
-    expect(t6.plugins).toHaveLength(133);
-    expect(t6.releasable).toBeFalse();
-    expect(t6.omittedProposals).toHaveLength(2);
+    expect(t6.plugins).toHaveLength(135);
+    expect(t6.omittedProposals).toEqual([]);
+    expect(t6.partialImplementations).toEqual([]);
+    expect(t6.openBlockers).toEqual([]);
+    expect(t6.releasable).toBe(
+      t6.includedTiers.at(-1).status === "product_useful",
+    );
     expect(npmPackagePlan(manifest).throughTierId).toBe("T6");
   });
 
@@ -189,7 +193,11 @@ describe("all-in-one npm packaging", () => {
     expect(packageReadme).not.toContain("ProductUseful");
     expect(packageReadme).not.toContain("tier");
     expect(packageReadme).not.toContain("aggregate");
-    expect(packageReadme).not.toContain("receipt");
+    expect(packageReadme).toContain("External day-trader and broker dependencies");
+    expect(packageReadme).toContain("Futu OpenD, Alpaca, IBKR");
+    expect(packageReadme).toContain(
+      "external dependencies and are not included in this npm",
+    );
     expect(() => assertNpmPublishable(summary)).not.toThrow();
 
     const rebuilt = await assembleNpmRelease(
@@ -226,7 +234,7 @@ describe("all-in-one npm packaging", () => {
       "utf8",
     );
     expect(packageReadme).toContain("## T6 development inventory");
-    expect(packageReadme).toContain("OpenD is development-only");
+    expect(packageReadme).toContain("OpenD, provider SDKs, credentials");
     expect(packageReadme).toContain("never quotes, bid/offer, or an order");
     expect(packageReadme).toContain("## Local preview");
     expect(packageReadme).not.toContain(`pi install npm:@pi-sparkles/pi-sparkles`);
@@ -246,7 +254,7 @@ describe("all-in-one npm packaging", () => {
     expect(() => verifyNpmRelease(plan.npmOutputDirectory, plan)).toThrow();
   });
 
-  test("defaults to the guarded T6 next release and accepts explicit T5", () => {
+  test("defaults to the T6 next release and accepts explicit T5", () => {
     expect(parseNpmPackageArguments([])).toMatchObject({
       throughTierId: "T6",
       build: true,

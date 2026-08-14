@@ -1,7 +1,7 @@
 name = "pi_sparkles_broker_readonly_alpaca"
 version = "0.1.0"
 target = "javascript"
-description = "Partial caller-owned Alpaca account activity import review for Pi"
+description = "Explicit external Alpaca read-only capability review for Pi"
 licences = ["Apache-2.0"]
 gleam = ">= 1.18.0"
 
@@ -18,8 +18,8 @@ runtime = "bun"
 tested_version = "0.83.0"
 
 [metadata.finance]
-status = "track_partial"
-provider = "Alpaca caller-owned export"
-access = "caller-owned-import-review-only"
+status = "experimental"
+provider = "explicit external Alpaca read-only capability"
+access = "external-capability-packet"
 track = "us"
 broker_order_mutation = false

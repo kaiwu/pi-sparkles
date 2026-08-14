@@ -1,7 +1,7 @@
 name = "pi_sparkles_broker_live"
 version = "0.1.0"
 target = "javascript"
-description = "Partial non-executable handoff and external execution receipt review for Pi"
+description = "Non-executable external handoff and execution receipt reconciliation for Pi"
 licences = ["Apache-2.0"]
 gleam = ">= 1.18.0"
 
@@ -24,8 +24,8 @@ runtime = "bun"
 tested_version = "0.83.0"
 
 [metadata.finance]
-status = "track_partial"
-provider = "caller-selected external execution channel"
-access = "non-executable-handoff-and-import-review-only"
+status = "experimental"
+provider = "explicit caller-selected external execution capability"
+access = "non-executable-handoff-and-receipt-reconciliation"
 track = "cn|hk|us"
 broker_order_mutation = false

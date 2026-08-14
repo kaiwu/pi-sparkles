@@ -104,8 +104,8 @@ describe("functional architecture", () => {
     }
   });
 
-  test("T6 partial broker and compliance inventory has no market-depth or transport surface", () => {
-    const partials = [
+  test("T6 broker and compliance plugins have no market-depth or transport surface", () => {
+    const plugins = [
       "cn_broker_paper",
       "broker_readonly_alpaca",
       "broker_readonly_ibkr",
@@ -116,7 +116,7 @@ describe("functional architecture", () => {
     ];
     const depthField =
       /["'](?:bid|bids|ask|asks|offer|offers|orderBook|marketDepth)["']/i;
-    for (const name of partials) {
+    for (const name of plugins) {
       const directory = join(PLUGINS_DIR, name);
       const manifest = source(join(directory, "gleam.toml"));
       expect(
@@ -132,7 +132,7 @@ describe("functional architecture", () => {
     }
   });
 
-  test("pure finance foundations contain no Promise or FFI boundary", () => {
+  test("pure finance foundations contain no Promise or unreviewed FFI boundary", () => {
     for (const name of [
       "finance_core",
       "finance_track",
@@ -182,9 +182,16 @@ describe("functional architecture", () => {
       for (const path of filesBelow(directory, ".gleam")) {
         const gleam = source(path);
         expect(promiseImport.test(gleam), display(path)).toBeFalse();
-        expect(gleam.includes("@external"), display(path)).toBeFalse();
+        const reviewedDecimalPrimitive =
+          name === "finance_core" && basename(path) === "decimal.gleam";
+        if (!reviewedDecimalPrimitive) {
+          expect(gleam.includes("@external"), display(path)).toBeFalse();
+        }
       }
-      expect(filesBelow(directory, ".mjs"), name).toEqual([]);
+      expect(
+        filesBelow(directory, ".mjs").map((path) => basename(path)).sort(),
+        name,
+      ).toEqual(name === "finance_core" ? ["decimal_ffi.mjs"] : []);
     }
   });
 

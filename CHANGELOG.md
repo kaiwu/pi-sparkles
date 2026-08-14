@@ -5,6 +5,24 @@ here. Versions follow Semantic Versioning. The exact selected tier, plugin
 inventory, maturity, and content hashes remain authoritative in each tarball's
 `release-lock.json` and `aggregate-lock.json`.
 
+## 0.1.5 - 2026-08-15
+
+- Complete and promote the eleven-proposal T6 day-trader and execution-review
+  tier, including the two previously missing plugins and the seven previously
+  partial broker, paper, compliance, and reconciliation surfaces.
+- Add independently labelled CN, HK, and US bounded transaction-tape capability
+  review, shared sequence/gap/reset/correction workflow laws, named local
+  possible-fill simulation, compound compliance evaluation, non-executable
+  handoff, and content-bound external receipt reconciliation.
+- Make provider dependencies explicit: Futu OpenD, Alpaca, IBKR, their SDKs or
+  gateways, credentials, login state, entitlements, and live certification stay
+  caller-owned and are never bundled or silently selected.
+- Release the cumulative T1-through-T6 all-in-one package with all 135 ledger
+  plugins behind one Pi entrypoint and no broker order-mutation authority.
+- Remove the legacy per-plugin Pi loader permanently. Development, tier
+  acceptance, clean-install, and release verification load the T6 all-in-one
+  entrypoint once and reject earlier-tier or per-plugin load targets.
+
 ## 0.1.4 - 2026-08-14
 
 - Compose broad CN sector analysis from a bounded `cn_sector_series`

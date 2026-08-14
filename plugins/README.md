@@ -1,13 +1,10 @@
 # Plugin implementation and design index
 
-The catalog currently contains 135 exact `pi_*` proposals:
-
-- 62 have an implementation package (`gleam.toml`, source, tests, and README);
-- 73 are **Designing** and contain only `plugins/<name>/README.md`.
-
-README-only directories are reviewed specifications, not runnable plugins.
-Root tasks discover packages by `gleam.toml`, so these designs do not increase
-implementation breadth. The implementation queue remains controlled by the
+The catalog contains 135 exact `pi_*` proposals. All 135 now have an
+implementation package (`gleam.toml`, source, and README); package-local tests
+exist where the package owns pure laws or focused behavior, while generated
+shells share core law and tier-lane coverage. The implementation and promotion
+queue remains controlled by the
 [product-tier standard](../PRODUCT_TIERS.md), [R2](../R2.md), and
 [`tiers.json`](../tiers.json). The complete T1 swing product is ProductUseful;
 no individual plugin is selected next.
@@ -32,7 +29,7 @@ non-external questions** inside the reviewed scope.
 | [Session 41](../../trading-course/sessions/41_market_structure_source_product_contract_20260811.md) | 30 market/source/identity/rule/disclosure/cache/tape/HK designs | Concrete professional tasks, provider-path requirements, tape depth, compact/drill-down and failures |
 | [Session 42](../../trading-course/sessions/42_research_portfolio_monitoring_product_contract_20260811.md) | 31 research/portfolio/monitoring/company-intelligence designs | Exact workflows, receipt chains, durable artifacts, executable assumptions and acceptance |
 | [Session 43](../../trading-course/sessions/43_multi_asset_macro_product_contract_20260811.md) | 12 fund/rates/fixed-income/options/commodity/COT/crypto/macro/FX/global designs | Instrument semantics, calculations, source paths and cross-asset laws |
-| [Session 44](../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md) | 7 `track_partial` broker/simulation/receipt/compliance packages plus 1 README-only CN broker design, amended 2026-08-12 | Current code is offline/import-only validation and pure evaluation; read-only network observation, named simulation, provider conformance, private import, and richer compliance remain explicit backlog; order mutation is forbidden |
+| [Session 44](../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md) | 8 broker/simulation/receipt/compliance packages, amended 2026-08-12 and completed for T6 on 2026-08-14 | Explicit external provider capabilities, named local simulation, caller-owned receipt review, compound compliance evaluation, non-executable handoff, and reconciliation are implemented; providers and credentials remain external and order mutation is forbidden |
 | [Session 45](../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md) | Whole product | Uniform Pi contract, capability/data-flow DAG, lifecycle, five persona journeys and acceptance |
 | [Session 46](../../trading-course/sessions/46_product_readiness_corrections_20260811.md) | Sessions 40, 44 and 45 | Correct chronology, maturity/input-path semantics, DAG meaning and ambiguous live-submission handling |
 
@@ -75,14 +72,15 @@ are represented above.
 | CN ownership and market publications | [cn_stock_share_structure](cn_stock_share_structure/README.md), [cn_stock_shareholders](cn_stock_shareholders/README.md), [cn_stock_restricted_shares](cn_stock_restricted_shares/README.md), [cn_stock_pledges](cn_stock_pledges/README.md), [cn_stock_insiders](cn_stock_insiders/README.md), [cn_stock_public_info](cn_stock_public_info/README.md), [cn_stock_margin](cn_stock_margin/README.md), [cn_stock_block_trades](cn_stock_block_trades/README.md), [cn_stock_connect](cn_stock_connect/README.md) |
 | SEC and infrastructure | [sec_ownership](sec_ownership/README.md), [sec_insiders](sec_insiders/README.md), [finance_cache](finance_cache/README.md) |
 | Existing shared-shell projections | [cn_stock_screener](cn_stock_screener/README.md), [cn_market_snapshot](cn_market_snapshot/README.md) |
-| T6 day/execution inventory | README-only: [stock_tape](stock_tape/README.md), [cn_broker_readonly](cn_broker_readonly/README.md). Implemented `track_partial`: [cn_broker_paper](cn_broker_paper/README.md), [broker_readonly_alpaca](broker_readonly_alpaca/README.md), [broker_readonly_ibkr](broker_readonly_ibkr/README.md), [broker_paper_alpaca](broker_paper_alpaca/README.md), [broker_paper_ibkr](broker_paper_ibkr/README.md), [broker_live](broker_live/README.md), [trade_compliance](trade_compliance/README.md) |
+| T6 day/execution inventory | Implemented: [stock_tape](stock_tape/README.md), [cn_broker_readonly](cn_broker_readonly/README.md), [cn_broker_paper](cn_broker_paper/README.md), [broker_readonly_alpaca](broker_readonly_alpaca/README.md), [broker_readonly_ibkr](broker_readonly_ibkr/README.md), [broker_paper_alpaca](broker_paper_alpaca/README.md), [broker_paper_ibkr](broker_paper_ibkr/README.md), [broker_live](broker_live/README.md), and [trade_compliance](trade_compliance/README.md); T6 also composes the existing [stock_order_book](stock_order_book/README.md) and [day_workbench](day_workbench/README.md) packages |
 
 ## Tier-only implementation and promotion rule
 
 A design normally becomes code only as part of its owning tier after every tier
-blocker is resolved. T6's seven explicit offline/import-only exceptions are
-listed as `track_partial` in `tiers.json`; they neither resolve its feed blocker
-nor permit verification. Cross-package work is expected, but every touched
+blocker is resolved. T6 has no remaining partial implementation: each provider,
+gateway, SDK, credential, and live-provider certification is an explicit
+caller-owned runtime dependency outside the plugin distribution. Cross-package
+work is expected, but every touched
 package remains compilable and focused-test green at atomic checkpoints;
 incomplete public tools or placeholder behavior are forbidden.
 

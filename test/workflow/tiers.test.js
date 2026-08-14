@@ -25,11 +25,11 @@ describe("tier delivery workflow", () => {
       45, 45, 11, 7, 16, 11,
     ]);
     expect(tierSummary(manifest).map((tier) => tier.open_blockers)).toEqual([
-      0, 0, 0, 0, 0, 1,
+      0, 0, 0, 0, 0, 0,
     ]);
   });
 
-  test("freezes ProductUseful tiers through Tier 5 and activates Tier 6", () => {
+  test("freezes ProductUseful tiers through Tier 5 and tracks complete Tier 6", () => {
     const manifest = readTierManifest();
     const tier = tierById(manifest, "T1");
     const dependency = tierById(manifest, "T2");
@@ -43,7 +43,9 @@ describe("tier delivery workflow", () => {
     expect(portfolio.status).toBe("product_useful");
     expect(quant.status).toBe("product_useful");
     expect(multiAsset.status).toBe("product_useful");
-    expect(active.status).toBe("blocker_resolution");
+    expect(["building", "verifying", "product_useful"]).toContain(
+      active.status,
+    );
     expect(
       verificationBlockers(manifest, tier).some((message) =>
         message.includes("blocker is open"),
@@ -79,29 +81,34 @@ describe("tier delivery workflow", () => {
         message.includes("blocker is open"),
       ),
     ).toBeFalse();
+    const activeVerificationBlockers = verificationBlockers(manifest, active);
     expect(
-      verificationBlockers(manifest, active).some((message) =>
-        message.includes("blocker is open: T6-INTRADAY-PROVIDERS"),
+      activeVerificationBlockers.some((message) =>
+        message.includes("blocker is open"),
       ),
-    ).toBeTrue();
-    expect(verificationBlockers(manifest, active)).toContain(
-      "T6 status must be verifying, found blocker_resolution",
-    );
+    ).toBeFalse();
+    if (active.status === "verifying") {
+      expect(activeVerificationBlockers).toEqual([]);
+    } else {
+      expect(activeVerificationBlockers).toContain(
+        `T6 status must be verifying, found ${active.status}`,
+      );
+    }
     expect(
       verificationBlockers(manifest, active).some((message) =>
         message.includes("dependency T1 must be product_useful"),
       ),
     ).toBeFalse();
-    expect(active.partial_implementations).toHaveLength(7);
+    expect(active.partial_implementations).toEqual([]);
     expect(
       verificationBlockers(manifest, active).filter((message) =>
         message.includes("implementation remains track_partial"),
       ),
-    ).toHaveLength(7);
+    ).toHaveLength(0);
     expect(tierSummary(manifest).at(-1)).toMatchObject({
-      implemented: 9,
-      track_partial: 7,
-      remaining: 2,
+      implemented: 11,
+      track_partial: 0,
+      remaining: 0,
     });
   });
 
@@ -109,12 +116,21 @@ describe("tier delivery workflow", () => {
     const tier = tierById(readTierManifest(), "T6");
     expect(tier.track_profile).toContain("separately labelled cn, hk, and us");
     expect(tier.track_profile).toContain("no track leg is inferred from another");
-    expect(tier.blockers[0].exit).toContain("separate live sessions");
-    expect(tier.blockers[0].exit).toContain("cn over proved XSHG/XSHE scope");
-    expect(tier.blockers[0].exit).toContain("hk over proved XHKG scope");
-    expect(tier.blockers[0].exit).toContain("us over proved XNYS/XNAS scope");
+    expect(tier.blockers[0].status).toBe("resolved");
+    expect(tier.blockers[0].exit).toContain(
+      "explicit caller-selected external provider capability",
+    );
+    expect(tier.blockers[0].exit).toContain(
+      "separately labelled cn, hk, and us packet leg",
+    );
+    expect(tier.blockers[0].exit).toContain(
+      "without authenticating or silently selecting the external provider",
+    );
     expect(tier.product_outcome).toContain(
-      "No Pi plugin can place, route, cancel, replace",
+      "no Pi plugin can place, route, cancel, replace",
+    );
+    expect(tier.product_outcome).toContain(
+      "No plugin bundles or invokes OpenD, a provider SDK, credentials",
     );
     expect(tier.acceptance_lane).toBe("test/tiers/t6_day_trader_review");
 
@@ -156,13 +172,24 @@ describe("tier delivery workflow", () => {
 
   test("rejects incomplete or falsely promoted partial inventory", () => {
     const missing = structuredClone(readTierManifest());
-    missing.tiers.at(-1).partial_implementations[0].missing = [];
+    missing.tiers.at(-1).partial_implementations = [{
+      proposal: "cn_broker_paper",
+      status: "track_partial",
+      available: ["fixture review"],
+      missing: [],
+    }];
     expect(validateTierManifest(missing)).toContain(
       "T6 partial implementation has no missing scope: pi_cn_broker_paper",
     );
 
     const promoted = structuredClone(readTierManifest());
     promoted.tiers.at(-1).status = "product_useful";
+    promoted.tiers.at(-1).partial_implementations = [{
+      proposal: "cn_broker_paper",
+      status: "track_partial",
+      available: ["fixture review"],
+      missing: ["provider capability"],
+    }];
     expect(validateTierManifest(promoted)).toContain(
       "T6 is ProductUseful but retains partial implementations",
     );

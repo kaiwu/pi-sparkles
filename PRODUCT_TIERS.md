@@ -18,7 +18,7 @@ Pi tools, never plugin-to-plugin source imports.
 | **T3 — ProductUseful** | Portfolio manager and monitor | 11 | 11 packages, 0 not implemented | Durable portfolio import/reconciliation → risk/scenarios/attribution/rebalance/tax lots → monitors/alerts and auditable resume |
 | **T4 — ProductUseful** | Quant researcher | 7 | 7 packages, 0 not implemented | Point-in-time universe/data → explicit features/events → trial ledger/backtest/comparison → complete reproduction |
 | **T5 — ProductUseful** | Macro and multi-asset researcher | 16 | 16 packages, 0 not implemented | Exact instrument/source legs → reviewed calculations → time-aligned, separately labelled cross-asset research |
-| **T6** | CN/HK/US day trader and execution reviewer | 11 | 9 packages, 2 not implemented; 7 are `track_partial` | Separately authenticated CN, HK, and US live transaction-tape legs → one shared bounded day workflow → track-owned local simulation/read-only account and compliance → non-executable handoff and external-receipt reconciliation |
+| **T6 — ProductUseful** | CN/HK/US day trader and execution reviewer | 11 | 11 packages, 0 not implemented | Separately labelled CN, HK, and US external transaction-tape capability legs → one shared bounded day workflow → track-owned local simulation/read-only account and compliance → non-executable handoff and external-receipt reconciliation |
 
 “Current inventory” means code exists. It is not a completion percentage and
 does not credit narrow Experimental slices as finished product behavior.
@@ -36,7 +36,7 @@ the role journey or expensive acceptance suite to be copied three times.
 | T3 portfolio | One mixed imported portfolio with separately labelled CN/HK/US legs |
 | T4 quant | One US point-in-time dataset/replay journey; provider-neutral manifests preserve other track labels |
 | T5 multi-asset | Global/cross-market legs; it is not an equity-track product |
-| T6 day/execution review | One composed role journey with mandatory, separately labelled CN, HK, and US live transaction-tape legs; shared workflow behavior is exercised once and Futu conformance is proved independently per track |
+| T6 day/execution review | One composed role journey with mandatory, separately labelled CN, HK, and US transaction-tape capability-packet legs; shared workflow behavior is exercised once and provider identity, rights, sequence, conditions, clocks, recovery, and limitations are proved independently per track |
 
 Shared domain types, calculations, receipts, Pi shells, and acceptance logic are
 implemented once. Track-owned adapters or rule modules exist only when market
@@ -52,7 +52,7 @@ separate future scope decision—not an automatic matrix expansion.
 
 T6 is the explicit three-track scope decision: it has one role acceptance lane,
 not three cloned products, but that lane cannot pass unless its `cn`, `hk`, and
-`us` live legs each have independently exercised track-owned provider evidence.
+`us` legs each have independently exercised track-owned provider evidence.
 Shared laws and workflow transitions are tested once; market identity, feed,
 rights, sequence, conditions, clocks, recovery, and unsupported venues remain
 separate per track.
@@ -74,7 +74,9 @@ credentials from the environment to prove the adapter against the subscribed
 service; it must redact them and retain only non-secret evidence. Missing
 credentials or alternative-provider breadth is not a blocker. A provider blocks
 work only when no testable provider/import path can establish a required
-contract, as with authentic T6 real-time stream behavior.
+contract. For T6, the caller explicitly supplies a bounded capability packet;
+the distribution validates that packet but does not authenticate, bundle, or
+silently select its provider.
 
 For T1, Eastmoney is the working CN adapter and Tushare Pro is the second
 mainstream adapter/conformance proof. The Tushare token is an environment-only
@@ -84,8 +86,10 @@ without reopening T1 or changing the plugin-facing contract.
 Each adapter receives focused conformance and decoder coverage. A tier's
 expensive role journey uses only its declared acceptance provider set, so
 supporting additional providers does not duplicate the entire product
-acceptance suite. T6 selects Futu first for all three required track legs, with
-independent per-track conformance behind shared provider-neutral ports.
+acceptance suite. T6 accepts explicit external provider capabilities for all
+three required track legs, with independent per-track evidence behind shared
+provider-neutral ports. Futu/OpenD is one development and runtime option, not a
+shipped or implicitly selected dependency.
 
 ## Mandatory tier workflow
 
@@ -117,14 +121,13 @@ An unresolved provider or operational prerequisite stops the whole tier. We do
 not fill the time by producing provider-neutral shells and calling them a
 completed slice.
 
-T6 has one explicit inventory exception recorded in `tiers.json`: seven
-non-network, non-executing packages may exist as `track_partial` while the live
-feed blocker remains open. Each entry must enumerate both its working contract
-and its missing product scope. The checkpoint accepts only those named packages
-during `blocker_resolution`, while verification rejects every remaining
-`track_partial` entry. This inventory neither resolves a blocker nor changes
-the tier's delivery state, and it must not grow transport, market-depth, broker
-credential, or order-mutation authority.
+T6's former partial-inventory exception is closed. All eleven packages are
+implemented around explicit external capability packets, deterministic local
+simulation, caller-owned receipt review, and non-executable handoffs. The
+plugins ship no provider gateway, SDK, credential, remembered login state, or
+order-mutation authority. Live-provider operation is an explicitly selected
+caller-owned runtime dependency whose exact rights and limitations remain in
+every result.
 
 ### 2. Build the whole tier inside out
 
@@ -259,10 +262,8 @@ bun run aggregate:build -- --verify-only
 bun run aggregate:build -- T5
 ```
 
-T6 is the next-release default. While blocked, it includes only existing T6
-inventory and produces a private `blocked_inventory_preview`; after complete
-ProductUseful promotion, the same default includes the exact T1-through-T6
-proposal inventory as the releasable next aggregate. T5 remains an explicit
+T6 is the current release default and includes the exact T1-through-T6 proposal
+inventory as the releasable aggregate. T5 remains an explicit
 prior-release target containing every proposal owned by T1 through T5. Each
 output has exactly one `pi.extensions` entry and deterministic tier-ledger
 order. It bundles compiled initialization only;
@@ -271,11 +272,10 @@ maturity boundaries remain owned by their original plugins. A runtime guard
 rejects duplicate named commands, tools, shortcuts, flags, providers, and
 renderers before forwarding the conflicting registration to Pi.
 
-While T6 is blocked, its output at
-`dist/aggregate/t6/` is marked `private` and `blocked_inventory_preview`, is not
-a ProductUseful release, and omits proposals without implementation packages.
-Its lock records those omissions, every partial implementation, and every open
-blocker. Building or loading that preview does not alter the tier ledger.
+The ProductUseful T6 output at `dist/aggregate/t6/` contains all 135 proposals
+with zero omissions, partial implementations, or open blockers. Its lock records
+that exact inventory and maturity; building or loading it does not alter the
+tier ledger.
 
 Both variants refuse any plugin that declares broker order-mutation authority,
 exclude `extra_packages`, include no credential values, and generate
@@ -294,12 +294,11 @@ bun run npm:pack -- T5
 ```
 
 The selected target remains explicit in npm metadata and both content locks; a
-package name never erases its tier scope. T6 is the next-release default, but
-its current package is a private local preview and the npm publish gate rejects
-it. When T6 has no omissions, partials, or blockers and is ProductUseful, the
-same default T6 pipeline becomes releasable. T5 remains explicitly selectable
-as the prior public release. An npm package version must be bumped before
-publishing different content under the stable name.
+package name never erases its tier scope. T6 is the ProductUseful release
+default and its package is publishable only with zero omissions, partials, and
+blockers. T5 remains explicitly selectable as the prior public release. An npm
+package version must be bumped before publishing different content under the
+stable name.
 
 The tarball has one Pi entrypoint, a strict file allowlist, no lifecycle
 scripts, no credential values, exact `pdfjs-dist` runtime assets, Apache-2.0 and
@@ -312,16 +311,14 @@ documented in [`NPM_RELEASE.md`](NPM_RELEASE.md).
 
 ## Active ledger decision
 
-T1 through T5 are **ProductUseful**. Their single declared role journeys,
-complete repository checks, artifact contracts and installed-Pi smoke lanes
-passed on 2026-08-11 or 2026-08-12. T6 is now the active ledger tier in
-`blocker_resolution`; T5's completed promotion record remains frozen. Its
-plain-Pi package contains the T1 and T5 dependency closure as 61 separately
-loadable, content-locked extension entry points. T6 remains externally blocked
-on authentic real-time market behavior and must not enter `building` until the
-recorded exit evidence exists. Seven explicitly ledger-declared offline/import
-packages are coherent `track_partial` inventory only; their listed missing
-scope remains a verification blocker.
+T1 through T6 are **ProductUseful**. Their single declared role journeys,
+repository checks, artifact contracts, and Pi acceptance lanes have passed.
+T6 was promoted on 2026-08-15 after its complete composed role lane proved
+separately labelled CN, HK, and US capability-packet legs and the shared day
+workflow. Its aggregate contains all 135 proposals behind one content-locked Pi
+entrypoint. External provider binaries, SDKs, gateways, credentials, login
+state, entitlements, and live certification remain explicit caller-owned
+dependencies rather than shipped components or silent fallbacks.
 
 Tushare credentials remain environment-only adapter inputs and CNINFO remains a
 public official-source path. `pi_stock_tape` belongs to T6; separately exercised

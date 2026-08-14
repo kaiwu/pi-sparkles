@@ -1,7 +1,11 @@
 import finance_broker_review
 import finance_broker_review/decode
+import finance_execution/tape_scenario
+import finance_execution/tape_scenario_decode
 import gleam/javascript/promise.{type Promise}
+import gleam/option.{None}
 import pi
+import pi/finance/tape_scenario_schema
 import pi/schema
 import pi/tool
 import pi_sparkles_cn_broker_paper/domain
@@ -10,16 +14,12 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   tool.register(
     api,
     "review_cn_paper_evidence",
-    "Review offline CN paper evidence",
-    "Validate a bounded deterministic-scenario envelope or caller-owned external paper receipt without network or broker authority; every result is track_partial",
-    "Supply hashes instead of raw private identifiers. The tool preserves exact fact and status lexemes and reports duplicates or conflicts.",
+    "Review an external CN paper receipt packet",
+    "Validate bounded normalized CN paper-account, order, fill, capability, entitlement, and lifecycle evidence from one explicitly selected external read-only provider capability",
+    "The provider is an external dependency. This plugin ships no SDK, credential, adapter, network transport, or broker mutation surface.",
     tool.parameters(
-      review_schema(
-        ["deterministic_scenario", "external_paper_receipt_import"],
-        ["local_simulation", "external_paper"],
-        ["cn"],
-      ),
-      decode.review_input(),
+      review_schema(["external_paper_receipt"], ["external_paper"], ["cn"]),
+      decode.explicit_capability_input(),
     ),
     tool.Parallel,
     fn(_id, input, _signal, _updates, _ctx) {
@@ -34,7 +34,42 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
       }
     },
   )
+  register_simulation(api)
   promise.resolve(Nil)
+}
+
+fn register_simulation(api: pi.ExtensionApi) -> Nil {
+  tool.register(
+    api,
+    "simulate_cn_tape_possible_fill",
+    "Simulate one CN transaction-tape possible-fill scenario",
+    "Apply the named provider-neutral transaction_tape_possible_fill_v1 model to one exact CN limit instruction and bounded external transaction tape, retaining eligible prints, exclusions, sequence limitations, and both non-fill and possible-fill branches",
+    "This deterministic model never proves a fill or queue position and cannot place, route, cancel, replace, or otherwise mutate an order.",
+    tool.parameters(
+      tape_scenario_schema.input(bounded_string(1, 200), ["cn"], [
+        "XSHG",
+        "XSHE",
+        "XBSE",
+      ]),
+      tape_scenario_decode.input(),
+    ),
+    tool.Parallel,
+    fn(_id, input, signal, _updates, _ctx) {
+      case tool.is_cancelled(signal) {
+        True -> tool.reject("CN possible-fill simulation was cancelled")
+        False ->
+          case tape_scenario.run(input, "cn", None) {
+            Ok(value) ->
+              tool.text_result(
+                tape_scenario.summary(value),
+                tape_scenario.details(value),
+              )
+              |> promise.resolve
+            Error(error) -> tool.reject(tape_scenario.error_message(error))
+          }
+      }
+    },
+  )
 }
 
 fn review_schema(
@@ -43,6 +78,7 @@ fn review_schema(
   tracks: List(String),
 ) -> schema.Schema {
   schema.object([
+    schema.Required("provider", bounded_string(1, 100)),
     schema.Required("operationId", bounded_string(1, 500)),
     schema.Required("mode", schema.string_enum(modes)),
     schema.Required("environment", schema.string_enum(environments)),

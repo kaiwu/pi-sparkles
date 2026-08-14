@@ -238,7 +238,7 @@ bun run check -- swing_workbench
 bun run test:unit -- swing_workbench
 bun run test:acceptance -- swing
 bun run build -- swing_workbench
-bun run test:pi -- swing_workbench
+bun run test:aggregate:pi
 bun run test:live:tutor
 ```
 

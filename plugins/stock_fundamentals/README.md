@@ -367,7 +367,7 @@ the same modern JavaScript exact-JSON runtime requirement as `finance_sec`.
 ```sh
 bun run test:unit -- stock_fundamentals
 bun run build -- stock_fundamentals
-bun run test:pi -- stock_fundamentals
+bun run test:aggregate:pi
 ```
 
 Hex distributes Gleam and FFI source. Pi loads the generated

@@ -95,11 +95,21 @@ pub fn read_failures_never_become_empty_successes_test() {
 fn fixture(version: String, mode: String) -> String {
   "{\"contractVersion\":\""
   <> version
-  <> "\",\"operationId\":\"local-import\",\"mode\":\""
+  <> "\",\"provider\":\"futu\",\"operationId\":\"local-import\",\"mode\":\""
   <> mode
   <> "\",\"environment\":\"external_live\",\"accountReference\":\""
   <> hash_a
-  <> "\",\"track\":\"hk\",\"listingId\":\"HK.00700\",\"mic\":\"XHKG\",\"facts\":[{\"name\":\"cash_available\",\"state\":\"known\",\"value\":\"1000\",\"unit\":\"HKD\",\"sourceReference\":\""
+  <> "\",\"track\":\"hk\",\"listingId\":\"HK.00700\",\"mic\":\"XHKG\",\"facts\":[{\"name\":\"broker_provider\",\"state\":\"known\",\"value\":\"futu\",\"unit\":\"provider_identifier\",\"sourceReference\":\""
+  <> hash_b
+  <> "\"},{\"name\":\"read_only_authority\",\"state\":\"known\",\"value\":\"read_only\",\"unit\":\"authority_scope\",\"sourceReference\":\""
+  <> hash_b
+  <> "\"},{\"name\":\"entitlement_scope\",\"state\":\"known\",\"value\":\"caller_owned\",\"unit\":\"entitlement_declaration\",\"sourceReference\":\""
+  <> hash_b
+  <> "\"},{\"name\":\"capability_scope\",\"state\":\"known\",\"value\":\"order,fill\",\"unit\":\"capability_set\",\"sourceReference\":\""
+  <> hash_b
+  <> "\"},{\"name\":\"handoff_receipt\",\"state\":\"known\",\"value\":\"bound\",\"unit\":\"sha256_reference\",\"sourceReference\":\""
+  <> hash_b
+  <> "\"},{\"name\":\"external_execution_receipt\",\"state\":\"known\",\"value\":\"present\",\"unit\":\"sha256_reference\",\"sourceReference\":\""
   <> hash_b
   <> "\"}],\"events\":[],\"missingCapabilities\":[]}"
 }

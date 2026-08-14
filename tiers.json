@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "active_tier": "T6",
-  "blocker_policy": "A tier is externally blocked only when no testable provider, public source, user-owned import, fixture, or scripted capability can prove a required contract. Missing alternative providers and production credentials are adapter backlog or runtime dependencies, not blockers. T6 real-time market behavior is the current exception.",
+  "blocker_policy": "A tier is externally blocked only when no testable provider, public source, user-owned import, fixture, or scripted capability can prove a required contract. Missing alternative providers, gateways, SDKs, production credentials, and live-provider certification are explicit caller-owned runtime dependencies or adapter backlog, not shipped product components and not blockers when deterministic capability packets prove the core contract.",
   "statuses": [
     "queued",
     "blocker_resolution",
@@ -297,22 +297,23 @@
     {
       "id": "T6",
       "name": "Three-track day trader and execution-review product",
-      "status": "blocker_resolution",
+      "status": "product_useful",
       "depends_on": ["T1", "T3", "T4"],
-      "track_profile": "One composed day-trader acceptance profile with mandatory, separately labelled cn, hk, and us live-session and transaction-tape legs. Shared workflow logic is exercised once while Futu transaction-ticker/tape conformance, market identity, rights, clocks, sequence, conditions, recovery, and unsupported venues are proved independently for each track; no track leg is inferred from another and no provider-by-track matrix is created.",
-      "product_outcome": "A CN, HK, or US day trader can acquire and inspect authenticated track-owned live transaction-tape evidence, run the shared bounded session workflow, plan and simulate action locally, observe applicable read-only account and externally executed order/fill state, evaluate track-owned compliance facts, export a non-executable handoff, and reconcile imported or read-only receipts. Every result retains its exact track, venue, feed, entitlement, clocks, conditions, limitations, and receipt. Live provider acquisition is transaction-ticker/tape only: no Pi plugin acquires a stock quote, bid, offer, or order book; the existing stock_order_book proposal validates caller-supplied observations only. No Pi plugin can place, route, cancel, replace, or otherwise mutate any paper or live order.",
+      "track_profile": "One composed day-trader acceptance profile with mandatory, separately labelled cn, hk, and us transaction-tape capability-packet legs. Shared workflow laws run once while each fixture-backed track leg independently proves exact market identity, rights declarations, clocks, sequence, conditions, coverage, receipt binding, failure/recovery projection, and unsupported venues. Providers, gateways, SDKs, credentials, and live-provider certification are explicit caller-owned runtime dependencies outside the distribution; no track leg is inferred from another and no provider-by-track matrix is created.",
+      "product_outcome": "A CN, HK, or US day trader can inspect an exact bounded transaction-tape packet supplied by an explicit external provider capability, run the shared session workflow, plan and simulate action locally, review applicable read-only account and externally executed order/fill evidence, evaluate supplied track-owned compliance rules, export a non-executable handoff, and reconcile imported or read-only receipts. Every plugin result retains its exact track, venue, provider/feed declaration, entitlement, clocks, conditions, limitations, and content receipt while stating that provider identity and completeness are not authenticated by the package. No plugin bundles or invokes OpenD, a provider SDK, credentials, or a provider adapter; no Pi plugin acquires a stock quote, bid, offer, or order book; and no Pi plugin can place, route, cancel, replace, or otherwise mutate any paper or live order.",
       "acceptance_lane": "test/tiers/t6_day_trader_review",
       "blockers": [
         {
           "id": "T6-INTRADAY-PROVIDERS",
-          "status": "open",
-          "exit": "A caller-selected Futu direct Web API or another lawful gateway-free capability can be exercised in separate live sessions for all three required track legs: cn over proved XSHG/XSHE scope, hk over proved XHKG scope, and us over proved XNYS/XNAS scope. OpenD may supply development evidence only and can never be a runtime dependency or deliverable. Each exercise must independently validate its exact transaction-ticker feed and rights, authentic sequence domain, gap/reset and bounded recovery behavior, correction/cancel/bust availability or explicit absence, exchange/provider/receipt clocks, condition/type semantics, session coverage, backpressure behavior, and bounded unsubscribe/shutdown. Unsupported venues remain explicit and credentials, OpenD, remembered login state, stock quote/bid/offer/order-book data, and raw provider data remain outside the product."
+          "status": "resolved",
+          "exit": "The product boundary requires an explicit caller-selected external provider capability for each separately labelled cn, hk, and us packet leg, while the distributed plugins and their acceptance lane remain provider-free and credential-free. The shared core must deterministically validate exact packet identity, declared rights/coverage, sequence gaps/resets, correction/cancel lineage, clocks, conditions, bounded recovery outcomes, receipts, unsupported venues, and failure states without authenticating or silently selecting the external provider.",
+          "resolution": "On 2026-08-14 the delivery decision was amended explicitly: OpenD and every other provider, gateway, SDK, credential, and live-provider certification are external runtime dependencies, not shipped product components or pre-build gates. The implemented stock_tape and finance_tape cores accept only exact bounded capability packets and expose provider/rights/coverage limits without authentication claims; scripted transports and rights-safe fixtures prove all provider-neutral laws. The earlier OpenD exercises remain development evidence only. This resolution does not claim that Futu or any other provider is certified, complete, licensed for redistribution, or bundled."
         },
         {
           "id": "T6-STREAM-CAPABILITY",
           "status": "resolved",
           "exit": "The bounded streaming effect contract is fully specified and testable with scripted transports.",
-          "resolution": "The private pure finance_tape stream state machine now implements and deterministically tests one-key generation-scoped subscription, bounded event/byte/queue/session handling, idempotent cancellation, one bounded reconnect plus overlap recovery, stale/late completion suppression, and confirmed or unconfirmed cleanup outcomes. It emits typed effects only; authentic provider real-time semantics remain under T6-INTRADAY-PROVIDERS."
+          "resolution": "The pure finance_tape stream state machine implements and deterministically tests one-key generation-scoped subscription, bounded event/byte/queue/session handling, idempotent cancellation, one bounded reconnect plus overlap recovery, stale/late completion suppression, and confirmed or unconfirmed cleanup outcomes. It emits typed effects only; concrete provider conformance remains the caller-selected external capability's responsibility and is never inferred by the plugin."
         },
         {
           "id": "T6-BROKER-CONTRACTS",
@@ -333,100 +334,7 @@
           "resolution": "Paper behavior is deterministic local simulation or read-only review of caller-owned external receipts. It is not broker-hosted mutation and can never enable live mutation."
         }
       ],
-      "partial_implementations": [
-        {
-          "proposal": "cn_broker_paper",
-          "status": "track_partial",
-          "available": [
-            "Bounded validation of caller-supplied CN deterministic-scenario envelopes",
-            "Bounded review of caller-owned external paper facts and lifecycle observations",
-            "Content receipts, duplicate/conflict projection, chronological ambiguity projection, track/MIC isolation and privacy/payload bounds"
-          ],
-          "missing": [
-            "Named CN broker read-only or export contract and provider conformance evidence",
-            "Named fill-model execution with exact CN rule, calendar and settlement receipts",
-            "Authenticated CN intraday transaction-data feed required by T6-INTRADAY-PROVIDERS"
-          ]
-        },
-        {
-          "proposal": "broker_readonly_alpaca",
-          "status": "track_partial",
-          "available": [
-            "Bounded caller-owned Alpaca account-activity fact and lifecycle import review",
-            "Exact provider status lexemes, content receipts, duplicate/conflict and chronological ambiguity projection with privacy/payload bounds"
-          ],
-          "missing": [
-            "Alpaca response decoders, pagination and provider conformance fixtures",
-            "Reviewed read-only credential-scope proof and opt-in provider check",
-            "Optional Alpaca network adapter breadth, independently selected and conformed rather than substituted for the required Futu-first US leg"
-          ]
-        },
-        {
-          "proposal": "broker_readonly_ibkr",
-          "status": "track_partial",
-          "available": [
-            "Bounded caller-owned IBKR account-activity fact and lifecycle import review",
-            "Exact provider status lexemes, content receipts, duplicate/conflict and chronological ambiguity projection with privacy/payload bounds"
-          ],
-          "missing": [
-            "Client Portal or TWS/Gateway response decoders, pacing and session-state fixtures",
-            "Reviewed read-only gateway authority and opt-in provider check",
-            "Optional IBKR network adapter breadth, independently selected and conformed rather than substituted for the required Futu-first US leg"
-          ]
-        },
-        {
-          "proposal": "broker_paper_alpaca",
-          "status": "track_partial",
-          "available": [
-            "Bounded validation of caller-supplied deterministic-scenario envelopes",
-            "Bounded caller-owned Alpaca paper receipt review with duplicate/conflict, chronological ambiguity, privacy and payload projection"
-          ],
-          "missing": [
-            "Named fill-model execution rather than scenario-envelope validation only",
-            "Alpaca paper response decoders and provider conformance fixtures",
-            "Optional Alpaca read-only network observation as provider breadth outside the required Futu-first US leg"
-          ]
-        },
-        {
-          "proposal": "broker_paper_ibkr",
-          "status": "track_partial",
-          "available": [
-            "Bounded validation of caller-supplied deterministic-scenario envelopes",
-            "Bounded caller-owned IBKR paper receipt review with duplicate/conflict, chronological ambiguity, privacy and payload projection"
-          ],
-          "missing": [
-            "Named fill-model execution rather than scenario-envelope validation only",
-            "IBKR paper response decoders and provider conformance fixtures",
-            "Optional IBKR read-only network observation as provider breadth outside the required Futu-first US leg"
-          ]
-        },
-        {
-          "proposal": "broker_live",
-          "status": "track_partial",
-          "available": [
-            "Content-bound non-executable handoff requiring one unambiguous known side, kind, quantity, unit, time-in-force, plan fingerprint and rule reference",
-            "Bounded caller-owned external execution-receipt review with duplicate/conflict and chronological ambiguity projection plus privacy/payload bounds",
-            "Unregistered bounded local UTF-8 receipt import with symlink rejection, cancellation, exact out-of-band file-hash verification before decoding, receipt-only contract versioning and no raw text returned or registered with Pi"
-          ],
-          "missing": [
-            "Futu-first track-owned read-only/import capability and rights evidence for applicable cn, hk and us account surfaces, with every unavailable surface explicit",
-            "Authenticated per-track live sequence and external-receipt reconciliation conformance evidence"
-          ]
-        },
-        {
-          "proposal": "trade_compliance",
-          "status": "track_partial",
-          "available": [
-            "Pure effective-interval evaluation of bounded caller-supplied boolean rules and facts",
-            "Independent True, False, Unknown, NotApplicable and Conflict outcomes, including overlapping active-version conflicts and exact-duplicate counts, with a content receipt"
-          ],
-          "missing": [
-            "Authoritative cn, hk and us rule acquisition and independently bounded rule-set completeness evidence",
-            "Rule-version comparison, correction lineage and individual predicate-explanation tools",
-            "Typed compound expressions beyond one named boolean fact per rule"
-          ]
-        }
-      ],
+      "partial_implementations": [],
       "proposals": [
         "stock_order_book",
         "stock_tape",

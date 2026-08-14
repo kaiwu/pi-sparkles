@@ -73,7 +73,7 @@ bun run build -- finance_news
 bun test test/binding/finance_news.test.js
 bun run test:architecture
 bun run test:artifacts
-bun run test:pi -- finance_news
+bun run test:aggregate:pi
 bun run test
 ```
 

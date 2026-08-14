@@ -37,7 +37,52 @@ pub type ReviewInput {
 }
 
 pub type BoundReviewInput {
-  BoundReviewInput(contract_version: String, review: ReviewInput)
+  BoundReviewInput(
+    contract_version: String,
+    provider: String,
+    review: ReviewInput,
+  )
+}
+
+/// A normalized evidence packet paired with the exact external provider
+/// capability selected by the caller. Provider credentials and SDK handles are
+/// intentionally outside this serializable boundary.
+pub type ExplicitCapabilityInput {
+  ExplicitCapabilityInput(provider: String, review: ReviewInput)
+}
+
+pub fn explicit_capability_input() -> decoder.Decoder(ExplicitCapabilityInput) {
+  use provider <- decoder.field("provider", decoder.string)
+  use operation_id <- decoder.field("operationId", decoder.string)
+  use mode <- decoder.field("mode", decoder.string)
+  use environment <- decoder.field("environment", decoder.string)
+  use account_reference <- decoder.field("accountReference", decoder.string)
+  use track <- decoder.field("track", decoder.string)
+  use listing_id <- decoder.field("listingId", decoder.string)
+  use mic <- decoder.field("mic", decoder.string)
+  use source_content_hash <- decoder.field("sourceContentHash", decoder.string)
+  use facts <- decoder.field("facts", decoder.list(of: fact_input()))
+  use events <- decoder.field("events", decoder.list(of: event_input()))
+  use missing_capabilities <- decoder.field(
+    "missingCapabilities",
+    decoder.list(of: decoder.string),
+  )
+  decoder.success(ExplicitCapabilityInput(
+    provider,
+    ReviewInput(
+      operation_id,
+      mode,
+      environment,
+      account_reference,
+      track,
+      listing_id,
+      mic,
+      source_content_hash,
+      facts,
+      events,
+      missing_capabilities,
+    ),
+  ))
 }
 
 pub fn review_input() -> decoder.Decoder(ReviewInput) {
@@ -76,6 +121,7 @@ pub fn bound_review_input(
   source_content_hash: String,
 ) -> decoder.Decoder(BoundReviewInput) {
   use contract_version <- decoder.field("contractVersion", decoder.string)
+  use provider <- decoder.field("provider", decoder.string)
   use operation_id <- decoder.field("operationId", decoder.string)
   use mode <- decoder.field("mode", decoder.string)
   use environment <- decoder.field("environment", decoder.string)
@@ -91,6 +137,7 @@ pub fn bound_review_input(
   )
   decoder.success(BoundReviewInput(
     contract_version,
+    provider,
     ReviewInput(
       operation_id,
       mode,

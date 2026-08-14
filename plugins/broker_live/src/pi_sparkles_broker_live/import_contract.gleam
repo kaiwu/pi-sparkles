@@ -66,14 +66,16 @@ pub fn decode_loaded(
 fn decode_verified(text: String, content_hash: String) -> LocalImportOutcome {
   case json.parse(text, decode.bound_review_input(content_hash)) {
     Error(_) -> InvalidJson
-    Ok(decode.BoundReviewInput(version, _input))
+    Ok(decode.BoundReviewInput(version, _provider, _input))
       if version != contract_version
     -> UnsupportedContractVersion(version)
-    Ok(decode.BoundReviewInput(_, input))
+    Ok(decode.BoundReviewInput(_, _provider, input))
       if input.mode != "external_execution_receipt_import"
     -> UnsupportedImportMode(input.mode)
-    Ok(decode.BoundReviewInput(_, input)) ->
-      case domain.run_content_bound(input) {
+    Ok(decode.BoundReviewInput(_, provider, input)) ->
+      case
+        domain.run_content_bound(decode.ExplicitCapabilityInput(provider, input))
+      {
         Ok(review) -> Imported(review)
         Error(error) ->
           ReviewRejected(finance_broker_review.error_message(error))

@@ -49,5 +49,5 @@ provider or model request and has no environment-variable dependency.
 bun run check -- watchlist
 bun run test:unit -- watchlist
 bun run build -- watchlist
-bun run test:pi -- watchlist
+bun run test:aggregate:pi
 ```

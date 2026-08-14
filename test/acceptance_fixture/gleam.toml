@@ -19,6 +19,7 @@ finance_ohlcv = { path = "../../finance/finance_ohlcv" }
 finance_provenance = { path = "../../finance/finance_provenance" }
 finance_risk = { path = "../../finance/finance_risk" }
 finance_strategy = { path = "../../finance/finance_strategy" }
+finance_tape = { path = "../../finance/finance_tape" }
 finance_track = { path = "../../finance/finance_track" }
 finance_us_rules = { path = "../../finance/finance_us_rules" }
 

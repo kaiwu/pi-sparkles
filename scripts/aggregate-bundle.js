@@ -435,9 +435,9 @@ ${rows.join("\n")}
 function packageReadme(plan) {
   const warning = plan.releasable
     ? "Every included tier is ProductUseful."
-    : `This is a blocked inventory preview, not a ProductUseful T6 release. Missing proposals: ${plan.omittedProposals
+    : `This is a non-releasable inventory build awaiting ProductUseful promotion. Missing proposals: ${plan.omittedProposals
         .map(({ proposal }) => `pi_${proposal}`)
-        .join(", ")}. The open live-feed blocker remains controlling.`;
+        .join(", ") || "none"}.`;
   return `# ${plan.packageName}
 
 One Pi extension entrypoint aggregating ${plan.plugins.length} existing tier
@@ -498,7 +498,7 @@ function lockRecord(plan, pluginRecords, bundlePath) {
       ...plugin,
       ledgerStatus: partialNames.has(plugin.shortName)
         ? "track_partial"
-        : plan.pluginTiers[plugin.shortName] === "T6"
+        : plan.pluginTiers[plugin.shortName] === "T6" && !plan.releasable
           ? "implementation_inventory"
           : "product_useful",
     })),
@@ -732,7 +732,7 @@ function usage() {
   return [
     "Usage: bun run aggregate:build -- [T5|T6] [--no-build] [--output <directory>]",
     "       bun run aggregate:build -- [T5|T6] --verify-only [--output <directory>]",
-    "T6 is the next-release default. It includes only existing T6 inventory and remains non-releasable while blocked; select T5 explicitly for the prior ProductUseful release.",
+    "T6 is the next-release default and becomes releasable only after ProductUseful promotion; select T5 explicitly for the prior release.",
   ].join("\n");
 }
 

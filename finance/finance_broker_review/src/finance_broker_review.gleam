@@ -1,5 +1,5 @@
 import finance_broker_review/decode.{
-  type EventInput, type FactInput, type ReviewInput,
+  type EventInput, type FactInput, type ReviewInput, FactInput,
 }
 import finance_broker_review/field
 import finance_provenance/hash
@@ -37,13 +37,15 @@ pub fn review(
   allowed_mode_environments: List(#(String, String)),
   required_missing_capabilities: List(String),
 ) -> Result(Review, ReviewError) {
-  review_with_content_binding(
+  review_with_policy(
     input,
     provider,
     expected_track,
     allowed_mode_environments,
     required_missing_capabilities,
     False,
+    "track_partial",
+    True,
   )
 }
 
@@ -56,23 +58,71 @@ pub fn review_content_bound(
   allowed_mode_environments: List(#(String, String)),
   required_missing_capabilities: List(String),
 ) -> Result(Review, ReviewError) {
-  review_with_content_binding(
+  review_with_policy(
     input,
     provider,
     expected_track,
     allowed_mode_environments,
     required_missing_capabilities,
     True,
+    "track_partial",
+    True,
   )
 }
 
-fn review_with_content_binding(
+/// Review a packet emitted by a caller-selected external read-only provider
+/// capability. The capability remains an explicit runtime dependency: this
+/// package neither accepts its credentials nor bundles or invokes its SDK.
+/// Unknown provider facts stay explicit, but the packet is not forced into the
+/// historical `track_partial` backlog merely because the provider lives
+/// outside the distribution.
+pub fn review_explicit_capability(
+  input: ReviewInput,
+  provider: String,
+  expected_track: String,
+  allowed_mode_environments: List(#(String, String)),
+) -> Result(Review, ReviewError) {
+  review_with_policy(
+    input,
+    provider,
+    expected_track,
+    allowed_mode_environments,
+    [],
+    False,
+    "experimental",
+    False,
+  )
+}
+
+/// Content-bound variant for a caller-owned local receipt whose exact UTF-8
+/// bytes were hashed and matched before decoding.
+pub fn review_explicit_capability_content_bound(
+  input: ReviewInput,
+  provider: String,
+  expected_track: String,
+  allowed_mode_environments: List(#(String, String)),
+) -> Result(Review, ReviewError) {
+  review_with_policy(
+    input,
+    provider,
+    expected_track,
+    allowed_mode_environments,
+    [],
+    True,
+    "experimental",
+    False,
+  )
+}
+
+fn review_with_policy(
   input: ReviewInput,
   provider: String,
   expected_track: String,
   allowed_mode_environments: List(#(String, String)),
   required_missing_capabilities: List(String),
   source_content_hash_verified_against_bytes: Bool,
+  maturity: String,
+  require_missing_capabilities: Bool,
 ) -> Result(Review, ReviewError) {
   use _ <- result.try(valid_text("operationId", input.operation_id, 1, 500))
   use _ <- result.try(valid_text("provider", provider, 1, 100))
@@ -124,13 +174,13 @@ fn review_with_content_binding(
   let missing =
     list.append(required_missing_capabilities, input.missing_capabilities)
     |> list.unique
-  use _ <- result.try(case missing {
-    [] ->
+  use _ <- result.try(case missing, require_missing_capabilities {
+    [], True ->
       Error(InvalidField(
         "missingCapabilities",
         "must remain explicit for track_partial output",
       ))
-    _ ->
+    _, _ ->
       list.try_each(missing, fn(value) {
         valid_text("missingCapabilities[]", value, 1, 200)
       })
@@ -170,7 +220,7 @@ fn review_with_content_binding(
   })
   let details =
     json.object([
-      #("maturity", json.string("track_partial")),
+      #("maturity", json.string(maturity)),
       #("contractVersion", json.string("broker_review_v1")),
       #("operationId", json.string(input.operation_id)),
       #("state", json.string(state)),
@@ -200,6 +250,17 @@ fn review_with_content_binding(
       ),
       #("semanticReceipt", json.string(digest)),
       #("missingCapabilities", json.array(missing, json.string)),
+      #(
+        "providerDependency",
+        json.object([
+          #("mode", json.string("explicit_external_capability")),
+          #("requiredAtRuntime", json.bool(True)),
+          #("adapterBundled", json.bool(False)),
+          #("sdkBundled", json.bool(False)),
+          #("credentialAcceptedByPlugin", json.bool(False)),
+          #("openDRequiredByPackage", json.bool(False)),
+        ]),
+      ),
       #("networkPerformed", json.bool(False)),
       #("brokerAuthorityAccepted", json.bool(False)),
       #("providerAuthenticated", json.bool(False)),
@@ -210,7 +271,12 @@ fn review_with_content_binding(
       #("executable", json.bool(False)),
     ])
   Ok(Review(
-    "Reviewed bounded caller-owned evidence; result remains track_partial",
+    case maturity {
+      "track_partial" ->
+        "Reviewed bounded caller-owned evidence; result remains track_partial"
+      _ ->
+        "Reviewed bounded evidence from an explicit external read-only provider capability"
+    },
     details,
     digest,
   ))
@@ -246,6 +312,31 @@ pub fn require_unique_known_fact_names(
       Error(InvalidField(
         "facts",
         "requires exactly one known fact for: " <> string.join(invalid, ", "),
+      ))
+  }
+}
+
+/// Require one exact known fact that binds an external capability declaration.
+/// This validates a normalized packet boundary; it does not authenticate the
+/// provider that produced the packet.
+pub fn require_unique_known_fact(
+  input: ReviewInput,
+  name: String,
+  expected_value: String,
+  expected_unit: String,
+) -> Result(Nil, ReviewError) {
+  case list.filter(input.facts, fn(fact) { fact.name == name }) {
+    [FactInput(_, "known", Some(value), Some(unit), _)]
+      if value == expected_value && unit == expected_unit
+    -> Ok(Nil)
+    _ ->
+      Error(InvalidField(
+        "facts",
+        name
+          <> " must bind exactly "
+          <> expected_value
+          <> " with unit "
+          <> expected_unit,
       ))
   }
 }

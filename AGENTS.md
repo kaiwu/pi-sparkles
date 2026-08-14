@@ -68,12 +68,11 @@ silently supplies another.
 Only ProductUseful inventory may become a releasable plain Pi distribution. Use
 `bun run tier:package -- Tn` to build the normal package containing that tier
 and its ProductUseful dependency closure; its manifest loads each version-locked
-extension separately. The prior releasable aggregate is explicitly selected by
+extension separately. The prior release boundary is explicitly selected by
 `bun run aggregate:build -- T5` and contains exact T1-through-T5 inventory.
-T6 is the next-release/default aggregate target. While blocked it remains a
-local, non-releasable inventory preview that omits missing proposals and records
-every blocker and partial implementation; the same target becomes releasable
-only after complete ProductUseful promotion. Aggregation may combine only
+T6 is the current release/default aggregate target and means the complete
+cumulative T1-through-T6 inventory. It is releasable only while its ledger is
+ProductUseful with no omissions, partials, or blockers. Aggregation may combine only
 compiled initialization and distribution; it must not introduce plugin source
 imports, weaken tier maturity, imply promotion, add broker order mutation, or
 change receipt/track/provider authority. Duplicate named registrations must
@@ -354,8 +353,10 @@ and an annual-shaped complete window.
   `bun run test:unit [-- hello]`: inner-loop diagnostics only; a package-level
   pass never changes delivery status.
 - `bun run test:architecture`, `bun run test:ffi`, `bun run test:artifacts`,
-  `bun run test:pi [-- hello]`, and `bun run test`: diagnostic/manual commands
-  used by the tier gate, not per-plugin promotion loops.
+  `bun run test:aggregate:pi`, and `bun run test`:
+  diagnostic/manual commands used by the tier gate. Pi load verification always
+  loads the cumulative T1-through-T6 all-in-one aggregate entrypoint; an earlier
+  tier target or per-plugin Pi-load lane is forbidden.
 - `bun run clean`: remove generated outputs.
 
 ## Coding Style & Naming Conventions

@@ -1,6 +1,6 @@
 {
   "name": "pi-sparkles",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -25,7 +25,7 @@
     "test:ffi": "bun scripts/build.js && bun test test/binding",
     "test:artifacts": "bun scripts/build.js && bun test test/artifacts",
     "test:acceptance": "bun scripts/test-acceptance.js",
-    "test:pi": "bun scripts/test-pi.js",
+    "test:aggregate:pi": "bun scripts/test-aggregate-pi.js",
     "test:live:tutor": "bun scripts/test-live-tutor.js",
     "test:live:sec": "bun scripts/test-live-sec.js",
     "probe:live:futu:us": "bun scripts/futu-us-ticker-probe.js --live",
@@ -45,7 +45,7 @@
     "tier:show": "bun scripts/tier.js show",
     "tier:verify": "bun scripts/tier.js verify",
     "npm:pack": "bun scripts/npm-package.js",
-    "npm:release:verify": "bun test test/workflow/aggregate_bundle.test.js test/workflow/npm_package.test.js && bun scripts/npm-package.js T5 --install-smoke --publish-dry-run --check-registry",
+    "npm:release:verify": "bun test test/workflow/aggregate_bundle.test.js test/workflow/npm_package.test.js && bun scripts/npm-package.js T6 --install-smoke --publish-dry-run --check-registry",
     "test": "bun scripts/test.js",
     "clean": "bun scripts/clean.js"
   },

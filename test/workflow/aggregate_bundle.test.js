@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -16,6 +18,7 @@ import {
   verifyAggregateBundle,
 } from "../../scripts/aggregate-bundle.js";
 import { readTierManifest } from "../../scripts/tiers.js";
+import { ROOT } from "../../scripts/modules.js";
 
 const temporaryDirectories = [];
 
@@ -78,7 +81,7 @@ function fixturePlan(root, plugins) {
 }
 
 describe("single-entrypoint tier aggregate", () => {
-  test("plans every T1-T5 proposal and an honest optional T6 preview", () => {
+  test("plans every T1-T6 proposal and gates T6 on tier maturity", () => {
     const manifest = readTierManifest();
     const t5 = aggregateBundlePlan(manifest, "T5");
     expect(t5.includedTiers.map((tier) => tier.id)).toEqual([
@@ -93,20 +96,18 @@ describe("single-entrypoint tier aggregate", () => {
     expect(t5.releasable).toBeTrue();
 
     const t6 = aggregateBundlePlan(manifest, "T6");
-    expect(t6.plugins).toHaveLength(133);
-    expect(t6.omittedProposals).toEqual([
-      { tierId: "T6", proposal: "stock_tape" },
-      { tierId: "T6", proposal: "cn_broker_readonly" },
-    ]);
-    expect(t6.partialImplementations).toHaveLength(7);
-    expect(t6.openBlockers.map((blocker) => blocker.id)).toEqual([
-      "T6-INTRADAY-PROVIDERS",
-    ]);
-    expect(t6.releasable).toBeFalse();
-    expect(t6.maturity).toBe("blocked_inventory_preview");
+    expect(t6.plugins).toHaveLength(135);
+    expect(t6.omittedProposals).toEqual([]);
+    expect(t6.partialImplementations).toEqual([]);
+    expect(t6.openBlockers).toEqual([]);
+    const promoted = t6.includedTiers.at(-1).status === "product_useful";
+    expect(t6.releasable).toBe(promoted);
+    expect(t6.maturity).toBe(
+      promoted ? "product_useful_aggregate" : "blocked_inventory_preview",
+    );
   });
 
-  test("targets the guarded T6 next release by default and keeps T5 explicit", () => {
+  test("targets the T6 next release by default and keeps T5 explicit", () => {
     expect(parseAggregateArguments([])).toMatchObject({
       throughTierId: "T6",
       build: true,
@@ -119,6 +120,44 @@ describe("single-entrypoint tier aggregate", () => {
     expect(() => parseAggregateArguments(["T4"])).toThrow(
       "must be T5 or T6",
     );
+  });
+
+  test("forbids the removed per-plugin Pi load lane", () => {
+    expect(existsSync(join(ROOT, "scripts", "test-pi.js"))).toBeFalse();
+    const rootManifest = JSON.parse(
+      readFileSync(join(ROOT, "package.json"), "utf8"),
+    );
+    expect(rootManifest.scripts["test:pi"]).toBeUndefined();
+    expect(rootManifest.scripts["test:aggregate:pi"]).toBe(
+      "bun scripts/test-aggregate-pi.js",
+    );
+    const repositoryGate = readFileSync(
+      join(ROOT, "scripts", "test.js"),
+      "utf8",
+    );
+    expect(repositoryGate).not.toContain("test-pi.js");
+    expect(repositoryGate).toContain("test-aggregate-pi.js");
+    const aggregateLoader = readFileSync(
+      join(ROOT, "scripts", "test-aggregate-pi.js"),
+      "utf8",
+    );
+    expect(aggregateLoader).toContain("buildAggregateBundle");
+    expect(aggregateLoader).toContain('const target = "T6"');
+    expect(aggregateLoader).toContain(
+      "fixed to cumulative T1-through-T6",
+    );
+    expect(aggregateLoader).not.toContain("requirePlugins");
+    expect(aggregateLoader).not.toContain("for (const plugin");
+    const documentation = [
+      "README.md",
+      "AGENTS.md",
+      "NPM_RELEASE.md",
+      ...readdirSync(join(ROOT, "plugins"), { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => join("plugins", entry.name, "README.md"))
+        .filter((file) => existsSync(join(ROOT, file))),
+    ].map((file) => readFileSync(join(ROOT, file), "utf8")).join("\n");
+    expect(documentation).not.toContain("test:pi");
   });
 
   test("builds one Pi entrypoint and preserves deterministic initialization", async () => {

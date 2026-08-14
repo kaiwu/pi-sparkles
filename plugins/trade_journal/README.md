@@ -109,7 +109,7 @@ deletion policy.
 bun run check -- trade_journal
 bun run test:unit -- trade_journal
 bun run build -- trade_journal
-bun run test:pi -- trade_journal
+bun run test:aggregate:pi
 bun test test/binding/trade_journal.test.js
 ```
 

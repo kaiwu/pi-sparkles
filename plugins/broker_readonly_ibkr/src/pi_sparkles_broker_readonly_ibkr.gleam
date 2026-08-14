@@ -10,10 +10,10 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   tool.register(
     api,
     "review_ibkr_activity_import",
-    "Review an IBKR activity import",
-    "Validate bounded caller-owned IBKR account activity without a gateway, network access, or credentials; every result is track_partial",
-    "Supply hashes instead of raw account identifiers. This tool only reviews supplied facts and lifecycle observations.",
-    tool.parameters(review_schema(), decode.review_input()),
+    "Review an explicit IBKR read-only capability packet",
+    "Validate bounded normalized IBKR account, position, order, fill, capability, entitlement, and lifecycle evidence from an explicitly selected external read-only capability",
+    "IBKR is a required external dependency. This plugin ships no Gateway, SDK, credentials, adapter, transport, or broker mutation surface.",
+    tool.parameters(review_schema(), decode.explicit_capability_input()),
     tool.Parallel,
     fn(_id, input, _signal, _updates, _ctx) {
       case domain.run(input) {
@@ -32,9 +32,16 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
 
 fn review_schema() -> schema.Schema {
   schema.object([
+    schema.Required("provider", schema.string_enum(["ibkr"])),
     schema.Required("operationId", bounded_string(1, 500)),
-    schema.Required("mode", schema.string_enum(["account_activity_import"])),
-    schema.Required("environment", schema.string_enum(["paper", "live"])),
+    schema.Required(
+      "mode",
+      schema.string_enum(["read_only_capability", "caller_owned_export"]),
+    ),
+    schema.Required(
+      "environment",
+      schema.string_enum(["external_live", "caller_export"]),
+    ),
     schema.Required("accountReference", hash_schema()),
     schema.Required("track", schema.string_enum(["us"])),
     schema.Required("listingId", bounded_string(1, 500)),

@@ -18,4 +18,6 @@ run("bun", ["test", "test/binding", "test/artifacts"], {
 run("bun", ["test", "test/acceptance"], {
   cwd: ROOT,
 });
-run("bun", ["scripts/test-pi.js"], { cwd: ROOT });
+run("bun", ["scripts/test-aggregate-pi.js", "--no-build"], {
+  cwd: ROOT,
+});

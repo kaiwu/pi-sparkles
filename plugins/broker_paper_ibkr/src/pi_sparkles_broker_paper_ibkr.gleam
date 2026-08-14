@@ -1,7 +1,11 @@
 import finance_broker_review
 import finance_broker_review/decode
+import finance_execution/tape_scenario
+import finance_execution/tape_scenario_decode
 import gleam/javascript/promise.{type Promise}
+import gleam/option.{Some}
 import pi
+import pi/finance/tape_scenario_schema
 import pi/schema
 import pi/tool
 import pi_sparkles_broker_paper_ibkr/domain
@@ -10,10 +14,10 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   tool.register(
     api,
     "review_ibkr_paper_evidence",
-    "Review offline IBKR paper evidence",
-    "Validate a bounded deterministic-scenario envelope or caller-owned IBKR paper receipt with no gateway, network, or broker authority; every result is track_partial",
-    "The scenario mode validates supplied evidence but does not predict a fill. Supply hashes instead of raw private identifiers.",
-    tool.parameters(review_schema(), decode.review_input()),
+    "Review an external IBKR paper receipt packet",
+    "Validate bounded normalized IBKR paper-account, order, fill, capability, entitlement, and lifecycle evidence from the explicit external read-only provider capability",
+    "IBKR is an external dependency. This plugin ships no Gateway, SDK, credential, adapter, network transport, or broker mutation surface.",
+    tool.parameters(review_schema(), decode.explicit_capability_input()),
     tool.Parallel,
     fn(_id, input, _signal, _updates, _ctx) {
       case domain.run(input) {
@@ -27,23 +31,49 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
       }
     },
   )
+  register_simulation(api)
   promise.resolve(Nil)
+}
+
+fn register_simulation(api: pi.ExtensionApi) -> Nil {
+  tool.register(
+    api,
+    "simulate_ibkr_tape_possible_fill",
+    "Simulate one IBKR transaction-tape possible-fill scenario",
+    "Apply the named provider-neutral transaction_tape_possible_fill_v1 model to one exact US limit instruction and bounded external IBKR transaction tape, retaining eligible prints, exclusions, sequence limitations, and both non-fill and possible-fill branches",
+    "This deterministic model never proves a fill or queue position and cannot place, route, cancel, replace, or otherwise mutate an order.",
+    tool.parameters(
+      tape_scenario_schema.input(schema.string_enum(["ibkr"]), ["us"], [
+        "XNYS",
+        "XNAS",
+      ]),
+      tape_scenario_decode.input(),
+    ),
+    tool.Parallel,
+    fn(_id, input, signal, _updates, _ctx) {
+      case tool.is_cancelled(signal) {
+        True -> tool.reject("IBKR possible-fill simulation was cancelled")
+        False ->
+          case tape_scenario.run(input, "us", Some("ibkr")) {
+            Ok(value) ->
+              tool.text_result(
+                tape_scenario.summary(value),
+                tape_scenario.details(value),
+              )
+              |> promise.resolve
+            Error(error) -> tool.reject(tape_scenario.error_message(error))
+          }
+      }
+    },
+  )
 }
 
 fn review_schema() -> schema.Schema {
   schema.object([
+    schema.Required("provider", schema.string_enum(["ibkr"])),
     schema.Required("operationId", bounded_string(1, 500)),
-    schema.Required(
-      "mode",
-      schema.string_enum([
-        "deterministic_scenario",
-        "external_paper_receipt_import",
-      ]),
-    ),
-    schema.Required(
-      "environment",
-      schema.string_enum(["local_simulation", "ibkr_paper"]),
-    ),
+    schema.Required("mode", schema.string_enum(["external_paper_receipt"])),
+    schema.Required("environment", schema.string_enum(["external_paper"])),
     schema.Required("accountReference", hash_schema()),
     schema.Required("track", schema.string_enum(["us"])),
     schema.Required("listingId", bounded_string(1, 500)),
