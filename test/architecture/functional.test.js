@@ -170,6 +170,7 @@ describe("functional architecture", () => {
       "finance_indicators",
       "finance_risk",
       "finance_execution",
+      "finance_tape",
       "finance_broker_review",
       "finance_journal",
       "finance_replay",

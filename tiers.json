@@ -296,29 +296,29 @@
     },
     {
       "id": "T6",
-      "name": "CN day trader and execution-review product",
+      "name": "Three-track day trader and execution-review product",
       "status": "blocker_resolution",
       "depends_on": ["T1", "T3", "T4"],
-      "track_profile": "One CN live-session and transaction-tape anchor journey. US live market-data and broker-network adapters are on hold and remain explicitly track_partial; no US or HK end-to-end journey is inferred.",
-      "product_outcome": "A CN day trader can acquire and inspect authenticated live transaction-tape evidence, run a bounded session workflow, plan and simulate action locally, observe read-only account and externally executed order/fill state, evaluate compliance facts, export a non-executable handoff, and reconcile imported or read-only receipts. No Pi plugin can place, route, cancel, replace, or otherwise mutate any paper or live order.",
-      "acceptance_lane": "test/tiers/t6_cn_day_trader_review",
+      "track_profile": "One composed day-trader acceptance profile with mandatory, separately labelled cn, hk, and us live-session and transaction-tape legs. Shared workflow logic is exercised once while Futu transaction-ticker/tape conformance, market identity, rights, clocks, sequence, conditions, recovery, and unsupported venues are proved independently for each track; no track leg is inferred from another and no provider-by-track matrix is created.",
+      "product_outcome": "A CN, HK, or US day trader can acquire and inspect authenticated track-owned live transaction-tape evidence, run the shared bounded session workflow, plan and simulate action locally, observe applicable read-only account and externally executed order/fill state, evaluate track-owned compliance facts, export a non-executable handoff, and reconcile imported or read-only receipts. Every result retains its exact track, venue, feed, entitlement, clocks, conditions, limitations, and receipt. Live provider acquisition is transaction-ticker/tape only: no Pi plugin acquires a stock quote, bid, offer, or order book; the existing stock_order_book proposal validates caller-supplied observations only. No Pi plugin can place, route, cancel, replace, or otherwise mutate any paper or live order.",
+      "acceptance_lane": "test/tiers/t6_day_trader_review",
       "blockers": [
         {
           "id": "T6-INTRADAY-PROVIDERS",
           "status": "open",
-          "exit": "At least one CN real-time transaction-data provider can be exercised with caller-owned environment configuration to validate its authentic sequence domain, gap/reset and replay behavior, correction/cancel/bust availability or explicit absence, exchange/provider/receipt clocks, condition/type semantics and bounded streaming behavior. Credentials remain outside the product; US paths are not part of this exit."
+          "exit": "A caller-selected Futu direct Web API or another lawful gateway-free capability can be exercised in separate live sessions for all three required track legs: cn over proved XSHG/XSHE scope, hk over proved XHKG scope, and us over proved XNYS/XNAS scope. OpenD may supply development evidence only and can never be a runtime dependency or deliverable. Each exercise must independently validate its exact transaction-ticker feed and rights, authentic sequence domain, gap/reset and bounded recovery behavior, correction/cancel/bust availability or explicit absence, exchange/provider/receipt clocks, condition/type semantics, session coverage, backpressure behavior, and bounded unsubscribe/shutdown. Unsupported venues remain explicit and credentials, OpenD, remembered login state, stock quote/bid/offer/order-book data, and raw provider data remain outside the product."
         },
         {
           "id": "T6-STREAM-CAPABILITY",
           "status": "resolved",
           "exit": "The bounded streaming effect contract is fully specified and testable with scripted transports.",
-          "resolution": "Cancellation, reconnect/reset, backpressure, budgets, stale-completion and shutdown can be implemented and deterministically tested without provider credentials; authentic real-time semantics remain under T6-INTRADAY-PROVIDERS."
+          "resolution": "The private pure finance_tape stream state machine now implements and deterministically tests one-key generation-scoped subscription, bounded event/byte/queue/session handling, idempotent cancellation, one bounded reconnect plus overlap recovery, stale/late completion suppression, and confirmed or unconfirmed cleanup outcomes. It emits typed effects only; authentic provider real-time semantics remain under T6-INTRADAY-PROVIDERS."
         },
         {
           "id": "T6-BROKER-CONTRACTS",
           "status": "resolved",
           "exit": "Read-only broker observation, caller-owned receipt import, deterministic local simulation, non-executable handoff and reconciliation ports are specified and testable without order mutation.",
-          "resolution": "The controlling non-executing boundary forbids every plugin from placing, routing, cancelling, replacing or otherwise mutating paper or live orders. CN is the anchor; US network adapters are on hold. Any future account adapter is read-only and any credential is a caller-owned runtime input."
+          "resolution": "The controlling non-executing boundary forbids every plugin from placing, routing, cancelling, replacing or otherwise mutating paper or live orders. The completed product composes separately labelled cn, hk, and us read-only/import legs; Futu is the first selected external capability where its per-track authority is proved, and any other provider remains explicit optional breadth. Every credential is a caller-owned runtime input."
         },
         {
           "id": "T6-SECURITY-INCIDENT",
@@ -358,7 +358,7 @@
           "missing": [
             "Alpaca response decoders, pagination and provider conformance fixtures",
             "Reviewed read-only credential-scope proof and opt-in provider check",
-            "Alpaca network adapter, which remains on hold with all US network paths"
+            "Optional Alpaca network adapter breadth, independently selected and conformed rather than substituted for the required Futu-first US leg"
           ]
         },
         {
@@ -371,7 +371,7 @@
           "missing": [
             "Client Portal or TWS/Gateway response decoders, pacing and session-state fixtures",
             "Reviewed read-only gateway authority and opt-in provider check",
-            "IBKR network adapter, which remains on hold with all US network paths"
+            "Optional IBKR network adapter breadth, independently selected and conformed rather than substituted for the required Futu-first US leg"
           ]
         },
         {
@@ -384,7 +384,7 @@
           "missing": [
             "Named fill-model execution rather than scenario-envelope validation only",
             "Alpaca paper response decoders and provider conformance fixtures",
-            "Alpaca read-only network observation, which remains on hold"
+            "Optional Alpaca read-only network observation as provider breadth outside the required Futu-first US leg"
           ]
         },
         {
@@ -397,7 +397,7 @@
           "missing": [
             "Named fill-model execution rather than scenario-envelope validation only",
             "IBKR paper response decoders and provider conformance fixtures",
-            "IBKR read-only network observation, which remains on hold"
+            "Optional IBKR read-only network observation as provider breadth outside the required Futu-first US leg"
           ]
         },
         {
@@ -405,12 +405,12 @@
           "status": "track_partial",
           "available": [
             "Content-bound non-executable handoff requiring one unambiguous known side, kind, quantity, unit, time-in-force, plan fingerprint and rule reference",
-            "Bounded caller-owned external execution-receipt review with duplicate/conflict and chronological ambiguity projection plus privacy/payload bounds"
+            "Bounded caller-owned external execution-receipt review with duplicate/conflict and chronological ambiguity projection plus privacy/payload bounds",
+            "Unregistered bounded local UTF-8 receipt import with symlink rejection, cancellation, exact out-of-band file-hash verification before decoding, receipt-only contract versioning and no raw text returned or registered with Pi"
           ],
           "missing": [
-            "Private local import channel that keeps raw account data outside model context",
-            "Named read-only provider adapters and rights review",
-            "Authenticated live sequence and reconciliation conformance evidence"
+            "Futu-first track-owned read-only/import capability and rights evidence for applicable cn, hk and us account surfaces, with every unavailable surface explicit",
+            "Authenticated per-track live sequence and external-receipt reconciliation conformance evidence"
           ]
         },
         {
@@ -421,7 +421,7 @@
             "Independent True, False, Unknown, NotApplicable and Conflict outcomes, including overlapping active-version conflicts and exact-duplicate counts, with a content receipt"
           ],
           "missing": [
-            "Authoritative rule acquisition and rule-set completeness evidence",
+            "Authoritative cn, hk and us rule acquisition and independently bounded rule-set completeness evidence",
             "Rule-version comparison, correction lineage and individual predicate-explanation tools",
             "Typed compound expressions beyond one named boolean fact per rule"
           ]

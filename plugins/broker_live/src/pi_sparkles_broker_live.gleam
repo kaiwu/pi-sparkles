@@ -1,10 +1,35 @@
 import finance_broker_review
 import finance_broker_review/decode
+import finance_local_import
+import gleam/dynamic.{type Dynamic}
 import gleam/javascript/promise.{type Promise}
 import pi
 import pi/schema
 import pi/tool
 import pi_sparkles_broker_live/domain
+import pi_sparkles_broker_live/import_contract
+
+const maximum_local_import_bytes = 250_000
+
+/// Unregistered caller-owned local import. Exact bytes are content-bound and
+/// decoded to a bounded review before this promise resolves; raw text is never
+/// returned or registered as a Pi tool result.
+pub fn review_local_execution_file(
+  path: String,
+  expected_content_hash: String,
+  maximum_bytes: Int,
+  signal: Dynamic,
+) -> Promise(import_contract.LocalImportOutcome) {
+  case maximum_bytes >= 1 && maximum_bytes <= maximum_local_import_bytes {
+    False ->
+      import_contract.ReadFailure("invalid_read_budget") |> promise.resolve
+    True ->
+      finance_local_import.read(path, maximum_bytes, signal)
+      |> promise.map(fn(outcome) {
+        import_contract.from_read_outcome(outcome, expected_content_hash)
+      })
+  }
+}
 
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   tool.register(

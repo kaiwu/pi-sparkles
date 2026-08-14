@@ -37,6 +37,43 @@ pub fn review(
   allowed_mode_environments: List(#(String, String)),
   required_missing_capabilities: List(String),
 ) -> Result(Review, ReviewError) {
+  review_with_content_binding(
+    input,
+    provider,
+    expected_track,
+    allowed_mode_environments,
+    required_missing_capabilities,
+    False,
+  )
+}
+
+/// Review evidence whose exact UTF-8 source bytes were hashed and matched to
+/// `source_content_hash` by the caller before decoding.
+pub fn review_content_bound(
+  input: ReviewInput,
+  provider: String,
+  expected_track: String,
+  allowed_mode_environments: List(#(String, String)),
+  required_missing_capabilities: List(String),
+) -> Result(Review, ReviewError) {
+  review_with_content_binding(
+    input,
+    provider,
+    expected_track,
+    allowed_mode_environments,
+    required_missing_capabilities,
+    True,
+  )
+}
+
+fn review_with_content_binding(
+  input: ReviewInput,
+  provider: String,
+  expected_track: String,
+  allowed_mode_environments: List(#(String, String)),
+  required_missing_capabilities: List(String),
+  source_content_hash_verified_against_bytes: Bool,
+) -> Result(Review, ReviewError) {
   use _ <- result.try(valid_text("operationId", input.operation_id, 1, 500))
   use _ <- result.try(valid_text("provider", provider, 1, 100))
   use _ <- result.try(valid_text("environment", input.environment, 1, 100))
@@ -166,7 +203,10 @@ pub fn review(
       #("networkPerformed", json.bool(False)),
       #("brokerAuthorityAccepted", json.bool(False)),
       #("providerAuthenticated", json.bool(False)),
-      #("sourceContentHashVerifiedAgainstBytes", json.bool(False)),
+      #(
+        "sourceContentHashVerifiedAgainstBytes",
+        json.bool(source_content_hash_verified_against_bytes),
+      ),
       #("executable", json.bool(False)),
     ])
   Ok(Review(

@@ -105,16 +105,18 @@ describe("tier delivery workflow", () => {
     });
   });
 
-  test("anchors Tier 6 in CN and forbids plugin order mutation", () => {
+  test("requires three separately proved Tier 6 tracks and forbids plugin order mutation", () => {
     const tier = tierById(readTierManifest(), "T6");
-    expect(tier.track_profile).toContain("One CN live-session");
-    expect(tier.track_profile).toContain(
-      "US live market-data and broker-network adapters are on hold",
-    );
+    expect(tier.track_profile).toContain("separately labelled cn, hk, and us");
+    expect(tier.track_profile).toContain("no track leg is inferred from another");
+    expect(tier.blockers[0].exit).toContain("separate live sessions");
+    expect(tier.blockers[0].exit).toContain("cn over proved XSHG/XSHE scope");
+    expect(tier.blockers[0].exit).toContain("hk over proved XHKG scope");
+    expect(tier.blockers[0].exit).toContain("us over proved XNYS/XNAS scope");
     expect(tier.product_outcome).toContain(
       "No Pi plugin can place, route, cancel, replace",
     );
-    expect(tier.acceptance_lane).toBe("test/tiers/t6_cn_day_trader_review");
+    expect(tier.acceptance_lane).toBe("test/tiers/t6_day_trader_review");
 
     const readiness = readFileSync(join(ROOT, "PRODUCT_READINESS.md"), "utf8");
     expect(readiness).toContain("## Non-executing broker boundary");

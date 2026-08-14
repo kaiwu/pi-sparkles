@@ -39,6 +39,7 @@ import {
 const BUNDLE_SCHEMA_VERSION = 1;
 const PRODUCT_TIER_IDS = ["T1", "T2", "T3", "T4", "T5"];
 const ALLOWED_TARGETS = new Set(["T5", "T6"]);
+export const DEFAULT_AGGREGATE_TARGET = "T6";
 export const HOST_PEERS = {
   "@earendil-works/pi-agent-core": "*",
   "@earendil-works/pi-ai": "*",
@@ -178,7 +179,10 @@ function tierDefinition(tier) {
   };
 }
 
-export function aggregateBundlePlan(manifest, throughTierId = "T5") {
+export function aggregateBundlePlan(
+  manifest,
+  throughTierId = DEFAULT_AGGREGATE_TARGET,
+) {
   const manifestErrors = validateTierManifest(manifest);
   if (manifestErrors.length > 0) {
     throw new Error(`Invalid tier manifest:\n- ${manifestErrors.join("\n- ")}`);
@@ -463,6 +467,16 @@ function packageManifest(plan) {
     keywords: ["pi-package", "pi-sparkles", "aggregate"],
     peerDependencies: HOST_PEERS,
     pi: { extensions: ["./index.js"] },
+    piSparkles: {
+      aggregateThrough: plan.throughTierId,
+      maturity: plan.maturity,
+      pluginCount: plan.plugins.length,
+      omittedProposalCount: plan.omittedProposals.length,
+      partialImplementationCount: plan.partialImplementations.length,
+      openBlockerCount: plan.openBlockers.length,
+      publishable: plan.releasable,
+      brokerOrderMutation: false,
+    },
   };
 }
 
@@ -531,6 +545,16 @@ export function verifyAggregateBundle(directory, expectedPlan) {
   if (
     manifest.name !== lock.package?.name ||
     manifest.version !== lock.package?.version ||
+    manifest.private !== !lock.releasable ||
+    manifest.piSparkles?.aggregateThrough !== lock.throughTierId ||
+    manifest.piSparkles?.maturity !== lock.maturity ||
+    manifest.piSparkles?.pluginCount !== lock.pluginCount ||
+    manifest.piSparkles?.omittedProposalCount !== lock.omittedProposals?.length ||
+    manifest.piSparkles?.partialImplementationCount !==
+      lock.partialImplementations?.length ||
+    manifest.piSparkles?.openBlockerCount !== lock.openBlockers?.length ||
+    manifest.piSparkles?.publishable !== lock.releasable ||
+    manifest.piSparkles?.brokerOrderMutation !== false ||
     lock.singleEntrypoint !== true ||
     lock.credentialsIncluded !== false ||
     lock.pluginCount !== lock.plugins?.length ||
@@ -688,7 +712,7 @@ export async function assembleAggregateBundle(
 }
 
 export async function buildAggregateBundle(
-  throughTierId = "T5",
+  throughTierId = DEFAULT_AGGREGATE_TARGET,
   { build = true, outputDirectory } = {},
 ) {
   const plan = aggregateBundlePlan(readTierManifest(), throughTierId);
@@ -708,12 +732,12 @@ function usage() {
   return [
     "Usage: bun run aggregate:build -- [T5|T6] [--no-build] [--output <directory>]",
     "       bun run aggregate:build -- [T5|T6] --verify-only [--output <directory>]",
-    "T5 is the default. T6 includes only existing T6 inventory and remains non-releasable while blocked.",
+    "T6 is the next-release default. It includes only existing T6 inventory and remains non-releasable while blocked; select T5 explicitly for the prior ProductUseful release.",
   ].join("\n");
 }
 
 export function parseAggregateArguments(args) {
-  let throughTierId = "T5";
+  let throughTierId = DEFAULT_AGGREGATE_TARGET;
   let targetSeen = false;
   let build = true;
   let verifyOnly = false;

@@ -6,11 +6,11 @@ and `aggregate-lock.json`.
 
 ## Build and inspect
 
-T5 is the default. Select T6 explicitly when that inventory is wanted:
+T6 is the next-release default. Select T5 explicitly for the prior release:
 
 ```sh
+bun run npm:pack
 bun run npm:pack -- T5
-bun run npm:pack -- T6
 ```
 
 Outputs are written below `dist/npm/t5/` or `dist/npm/t6/`:
@@ -23,13 +23,13 @@ Outputs are written below `dist/npm/t5/` or `dist/npm/t6/`:
 Use existing aggregate artifacts without rebuilding every plugin:
 
 ```sh
-bun run aggregate:build -- T5 --no-build
-bun run npm:pack -- T5 --no-build
-bun run npm:pack -- T5 --verify-only
+bun run aggregate:build -- --no-build
+bun run npm:pack -- --no-build
+bun run npm:pack -- --verify-only
 ```
 
 Before a release, run the dedicated all-in-one gate. It exercises only the npm
-product boundary: focused aggregate/package laws, a fresh T5 build, one exact
+product boundary: focused aggregate/package laws, a fresh T6 build, one exact
 tarball, a clean install, one plain-Pi aggregate entrypoint load, npm's publish
 dry-run, and exact name/version availability:
 
@@ -38,15 +38,16 @@ bun run npm:release:verify
 ```
 
 The release workflow does not run the per-plugin Pi-load matrix. That matrix is
-a development diagnostic and can miss aggregate registration collisions; the
-published product is the single T5 entrypoint containing all 124 plugins. T6
-can still be built locally as a private preview, but it is not a selectable npm
-release target while blocked.
+a development diagnostic and can miss aggregate registration collisions. The
+next published product will be the single T6 entrypoint containing its exact
+complete proposal inventory. While T6 is blocked, the release gate refuses it;
+the default pack command remains useful only for a private local preview.
 
-The current T5 selection passes the publish gate. The current T6 selection is
-still useful as a local npm-format preview, but remains `private: true` and the
-publish dry-run gate rejects it. When T6 has no omissions, partials, or blockers
-and the ledger marks it ProductUseful, the same T6 command becomes releasable.
+The current T5 selection passes the publish gate. Version 0.1.3's current T6
+selection is useful as a local npm-format preview, but remains `private: true`
+and the publish dry-run gate rejects it. When T6 has no omissions, partials, or
+blockers and the ledger marks it ProductUseful, the same T6 command becomes
+releasable.
 
 ## Local consumer verification
 
@@ -57,7 +58,7 @@ provider variable from the child environment, and asks plain Pi to load the
 entrypoint with `--list-models`. For a manual equivalent:
 
 ```sh
-npm install ./dist/npm/t5/pi-sparkles-pi-sparkles-0.1.3.tgz
+npm install ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.3.tgz
 pi --no-extensions \
   --extension ./node_modules/@pi-sparkles/pi-sparkles/index.js \
   --list-models
@@ -83,7 +84,7 @@ because a trusted-publisher relationship cannot be attached until the package
 exists. The explicit command is:
 
 ```sh
-npm publish ./dist/npm/t5/pi-sparkles-pi-sparkles-0.1.3.tgz --access public
+npm publish ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.3.tgz --access public
 ```
 
 Publishing changes external state and is never performed by builds, tests, or

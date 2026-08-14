@@ -11,7 +11,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "review_alpaca_activity_import",
     "Review an Alpaca activity import",
-    "Validate bounded caller-owned Alpaca account activity without network access or credentials; the US network path remains on hold and every result is track_partial",
+    "Validate bounded caller-owned Alpaca account activity without network access or credentials; optional Alpaca network breadth is absent and every result is track_partial",
     "Supply hashes instead of raw account identifiers. This tool only reviews supplied facts and lifecycle observations.",
     tool.parameters(review_schema(), decode.review_input()),
     tool.Parallel,

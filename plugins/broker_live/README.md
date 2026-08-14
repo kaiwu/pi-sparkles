@@ -11,6 +11,15 @@ duplicates, conflicts, and a semantic receipt. It has no transport, credentials,
 or broker authority.
 Caller-supplied source hashes are retained but are not verified against absent
 source bytes and do not authenticate any provider.
+
+The unregistered `review_local_execution_file` package function is the private
+local import channel. It reads one caller-selected regular UTF-8 file through
+`finance_local_import` under a 250 KB ceiling, rejects symlinks, supports
+cancellation, verifies an out-of-band SHA-256 over the exact bytes before JSON
+decoding, and accepts only `broker_local_execution_import_v1` external receipt
+review. It returns a normalized bounded review or a typed failure; neither the
+path nor raw text is registered as a Pi tool or returned in the review. This
+does not authenticate the external provider.
 Market-depth fact names are rejected; this plugin does not read bid/ask/offer
 data.
 Non-executable handoff mode requires exactly one known
@@ -21,8 +30,7 @@ also enforces an aggregate semantic-payload budget, credential-shaped input
 rejection, JavaScript-safe event times, exact track/MIC isolation, and separate
 input-order versus occurred-time lifecycle projections.
 
-Missing: a private local import channel that keeps raw account data outside
-model context; named read-only provider adapters and rights review; and
+Missing: named read-only provider adapters and rights review; and
 authenticated live sequence/reconciliation conformance evidence.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 44](../../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
@@ -51,8 +59,10 @@ Provider adapters are isolated; there is no generic cross-broker fallback.
 
 ## Hard gates and exclusions
 
-The US network path is on hold while T6 uses its CN anchor. Import and handoff
-work may proceed with exact schemas, rights and private-data controls. No plugin
+T6 requires separately conformed Futu `cn`, `hk`, and `us` live-data legs;
+read-only account observation remains a distinct capability and may never be
+inferred from quote entitlement. Import and handoff work may proceed with exact
+schemas, rights and private-data controls. No plugin
 may place, submit, route, cancel, replace, modify, approve, or otherwise mutate
 an order; no broker preview or write endpoint; no unattended/algorithmic
 trading, LLM authorization, hidden retry, rollback claim, size escalation,

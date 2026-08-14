@@ -5,12 +5,23 @@ here. Versions follow Semantic Versioning. The exact selected tier, plugin
 inventory, maturity, and content hashes remain authoritative in each tarball's
 `release-lock.json` and `aggregate-lock.json`.
 
-## 0.1.3 - 2026-08-13
+## 0.1.3 - 2026-08-14
 
 - Replace the npm README's internal tier terminology with a user-facing
   introduction, supported market coverage, primary data sources, example
   questions, minimal environment setup, optional provider credentials, track
   selection, and explicit read-only boundaries.
+- Make T6 the guarded default for aggregate and npm-package preparation while
+  retaining an explicit T5 build for the published 0.1.2 product boundary.
+- Record omitted proposals, partial implementations, open blockers, maturity,
+  and publish eligibility directly in generated aggregate and npm manifests.
+- Prepare a private 0.1.3 T6 preview containing the exact present plugin
+  inventory, while preserving the publish refusal until T6 is complete and
+  ProductUseful.
+- Add private transaction-tape and bounded-stream laws, local possible-fill
+  simulation, evidence-first compliance evaluation, and exact-hash caller-owned
+  receipt review to the T6 development inventory without exposing order
+  mutation or making OpenD a deliverable.
 
 ## 0.1.2 - 2026-08-13
 

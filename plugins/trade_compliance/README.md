@@ -23,6 +23,14 @@ rule-version comparison, correction lineage, and individual
 predicate-explanation tools; and typed compound expressions beyond one named
 boolean fact per rule.
 
+Private blocker-resolution inventory now includes an unwired typed rule engine
+for non-empty `all`/`any`/`not` expressions, recursive predicate explanations,
+exact track/account/effective-time isolation, active-version conflicts,
+version diffs, and validated correction ancestry. It is not decoded by or
+registered from the Pi shell, emits no public tool result or receipt, and does
+not change this plugin's `track_partial` scope. Authoritative acquisition,
+completeness evidence, public schemas/tools, and acceptance remain missing.
+
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 44](../../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
 Historical input: [Course Session 25](../../../trading-course/sessions/25_cg_live_broker_effect_contract_20260811.md). The repository's [non-executing broker boundary](../../PRODUCT_READINESS.md#non-executing-broker-boundary--controlling-amendment-2026-08-12) controls.

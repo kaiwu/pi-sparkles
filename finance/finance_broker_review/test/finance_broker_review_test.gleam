@@ -38,6 +38,21 @@ pub fn review_is_partial_and_non_executable_test() {
   details |> string.contains("\"executable\":false") |> should.be_true
 }
 
+pub fn content_bound_review_marks_only_explicitly_verified_bytes_test() {
+  let assert Ok(value) =
+    finance_broker_review.review_content_bound(
+      input([]),
+      "fixture_provider",
+      "cn",
+      [#("activity_import", "paper")],
+      ["provider_network_observation"],
+    )
+  finance_broker_review.details(value)
+  |> json.to_string
+  |> string.contains("\"sourceContentHashVerifiedAgainstBytes\":true")
+  |> should.be_true
+}
+
 pub fn conflicts_are_not_silently_resolved_test() {
   let first = EventInput(hash_b, "working", 1, hash_c)
   let changed = EventInput(hash_b, "filled", 2, hash_c)

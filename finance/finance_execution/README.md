@@ -19,6 +19,10 @@ The first long-only cash-equity slice provides:
 - explicit `bar_possible_paths_v1` branches for limit touches and stop/target
   ordering without selecting a branch or claiming that a daily bar proves a
   fill;
+- private `transaction_tape_possible_fill_v1` branches over an exact supplied
+  `finance_tape` packet, with track/listing/MIC, limit, venue, condition and
+  activation/expiry checks; a compatible non-fill branch is mandatory because
+  transaction prints do not prove queue position or the caller's order fill;
 - exact fill leaves and requested same-identity/currency/unit/side/kind
   quantity, notional, and VWAP aggregates;
 - ordered lifecycle folding that preserves external broker rejection text,
@@ -44,14 +48,15 @@ Run the focused suite with:
 bun run test:unit -- finance_execution
 ```
 
-The 24 deterministic offline tests cover information states, desired/capability
+The 32 deterministic offline tests cover information states, desired/capability
 separation, visible buy and sell depth sweeps, depth exhaustion, zero-fill VWAP,
 daily-bar branches, exact fill lexemes and aggregates, currency isolation,
 cancel/fill races, external broker rejection, lifecycle equivalence, session
 comparisons, partial costs, signed slippage, clock uncertainty, content-bound
-receipts, request/result budgets, and forbidden plugin-decision language.
+receipts, request/result budgets, transaction-tape possible-fill branching and
+forbidden plugin-decision language.
 
-Top-of-book, sequenced trade-through, declared queue-ahead, intraday-bar,
+Top-of-book, authenticated sequenced trade-through, declared queue-ahead, intraday-bar,
 auction, stop-child, broker-replay correction projections, richer fee schedules,
 cross-currency aggregation, provider adapters, `pi_order_simulator`, full day
 workflow, and imported/read-only lifecycle projections remain incremental.

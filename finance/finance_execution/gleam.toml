@@ -13,6 +13,7 @@ finance_core = { path = "../finance_core" }
 finance_math = { path = "../finance_math" }
 finance_provenance = { path = "../finance_provenance" }
 finance_track = { path = "../finance_track" }
+finance_tape = { path = "../finance_tape" }
 
 [dev-dependencies]
 gleeunit = ">= 1.9.0 and < 2.0.0"

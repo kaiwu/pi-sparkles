@@ -1,6 +1,6 @@
 # pi_sparkles_broker_paper_ibkr
 
-Status: **Implemented inventory — `track_partial`** · offline scenario/receipt review only · US network path on hold
+Status: **Implemented inventory — `track_partial`** · offline scenario/receipt review only · optional IBKR observation absent
 
 ## Implemented partial slice
 
@@ -19,8 +19,8 @@ credential-shaped input rejection, JavaScript-safe event times, cross-track MIC
 exclusion, and separate input-order versus occurred-time lifecycle projections.
 
 Missing: named fill-model execution; IBKR paper response decoders and provider
-conformance fixtures; and read-only IBKR network observation, which remains on
-hold.
+conformance fixtures; and optional read-only IBKR network observation. Futu is
+T6's required first US live-data provider and is not a paper-broker substitute.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 44](../../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
@@ -45,8 +45,10 @@ races, disconnect/reconnect, deduplication, conflicts and endpoint isolation.
 
 ## Gates and exclusions
 
-The US network path is on hold. Fixture/import work and deterministic
-scenario-envelope validation can proceed without it; named fill-model execution
-is still missing. No write-capable credential, paper/live order placement,
+Optional IBKR network observation requires its own reviewed read-only authority
+and does not substitute for Futu's required US live-data leg. Fixture/import
+work and deterministic scenario-envelope validation can proceed without it;
+named fill-model execution is still missing. No write-capable credential,
+paper/live order placement,
 routing, cancellation/replacement, automatic retry, hidden confirmation,
 inferred fill, live-readiness judgment, or trade recommendation.

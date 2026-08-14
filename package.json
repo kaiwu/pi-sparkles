@@ -28,6 +28,14 @@
     "test:pi": "bun scripts/test-pi.js",
     "test:live:tutor": "bun scripts/test-live-tutor.js",
     "test:live:sec": "bun scripts/test-live-sec.js",
+    "probe:live:futu:us": "bun scripts/futu-us-ticker-probe.js --live",
+    "probe:live:futu:us:rights": "bun scripts/futu-us-rights-probe.js --live",
+    "probe:live:futu:cn": "bun scripts/futu-cn-ticker-probe.js --live",
+    "probe:live:futu:hk": "bun scripts/futu-hk-ticker-probe.js --live",
+    "probe:live:futu:rights": "bun scripts/futu-track-rights-probe.js --live",
+    "probe:live:futu:webapi:oauth": "bun scripts/futu-webapi-oauth-probe.js --live",
+    "probe:live:futu:webapi:ticker": "bun scripts/futu-webapi-ticker-probe.js --live",
+    "probe:live:futu:webapi:ticker:ws": "bun scripts/futu-webapi-websocket-ticker-probe.js --live",
     "test:workflow": "bun test test/workflow",
     "tier:audit": "bun scripts/tier.js audit",
     "tier:checkpoint": "bun scripts/tier.js checkpoint",
@@ -37,7 +45,7 @@
     "tier:show": "bun scripts/tier.js show",
     "tier:verify": "bun scripts/tier.js verify",
     "npm:pack": "bun scripts/npm-package.js",
-    "npm:release:verify": "bun test test/workflow/aggregate_bundle.test.js test/workflow/npm_package.test.js && bun scripts/npm-package.js T5 --install-smoke --publish-dry-run --check-registry",
+    "npm:release:verify": "bun test test/workflow/aggregate_bundle.test.js test/workflow/npm_package.test.js && bun scripts/npm-package.js T6 --install-smoke --publish-dry-run --check-registry",
     "test": "bun scripts/test.js",
     "clean": "bun scripts/clean.js"
   },
@@ -49,5 +57,8 @@
   "directories": {
     "test": "test"
   },
-  "keywords": []
+  "keywords": [],
+  "devDependencies": {
+    "futu-api": "10.10.7008"
+  }
 }

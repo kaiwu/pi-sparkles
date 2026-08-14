@@ -106,14 +106,14 @@ describe("single-entrypoint tier aggregate", () => {
     expect(t6.maturity).toBe("blocked_inventory_preview");
   });
 
-  test("parses T5 by default and requires an explicit T6 target", () => {
+  test("targets the guarded T6 next release by default and keeps T5 explicit", () => {
     expect(parseAggregateArguments([])).toMatchObject({
-      throughTierId: "T5",
+      throughTierId: "T6",
       build: true,
       verifyOnly: false,
     });
-    expect(parseAggregateArguments(["T6", "--no-build"])).toMatchObject({
-      throughTierId: "T6",
+    expect(parseAggregateArguments(["T5", "--no-build"])).toMatchObject({
+      throughTierId: "T5",
       build: false,
     });
     expect(() => parseAggregateArguments(["T4"])).toThrow(
@@ -156,6 +156,16 @@ describe("single-entrypoint tier aggregate", () => {
       readFileSync(join(plan.outputDirectory, "package.json"), "utf8"),
     );
     expect(manifest.pi.extensions).toEqual(["./index.js"]);
+    expect(manifest.piSparkles).toEqual({
+      aggregateThrough: "T5",
+      maturity: "product_useful_aggregate",
+      pluginCount: 2,
+      omittedProposalCount: 0,
+      partialImplementationCount: 0,
+      openBlockerCount: 0,
+      publishable: true,
+      brokerOrderMutation: false,
+    });
     expect(manifest.peerDependencies).toMatchObject({
       "@earendil-works/pi-coding-agent": "*",
       typebox: "*",

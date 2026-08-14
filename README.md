@@ -284,50 +284,53 @@ scope with `--scope project`.
 
 ## Single-entry aggregate package
 
-For a single giant Pi extension entrypoint containing the complete T1-through-T5
-proposal inventory, build the aggregate package:
+T6 is the next single-entry aggregate release target. Build its current guarded
+preview with:
 
 ```sh
-bun run aggregate:build -- T5
-pi --no-extensions -e ./dist/aggregate/t5 --list-models
-bun run aggregate:build -- T5 --verify-only
+bun run aggregate:build
+pi --no-extensions -e ./dist/aggregate/t6 --list-models
+bun run aggregate:build -- --verify-only
 ```
 
-T5 is the default target. The generated `package.json` declares only
+The generated `package.json` declares only
 `./index.js`; initialization follows deterministic tier-ledger order, and
 duplicate named registrations fail before the duplicate reaches Pi. This
 changes the bundle boundary only—the original plugins still own their domain,
 track, receipt, provider, and configuration contracts.
 
-T6 is opt-in:
+Until the real-time feed blocker is resolved, T6 is explicitly a private,
+non-releasable `blocked_inventory_preview`. Its lock lists missing proposals,
+partial implementations, and open blockers; loading it does not promote T6.
+After T6 is complete and ProductUseful, the same default command produces the
+exact releasable T1-through-T6 aggregate for the next release.
+
+The prior ProductUseful T5 aggregate remains explicitly selectable:
 
 ```sh
-bun run aggregate:build -- T6
-pi --no-extensions -e ./dist/aggregate/t6 --list-models
+bun run aggregate:build -- T5
+pi --no-extensions -e ./dist/aggregate/t5 --list-models
 ```
 
-Until the real-time feed blocker is resolved, that artifact is explicitly a
-private, non-releasable `blocked_inventory_preview`. Its lock lists missing T6
-proposals, partial implementations, and open blockers; loading it does not
-promote T6. Both variants refuse broker order-mutation authority, exclude demo
+Both variants refuse broker order-mutation authority, exclude demo
 and reference extras, and include `aggregate-lock.json`, `CONFIGURATION.md`, and
 `SHA256SUMS` without copying credential values.
 
 ## All-in-one npm package
 
-Prepare the releasable T5 aggregate under the stable npm identity
+Prepare the next T6 aggregate under the stable npm identity
 `@pi-sparkles/pi-sparkles`:
 
 ```sh
-bun run npm:pack -- T5
-bun run npm:pack -- T5 --verify-only
+bun run npm:pack
+bun run npm:pack -- --verify-only
 ```
 
-The current T5 output at `dist/npm/t5/` is publish-ready. T6 can be packed
-locally as a private npm-format preview, but it is not a release-pipeline choice
-until T6 becomes complete and ProductUseful. The selected maturity, plugin
-count, omissions, partials, and blockers remain visible in package metadata and
-locks.
+The current T6 output at `dist/npm/t6/` is a private npm-format preview. The
+same default target becomes publishable only when T6 is complete and
+ProductUseful. T5 remains available explicitly as the prior publish-ready
+target. Selected maturity, plugin count, omissions, partials, and blockers
+remain visible in package metadata and locks.
 
 Each tarball contains one Pi entrypoint, an exact file allowlist, Apache-2.0 and
 third-party notices, configuration names without values, inner and outer
@@ -341,10 +344,12 @@ publishing:
 bun run npm:release:verify
 ```
 
-This release gate builds and tests the one all-in-one npm product. Its clean
-install asks plain Pi to load the single aggregate `index.js`, which initializes
-all 124 plugins and fails on any duplicate named registration. It intentionally
-does not run the per-plugin Pi-load matrix.
+This release gate targets T6 and refuses to proceed while it is a blocked
+preview. After promotion it builds and tests the one all-in-one npm product;
+its clean install asks plain Pi to load the single aggregate `index.js`, which
+initializes the exact T1-through-T6 proposal inventory and fails on any
+duplicate named registration. It intentionally does not run the per-plugin
+Pi-load matrix.
 
 See [NPM_RELEASE.md](NPM_RELEASE.md) for clean-install testing, versioning, the
 first publication, and the manual tag-bound trusted-publisher workflow.
@@ -386,9 +391,9 @@ bun run tier:audit
 bun run tier:show -- T1
 bun run tier:checkpoint -- T1
 bun run tier:package -- T1
-bun run aggregate:build -- T5
+bun run aggregate:build
 pi --no-extensions -e ./dist/tiers/t1 --list-models
-pi --no-extensions -e ./dist/aggregate/t5 --list-models
+pi --no-extensions -e ./dist/aggregate/t6 --list-models
 pi --no-extensions -e ./dist/hello --list-models
 ```
 
@@ -634,6 +639,7 @@ pi-sparkles/
 │   ├── finance_eastmoney/
 │   ├── finance_evidence/
 │   ├── finance_execution/        information-only CG-DAY execution core
+│   ├── finance_tape/             private bounded T6 transaction-tape core
 │   ├── finance_fred/             bounded credentialed FRED v1 series adapter
 │   ├── finance_twelve_data/      bounded exact US company-profile adapter
 │   ├── finance_hk_accounting/
@@ -773,7 +779,8 @@ extensions. Plugins compose these packages behind typed Pi boundaries:
 | `finance_ohlcv` | Exact raw-plus-normalized OHLCV bars, source-instant/date-anchor and proven/unknown-volume distinctions, canonical observations, strict ordering/exact deduplication, provider-neutral content-bound acquisition receipts, and calendar/listing/status gap classification. |
 | `finance_indicators` | Calculation-only SMA, Wilder RSI, true-range, and Wilder ATR core with explicit input/window/gap/rounding policies, unperformed expressions, and content-bound request/semantic receipts; it emits no interpretation or decision. |
 | `finance_risk` | Calculation-only planned/gap loss, explicit budgets, independent quantity bounds, supplied-grid projection, requested intersections, heat/cost decompositions, partial expressions, and content-bound receipts; it emits no policy, quantity choice, verdict, authorization, or next operation. |
-| `finance_execution` | Information-only desired instructions, sourced capabilities, explicit visible-depth and daily-bar scenarios, lifecycle/fill folds, requested cost/benchmark/latency calculations, and content-bound receipts; it cannot choose an encoding or branch, judge an outcome, or mutate a broker. |
+| `finance_execution` | Information-only desired instructions, sourced capabilities, explicit visible-depth, daily-bar, and private transaction-tape possible-fill scenarios, lifecycle/fill folds, requested cost/benchmark/latency calculations, and content-bound receipts; it cannot choose an encoding or branch, turn a print into an observed order fill, judge an outcome, or mutate a broker. |
+| `finance_tape` | Private T6 transaction-tape laws for exact bounded events, arbitrary-length sequences, gap/reset/duplicate detection, correction/cancel lineage, clocks, condition coverage, track/MIC scope, and strict budgets; it has no Pi shell or provider effect. |
 | `finance_journal` | Immutable exact attributed journal events, information states, correction/redaction lineage, partial checklists, bounded replay/query/export, requested comparisons and realized net P&L, compact context, and content-bound receipts without psychology/process/trade decisions. |
 | `finance_replay` | Point-in-time universe/dataset manifests, immutable shared run definitions, caller-declared partitions/trials, ordered replay and checkpoints, explicitly requested calculations, aligned comparisons, compact context, reproduction manifests, and bounded scripted execution without research verdicts. |
 | `finance_cn_ohlcv` | CN-only SSE/SZSE/BSE identity, reviewed-calendar, listing/status, and Eastmoney-receipt composition with four typed gap outcomes and fail-closed conflicts. |

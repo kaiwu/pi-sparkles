@@ -24,6 +24,7 @@ import {
 import {
   aggregateBundlePlan,
   buildAggregateBundle,
+  DEFAULT_AGGREGATE_TARGET,
   HOST_PEERS,
   verifyAggregateBundle,
 } from "./aggregate-bundle.js";
@@ -170,7 +171,42 @@ function requireSuccess(result, label) {
 function packageReadme(plan) {
   const previewNotice = plan.releasable
     ? ""
-    : "> Development preview: this build is not intended for publication.\n\n";
+    : `> Development preview: version ${plan.packageVersion} is private and is not intended for publication.\n\n`;
+  const previewSection =
+    plan.throughTierId === "T6" && !plan.releasable
+      ? `## T6 development inventory
+
+This tarball contains ${plan.plugins.length} present plugin ${plan.plugins.length === 1 ? "entrypoint" : "entrypoints"} through
+T6. Its content locks record ${plan.omittedProposals.length} omitted proposals,
+${plan.partialImplementations.length} partial implementations, and
+${plan.openBlockers.length} open ${plan.openBlockers.length === 1 ? "blocker" : "blockers"}. The repository work behind this target
+includes private transaction-tape/stream laws, deterministic possible-fill
+simulation, evidence-first compliance evaluation, and exact-hash caller-owned
+receipt review. Those foundations do not prove a live day-trading product and
+do not make private code a public Pi tool.
+
+Promotion still requires independently conformed CN, HK, and US transaction-tape
+legs. OpenD is development-only and is not included or required. Provider
+acquisition is transaction prints only—never quotes, bid/offer, or an order
+book—and no plugin can mutate a paper or live order.
+
+`
+      : "";
+  const quickStart = plan.releasable
+    ? `## Quick start
+
+\`\`\`sh
+pi install npm:${NPM_PACKAGE_NAME}
+\`\`\`
+`
+    : `## Local preview
+
+Install only the exact locally built tarball for development inspection:
+
+\`\`\`sh
+npm install ./pi-sparkles-pi-sparkles-${plan.packageVersion}.tgz
+\`\`\`
+`;
   return `# Pi Sparkles
 
 ${previewNotice}Turn [Pi](https://github.com/badlogic/pi-mono) into a finance research
@@ -193,11 +229,7 @@ spreadsheets, and one-off scripts.
 Pi automatically looks up current evidence for questions about price, trend,
 buying now, or when to sell. You do not need to ask it to "use tools" first.
 
-## Quick start
-
-\`\`\`sh
-pi install npm:${NPM_PACKAGE_NAME}
-\`\`\`
+${previewSection}${quickStart}
 
 For most mainland China and Hong Kong quote/history research, and for SEC filing
 research, the only setup is a contact address used to identify requests to public
@@ -303,6 +335,9 @@ function npmManifest(plan) {
       aggregateThrough: plan.throughTierId,
       maturity: plan.maturity,
       pluginCount: plan.plugins.length,
+      omittedProposalCount: plan.omittedProposals.length,
+      partialImplementationCount: plan.partialImplementations.length,
+      openBlockerCount: plan.openBlockers.length,
       publishable: plan.releasable,
       brokerOrderMutation: false,
     },
@@ -400,7 +435,10 @@ function scanForCredentialValues(directory) {
   }
 }
 
-export function npmPackagePlan(manifest, throughTierId = "T5") {
+export function npmPackagePlan(
+  manifest,
+  throughTierId = DEFAULT_AGGREGATE_TARGET,
+) {
   const aggregate = aggregateBundlePlan(manifest, throughTierId);
   return {
     ...aggregate,
@@ -484,6 +522,12 @@ export function verifyNpmPackageDirectory(directory, expectedPlan) {
       manifest.piSparkles?.aggregateThrough !== expectedPlan.throughTierId ||
       manifest.piSparkles?.maturity !== expectedPlan.maturity ||
       manifest.piSparkles?.pluginCount !== expectedPlan.plugins.length ||
+      manifest.piSparkles?.omittedProposalCount !==
+        expectedPlan.omittedProposals.length ||
+      manifest.piSparkles?.partialImplementationCount !==
+        expectedPlan.partialImplementations.length ||
+      manifest.piSparkles?.openBlockerCount !==
+        expectedPlan.openBlockers.length ||
       manifest.piSparkles?.publishable !== expectedPlan.releasable ||
       manifest.piSparkles?.brokerOrderMutation !== false
     ) {
@@ -752,7 +796,7 @@ export async function assembleNpmRelease(
 }
 
 export async function buildNpmRelease(
-  throughTierId = "T5",
+  throughTierId = DEFAULT_AGGREGATE_TARGET,
   { build = true, aggregateDirectory, outputDirectory } = {},
 ) {
   const plan = npmPackagePlan(readTierManifest(), throughTierId);
@@ -914,12 +958,12 @@ function usage() {
     "Usage: bun run npm:pack -- [T5|T6] [--no-build] [--output <directory>]",
     "       bun run npm:pack -- [T5|T6] --verify-only [--output <directory>]",
     "       bun run npm:pack -- [T5|T6] --no-build --install-smoke [--publish-dry-run] [--check-registry]",
-    "T5 is the default. T6 packs as private while blocked and becomes publishable only after ProductUseful promotion.",
+    "T6 is the next-release default. It packs as private while blocked and becomes publishable only after ProductUseful promotion; select T5 explicitly for the prior release.",
   ].join("\n");
 }
 
 export function parseNpmPackageArguments(args) {
-  let throughTierId = "T5";
+  let throughTierId = DEFAULT_AGGREGATE_TARGET;
   let targetSeen = false;
   let build = true;
   let verifyOnly = false;

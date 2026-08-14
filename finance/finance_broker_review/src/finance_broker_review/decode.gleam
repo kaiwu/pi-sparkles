@@ -36,6 +36,10 @@ pub type ReviewInput {
   )
 }
 
+pub type BoundReviewInput {
+  BoundReviewInput(contract_version: String, review: ReviewInput)
+}
+
 pub fn review_input() -> decoder.Decoder(ReviewInput) {
   use operation_id <- decoder.field("operationId", decoder.string)
   use mode <- decoder.field("mode", decoder.string)
@@ -63,6 +67,43 @@ pub fn review_input() -> decoder.Decoder(ReviewInput) {
     facts,
     events,
     missing_capabilities,
+  ))
+}
+
+/// Decode a local-import envelope whose source hash was supplied and verified
+/// out of band. Omitting the hash from the JSON avoids an impossible self-hash.
+pub fn bound_review_input(
+  source_content_hash: String,
+) -> decoder.Decoder(BoundReviewInput) {
+  use contract_version <- decoder.field("contractVersion", decoder.string)
+  use operation_id <- decoder.field("operationId", decoder.string)
+  use mode <- decoder.field("mode", decoder.string)
+  use environment <- decoder.field("environment", decoder.string)
+  use account_reference <- decoder.field("accountReference", decoder.string)
+  use track <- decoder.field("track", decoder.string)
+  use listing_id <- decoder.field("listingId", decoder.string)
+  use mic <- decoder.field("mic", decoder.string)
+  use facts <- decoder.field("facts", decoder.list(of: fact_input()))
+  use events <- decoder.field("events", decoder.list(of: event_input()))
+  use missing_capabilities <- decoder.field(
+    "missingCapabilities",
+    decoder.list(of: decoder.string),
+  )
+  decoder.success(BoundReviewInput(
+    contract_version,
+    ReviewInput(
+      operation_id,
+      mode,
+      environment,
+      account_reference,
+      track,
+      listing_id,
+      mic,
+      source_content_hash,
+      facts,
+      events,
+      missing_capabilities,
+    ),
   ))
 }
 

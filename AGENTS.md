@@ -58,14 +58,22 @@ once. Add a track-owned adapter/module only when market semantics genuinely
 differ, and keep non-anchor coverage explicitly unsupported or `track_partial`.
 Never infer that one anchor journey proves another track.
 
+T6's declared profile is one explicit composed exception to single-track
+anchoring, not an acceptance matrix: its one role lane contains mandatory,
+separately labelled `cn`, `hk`, and `us` live legs. Shared workflow laws run
+once, while Futu feed/rights/identity/sequence/condition/clock/recovery
+conformance is proved independently for each track. No successful leg proves or
+silently supplies another.
+
 Only ProductUseful inventory may become a releasable plain Pi distribution. Use
 `bun run tier:package -- Tn` to build the normal package containing that tier
 and its ProductUseful dependency closure; its manifest loads each version-locked
-extension separately. The explicitly authorized aggregate alternative is
-`bun run aggregate:build -- T5`, which bundles the exact T1-through-T5 proposal
-inventory behind one Pi extension entrypoint. `aggregate:build -- T6` is a
-local, non-releasable blocked-inventory preview: it omits missing proposals and
-records every blocker and partial implementation. Aggregation may combine only
+extension separately. The prior releasable aggregate is explicitly selected by
+`bun run aggregate:build -- T5` and contains exact T1-through-T5 inventory.
+T6 is the next-release/default aggregate target. While blocked it remains a
+local, non-releasable inventory preview that omits missing proposals and records
+every blocker and partial implementation; the same target becomes releasable
+only after complete ProductUseful promotion. Aggregation may combine only
 compiled initialization and distribution; it must not introduce plugin source
 imports, weaken tier maturity, imply promotion, add broker order mutation, or
 change receipt/track/provider authority. Duplicate named registrations must
@@ -135,7 +143,7 @@ The finance foundations include `finance_archive`, `finance_core`, `finance_trac
 `finance_track_capabilities`, `finance_cache_contract`,
 `finance_provenance`, `finance_http`, `finance_math`, `finance_series`,
 `finance_calendar`, `finance_ohlcv`, `finance_indicators`, `finance_risk`,
-`finance_execution`, `finance_journal`, `finance_replay`,
+`finance_execution`, `finance_tape`, `finance_journal`, `finance_replay`,
 `finance_cn_ohlcv`, `finance_hk_ohlcv`, `finance_us_ohlcv`, `finance_table`, and
 `finance_testkit`.
 They are Experimental independent Gleam packages, not Pi plugins. Keep their dependency
@@ -326,9 +334,32 @@ individual plugin. At the completed tier boundary, change the tier to
 promotion.
 Provider plugin unit tests use fixtures or scripted transports, never live
 network calls, real sleeps, ambient credentials, or mutable shared caches.
-The sole live-provider lane is the explicit `bun run test:live:sec` runner. It
-must remain opt-in, read-only, caller-identified, host/method allowlisted,
-request-budgeted, and excluded from `bun run test`.
+The normal sole live-provider lane is the explicit `bun run test:live:sec`
+runner. The temporary `bun run probe:live:futu:us`,
+`bun run probe:live:futu:cn`, `bun run probe:live:futu:hk` ticker,
+`bun run probe:live:futu:us:rights`, and `bun run probe:live:futu:rights`
+entitlement lanes, plus the one-shot
+`bun run probe:live:futu:webapi:oauth` direct-API authorization lane, are also
+allowed while
+`T6-INTRADAY-PROVIDERS` remains open. They are Bun-only, quote/global-read-only,
+hard-budgeted, non-retrying, and excluded from `bun run test`, tier gates,
+packaging, installation, and plugin load. OpenD lanes are localhost-only and
+reconnect-disabled. The OAuth lane registers only the documented localhost
+public client, requires PKCE and interactive caller consent, accepts only an
+exact `quote:read` grant, stores one short-lived access token in a fixed
+mode-0600 `/tmp` file, and discards refresh and registration credentials. The
+ticker lane permits exactly one fixed Futu direct
+`/api/v1.0/quote/{symbol}/rt-ticker?num=10` request for one reviewed track/MIC
+anchor, with no retry or redirect and no stock-quote, bid/offer, order-book,
+trade, or account endpoint. It preserves int64 sequence lexemes internally and
+emits only redacted aggregates. The temporary direct WebSocket lane permits
+one reviewed HK/XHKG connection, OAuth auth, one `ticker` subscription, and
+one exact `ticker` unsubscribe with no reconnect or retry; quote, order-book,
+K-line, trade, and account fields are forbidden. The
+ticker lane is one-symbol/one-subtype; the rights lane is exactly one protocol
+1005 request with quote-right flag 4 and an output allowlist. All live lanes
+must remain opt-in, read-only, caller-identified, host/method allowlisted, and
+request-budgeted.
 
 ## Commit & Pull Request Guidelines
 

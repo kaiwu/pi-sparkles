@@ -119,6 +119,7 @@ describe("all-in-one npm packaging", () => {
     expect(t6.plugins).toHaveLength(133);
     expect(t6.releasable).toBeFalse();
     expect(t6.omittedProposals).toHaveLength(2);
+    expect(npmPackagePlan(manifest).throughTierId).toBe("T6");
   });
 
   test("packs a content-locked npm tarball with one Pi entrypoint", async () => {
@@ -147,6 +148,16 @@ describe("all-in-one npm packaging", () => {
       ),
     );
     expect(packageManifest.pi.extensions).toEqual(["./index.js"]);
+    expect(packageManifest.piSparkles).toEqual({
+      aggregateThrough: "T5",
+      maturity: "product_useful_aggregate",
+      pluginCount: 1,
+      omittedProposalCount: 0,
+      partialImplementationCount: 0,
+      openBlockerCount: 0,
+      publishable: true,
+      brokerOrderMutation: false,
+    });
     expect(packageManifest.dependencies).toEqual({
       "pdfjs-dist": "6.2.108",
     });
@@ -205,6 +216,20 @@ describe("all-in-one npm packaging", () => {
     expect(summary.publishable).toBeFalse();
     expect(packageManifest.private).toBeTrue();
     expect(packageManifest.publishConfig).toBeUndefined();
+    expect(packageManifest.piSparkles).toMatchObject({
+      aggregateThrough: "T6",
+      maturity: "blocked_inventory_preview",
+      publishable: false,
+    });
+    const packageReadme = readFileSync(
+      join(plan.npmOutputDirectory, "package", "README.md"),
+      "utf8",
+    );
+    expect(packageReadme).toContain("## T6 development inventory");
+    expect(packageReadme).toContain("OpenD is development-only");
+    expect(packageReadme).toContain("never quotes, bid/offer, or an order");
+    expect(packageReadme).toContain("## Local preview");
+    expect(packageReadme).not.toContain(`pi install npm:@pi-sparkles/pi-sparkles`);
     expect(() => assertNpmPublishable(summary)).toThrow(
       "T6 npm aggregate is a blocked preview and cannot be published",
     );
@@ -221,13 +246,13 @@ describe("all-in-one npm packaging", () => {
     expect(() => verifyNpmRelease(plan.npmOutputDirectory, plan)).toThrow();
   });
 
-  test("parses an explicit T5 or T6 target", () => {
+  test("defaults to the guarded T6 next release and accepts explicit T5", () => {
     expect(parseNpmPackageArguments([])).toMatchObject({
-      throughTierId: "T5",
+      throughTierId: "T6",
       build: true,
     });
-    expect(parseNpmPackageArguments(["T6", "--no-build"])).toMatchObject({
-      throughTierId: "T6",
+    expect(parseNpmPackageArguments(["T5", "--no-build"])).toMatchObject({
+      throughTierId: "T5",
       build: false,
     });
     expect(

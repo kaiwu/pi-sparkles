@@ -1,6 +1,6 @@
 # pi_sparkles_broker_readonly_ibkr
 
-Status: **Implemented inventory — `track_partial`** · caller-owned import review only · US network path on hold
+Status: **Implemented inventory — `track_partial`** · caller-owned import review only · optional IBKR network breadth absent
 
 ## Implemented partial slice
 
@@ -19,7 +19,9 @@ exclusion, and separate input-order versus occurred-time lifecycle projections.
 
 Missing: Client Portal or TWS/Gateway response decoders plus pacing/session
 fixtures; reviewed proof of read-only gateway authority and an opt-in provider
-check; and the IBKR network adapter, which remains on hold with the US path.
+check; and the optional IBKR network adapter. Futu is T6's required first US
+live provider; IBKR remains separately selected provider breadth and is never a
+fallback.
 
 Product-readiness evidence: [Session 40](../../../trading-course/sessions/40_professional_product_readiness_audit_20260811.md), [Session 44](../../../trading-course/sessions/44_broker_live_operational_product_contract_20260811.md), [Session 45](../../../trading-course/sessions/45_cross_plugin_persona_acceptance_contract_20260811.md), and [Session 46](../../../trading-course/sessions/46_product_readiness_corrections_20260811.md). Shared implementation standard: [PRODUCT_READINESS.md](../../PRODUCT_READINESS.md).
 
@@ -39,9 +41,10 @@ Acceptance covers fixture decoding, multiple accounts/currencies, pacing/session
 
 ## Stop conditions and exclusions
 
-The live IBKR network adapter is on hold while T6 uses its CN anchor. Fixture
-decoding and a caller-owned activity export may prove the bounded import
-contract; any later network mode requires reviewed rights and demonstrably
-read-only authority. No write-capable credential, order placement/routing,
+The live IBKR network adapter is optional provider breadth outside T6's
+required Futu-first US leg. Fixture decoding and a caller-owned activity export
+may prove the bounded import contract; any network mode requires reviewed
+rights and demonstrably read-only authority. No write-capable credential,
+order placement/routing,
 cancellation/replacement, automatic login recovery, environment relabelling,
 readiness judgment, or live effect.
