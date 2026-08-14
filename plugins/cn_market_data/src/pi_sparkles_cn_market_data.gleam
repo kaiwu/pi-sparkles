@@ -28,7 +28,17 @@ import pi/tool
 import pi_sparkles_cn_market_data/effect/environment
 
 pub type QuoteInput {
-  QuoteInput(market: query.Market, code: String)
+  QuoteInput(
+    market: query.Market,
+    code: String,
+    instrument_kind: InstrumentKind,
+  )
+}
+
+pub type InstrumentKind {
+  ListedSecurity
+  BenchmarkIndex
+  SectorIndex
 }
 
 pub type HistoryInput {
@@ -38,6 +48,7 @@ pub type HistoryInput {
     start_date: time.Date,
     end_date: time.Date,
     limit: Int,
+    instrument_kind: InstrumentKind,
   )
 }
 
@@ -52,35 +63,57 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "cn_raw_vendor_quote",
     "CN raw vendor quote",
-    "Fetch an exact-code Eastmoney mainland A-share quote after an explicit SSE/SZSE/BSE choice; use current quote evidence by default for ordinary buy-now, sell-timing, entry, exit, stop, or target questions even when the user does not explicitly request tools; expose exact scaled prices, provider timestamp, retrieval time, unknown latency/rights, and unverified volume semantics",
-    "Get a bounded current or delayed raw vendor quote for an independently proven mainland identity whenever a current-price-dependent opinion is requested",
+    "Fetch an exact-code Eastmoney mainland listed-security quote after an explicit SSE/SZSE/BSE choice; reviewed benchmark and sector indices are rejected locally before network access",
+    "Use only for an independently identified listed security. Use cn_market_overview for today's broad Shanghai/Shenzhen market and cn_sector_trends for industry-sector comparisons",
     tool.parameters(quote_schema(), quote_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
       case provider {
         InvalidConfiguration(reason) -> tool.reject(reason)
         Ready(access, provider_runtime) ->
-          case query.quote(finance_track.Cn, input.market, input.code) {
-            Error(_) ->
-              tool.reject("Invalid explicit CN Eastmoney quote identity")
-            Ok(plan) -> {
-              use outcome <- promise.await(fetch_quote(
-                provider_runtime,
-                access,
-                plan,
-                id,
-                transport.from_abort_signal(raw.dynamic(signal)),
-              ))
-              case outcome {
-                Error(message) -> tool.reject(message)
-                Ok(value) ->
-                  tool.text_result(
-                    render_quote(input, value),
-                    quote_json(input, value, environment.now_milliseconds()),
+          case
+            input.instrument_kind,
+            reviewed_benchmark(input.market, input.code),
+            reviewed_sector(input.market, input.code)
+          {
+            SectorIndex, _, _ | _, _, True -> reject_sector_quote(input)
+            BenchmarkIndex, _, _ | _, True, _ -> reject_index_quote(input)
+            ListedSecurity, False, False ->
+              case query.quote(finance_track.Cn, input.market, input.code) {
+                Error(_) ->
+                  reject_input(
+                    "invalid_quote_identity",
+                    "Invalid explicit CN Eastmoney listed-security quote identity",
+                    input.market,
+                    input.code,
+                    input.instrument_kind,
                   )
-                  |> promise.resolve
+                Ok(plan) -> {
+                  use outcome <- promise.await(fetch_quote(
+                    provider_runtime,
+                    access,
+                    plan,
+                    id,
+                    transport.from_abort_signal(raw.dynamic(signal)),
+                  ))
+                  case outcome {
+                    Error(message) ->
+                      reject_input(
+                        "provider_quote_failed",
+                        message,
+                        input.market,
+                        input.code,
+                        input.instrument_kind,
+                      )
+                    Ok(value) ->
+                      tool.text_result(
+                        render_quote(input, value),
+                        quote_json(input, value, environment.now_milliseconds()),
+                      )
+                      |> promise.resolve
+                  }
+                }
               }
-            }
           }
       }
     },
@@ -89,8 +122,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "cn_raw_vendor_history",
     "CN raw vendor history",
-    "Fetch bounded Eastmoney raw unadjusted daily bars for an exact caller-identified SSE/SZSE/BSE-listed instrument, including an already-identified ETF; use recent history by default for ordinary buy-now, sell-timing, entry, exit, stop, target, trend, or momentum questions even when the user does not explicitly request tools; for a supplied exact venue and code call this directly and do not call cn_stock_symbol_search, Tushare, or any CNINFO tool first",
-    "For a caller-supplied exact CN venue and code, call this directly for current-data-dependent opinions or indicators; do not call cn_stock_symbol_search, Tushare, or any CNINFO tool first",
+    "Fetch bounded Eastmoney raw unadjusted daily bars for an exact caller-identified SSE/SZSE/BSE listed security, reviewed benchmark index, or reviewed CSI sector index",
+    "Use for one exact series only. Label reviewed indices explicitly; use cn_market_overview for the current broad market and cn_sector_trends once for sector comparisons instead of guessing or probing codes",
     tool.parameters(history_schema(), history_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
@@ -98,38 +131,101 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
         InvalidConfiguration(reason) -> tool.reject(reason)
         Ready(access, provider_runtime) ->
           case
-            query.history(
-              finance_track.Cn,
-              input.market,
-              input.code,
-              input.start_date,
-              input.end_date,
-              input.limit,
-            )
+            input.instrument_kind,
+            reviewed_benchmark(input.market, input.code),
+            reviewed_sector(input.market, input.code)
           {
-            Error(_) ->
-              tool.reject("Invalid explicit CN Eastmoney history query")
-            Ok(plan) -> {
-              use outcome <- promise.await(fetch_history(
-                provider_runtime,
-                access,
-                plan,
-                id,
-                transport.from_abort_signal(raw.dynamic(signal)),
-              ))
-              case outcome {
-                Error(message) -> tool.reject(message)
-                Ok(value) -> {
-                  let retrieved_at = environment.now_milliseconds()
-                  let details = history_json(input, value, retrieved_at)
-                  tool.text_result(
-                    history_model_content(input, value, retrieved_at),
-                    details,
+            BenchmarkIndex, True, True | SectorIndex, True, True ->
+              reject_input(
+                "conflicting_index_identity",
+                "Instrument code matched conflicting reviewed index registries",
+                input.market,
+                input.code,
+                input.instrument_kind,
+              )
+            ListedSecurity, True, _ ->
+              reject_input(
+                "instrument_kind_mismatch",
+                "Reviewed benchmark code requires instrumentKind=benchmark_index for daily history or cn_market_overview for the current market",
+                input.market,
+                input.code,
+                BenchmarkIndex,
+              )
+            ListedSecurity, _, True ->
+              reject_input(
+                "instrument_kind_mismatch",
+                "Reviewed CSI sector code requires instrumentKind=sector_index for one exact history series or cn_sector_trends for the complete comparison",
+                input.market,
+                input.code,
+                SectorIndex,
+              )
+            BenchmarkIndex, False, _ ->
+              reject_input(
+                "unsupported_index_identity",
+                "benchmark_index is limited to the exact reviewed benchmark registry",
+                input.market,
+                input.code,
+                BenchmarkIndex,
+              )
+            SectorIndex, _, False ->
+              reject_input(
+                "unsupported_sector_identity",
+                "sector_index is limited to the exact pinned CSI 800 level-one registry; use cn_sector_trends for the complete comparison",
+                input.market,
+                input.code,
+                SectorIndex,
+              )
+            ListedSecurity, False, False
+            | BenchmarkIndex, True, False
+            | SectorIndex, False, True
+            ->
+              case
+                query.history(
+                  finance_track.Cn,
+                  input.market,
+                  input.code,
+                  input.start_date,
+                  input.end_date,
+                  input.limit,
+                )
+              {
+                Error(_) ->
+                  reject_input(
+                    "invalid_history_identity",
+                    "Invalid explicit CN Eastmoney history identity",
+                    input.market,
+                    input.code,
+                    input.instrument_kind,
                   )
-                  |> promise.resolve
+                Ok(plan) -> {
+                  use outcome <- promise.await(fetch_history(
+                    provider_runtime,
+                    access,
+                    plan,
+                    id,
+                    transport.from_abort_signal(raw.dynamic(signal)),
+                  ))
+                  case outcome {
+                    Error(message) ->
+                      reject_input(
+                        "provider_history_failed",
+                        message,
+                        input.market,
+                        input.code,
+                        input.instrument_kind,
+                      )
+                    Ok(value) -> {
+                      let retrieved_at = environment.now_milliseconds()
+                      let details = history_json(input, value, retrieved_at)
+                      tool.text_result(
+                        history_model_content(input, value, retrieved_at),
+                        details,
+                      )
+                      |> promise.resolve
+                    }
+                  }
                 }
               }
-            }
           }
       }
     },
@@ -233,6 +329,11 @@ fn quote_schema() -> schema.Schema {
   schema.object([
     schema.Required("venue", schema.string_enum(["sse", "szse", "bse"])),
     schema.Required("code", schema.string() |> schema.with_string_length(6, 6)),
+    schema.Optional(
+      "instrumentKind",
+      schema.string_enum(["listed_security", "benchmark_index", "sector_index"])
+        |> schema.with_default(json.string("listed_security")),
+    ),
   ])
 }
 
@@ -240,6 +341,11 @@ fn history_schema() -> schema.Schema {
   schema.object([
     schema.Required("venue", schema.string_enum(["sse", "szse", "bse"])),
     schema.Required("code", schema.string() |> schema.with_string_length(6, 6)),
+    schema.Optional(
+      "instrumentKind",
+      schema.string_enum(["listed_security", "benchmark_index", "sector_index"])
+        |> schema.with_default(json.string("listed_security")),
+    ),
     schema.Required(
       "startDate",
       schema.string() |> schema.with_string_length(10, 10),
@@ -258,29 +364,143 @@ fn history_schema() -> schema.Schema {
 fn quote_decoder() -> decode.Decoder(QuoteInput) {
   use venue <- decode.field("venue", decode.string)
   use code <- decode.field("code", decode.string)
-  case market_from_name(venue) {
-    Ok(market) -> decode.success(QuoteInput(market, code))
-    Error(_) ->
-      decode.failure(QuoteInput(query.CnSse, "000001"), "valid CN venue")
+  use kind <- decode.optional_field(
+    "instrumentKind",
+    "listed_security",
+    decode.string,
+  )
+  case market_from_name(venue), instrument_kind_from_name(kind) {
+    Ok(market), Ok(instrument_kind) ->
+      decode.success(QuoteInput(market, code, instrument_kind))
+    _, _ ->
+      decode.failure(
+        QuoteInput(query.CnSse, "600519", ListedSecurity),
+        "valid CN listed-security quote identity",
+      )
   }
 }
 
 fn history_decoder() -> decode.Decoder(HistoryInput) {
   use venue <- decode.field("venue", decode.string)
   use code <- decode.field("code", decode.string)
+  use kind <- decode.optional_field(
+    "instrumentKind",
+    "listed_security",
+    decode.string,
+  )
   use start <- decode.field("startDate", decode.string)
   use end <- decode.field("endDate", decode.string)
   use limit <- decode.optional_field("limit", 250, decode.int)
   let assert Ok(placeholder) = time.date(2026, 1, 1)
-  case market_from_name(venue), parse_date(start), parse_date(end) {
-    Ok(market), Ok(start_date), Ok(end_date) ->
-      decode.success(HistoryInput(market, code, start_date, end_date, limit))
-    _, _, _ ->
+  case
+    market_from_name(venue),
+    parse_date(start),
+    parse_date(end),
+    instrument_kind_from_name(kind)
+  {
+    Ok(market), Ok(start_date), Ok(end_date), Ok(instrument_kind) ->
+      decode.success(HistoryInput(
+        market,
+        code,
+        start_date,
+        end_date,
+        limit,
+        instrument_kind,
+      ))
+    _, _, _, _ ->
       decode.failure(
-        HistoryInput(query.CnSse, "000001", placeholder, placeholder, 250),
+        HistoryInput(
+          query.CnSse,
+          "600519",
+          placeholder,
+          placeholder,
+          250,
+          ListedSecurity,
+        ),
         "valid CN history query",
       )
   }
+}
+
+fn instrument_kind_from_name(value: String) -> Result(InstrumentKind, Nil) {
+  case value {
+    "listed_security" -> Ok(ListedSecurity)
+    "benchmark_index" -> Ok(BenchmarkIndex)
+    "sector_index" -> Ok(SectorIndex)
+    _ -> Error(Nil)
+  }
+}
+
+fn instrument_kind_name(value: InstrumentKind) -> String {
+  case value {
+    ListedSecurity -> "listed_security"
+    BenchmarkIndex -> "benchmark_index"
+    SectorIndex -> "sector_index"
+  }
+}
+
+fn reviewed_benchmark(market: query.Market, code: String) -> Bool {
+  case market, code {
+    query.CnSse, "000001" | query.CnSse, "000300" -> True
+    query.CnSzse, "399001" | query.CnSzse, "399006" -> True
+    _, _ -> False
+  }
+}
+
+fn reviewed_sector(market: query.Market, code: String) -> Bool {
+  query.cn_sector_indices()
+  |> list.any(fn(index) {
+    query.cn_sector_market(index) == market
+    && query.cn_sector_code(index) == code
+  })
+}
+
+fn reject_index_quote(input: QuoteInput) -> Promise(value) {
+  reject_input(
+    "unsupported_instrument_kind",
+    "cn_raw_vendor_quote supports listed securities only; use cn_market_overview for the reviewed Shanghai/Shenzhen benchmark set",
+    input.market,
+    input.code,
+    BenchmarkIndex,
+  )
+}
+
+fn reject_sector_quote(input: QuoteInput) -> Promise(value) {
+  reject_input(
+    "unsupported_instrument_kind",
+    "cn_raw_vendor_quote supports listed securities only; use cn_sector_trends for the pinned CSI industry-sector comparison",
+    input.market,
+    input.code,
+    SectorIndex,
+  )
+}
+
+fn reject_input(
+  code: String,
+  message: String,
+  market: query.Market,
+  security_code: String,
+  instrument_kind: InstrumentKind,
+) -> Promise(value) {
+  tool.reject_typed(
+    code,
+    message,
+    json.object([
+      #("code", json.string(code)),
+      #("track", json.string("cn")),
+      #("market", json.string(query.market_name(market))),
+      #("instrumentCode", json.string(security_code)),
+      #("instrumentKind", json.string(instrument_kind_name(instrument_kind))),
+      #(
+        "recommendedTool",
+        json.string(case instrument_kind {
+          BenchmarkIndex -> "cn_market_overview"
+          SectorIndex -> "cn_sector_trends"
+          ListedSecurity -> "cn_raw_vendor_quote_or_history"
+        }),
+      ),
+    ]),
+  )
 }
 
 fn market_from_name(value: String) -> Result(query.Market, Nil) {
@@ -375,18 +595,18 @@ fn history_model_content(
   let #(source_reference, receipt_digest, rows) =
     history_handoff(input, value, retrieved_at)
   render_history(input, value)
-  <> "\nComplete bounded daily rows follow as CSV. For requested indicators, call the installed Pi tools sma, rsi, and atr with these exact rows; do not write or execute a program and do not calculate the indicators yourself. Map close to sma/rsi observations and high,low,close to atr bars. Do not request TUSHARE_TOKEN or CNINFO for this returned series.\n"
+  <> "\nComplete bounded daily rows follow as CSV. These daily bars do not establish intraday ordering, market breadth, fund flow, or sector rotation.\n"
   <> "track=cn;provider=eastmoney;market="
   <> query.market_name(input.market)
   <> ";code="
   <> history.code(value)
+  <> ";instrumentKind="
+  <> instrument_kind_name(input.instrument_kind)
   <> ";currency=CNY;frequency=daily;adjustment=raw_unadjusted_fqt_0;retrievedAtUnixMilliseconds="
   <> int.to_string(retrieved_at)
   <> ";sourceReference="
   <> source_reference
   <> ";acquisitionReceiptCanonicalSha256="
-  <> receipt_digest
-  <> ";acquisitionReceipt="
   <> receipt_digest
   <> "\ndate,open,high,low,close,volume,amount\n"
   <> rows
@@ -448,6 +668,10 @@ fn quote_json(
         #("route", json.string("direct")),
         #("market", json.string(query.market_name(input.market))),
         #("code", json.string(quote.code(value))),
+        #(
+          "instrumentKind",
+          json.string(instrument_kind_name(input.instrument_kind)),
+        ),
         #("name", json.string(quote.name(value))),
         #("declaredCurrency", json.string("CNY")),
         #("last", json.string(quote.last(value))),
@@ -488,6 +712,10 @@ fn history_json(
         #("route", json.string("direct")),
         #("market", json.string(query.market_name(input.market))),
         #("code", json.string(history.code(value))),
+        #(
+          "instrumentKind",
+          json.string(instrument_kind_name(input.instrument_kind)),
+        ),
         #("name", json.string(history.name(value))),
         #("declaredCurrency", json.string("CNY")),
         #("frequency", json.string("daily")),

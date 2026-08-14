@@ -49,11 +49,7 @@ pub fn inspect(
         active_tools,
       ),
       registered("symbol resolution", "security_resolve", active_tools),
-      Capability(
-        "provider connectivity",
-        MissingDependency,
-        "install a provider adapter; setup never claims network health without performing a provider-specific probe",
-      ),
+      provider_connectivity(active_tools),
       case currency_valid && timezone_valid {
         True ->
           Capability(
@@ -95,6 +91,26 @@ pub fn provider_health(
             "required active tool is not installed: us_stock_quote or us_stock_ohlcv",
           )
       }
+    "eastmoney" ->
+      provider_surface(
+        "Eastmoney",
+        [
+          "cn_market_overview",
+          "cn_raw_vendor_quote",
+          "cn_raw_vendor_history",
+          "cn_stock_quote",
+          "cn_stock_history",
+          "hk_stock_quote",
+          "hk_stock_history",
+        ],
+        active_tools,
+      )
+    "tushare" | "tushare-pro" ->
+      provider_surface(
+        "Tushare Pro",
+        ["cn_stock_quote", "cn_stock_history"],
+        active_tools,
+      )
     "" -> Capability("provider", InvalidConfiguration, "provider is required")
     name ->
       Capability(
@@ -127,10 +143,10 @@ pub fn render(report: Report) -> String {
       <> item.detail
     })
     |> string.join("\n")
-  "Finance configuration\n"
-  <> "currency="
+  "Finance reporting defaults (not the active market track)\n"
+  <> "reportingCurrency="
   <> report.currency
-  <> " timezone="
+  <> " reportingTimezone="
   <> report.timezone
   <> " valid="
   <> bool.to_string(report.configuration_valid)
@@ -161,6 +177,59 @@ fn registered(
         "required active tool is not installed: " <> tool_name,
       )
   }
+}
+
+fn provider_connectivity(active_tools: List(String)) -> Capability {
+  case has_any(active_tools, provider_tool_names()) {
+    True ->
+      Capability(
+        "provider adapter surfaces",
+        Available,
+        "one or more typed provider tools are installed; configured credentials, reachability, freshness, entitlement, and live health remain independently unprobed",
+      )
+    False ->
+      Capability(
+        "provider adapter surfaces",
+        MissingDependency,
+        "install a provider adapter; setup never claims network health from package presence alone",
+      )
+  }
+}
+
+fn provider_surface(
+  name: String,
+  tool_names: List(String),
+  active_tools: List(String),
+) -> Capability {
+  case has_any(active_tools, tool_names) {
+    True ->
+      Capability(
+        name,
+        Available,
+        "typed adapter surface is installed; this is installation state only, while configuration, reachability, freshness, entitlement, and live health remain unprobed",
+      )
+    False ->
+      Capability(
+        name,
+        MissingDependency,
+        "no recognized active tool exposes this provider adapter",
+      )
+  }
+}
+
+fn provider_tool_names() -> List(String) {
+  [
+    "cn_market_overview",
+    "cn_raw_vendor_quote",
+    "cn_raw_vendor_history",
+    "cn_stock_quote",
+    "cn_stock_history",
+    "hk_stock_quote",
+    "hk_stock_history",
+    "us_stock_quote",
+    "us_stock_ohlcv",
+    "sec_company_search",
+  ]
 }
 
 fn has_any(values: List(String), expected: List(String)) -> Bool {

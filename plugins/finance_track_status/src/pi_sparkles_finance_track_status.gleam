@@ -51,7 +51,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   event.respond(api, event.before_agent_start, fn(_event, ctx) {
     let prompt =
       context.get_system_prompt(ctx)
-      <> "\n\nPi Sparkles finance routing: Treat AGENT_CONTACT as one shared operator identity across cn, hk, and us. Tool use gathers evidence; it does not delegate the final judgment. The user never needs to say 'use tools', 'use current data', or 'provide tool evidence'. When a user asks whether to buy now, what happens if they buy now, when to sell, or requests an entry, exit, stop, target, or timing opinion about a security, treat that ordinary wording itself as a request for current read-only evidence. Do not answer from general knowledge alone and do not skip tools merely because the LLM owns the recommendation. Unless the user explicitly requests a general educational answer or declines current-data lookup, first resolve the exact active-track identity once if necessary, fetch a current quote and a bounded recent daily OHLCV/history series, then call the relevant installed sma, rsi, and atr tools before giving a conditional scenario-based answer. Use plan_loss or other trade-plan calculations only when their exact required entry, stop, account, risk, or trade-unit facts are available; use simulate_bar_paths only for an exact proposed order and completed bar, never as a prerequisite for an ordinary timing question. For CN price or technical-analysis requests with an exact venue and code, call the market-data tool directly and do not call symbol search or CNINFO first. When the user supplies only a familiar canonical security name and its code/venue mapping is sufficiently certain, state that mapping as an assumption and proceed directly; the absence of a code in the original wording does not by itself require symbol search. Otherwise resolve the identity at most once with cn_stock_symbol_search, then do not repeat it. Use CNINFO tools only when the user explicitly requests announcements, disclosures, filings, or event evidence; CNINFO is never a prerequisite for quotes, OHLCV, or indicators. After a history/OHLCV tool returns rows, call installed sma, rsi, and atr tools for requested calculations instead of writing or executing a program or calculating indicators yourself. Omit stock-technicals instructionRef unless a real retained hash already exists; the tool derives it, so never pause to calculate that hash."
+      <> "\n\nPi Sparkles finance routing: Treat AGENT_CONTACT as one shared operator identity across cn, hk, and us, but never reveal its value in model-visible results. Tool use gathers evidence; it does not delegate the final judgment. The user never needs to say 'use tools', 'use current data', or 'provide tool evidence'. For a request about today's overall Shanghai/Shenzhen market, call installed cn_market_overview once; optionally call cn_market_calendar for official session status, but do not probe benchmark codes through stock quote/history, provider-health, or shell-time calls. Describe that result as provider-scoped market evidence and preserve its explicit completeness, intraday-ordering, fund-flow, sector, turnover-semantics, and prior-session gaps. For a broad CN industry-sector, 板块趋势, or sector-rotation request, call cn_sector_trends once with one explicit date window. Do not guess or probe sector codes with cn_raw_vendor_history, and do not call both short and long windows: cn_sector_trends mechanically supplies latest-session, five-session, and full-window returns for its exact pinned 11-sector CSI 800 profile. Describe only relative price performance; never translate it into fund flow, capital rotation, sector breadth, causal leadership, AI/theme exposure, a confirmed top, stabilization, or reversal. When a user asks whether to buy now, what happens if they buy now, when to sell, or requests an entry, exit, stop, target, or timing opinion about a security, treat that ordinary wording itself as a request for current read-only evidence. Do not answer from general knowledge alone and do not skip tools merely because the LLM owns the recommendation. Unless the user explicitly requests a general educational answer or declines current-data lookup, first resolve the exact active-track identity once if necessary, fetch a current quote and a bounded recent daily OHLCV/history series, then call the relevant installed sma, rsi, and atr tools before giving a conditional scenario-based answer. Use plan_loss or other trade-plan calculations only when their exact required entry, stop, account, risk, or trade-unit facts are available; use simulate_bar_paths only for an exact proposed order and completed bar, never as a prerequisite for an ordinary timing question. For CN price or technical-analysis requests with an exact venue and code, call the market-data tool directly and do not call symbol search or CNINFO first. When the user supplies only a familiar canonical security name and its code/venue mapping is sufficiently certain, state that mapping as an assumption and proceed directly; the absence of a code in the original wording does not by itself require symbol search. Otherwise resolve the identity at most once with cn_stock_symbol_search, then do not repeat it. Use CNINFO tools only when the user explicitly requests announcements, disclosures, filings, or event evidence; CNINFO is never a prerequisite for quotes, OHLCV, or indicators. After a history/OHLCV tool returns rows, call installed sma, rsi, and atr tools for requested calculations instead of writing or executing a program or calculating indicators yourself. Omit stock-technicals instructionRef unless a real retained hash already exists; the tool derives it, so never pause to calculate that hash."
     prompt
     |> event.system_prompt
     |> Some
@@ -99,7 +99,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "finance_track_status",
     "Finance track status",
-    "Read the active cn, hk, or us navigation track with currency, timezone, source credibility, installed feature coverage, and non-secret agent contact",
+    "Read the active cn, hk, or us navigation track with effective currency/timezone defaults, source credibility, and installed feature coverage without exposing operator contact values",
     "Check the active finance track before choosing a market-specific tool",
     tool.parameters(schema.object([]), decode.success(StatusInput)),
     tool.Parallel,
@@ -318,12 +318,18 @@ fn status_line(value: profile.Profile, receipt: readiness.Receipt) -> String {
   <> int.to_string(readiness.source_percentage(receipt))
   <> "% · feat:"
   <> int.to_string(readiness.feature_percentage(receipt))
-  <> "% · agent:"
-  <> profile.agent_contact(value)
+  <> "%"
 }
 
 fn describe(value: profile.Profile, receipt: readiness.Receipt) -> String {
-  profile.describe(value)
+  "Active finance track: "
+  <> string.uppercase(finance_track.name(profile.track(value)))
+  <> " ("
+  <> finance_track.label(profile.track(value))
+  <> ")\neffectiveCurrency="
+  <> currency.code(profile.currency(value))
+  <> " effectiveTimezone="
+  <> time.timezone_name(profile.timezone(value))
   <> " sourceCredibility="
   <> int.to_string(readiness.source_percentage(receipt))
   <> "% featureCoverage="
@@ -355,7 +361,7 @@ fn details(
     list.append(track_json.result_fields(context), [
       #("currency", json.string(currency.code(profile.currency(value)))),
       #("timezone", json.string(time.timezone_name(profile.timezone(value)))),
-      #("agentContact", json.string(profile.agent_contact(value))),
+      #("agentContactConfigured", json.bool(configuration_valid)),
       #("statusLine", json.string(status_line(value, receipt))),
       #(
         "sourceCredibilityPercentage",

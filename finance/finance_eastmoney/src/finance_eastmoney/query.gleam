@@ -27,6 +27,19 @@ pub opaque type HistoryQuery {
   )
 }
 
+pub opaque type CnOverviewQuery {
+  CnOverviewQuery
+}
+
+pub opaque type CnSectorIndex {
+  CnSectorIndex(
+    market: Market,
+    code: String,
+    label: String,
+    official_name: String,
+  )
+}
+
 pub opaque type IncomeQuery {
   IncomeQuery(
     track: finance_track.Track,
@@ -41,6 +54,79 @@ pub type QueryError {
   TrackMarketMismatch
   InvalidDateRange
   InvalidLimit
+}
+
+pub fn cn_overview(
+  track track: finance_track.Track,
+) -> Result(CnOverviewQuery, QueryError) {
+  case track {
+    finance_track.Cn -> Ok(CnOverviewQuery)
+    _ -> Error(TrackMarketMismatch)
+  }
+}
+
+pub fn cn_overview_secids(_query: CnOverviewQuery) -> String {
+  "1.000001,0.399001,0.399006,1.000300"
+}
+
+/// The pinned CSI 800 level-one industry profile used by the CN sector tool.
+///
+/// This is deliberately not the legacy ten-index projection: financials and
+/// real estate remain separate, and the combined 000934 index is excluded.
+pub fn cn_sector_indices() -> List(CnSectorIndex) {
+  [
+    CnSectorIndex(CnSse, "000928", "energy", "中证能源指数"),
+    CnSectorIndex(CnSse, "000929", "materials", "中证原材料指数"),
+    CnSectorIndex(CnSse, "000930", "industrials", "中证工业指数"),
+    CnSectorIndex(CnSse, "000931", "consumer_discretionary", "中证可选消费指数"),
+    CnSectorIndex(CnSse, "000932", "consumer_staples", "中证主要消费指数"),
+    CnSectorIndex(CnSse, "000933", "health_care", "中证医药卫生指数"),
+    CnSectorIndex(CnSse, "000974", "financials", "中证800金融指数"),
+    CnSectorIndex(CnSzse, "399965", "real_estate", "中证800地产指数"),
+    CnSectorIndex(CnSse, "000935", "information_technology", "中证信息技术指数"),
+    CnSectorIndex(CnSse, "000936", "communication_services", "中证通信业务指数"),
+    CnSectorIndex(CnSse, "000937", "utilities", "中证公用事业指数"),
+  ]
+}
+
+pub fn cn_sector_profile_id() -> String {
+  "csi_800_level_one_v1_3_pinned_2022_04"
+}
+
+pub fn cn_sector_profile_source() -> String {
+  "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/indices/detail/files/zh_CN/000841_Index_Methodology_cn.pdf"
+}
+
+pub fn cn_sector_market(value: CnSectorIndex) -> Market {
+  value.market
+}
+
+pub fn cn_sector_code(value: CnSectorIndex) -> String {
+  value.code
+}
+
+pub fn cn_sector_label(value: CnSectorIndex) -> String {
+  value.label
+}
+
+pub fn cn_sector_official_name(value: CnSectorIndex) -> String {
+  value.official_name
+}
+
+pub fn cn_sector_history(
+  index: CnSectorIndex,
+  start_date: time.Date,
+  end_date: time.Date,
+  limit: Int,
+) -> Result(HistoryQuery, QueryError) {
+  history(
+    finance_track.Cn,
+    index.market,
+    index.code,
+    start_date,
+    end_date,
+    limit,
+  )
 }
 
 pub fn quote(

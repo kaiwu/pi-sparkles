@@ -32,4 +32,21 @@ pub fn provider_health_never_claims_an_unchecked_connection_test() {
   capability.provider_health("alpaca", ["us_stock_quote"])
   |> fn(value) { value.state }
   |> should.equal(capability.Available)
+
+  capability.provider_health("eastmoney", ["cn_market_overview"])
+  |> fn(value) { value.state }
+  |> should.equal(capability.Available)
+
+  capability.provider_health("tushare", ["cn_stock_quote"])
+  |> fn(value) { value.state }
+  |> should.equal(capability.Available)
+
+  let report = capability.inspect("USD", "UTC", ["cn_market_overview"])
+  let assert [_, _, _, provider_surface, _] = report.capabilities
+  provider_surface
+  |> should.equal(capability.Capability(
+    "provider adapter surfaces",
+    capability.Available,
+    "one or more typed provider tools are installed; configured credentials, reachability, freshness, entitlement, and live health remain independently unprobed",
+  ))
 }

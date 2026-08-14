@@ -95,3 +95,10 @@ export function is_cancelled(signal) {
 export function reject(message) {
   return Promise.reject(new Error(message));
 }
+
+export function reject_typed(code, message, details) {
+  const error = new Error(`[${code}] ${message}`);
+  error.code = code;
+  error.details = details;
+  return Promise.reject(error);
+}

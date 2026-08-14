@@ -16,6 +16,8 @@ pub const hk_fundamentals_origin = "https://datacenter.eastmoney.com"
 
 pub const quote_path = "/api/qt/stock/get"
 
+pub const cn_overview_path = "/api/qt/ulist.np/get"
+
 pub const history_path = "/api/qt/stock/kline/get"
 
 pub const cn_fundamentals_path = "/api/data/v1/get"
@@ -46,6 +48,26 @@ pub fn quote(
     value,
     "fields",
     "f43,f44,f45,f46,f47,f51,f52,f57,f58,f59,f60,f86",
+  ))
+  finance_eastmoney.authorize(access, value) |> result.map_error(InvalidAccess)
+}
+
+pub fn cn_overview(
+  access: Access,
+  plan: market_query.CnOverviewQuery,
+) -> Result(request.Request, RequestError) {
+  use base <- result.try(base_request(quote_origin, cn_overview_path, 200_000))
+  use value <- result.try(public_query(base, "fltt", "1"))
+  use value <- result.try(public_query(value, "invt", "2"))
+  use value <- result.try(public_query(
+    value,
+    "secids",
+    market_query.cn_overview_secids(plan),
+  ))
+  use value <- result.try(public_query(
+    value,
+    "fields",
+    "f2,f3,f4,f5,f6,f12,f13,f14,f15,f16,f17,f18,f104,f105,f106",
   ))
   finance_eastmoney.authorize(access, value) |> result.map_error(InvalidAccess)
 }

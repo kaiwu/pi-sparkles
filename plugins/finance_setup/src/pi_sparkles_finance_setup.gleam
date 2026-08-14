@@ -48,7 +48,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "finance_capabilities",
     "Finance capabilities",
-    "Inspect installed finance capabilities and validate reporting defaults without revealing secrets",
+    "Inspect installed finance capabilities and validate global reporting defaults, explicitly distinct from the active market track, without revealing secrets",
     "Check finance capabilities and configuration before doing research",
     tool.parameters(
       schema.object([
@@ -143,6 +143,10 @@ fn provider_decoder() -> decode.Decoder(ProviderInput) {
 
 fn report_json(value: capability.Report) -> json.Json {
   json.object([
+    #(
+      "defaultsScope",
+      json.string("global_reporting_defaults_not_active_track"),
+    ),
     #("currency", json.string(value.currency)),
     #("timezone", json.string(value.timezone)),
     #("configurationValid", json.bool(value.configuration_valid)),

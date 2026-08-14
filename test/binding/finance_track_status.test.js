@@ -129,6 +129,21 @@ describe("finance track status binding", () => {
 
     expect(result.systemPrompt).toContain("base prompt");
     expect(result.systemPrompt).toContain(
+      "call installed cn_market_overview once",
+    );
+    expect(result.systemPrompt).toContain(
+      "do not probe benchmark codes through stock quote/history",
+    );
+    expect(result.systemPrompt).toContain(
+      "For a broad CN industry-sector, 板块趋势, or sector-rotation request, call cn_sector_trends once",
+    );
+    expect(result.systemPrompt).toContain(
+      "Do not guess or probe sector codes with cn_raw_vendor_history",
+    );
+    expect(result.systemPrompt).toContain(
+      "never translate it into fund flow, capital rotation, sector breadth, causal leadership, AI/theme exposure",
+    );
+    expect(result.systemPrompt).toContain(
       "the absence of a code in the original wording does not by itself require symbol search",
     );
     expect(result.systemPrompt).toContain("resolve the identity at most once");
@@ -167,21 +182,21 @@ describe("finance track status binding", () => {
       ctx,
     );
     expect(statuses.at(-1).text).toBe(
-      "US · USD · America/New_York · src:80% · feat:100% · agent:agent@example.test",
+      "US · USD · America/New_York · src:80% · feat:100%",
     );
 
     for (const [command, expected] of [
       [
         "cn-track",
-        "CN · CNY · Asia/Shanghai · src:65% · feat:100% · agent:agent@example.test",
+        "CN · CNY · Asia/Shanghai · src:65% · feat:100%",
       ],
       [
         "hk-track",
-        "HK · HKD · Asia/Hong_Kong · src:70% · feat:100% · agent:agent@example.test",
+        "HK · HKD · Asia/Hong_Kong · src:70% · feat:100%",
       ],
       [
         "us-track",
-        "US · USD · America/New_York · src:80% · feat:100% · agent:agent@example.test",
+        "US · USD · America/New_York · src:80% · feat:100%",
       ],
     ]) {
       await instance.commands.get(command).handler("", ctx);
@@ -220,7 +235,9 @@ describe("finance track status binding", () => {
     expect(result.details.track).toBe("hk");
     expect(result.details.currency).toBe("HKD");
     expect(result.details.timezone).toBe("Asia/Hong_Kong");
-    expect(result.details.agentContact).toBe("agent@example.test");
+    expect(result.details.agentContactConfigured).toBeTrue();
+    expect(result.details.agentContact).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain("agent@example.test");
     expect(result.details.trackContext.track).toBe("hk");
     expect(result.details.sourceCredibilityPercentage).toBe(70);
     expect(result.details.featureCoveragePercentage).toBe(100);
@@ -305,7 +322,7 @@ describe("finance track status binding", () => {
       ctx,
     );
     expect(statuses.at(-1).text).toBe(
-      "CN · CNY · Asia/Shanghai · src:65% · feat:100% · agent:invalid-contact",
+      "CN · CNY · Asia/Shanghai · src:65% · feat:100%",
     );
     expect(notifications.at(-1)).toEqual({
       kind: "warning",
@@ -345,7 +362,7 @@ describe("finance track status binding", () => {
     );
 
     expect(statuses.at(-1).text).toBe(
-      "CN · CNY · Asia/Shanghai · src:65% · feat:10% · agent:agent@example.test",
+      "CN · CNY · Asia/Shanghai · src:65% · feat:10%",
     );
     const result = await instance.tools.get("finance_track_status").execute(
       "status-isolated",

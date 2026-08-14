@@ -13,6 +13,7 @@ import gleam/result
 pub opaque type Runtime {
   Runtime(
     quote: bounded_runtime.Runtime,
+    cn_overview: bounded_runtime.Runtime,
     history: bounded_runtime.Runtime,
     cn_fundamentals: bounded_runtime.Runtime,
     hk_fundamentals: bounded_runtime.Runtime,
@@ -21,6 +22,7 @@ pub opaque type Runtime {
 
 pub type InitError {
   InvalidQuoteRuntime(bounded_runtime.InitError)
+  InvalidCnOverviewRuntime(bounded_runtime.InitError)
   InvalidHistoryRuntime(bounded_runtime.InitError)
   InvalidCnFundamentalsRuntime(bounded_runtime.InitError)
   InvalidHkFundamentalsRuntime(bounded_runtime.InitError)
@@ -38,6 +40,13 @@ pub fn new(_access: Access) -> Result(Runtime, InitError) {
       provider_request.quote_path,
     ))
     |> result.map_error(InvalidQuoteRuntime),
+  )
+  use cn_overview <- result.try(
+    bounded_runtime.new(policy(
+      provider_request.quote_origin,
+      provider_request.cn_overview_path,
+    ))
+    |> result.map_error(InvalidCnOverviewRuntime),
   )
   use history <- result.try(
     bounded_runtime.new(policy(
@@ -60,7 +69,7 @@ pub fn new(_access: Access) -> Result(Runtime, InitError) {
     ))
     |> result.map_error(InvalidHkFundamentalsRuntime),
   )
-  Ok(Runtime(quote, history, cn_fundamentals, hk_fundamentals))
+  Ok(Runtime(quote, cn_overview, history, cn_fundamentals, hk_fundamentals))
 }
 
 pub fn new_with(
@@ -77,6 +86,15 @@ pub fn new_with(
       clock,
     )
     |> result.map_error(InvalidQuoteRuntime),
+  )
+  use cn_overview <- result.try(
+    bounded_runtime.new_with(
+      policy(provider_request.quote_origin, provider_request.cn_overview_path),
+      sender,
+      sleeper,
+      clock,
+    )
+    |> result.map_error(InvalidCnOverviewRuntime),
   )
   use history <- result.try(
     bounded_runtime.new_with(
@@ -111,7 +129,7 @@ pub fn new_with(
     )
     |> result.map_error(InvalidHkFundamentalsRuntime),
   )
-  Ok(Runtime(quote, history, cn_fundamentals, hk_fundamentals))
+  Ok(Runtime(quote, cn_overview, history, cn_fundamentals, hk_fundamentals))
 }
 
 pub fn send(
@@ -120,14 +138,24 @@ pub fn send(
   request request_value: request.Request,
   cancellation cancellation: Cancellation,
 ) -> Promise(Result(Response, SendError)) {
-  let selected = case request.origin(request_value) {
-    origin if origin == provider_request.quote_origin -> Ok(runtime.quote)
-    origin if origin == provider_request.history_origin -> Ok(runtime.history)
-    origin if origin == provider_request.cn_fundamentals_origin ->
+  let selected = case
+    request.origin(request_value),
+    request.path(request_value)
+  {
+    origin, path
+      if origin == provider_request.quote_origin
+      && path == provider_request.quote_path
+    -> Ok(runtime.quote)
+    origin, path
+      if origin == provider_request.quote_origin
+      && path == provider_request.cn_overview_path
+    -> Ok(runtime.cn_overview)
+    origin, _ if origin == provider_request.history_origin -> Ok(runtime.history)
+    origin, _ if origin == provider_request.cn_fundamentals_origin ->
       Ok(runtime.cn_fundamentals)
-    origin if origin == provider_request.hk_fundamentals_origin ->
+    origin, _ if origin == provider_request.hk_fundamentals_origin ->
       Ok(runtime.hk_fundamentals)
-    _ -> Error(UnexpectedOrigin)
+    _, _ -> Error(UnexpectedOrigin)
   }
   case selected {
     Error(error) -> promise.resolve(Error(error))

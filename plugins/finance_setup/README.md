@@ -39,10 +39,12 @@ ambient environment variables.
 
 - `/finance-setup` uses `--finance-currency` (default `USD`) and
   `--finance-timezone` (default `UTC`).
-- `finance_capabilities` accepts optional `currency` and `timezone` overrides.
-- `finance_provider_health` accepts a provider name. OpenFIGI and SEC EDGAR have
-  reserved adapter tool contracts; unknown providers remain explicitly
-  `unknown`.
+- `finance_capabilities` accepts optional global reporting `currency` and
+  `timezone` overrides. The result labels them as reporting defaults and never
+  presents them as the active track's effective currency/timezone.
+- `finance_provider_health` accepts a provider name. Eastmoney, Tushare Pro,
+  Alpaca, OpenFIGI, and SEC EDGAR have registered adapter-surface contracts;
+  unknown providers remain explicitly `unknown`.
 
 Tool results include structured `details` with state names. `available` means a
 companion tool is installed; it never implies that credentials, connectivity,

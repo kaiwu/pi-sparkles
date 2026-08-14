@@ -14,6 +14,10 @@ The adapter is intentionally narrow:
   decimal scale, without converting through binary floating point;
 - raw, unadjusted daily bars only, with every comma-separated numeric source
   lexeme preserved;
+- an exact pinned 11-index CSI 800 level-one sector query profile that keeps
+  financials (`000974`) and real estate (`399965`) separate and excludes the
+  legacy combined `000934`; CSI remains the index/classification authority and
+  Eastmoney only the price vendor;
 - inclusive date range and maximum 1,000-bar response budget;
 - a mainland wide-row income slice retaining exact source tokens for
   `TOTAL_OPERATE_INCOME` and `PARENT_NETPROFIT`, with caller-declared

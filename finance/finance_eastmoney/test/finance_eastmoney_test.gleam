@@ -3,6 +3,7 @@ import finance_core/time
 import finance_eastmoney
 import finance_eastmoney/fundamentals
 import finance_eastmoney/history
+import finance_eastmoney/overview
 import finance_eastmoney/query
 import finance_eastmoney/quote
 import finance_eastmoney/request as provider_request
@@ -10,6 +11,7 @@ import finance_http/request
 import finance_track
 import gleam/list
 import gleam/option.{None, Some}
+import gleam/string
 import gleeunit
 import gleeunit/should
 
@@ -62,6 +64,75 @@ pub fn requests_are_caller_identified_bounded_and_unadjusted_test() {
   |> should.equal(
     "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=116.00700&klt=101&fqt=0&beg=20260801&end=20260805&lmt=10",
   )
+}
+
+pub fn cn_overview_request_and_decoder_are_bounded_exact_and_identity_checked_test() {
+  let access = access()
+  let assert Ok(plan) = query.cn_overview(finance_track.Cn)
+  let assert Ok(provider_request_value) =
+    provider_request.cn_overview(access, plan)
+  request.path(provider_request_value)
+  |> should.equal(provider_request.cn_overview_path)
+  request.maximum_response_bytes(provider_request_value)
+  |> should.equal(200_000)
+  request.query(provider_request_value)
+  |> list.contains(request.QueryParameter(
+    "secids",
+    "1.000001,0.399001,0.399006,1.000300",
+    request.Public,
+  ))
+  |> should.be_true
+
+  let assert Ok(value) = overview.decode(cn_overview_fixture(), for: plan)
+  overview.benchmarks(value) |> list.length |> should.equal(4)
+  let assert [sse, szse, chinext, csi300] = overview.benchmarks(value)
+  overview.code(sse) |> should.equal("000001")
+  overview.last(sse) |> should.equal(overview.Observed("3927.18"))
+  overview.change_percent(sse) |> should.equal(overview.Observed("0.01"))
+  overview.provider_reported_amount(sse)
+  |> should.equal(overview.Observed("990371924237.7"))
+  overview.advanced(sse) |> should.equal(overview.Observed("1012"))
+  overview.code(szse) |> should.equal("399001")
+  overview.change(szse) |> should.equal(overview.Observed("64.87"))
+  overview.code(chinext) |> should.equal("399006")
+  overview.code(csi300) |> should.equal("000300")
+
+  overview.decode(
+    string.replace(
+      cn_overview_fixture(),
+      "\"f12\":\"399006\"",
+      "\"f12\":\"399007\"",
+    ),
+    for: plan,
+  )
+  |> should.be_error
+}
+
+pub fn cn_sector_profile_separates_financials_and_real_estate_test() {
+  let indices = query.cn_sector_indices()
+  indices |> list.length |> should.equal(11)
+  let codes = indices |> list.map(query.cn_sector_code)
+  codes |> list.contains("000934") |> should.be_false
+  codes |> list.contains("000974") |> should.be_true
+  codes |> list.contains("399965") |> should.be_true
+
+  let assert [_, _, _, _, _, _, financials, real_estate, ..] = indices
+  query.cn_sector_label(financials) |> should.equal("financials")
+  query.cn_sector_market(financials) |> should.equal(query.CnSse)
+  query.cn_sector_label(real_estate) |> should.equal("real_estate")
+  query.cn_sector_market(real_estate) |> should.equal(query.CnSzse)
+
+  let assert Ok(plan) =
+    query.cn_sector_history(
+      real_estate,
+      civil(2026, 7, 1),
+      civil(2026, 8, 14),
+      64,
+    )
+  let assert Ok(request_value) = provider_request.history(access(), plan)
+  request.query(request_value)
+  |> list.contains(request.QueryParameter("secid", "0.399965", request.Public))
+  |> should.be_true
 }
 
 pub fn quote_decoder_uses_integer_scale_and_preserves_hk_precision_test() {
@@ -219,6 +290,10 @@ fn hk_quote_fixture() -> String {
 
 fn history_fixture() -> String {
   "{\"rc\":0,\"data\":{\"code\":\"600519\",\"market\":1,\"name\":\"贵州茅台\",\"decimal\":2,\"klines\":[\"2026-08-03,1350.60,1358.98,1363.35,1346.00,36147,4898665275.00,1.28,0.62,8.38,0.29\",\"2026-08-04,1350.06,1328.36,1350.94,1328.36,37450,5004070406.00,1.66,-2.25,-30.62,0.30\",\"2026-08-05,1328.36,1306.45,1333.80,1303.50,42689,5600615349.00,2.28,-1.65,-21.91,0.34\"]}}"
+}
+
+fn cn_overview_fixture() -> String {
+  "{\"rc\":0,\"data\":{\"total\":4,\"diff\":[{\"f2\":392718,\"f3\":1,\"f4\":22,\"f5\":499525613,\"f6\":990371924237.7,\"f12\":\"000001\",\"f13\":1,\"f14\":\"上证指数\",\"f15\":393264,\"f16\":390370,\"f17\":393002,\"f18\":392696,\"f104\":1012,\"f105\":1254,\"f106\":85},{\"f2\":1435431,\"f3\":45,\"f4\":6487,\"f5\":642557319,\"f6\":1152471301164.9692,\"f12\":\"399001\",\"f13\":0,\"f14\":\"深证成指\",\"f15\":1438418,\"f16\":1420399,\"f17\":1433541,\"f18\":1428944,\"f104\":1338,\"f105\":1499,\"f106\":95},{\"f2\":362630,\"f3\":112,\"f4\":4026,\"f5\":199294854,\"f6\":556471146251.9,\"f12\":\"399006\",\"f13\":0,\"f14\":\"创业板指\",\"f15\":363303,\"f16\":357861,\"f17\":361019,\"f18\":358604,\"f104\":753,\"f105\":612,\"f106\":36},{\"f2\":466588,\"f3\":4,\"f4\":193,\"f5\":178430696,\"f6\":549769606284.4,\"f12\":\"000300\",\"f13\":1,\"f14\":\"沪深300\",\"f15\":467671,\"f16\":463713,\"f17\":467298,\"f18\":466395,\"f104\":108,\"f105\":186,\"f106\":6}]}}"
 }
 
 fn cn_income_fixture() -> String {

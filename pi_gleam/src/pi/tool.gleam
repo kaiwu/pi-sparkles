@@ -165,6 +165,15 @@ pub fn is_cancelled(signal: AbortSignal) -> Bool
 @external(javascript, "./tool_ffi.mjs", "reject")
 pub fn reject(message: String) -> Promise(value)
 
+/// Reject with a stable machine-readable code and safe structured context.
+/// Pi versions that only render `Error.message` still retain the code prefix.
+@external(javascript, "./tool_ffi.mjs", "reject_typed")
+pub fn reject_typed(
+  code: String,
+  message: String,
+  details: Json,
+) -> Promise(value)
+
 fn execution_mode_name(mode: ExecutionMode) -> String {
   case mode {
     DefaultExecution -> ""

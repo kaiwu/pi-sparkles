@@ -12,7 +12,9 @@ retain the provider's integer scale. History is daily, raw, and unadjusted
 
 History results put every bounded daily row in model-visible CSV content while
 keeping the default Pi display to one summary line. Expanding the tool result
-shows the CSV; structured provider evidence remains in `details`.
+shows the CSV; structured provider evidence remains in `details`. Model-visible
+content states evidence boundaries without directing model behavior, and each
+receipt digest appears once.
 
 Results visibly report Eastmoney as vendor origin, direct route, provider and
 retrieval timestamps, local-analysis entitlement, unknown latency/service

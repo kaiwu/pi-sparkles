@@ -115,7 +115,10 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       "cn_raw_vendor_quote",
     ]);
     expect(tools.get("cn_raw_vendor_history").description).toContain(
-      "do not call cn_stock_symbol_search, Tushare, or any CNINFO tool first",
+      "reviewed CSI sector index",
+    );
+    expect(tools.get("cn_raw_vendor_quote").description).toContain(
+      "reviewed benchmark and sector indices are rejected locally",
     );
 
     const quote = await execute(tools.get("cn_raw_vendor_quote"), {
@@ -123,6 +126,7 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       code: "920079",
     });
     expect(quote.details.track).toBe("cn");
+    expect(quote.details.instrumentKind).toBe("listed_security");
     expect(quote.details.trackContext.venueMic).toBe("XBSE");
     expect(quote.details.market).toBe("cn_bse");
     expect(quote.details.last).toBe("15.16");
@@ -140,6 +144,7 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       limit: 10,
     });
     expect(history.details.track).toBe("cn");
+    expect(history.details.instrumentKind).toBe("listed_security");
     expect(history.details.adjustment).toBe("raw_unadjusted_fqt_0");
     expect(history.details.bars[0].amount).toBe("1350000.00");
     expect(history.details.bars[1].close).toBe("15.16");
@@ -157,14 +162,10 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       "Complete bounded daily rows follow as CSV",
     );
     expect(history.content[0].text).toContain(
-      "Do not request TUSHARE_TOKEN or CNINFO for this returned series",
+      "do not establish intraday ordering, market breadth, fund flow, or sector rotation",
     );
-    expect(history.content[0].text).toContain(
-      "call the installed Pi tools sma, rsi, and atr",
-    );
-    expect(history.content[0].text).toContain(
-      "do not write or execute a program",
-    );
+    expect(history.content[0].text).not.toContain("call the installed Pi tools");
+    expect(history.content[0].text).not.toContain("TUSHARE_TOKEN");
     expect(history.content[0].text).toContain(
       `sourceReference=${history.details.sourceReference}`,
     );
@@ -205,6 +206,98 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
     expect(requests[0].headers.get("user-agent")).toContain(
       "market-data@example.test",
     );
+  });
+
+  test("rejects mismatched reviewed benchmark and sector identities before accidental I/O", async () => {
+    const tools = await harness("cn");
+    expect(requests).toHaveLength(0);
+
+    try {
+      await execute(tools.get("cn_raw_vendor_quote"), {
+        venue: "sse",
+        code: "000001",
+      });
+      throw new Error("expected quote rejection");
+    } catch (error) {
+      expect(error.code).toBe("unsupported_instrument_kind");
+      expect(error.details).toMatchObject({
+        track: "cn",
+        instrumentCode: "000001",
+        instrumentKind: "benchmark_index",
+        recommendedTool: "cn_market_overview",
+      });
+    }
+    expect(requests).toHaveLength(0);
+
+    await expect(
+      execute(tools.get("cn_raw_vendor_history"), {
+        venue: "szse",
+        code: "399001",
+        startDate: "2026-08-01",
+        endDate: "2026-08-05",
+        limit: 10,
+      }),
+    ).rejects.toMatchObject({ code: "instrument_kind_mismatch" });
+    expect(requests).toHaveLength(0);
+
+    const history = await execute(tools.get("cn_raw_vendor_history"), {
+      venue: "szse",
+      code: "399001",
+      instrumentKind: "benchmark_index",
+      startDate: "2026-08-01",
+      endDate: "2026-08-05",
+      limit: 10,
+    });
+    expect(history.details.instrumentKind).toBe("benchmark_index");
+    expect(requests).toHaveLength(1);
+
+    await expect(
+      execute(tools.get("cn_raw_vendor_quote"), {
+        venue: "sse",
+        code: "000928",
+      }),
+    ).rejects.toMatchObject({
+      code: "unsupported_instrument_kind",
+      details: {
+        instrumentKind: "sector_index",
+        recommendedTool: "cn_sector_trends",
+      },
+    });
+    await expect(
+      execute(tools.get("cn_raw_vendor_history"), {
+        venue: "sse",
+        code: "000928",
+        startDate: "2026-08-01",
+        endDate: "2026-08-05",
+      }),
+    ).rejects.toMatchObject({
+      code: "instrument_kind_mismatch",
+      details: {
+        instrumentKind: "sector_index",
+        recommendedTool: "cn_sector_trends",
+      },
+    });
+    await expect(
+      execute(tools.get("cn_raw_vendor_history"), {
+        venue: "sse",
+        code: "801780",
+        instrumentKind: "sector_index",
+        startDate: "2026-08-01",
+        endDate: "2026-08-05",
+      }),
+    ).rejects.toMatchObject({ code: "unsupported_sector_identity" });
+    expect(requests).toHaveLength(1);
+
+    const sector = await execute(tools.get("cn_raw_vendor_history"), {
+      venue: "sse",
+      code: "000928",
+      instrumentKind: "sector_index",
+      startDate: "2026-08-01",
+      endDate: "2026-08-05",
+      limit: 10,
+    });
+    expect(sector.details.instrumentKind).toBe("sector_index");
+    expect(requests).toHaveLength(2);
   });
 
   test("HK never assumes currency and retains its five-digit market ID", async () => {
@@ -250,11 +343,9 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       "Complete bounded daily rows follow as CSV",
     );
     expect(history.content[0].text).toContain(
-      "call the installed Pi tools sma, rsi, and atr",
+      "do not establish intraday ordering, market breadth, fund flow, or sector rotation",
     );
-    expect(history.content[0].text).toContain(
-      "do not write or execute a program",
-    );
+    expect(history.content[0].text).not.toContain("call the installed Pi tools");
     expect(history.content[0].text).toContain(
       "2026-08-04,14.91,15.31,14.80,15.16,100327,1516000.00",
     );

@@ -6,7 +6,7 @@ statusline and explicit switching among exactly `cn`, `hk`, and `us`.
 The TUI statusline renders:
 
 ```text
-CN · CNY · Asia/Shanghai · src:65% · feat:100% · agent:research@example.test
+CN · CNY · Asia/Shanghai · src:65% · feat:100%
 ```
 
 `src` and `feat` are deliberately separate:
@@ -53,13 +53,20 @@ between market plugins.
 
 - `--finance-track=cn|hk|us` selects the initial track; invalid values fail safe
   to `us`.
-- `AGENT_CONTACT=<label>` supplies the one shared non-secret operator identity
-  used by the status line and all provider adapters; it defaults visibly to
-  `unconfigured`.
+- `AGENT_CONTACT=<label>` supplies the shared operator identity used by provider
+  adapters. Status tools report only whether it is validly configured and never
+  expose the value to the model or session log.
 - `/finance-track` shows status; `/finance-track cn` switches strictly.
 - `/cn-track`, `/hk-track`, and `/us-track` are explicit shortcuts.
 - `finance_track_status` gives headless agents the same structured state.
 - `finance_track_switch` performs a typed sequential switch.
+
+The pre-agent routing policy sends today's broad Shanghai/Shenzhen overview to
+`cn_market_overview` once and broad CN industry/板块 trend requests to
+`cn_sector_trends` once. It forbids benchmark/sector code probing and duplicate
+short/long history windows, and keeps price-relative sector comparisons
+separate from unavailable fund-flow, constituent-breadth, causal-rotation,
+theme, stabilization, top, and reversal claims.
 
 Track choices persist as extension-owned custom entries on the active session
 branch. Resumed/forked branches restore their own latest choice; a new session
@@ -68,7 +75,7 @@ change emits `pi-sparkles.finance.track.changed` with only the strict track ID
 so sibling plugins can refresh without sharing a mutable store.
 
 The status tool returns the standard top-level `track` and versioned
-`trackContext` plus currency, timezone, agent contact, configuration validity,
+`trackContext` plus effective currency/timezone, contact-configuration validity,
 and persistence scope. It also returns `sourceCredibility` and
 `featureCoverage` receipts plus their display percentages. Headless mode has no
 UI statusline but remains fully operable through tools.

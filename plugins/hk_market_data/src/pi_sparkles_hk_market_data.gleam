@@ -389,7 +389,7 @@ fn history_model_content(
   let #(source_reference, receipt_digest, rows) =
     history_handoff(input, value, retrieved_at)
   summary
-  <> "\nComplete bounded daily rows follow as CSV. For requested indicators, call the installed Pi tools sma, rsi, and atr with these exact rows; do not write or execute a program and do not calculate the indicators yourself. Map close to sma/rsi observations and high,low,close to atr bars.\n"
+  <> "\nComplete bounded daily rows follow as CSV. These daily bars do not establish intraday ordering, market breadth, fund flow, or sector rotation.\n"
   <> "track=hk;provider=eastmoney;venue=XHKG;code="
   <> history.code(value)
   <> ";currency="
@@ -399,8 +399,6 @@ fn history_model_content(
   <> ";sourceReference="
   <> source_reference
   <> ";acquisitionReceiptCanonicalSha256="
-  <> receipt_digest
-  <> ";acquisitionReceipt="
   <> receipt_digest
   <> "\ndate,open,high,low,close,volume,amount\n"
   <> rows
