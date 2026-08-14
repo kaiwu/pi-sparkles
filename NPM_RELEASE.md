@@ -6,7 +6,8 @@ and `aggregate-lock.json`.
 
 ## Build and inspect
 
-T6 is the next-release default. Select T5 explicitly for the prior release:
+T6 is the development default. Select T5 explicitly to reproduce the published
+0.1.3 release:
 
 ```sh
 bun run npm:pack
@@ -43,11 +44,12 @@ next published product will be the single T6 entrypoint containing its exact
 complete proposal inventory. While T6 is blocked, the release gate refuses it;
 the default pack command remains useful only for a private local preview.
 
-The current T5 selection passes the publish gate. Version 0.1.3's current T6
-selection is useful as a local npm-format preview, but remains `private: true`
-and the publish dry-run gate rejects it. When T6 has no omissions, partials, or
-blockers and the ledger marks it ProductUseful, the same T6 command becomes
-releasable.
+The T5 selection is published as version 0.1.3. The current T6 selection is
+useful as a local npm-format preview, but remains `private: true` and the publish
+dry-run gate rejects it. Because npm versions are immutable, this local T6
+artifact cannot reuse the published 0.1.3 version: after T6 has no omissions,
+partials, or blockers and the ledger marks it ProductUseful, bump the root
+version before building its releasable tarball.
 
 ## Local consumer verification
 
@@ -84,7 +86,7 @@ because a trusted-publisher relationship cannot be attached until the package
 exists. The explicit command is:
 
 ```sh
-npm publish ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.3.tgz --access public
+npm publish ./dist/npm/t6/pi-sparkles-pi-sparkles-<next-version>.tgz --access public
 ```
 
 Publishing changes external state and is never performed by builds, tests, or

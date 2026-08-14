@@ -7,6 +7,8 @@ inventory, maturity, and content hashes remain authoritative in each tarball's
 
 ## 0.1.3 - 2026-08-14
 
+- Publish the complete 124-plugin ProductUseful T1-through-T5 aggregate under
+  the stable `@pi-sparkles/pi-sparkles` package identity.
 - Replace the npm README's internal tier terminology with a user-facing
   introduction, supported market coverage, primary data sources, example
   questions, minimal environment setup, optional provider credentials, track
@@ -15,7 +17,7 @@ inventory, maturity, and content hashes remain authoritative in each tarball's
   retaining an explicit T5 build for the published 0.1.2 product boundary.
 - Record omitted proposals, partial implementations, open blockers, maturity,
   and publish eligibility directly in generated aggregate and npm manifests.
-- Prepare a private 0.1.3 T6 preview containing the exact present plugin
+- Prepare a private same-source T6 preview containing the exact present plugin
   inventory, while preserving the publish refusal until T6 is complete and
   ProductUseful.
 - Add private transaction-tape and bounded-stream laws, local possible-fill
