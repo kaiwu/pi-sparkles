@@ -31,6 +31,10 @@ pub opaque type CnOverviewQuery {
   CnOverviewQuery
 }
 
+pub opaque type CnMoversQuery {
+  CnMoversQuery(limit: Int)
+}
+
 pub opaque type CnSectorIndex {
   CnSectorIndex(
     market: Market,
@@ -67,6 +71,36 @@ pub fn cn_overview(
 
 pub fn cn_overview_secids(_query: CnOverviewQuery) -> String {
   "1.000001,0.399001,0.399006,1.000300"
+}
+
+pub fn cn_movers(
+  track track: finance_track.Track,
+  limit limit: Int,
+) -> Result(CnMoversQuery, QueryError) {
+  case track, limit >= 1 && limit <= 50 {
+    finance_track.Cn, True -> Ok(CnMoversQuery(limit))
+    finance_track.Cn, False -> Error(InvalidLimit)
+    _, _ -> Error(TrackMarketMismatch)
+  }
+}
+
+pub fn cn_movers_limit(query: CnMoversQuery) -> Int {
+  query.limit
+}
+
+pub fn cn_movers_provider_filter(_query: CnMoversQuery) -> String {
+  "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048"
+}
+
+pub fn cn_movers_profile_id(_query: CnMoversQuery) -> String {
+  "eastmoney_cn_a_share_listing_categories_v1"
+}
+
+pub fn cn_movers_source_reference(query: CnMoversQuery) -> String {
+  "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz="
+  <> int.to_string(query.limit)
+  <> "&po=1&np=1&fltt=2&invt=2&fid=f3&fs="
+  <> cn_movers_provider_filter(query)
 }
 
 /// The pinned CSI 800 level-one industry profile used by the CN sector tool.

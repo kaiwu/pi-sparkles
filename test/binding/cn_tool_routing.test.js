@@ -21,12 +21,21 @@ describe("CN pre-invocation tool routing", () => {
     const tools = await toolsFor("cn_stock_symbols");
     const search = tools.get("cn_stock_symbol_search");
 
-    expect(search.description).toContain("identity is unresolved or ambiguous");
     expect(search.description).toContain(
-      "Do not call this for a caller-supplied exact venue and code",
+      "Exact-code mode requires a caller-proven sse, szse, or bse venue",
+    );
+    expect(search.description).toContain("TUSHARE_TOKEN");
+    expect(search.promptSnippet).toContain(
+      "Do not fan this single-query network tool across a result list",
     );
     expect(search.promptSnippet).toContain(
-      "Known exact venue-plus-code market-data requests bypass this tool",
+      "switch from code mode to name mode as a workaround",
+    );
+    expect(search.parameters.properties.queryKind.description).toContain(
+      "code requires an explicit venue",
+    );
+    expect(search.parameters.properties.venue.description).toContain(
+      "Required when queryKind is code",
     );
   });
 

@@ -1,7 +1,7 @@
 name = "pi_sparkles_cn_market_snapshot"
 version = "0.1.0"
 target = "javascript"
-description = "Exact CN market snapshot calculations for Pi"
+description = "Exact CN market snapshots and receipt-bound sector-series acquisition for Pi"
 licences = ["Apache-2.0"]
 gleam = ">= 1.18.0"
 

@@ -271,8 +271,7 @@ pub fn error_message(value: Error) -> String {
     InvalidRange -> "startDate must not follow endDate"
     InvalidLimit -> "maximumRows must be between 1 and 1000"
     InvalidProviderQuery -> "provider query is invalid"
-    InvalidTable(error) ->
-      "Tushare earnings response is invalid: " <> string.inspect(error)
+    InvalidTable(error) -> table.error_message(error)
     InvalidRow(index) ->
       "Tushare earnings row is invalid at index " <> int.to_string(index)
     IdentityMismatch ->

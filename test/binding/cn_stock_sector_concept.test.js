@@ -68,6 +68,14 @@ describe("CAPCO CN industry-classification boundary", () => {
   test("registers only the read-only cn_industry_classification tool", async () => {
     const tools = await harness();
     expect([...tools.keys()]).toEqual(["cn_industry_classification"]);
+    const tool = tools.get("cn_industry_classification");
+    expect(tool.description).toContain(
+      "One call downloads and parses the complete bounded PDF for one code",
+    );
+    expect(tool.promptSnippet).toContain(
+      "not as automatic per-row enrichment",
+    );
+    expect(tool.promptSnippet).toContain("Do not fan out parallel calls");
   });
 
   test("requests only the reviewed immutable CAPCO PDF", async () => {

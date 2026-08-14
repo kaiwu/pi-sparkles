@@ -60,6 +60,51 @@ function historyFixture(code) {
   };
 }
 
+function moversFixture() {
+  return {
+    rc: 0,
+    data: {
+      total: 3,
+      diff: [
+        {
+          f2: 18.21,
+          f3: 19.9876,
+          f4: 3.03,
+          f5: 100001,
+          f6: 1821000.25,
+          f8: 6.5,
+          f12: "688001",
+          f13: 1,
+          f14: "测试甲",
+          f15: 18.21,
+          f16: 15.01,
+          f17: 15.18,
+          f18: 15.18,
+          f20: 1821000000,
+          f21: 910500000,
+        },
+        {
+          f2: 12.34,
+          f3: 10.001,
+          f4: 1.12,
+          f5: 200002,
+          f6: 2468000,
+          f8: 3.25,
+          f12: "300001",
+          f13: 0,
+          f14: "测试乙",
+          f15: 12.5,
+          f16: 11.2,
+          f17: 11.3,
+          f18: 11.22,
+          f20: 1234000000,
+          f21: 617000000,
+        },
+      ],
+    },
+  };
+}
+
 beforeEach(() => {
   requests.length = 0;
   process.env.AGENT_CONTACT = "market-data@example.test";
@@ -67,10 +112,12 @@ beforeEach(() => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
     requests.push({ url, headers });
-    const code = url.searchParams.get("secid").split(".").at(-1);
-    const body = url.pathname.endsWith("/stock/get")
-      ? quoteFixture(code)
-      : historyFixture(code);
+    const code = url.searchParams.get("secid")?.split(".").at(-1);
+    const body = url.pathname.endsWith("/clist/get")
+      ? moversFixture()
+      : url.pathname.endsWith("/stock/get")
+        ? quoteFixture(code)
+        : historyFixture(code);
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: { "content-type": "application/json" },
@@ -111,6 +158,7 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
   test("CN preserves explicit BSE identity, source scaling, and raw bars", async () => {
     const tools = await harness("cn");
     expect([...tools.keys()].sort()).toEqual([
+      "cn_market_movers",
       "cn_raw_vendor_history",
       "cn_raw_vendor_quote",
     ]);
@@ -208,6 +256,95 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
     );
   });
 
+  test("CN movers preserves one provider-ranked page without turning it into analysis", async () => {
+    const tools = await harness("cn");
+    const result = await execute(tools.get("cn_market_movers"), { limit: 2 });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url.pathname).toBe("/api/qt/clist/get");
+    expect(requests[0].url.searchParams.get("fid")).toBe("f3");
+    expect(requests[0].url.searchParams.get("po")).toBe("1");
+    expect(requests[0].url.searchParams.get("pz")).toBe("2");
+    expect(result.details).toMatchObject({
+      track: "cn",
+      provider: "eastmoney",
+      requestedLimit: 2,
+      providerReportedTotal: 3,
+      returnedRows: 2,
+      providerOrder: {
+        preserved: true,
+        validatedNonIncreasing: true,
+        pluginCreatedRanking: false,
+      },
+      acquisitionReceipt: {
+        logicalProviderRequestCount: 1,
+        transportAttemptCount: 1,
+        retryAllowed: false,
+      },
+      identityResolutionPerformed: false,
+      securityKindVerified: false,
+      calculationPerformed: false,
+      recommendationPerformed: false,
+      numericInterpretation: {
+        rawProviderLexemesOnly: true,
+        currency: "unknown",
+        amountUnit: "unknown",
+        volumeUnit: "unknown",
+        marketCapitalizationUnit: "unknown",
+        scale: "unknown",
+        priceCurrencyLabelAllowed: false,
+        lastIsOfficialClose: false,
+        marketSessionState: "unknown",
+        amountAndCapitalizationConversionAllowed: false,
+        priceLimitInferenceAllowed: false,
+      },
+      trackApplicabilityReview: {
+        cn: "supported_by_this_exact_adapter",
+        hk: { status: "track_partial" },
+        us: { status: "track_partial" },
+      },
+    });
+    expect(result.details.rows).toHaveLength(2);
+    expect(tools.get("cn_market_movers").promptSnippet).toContain(
+      "do not automatically fan out per-row enrichment",
+    );
+    expect(tools.get("cn_market_movers").promptSnippet).toContain(
+      "convert unresolved amount or capitalization fields",
+    );
+    expect(tools.get("cn_market_movers").promptSnippet).toContain(
+      "append CNY/RMB/yuan to price-like fields",
+    );
+    expect(tools.get("cn_market_movers").promptSnippet).toContain(
+      "provider-filtered CN listing-category rows, not verified A-share instruments",
+    );
+    expect(tools.get("cn_market_movers").promptSnippet).toContain(
+      "latest lexeme as an official close",
+    );
+    expect(result.details.rows[0]).toMatchObject({
+      providerPosition: 1,
+      code: "688001",
+      changePercent: {
+        state: "observed_provider_lexeme",
+        raw: "19.9876",
+      },
+    });
+    expect(result.content[0].text).toContain("MODEL_DATA");
+    expect(result.content[0].text).toContain("completeness");
+  });
+
+  test("CN movers does not retry a failed provider page", async () => {
+    globalThis.fetch = async (input, init) => {
+      requests.push({ url: new URL(String(input)), headers: new Headers(init?.headers) });
+      return new Response("provider unavailable", { status: 503 });
+    };
+    const tools = await harness("cn");
+
+    await expect(
+      execute(tools.get("cn_market_movers"), { limit: 10 }),
+    ).rejects.toThrow("without retry");
+    expect(requests).toHaveLength(1);
+  });
+
   test("rejects mismatched reviewed benchmark and sector identities before accidental I/O", async () => {
     const tools = await harness("cn");
     expect(requests).toHaveLength(0);
@@ -260,7 +397,7 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       code: "unsupported_instrument_kind",
       details: {
         instrumentKind: "sector_index",
-        recommendedTool: "cn_sector_trends",
+        recommendedTool: "cn_sector_series",
       },
     });
     await expect(
@@ -274,7 +411,7 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       code: "instrument_kind_mismatch",
       details: {
         instrumentKind: "sector_index",
-        recommendedTool: "cn_sector_trends",
+        recommendedTool: "cn_sector_series",
       },
     });
     await expect(

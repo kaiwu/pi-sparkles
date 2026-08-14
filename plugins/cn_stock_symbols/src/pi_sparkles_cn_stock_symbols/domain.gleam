@@ -257,8 +257,7 @@ pub fn error_message(value: Error) -> String {
     ExactCodeRequiresVenue -> "exact code search requires an explicit venue"
     InvalidIdentityEvidenceId -> "identityEvidenceId is invalid"
     InvalidProviderQuery -> "provider query is invalid"
-    InvalidAliasTable(error) ->
-      "Tushare name history response is invalid: " <> string.inspect(error)
+    InvalidAliasTable(error) -> table.error_message(error)
     InvalidAliasRow(index) ->
       "Tushare name history row is invalid at index " <> int.to_string(index)
     IdentityMismatch ->
@@ -362,6 +361,14 @@ fn source_json(
       json.string("sha256_content_bound_not_provider_authenticated"),
     ),
     #("entitlement", json.string("caller_provider_account_permission_required")),
+    #("serviceLevel", json.string("unknown_no_provider_sla_claim")),
+    #(
+      "completeness",
+      json.string(
+        "subject_to_provider_filter_account_permission_and_row_budget",
+      ),
+    ),
+    #("redistribution", json.string("provider_controlled_unknown")),
   ])
 }
 

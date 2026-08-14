@@ -344,12 +344,12 @@ publishing:
 bun run npm:release:verify
 ```
 
-This release gate targets T6 and refuses to proceed while it is a blocked
-preview. After promotion it builds and tests the one all-in-one npm product;
-its clean install asks plain Pi to load the single aggregate `index.js`, which
-initializes the exact T1-through-T6 proposal inventory and fails on any
-duplicate named registration. It intentionally does not run the per-plugin
-Pi-load matrix.
+While T6 is blocked, this release gate targets the complete ProductUseful T5
+aggregate. After T6 promotion the gate can move to that inventory. In either
+case it builds and tests one all-in-one npm product; its clean install asks plain
+Pi to load the single aggregate `index.js`, which initializes the exact selected
+proposal inventory and fails on any duplicate named registration. It
+intentionally does not run the per-plugin Pi-load matrix.
 
 See [NPM_RELEASE.md](NPM_RELEASE.md) for clean-install testing, versioning, the
 first publication, and the manual tag-bound trusted-publisher workflow.

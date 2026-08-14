@@ -5,6 +5,10 @@ const artifact = resolve(
   import.meta.dir,
   "../../dist/cn_market_snapshot/index.js",
 );
+const technicalsArtifact = resolve(
+  import.meta.dir,
+  "../../dist/stock_technicals/index.js",
+);
 
 const originalFetch = globalThis.fetch;
 const requests = [];
@@ -62,6 +66,20 @@ async function harness() {
   return tools;
 }
 
+async function technicalsHarness() {
+  const tools = new Map();
+  const api = {
+    registerTool(definition) {
+      tools.set(definition.name, definition);
+    },
+  };
+  const module = await import(
+    `${technicalsArtifact}?sector-comparison=${Date.now()}-${Math.random()}`
+  );
+  await module.default(api);
+  return tools;
+}
+
 async function execute(tool, input = {}) {
   return tool.execute(
     "cn-market-overview",
@@ -78,7 +96,7 @@ describe("acquisition-backed CN market overview", () => {
     expect([...tools.keys()].sort()).toEqual([
       "cn_market_overview",
       "cn_market_snapshot",
-      "cn_sector_trends",
+      "cn_sector_series",
     ]);
 
     const result = await execute(tools.get("cn_market_overview"));
@@ -134,10 +152,10 @@ describe("acquisition-backed CN market overview", () => {
   });
 
   test(
-    "uses one Pi call for the exact eleven-sector profile and returns mechanical price comparisons",
+    "composes one exact sector acquisition handoff with the separate return calculator",
     async () => {
       const tools = await harness();
-      const result = await execute(tools.get("cn_sector_trends"), {
+      const acquisition = await execute(tools.get("cn_sector_series"), {
         startDate: "2026-08-07",
         endDate: "2026-08-14",
       });
@@ -160,7 +178,7 @@ describe("acquisition-backed CN market overview", () => {
         "1.000937",
       ]);
       expect(secids).not.toContain("1.000934");
-      expect(result.details).toMatchObject({
+      expect(acquisition.details).toMatchObject({
         track: "cn",
         provider: "eastmoney",
         classificationAuthority: "CSI",
@@ -168,35 +186,69 @@ describe("acquisition-backed CN market overview", () => {
         legacyCombinedFinancialRealEstateIndexIncluded: false,
         firstObservedDate: "2026-08-07",
         latestObservedDate: "2026-08-14",
-        fundFlow: { state: "unavailable" },
-        constituentBreadth: { state: "unavailable" },
-        causalRotation: { state: "unavailable" },
-        themeExposure: { state: "unavailable" },
         acquisitionReceipt: { providerRequestCount: 11 },
+        calculationPerformed: false,
+        rankingPerformed: false,
       });
-      expect(result.details.sectors).toHaveLength(11);
-      expect(result.details.sectors).toContainEqual(
+      expect(acquisition.details.comparisonInput.series).toHaveLength(11);
+      expect(acquisition.details.comparisonInput.series).toContainEqual(
         expect.objectContaining({
-          sectorCode: "000974",
-          sectorLabel: "financials",
-          instrumentKind: "sector_index",
+          seriesId: "000974",
+          label: "financials",
+          unit: "index_points",
+        }),
+      );
+      expect(acquisition.details.comparisonInput.series).toContainEqual(
+        expect.objectContaining({
+          seriesId: "399965",
+          label: "real_estate",
+        }),
+      );
+      expect(acquisition.details.expectedInputSha256).toMatch(
+        /^[0-9a-f]{64}$/,
+      );
+      expect(acquisition.content[0].text).toContain("COMPARISON_INPUT");
+      expect(acquisition.content[0].text).not.toContain(
+        "latestSessionReturnPercent",
+      );
+
+      const calculationTools = await technicalsHarness();
+      const comparison = await execute(
+        calculationTools.get("compare_series_returns"),
+        {
+          comparisonInput: acquisition.details.comparisonInput,
+          expectedInputSha256: acquisition.details.expectedInputSha256,
+        },
+      );
+      expect(requests).toHaveLength(11);
+      expect(comparison.details).toMatchObject({
+        track: "cn",
+        sourceProfile: acquisition.details.profileId,
+        networkRequests: 0,
+        providerOrUniverseSelectedByCalculator: false,
+        decisionOwner: "llm",
+        pluginDecisionFields: [],
+        inputReceipt: { matched: true },
+      });
+      expect(comparison.details.series).toHaveLength(11);
+      expect(comparison.details.series).toContainEqual(
+        expect.objectContaining({
+          seriesId: "000974",
           latestSessionReturnPercent: "5.77",
           fiveSessionReturnPercent: "10",
           windowReturnPercent: "10",
         }),
       );
-      expect(result.details.sectors).toContainEqual(
-        expect.objectContaining({
-          sectorCode: "399965",
-          sectorLabel: "real_estate",
-          providerMarket: "cn_szse",
+      expect(comparison.content[0].text).toContain("MODEL_DATA");
+      expect(comparison.content[0].text).not.toContain("资金回流");
+
+      await expect(
+        execute(calculationTools.get("compare_series_returns"), {
+          comparisonInput: acquisition.details.comparisonInput,
+          expectedInputSha256: "0".repeat(64),
         }),
-      );
-      expect(result.content[0].text).toContain(
-        "do not establish fund flow, constituent breadth, causal rotation",
-      );
-      expect(result.content[0].text).not.toContain("AI");
-      expect(result.content[0].text).not.toContain("资金回流");
+      ).rejects.toThrow("input receipt mismatch");
+      expect(requests).toHaveLength(11);
     },
     20_000,
   );

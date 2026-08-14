@@ -1,7 +1,7 @@
 name = "pi_sparkles_cn_market_data"
 version = "0.1.0"
 target = "javascript"
-description = "Track-isolated Eastmoney mainland quote and raw daily-history tools for Pi"
+description = "Track-isolated Eastmoney mainland movers, quote, and raw daily-history tools for Pi"
 
 licences = ["Apache-2.0"]
 gleam = ">= 1.18.0"

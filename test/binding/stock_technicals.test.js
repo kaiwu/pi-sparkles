@@ -164,7 +164,12 @@ async function execute(tool, input) {
 describe("stock technicals bundled boundary", () => {
   test("supports compact then intermediate evidence queries without making a decision", async () => {
     const tools = await harness();
-    expect([...tools.keys()]).toEqual(["sma", "rsi", "atr"]);
+    expect([...tools.keys()]).toEqual([
+      "sma",
+      "rsi",
+      "atr",
+      "compare_series_returns",
+    ]);
     for (const name of ["sma", "rsi", "atr"]) {
       expect(tools.get(name).description).toContain(
         "instead of writing or executing calculation code",

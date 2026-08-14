@@ -1,4 +1,5 @@
 import finance_tushare/response.{type Cell}
+import gleam/int
 import gleam/list
 
 pub opaque type Table {
@@ -45,6 +46,26 @@ pub fn fields(value: Table) -> List(String) {
 
 pub fn rows(value: Table) -> List(List(Cell)) {
   value.rows
+}
+
+pub fn error_message(value: DecodeError) -> String {
+  case value {
+    InvalidPayload(error) -> response.error_message(error)
+    UnexpectedFields ->
+      "Tushare response fields did not match the requested documented schema"
+    TooManyRows(limit, received) ->
+      "Tushare response row count "
+      <> int.to_string(received)
+      <> " exceeded the caller budget "
+      <> int.to_string(limit)
+    InvalidRowWidth(index, expected, received) ->
+      "Tushare response row "
+      <> int.to_string(index)
+      <> " had "
+      <> int.to_string(received)
+      <> " cells; expected "
+      <> int.to_string(expected)
+  }
 }
 
 fn validate_widths(

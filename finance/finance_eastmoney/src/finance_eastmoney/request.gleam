@@ -18,6 +18,8 @@ pub const quote_path = "/api/qt/stock/get"
 
 pub const cn_overview_path = "/api/qt/ulist.np/get"
 
+pub const cn_movers_path = "/api/qt/clist/get"
+
 pub const history_path = "/api/qt/stock/kline/get"
 
 pub const cn_fundamentals_path = "/api/data/v1/get"
@@ -68,6 +70,35 @@ pub fn cn_overview(
     value,
     "fields",
     "f2,f3,f4,f5,f6,f12,f13,f14,f15,f16,f17,f18,f104,f105,f106",
+  ))
+  finance_eastmoney.authorize(access, value) |> result.map_error(InvalidAccess)
+}
+
+pub fn cn_movers(
+  access: Access,
+  plan: market_query.CnMoversQuery,
+) -> Result(request.Request, RequestError) {
+  use base <- result.try(base_request(quote_origin, cn_movers_path, 250_000))
+  use value <- result.try(public_query(base, "pn", "1"))
+  use value <- result.try(public_query(
+    value,
+    "pz",
+    int.to_string(market_query.cn_movers_limit(plan)),
+  ))
+  use value <- result.try(public_query(value, "po", "1"))
+  use value <- result.try(public_query(value, "np", "1"))
+  use value <- result.try(public_query(value, "fltt", "2"))
+  use value <- result.try(public_query(value, "invt", "2"))
+  use value <- result.try(public_query(value, "fid", "f3"))
+  use value <- result.try(public_query(
+    value,
+    "fs",
+    market_query.cn_movers_provider_filter(plan),
+  ))
+  use value <- result.try(public_query(
+    value,
+    "fields",
+    "f2,f3,f4,f5,f6,f8,f12,f13,f14,f15,f16,f17,f18,f20,f21",
   ))
   finance_eastmoney.authorize(access, value) |> result.map_error(InvalidAccess)
 }

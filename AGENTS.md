@@ -136,6 +136,51 @@ effects. Pass clocks, transport, storage, randomness, and entitlements as
 explicit capabilities. Keep unavoidable mutable cells generic and put no
 business logic in JavaScript.
 
+Build user workflows by composing orthogonal plugin/tool responsibilities, not
+by adding query-shaped monopoly tools. Provider acquisition copies one exact,
+bounded source surface and returns typed Pi-visible facts and receipts;
+identity/normalization validates those facts; reusable calculation tools
+consume explicit facts or receipt-bound inputs without network access; and the
+LLM/workflow layer combines their results and owns interpretation. No single
+tool may silently choose a provider or universe, discover/fetch inputs,
+normalize identities, calculate/rank, and issue a judgment merely because one
+prompt mentions all of those steps. Reuse an existing acquisition, identity,
+calendar, rules, series, indicator, screener, or receipt surface instead of
+duplicating its work inside a convenience endpoint.
+
+Bounded batch acquisition is permitted only as transport optimization for one
+homogeneous, explicitly scoped source operation. It must expose the exact
+request count, identities, provider order, per-item failures/omissions, limits,
+and receipts, and it must not absorb downstream calculations or interpretation.
+A workflow composes only the evidence needed by the user's requested analysis;
+it must not fan a single-item network tool across every row merely because more
+enrichment is possible. Check each downstream tool's identity, credential,
+entitlement, and input preconditions before calling it. If they are absent,
+retain the fact as unknown. A failed optional enrichment is terminal for that
+enrichment unless the user requested a distinct fallback path; do not cascade
+through alternate tools, query modes, providers, or tracks to manufacture the
+missing fact. Prefer one reviewed homogeneous batch adapter when repeated
+source acquisition is genuinely required, but do not invent a batch by issuing
+unbounded parallel single-item calls.
+A provider-ranked page may preserve the provider's order as an observed fact;
+it is not a plugin-owned score, recommendation, or proof of complete-market
+ranking. Cross-tool handoffs use explicit typed values or content-bound
+Pi-visible receipts rather than ambient mutable state, plugin-to-plugin source
+imports, model-reconstructed hidden context, or an opaque aggregate result.
+Role acceptance should exercise the composed handoff and its failure cases;
+one successful all-in-one tool call is not evidence that the underlying
+capabilities remain reusable or independently trustworthy.
+
+Whenever one track gains or changes a capability, review `cn`, `hk`, and `us`
+before closing the batch. Put genuinely shared laws and calculations in one
+provider-neutral implementation, then add only the track-owned adapters whose
+market semantics and provider contracts are actually proved. For every other
+track, either reuse the shared contract through an exact adapter or record an
+explicit unsupported or `track_partial` result with the missing evidence; do
+not leave track applicability implicit, copy market-specific assumptions, or
+infer that the changed track proves another. This applicability review is not
+a demand for three acceptance journeys or a provider-by-track matrix.
+
 The finance foundations include `finance_archive`, `finance_core`, `finance_track`,
 `finance_evidence`, `finance_listing`, `finance_market_calendar`,
 `finance_market_authorities`, `finance_market_rules`, `finance_market_documents`,

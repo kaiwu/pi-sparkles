@@ -62,11 +62,24 @@ between market plugins.
 - `finance_track_switch` performs a typed sequential switch.
 
 The pre-agent routing policy sends today's broad Shanghai/Shenzhen overview to
-`cn_market_overview` once and broad CN industry/板块 trend requests to
-`cn_sector_trends` once. It forbids benchmark/sector code probing and duplicate
-short/long history windows, and keeps price-relative sector comparisons
+`cn_market_overview` once, current CN provider-ranked movers requests to
+`cn_market_movers` once, and broad CN industry/板块 trend requests through the
+composed `cn_sector_series` then `compare_series_returns` handoff. It forbids
+benchmark/sector code probing and duplicate short/long history windows, and keeps price-relative sector comparisons
 separate from unavailable fund-flow, constituent-breadth, causal-rotation,
 theme, stabilization, top, and reversal claims.
+
+The policy also records that provider-ranked movers acquisition is currently
+`track_partial` for HK and US; it never relabels or substitutes the CN page for
+another track. The return calculator itself remains shared across all three
+tracks when a track-owned acquisition supplies its exact receipt-bound inputs.
+For a general movers-list analysis, the policy stops after descriptive
+comparison of the acquired rows. Optional identity, classification, history,
+indicator, disclosure, or fundamental tools are composed only for a requested
+dimension whose credential and exact-input preconditions are already met. It
+forbids per-row fallback cascades, treating unresolved numeric fields as
+convertible amounts, and inferring price limits, board regimes, or abnormal
+activity from percentage/code patterns.
 
 Track choices persist as extension-owned custom entries on the active session
 branch. Resumed/forked branches restore their own latest choice; a new session

@@ -1,7 +1,7 @@
 name = "finance_eastmoney"
 version = "0.1.0"
 target = "javascript"
-description = "Bounded Eastmoney market-data and exact income-statement adapter"
+description = "Bounded Eastmoney movers, market-data, and exact income-statement adapter"
 
 licences = ["Apache-2.0"]
 gleam = ">= 1.18.0"

@@ -25,8 +25,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "cn_industry_classification",
     "CAPCO CN industry classification",
-    "Retrieve one exact stock-code row from the pinned CAPCO 2025-H2 listed-company industry-classification PDF with taxonomy, publication, content-hash, and rights evidence",
-    "The result period is not a membership validity interval; MIC, instrument identity, valid-from, and valid-to remain unknown",
+    "Retrieve one exact stock-code row from the pinned CAPCO 2025-H2 listed-company industry-classification PDF with taxonomy, publication, content-hash, and rights evidence. One call downloads and parses the complete bounded PDF for one code",
+    "Use only for an explicitly requested single-code classification, not as automatic per-row enrichment for a movers or screener list. Do not fan out parallel calls; a PDF acquisition or extraction failure is terminal for this optional enrichment. The result period is not a membership validity interval; MIC, instrument identity, valid-from, and valid-to remain unknown",
     tool.parameters(classification_schema(), classification_decoder()),
     tool.Parallel,
     fn(id, plan, signal, _updates, _ctx) {

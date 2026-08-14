@@ -18,6 +18,10 @@ The adapter is intentionally narrow:
   financials (`000974`) and real estate (`399965`) separate and excludes the
   legacy combined `000934`; CSI remains the index/classification authority and
   Eastmoney only the price vendor;
+- one bounded, non-retrying mainland provider-ranked movers page that preserves
+  exact numeric lexemes and returned `f3` order for one explicit provider
+  filter without claiming authoritative universe completeness, venue identity,
+  analysis, or recommendation;
 - inclusive date range and maximum 1,000-bar response budget;
 - a mainland wide-row income slice retaining exact source tokens for
   `TOTAL_OPERATE_INCOME` and `PARENT_NETPROFIT`, with caller-declared

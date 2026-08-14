@@ -35,6 +35,21 @@ pub fn code_search_requires_venue_and_name_search_preserves_candidates_test() {
   text
   |> string.contains("vendor_reported_not_exchange_authenticated")
   |> should.be_true
+  text |> string.contains("unknown_no_provider_sla_claim") |> should.be_true
+  text |> string.contains("provider_controlled_unknown") |> should.be_true
+}
+
+pub fn provider_quota_error_is_not_reported_as_invalid_symbol_rows_test() {
+  let assert Ok(plan) =
+    domain.search_plan("cn", "code", "600519", Some("sse"), "listed", 20)
+  let assert Error(error) =
+    stock_basic.decode(
+      "{\"code\":40203,\"msg\":\"account quota exceeded\"}",
+      for: domain.search_query(plan),
+    )
+  let message = stock_basic.error_message(error)
+  message |> string.contains("provider code 40203") |> should.be_true
+  message |> string.contains("invalid or mismatched") |> should.be_false
 }
 
 pub fn alias_history_retains_effective_intervals_test() {

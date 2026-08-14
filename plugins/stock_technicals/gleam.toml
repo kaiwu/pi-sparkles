@@ -1,7 +1,7 @@
 name = "pi_sparkles_stock_technicals"
 version = "0.1.0"
 target = "javascript"
-description = "LLM-requested SMA, Wilder RSI, and Wilder ATR information for Pi"
+description = "Receipt-bound series return, SMA, Wilder RSI, and Wilder ATR calculations for Pi"
 licences = ["Apache-2.0"]
 gleam = ">= 1.18.0"
 

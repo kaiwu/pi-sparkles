@@ -128,6 +128,7 @@ describe("finance track status binding", () => {
     );
 
     expect(result.systemPrompt).toContain("base prompt");
+    expect(result.systemPrompt).not.toMatch(/[^\x00-\x7F]/);
     expect(result.systemPrompt).toContain(
       "call installed cn_market_overview once",
     );
@@ -135,7 +136,49 @@ describe("finance track status binding", () => {
       "do not probe benchmark codes through stock quote/history",
     );
     expect(result.systemPrompt).toContain(
-      "For a broad CN industry-sector, 板块趋势, or sector-rotation request, call cn_sector_trends once",
+      "call cn_sector_series once with one explicit date window",
+    );
+    expect(result.systemPrompt).toContain(
+      "pass its comparisonInput and expectedInputSha256 unchanged to compare_series_returns",
+    );
+    expect(result.systemPrompt).toContain(
+      "For a current CN top-gainers or largest percentage-gainers request, call cn_market_movers once",
+    );
+    expect(result.systemPrompt).toContain(
+      "currently track_partial for hk and us",
+    );
+    expect(result.systemPrompt).toContain(
+      "Do not reacquire the movers page and do not expect one top-ten-analysis tool to own every step",
+    );
+    expect(result.systemPrompt).toContain(
+      "Do not automatically fan out identity, classification, quote, history, indicator, disclosure, or fundamental calls across the result list",
+    );
+    expect(result.systemPrompt).toContain(
+      "A failed optional enrichment is terminal for that dimension",
+    );
+    expect(result.systemPrompt).toContain(
+      "cn_stock_symbol_search exact-code mode requires a caller-proven venue and TUSHARE_TOKEN",
+    );
+    expect(result.systemPrompt).toContain(
+      "Do not call finance_track_status, finance_capabilities, provider-health tools, or shell-time tools first",
+    );
+    expect(result.systemPrompt).toContain(
+      "never infer a venue, board, security kind, daily price-limit rule, currency, numeric unit, or display scale from a code prefix, provider filter, or field name",
+    );
+    expect(result.systemPrompt).toContain(
+      "never convert them to thousands, millions, billions, wan, or yi",
+    );
+    expect(result.systemPrompt).toContain(
+      "never append CNY, RMB, yuan, or any currency-denominated price-band wording",
+    );
+    expect(result.systemPrompt).toContain(
+      "provider-filtered CN listing-category rows, not verified A-share instruments",
+    );
+    expect(result.systemPrompt).toContain(
+      "not a proved official close",
+    );
+    expect(result.systemPrompt).toContain(
+      "Do not describe a percentage cluster as a price limit, limit-up event, daily ceiling, board regime, or abnormal activity",
     );
     expect(result.systemPrompt).toContain(
       "Do not guess or probe sector codes with cn_raw_vendor_history",

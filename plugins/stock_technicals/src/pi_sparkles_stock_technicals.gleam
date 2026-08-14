@@ -4,12 +4,37 @@ import pi/schema
 import pi/tool
 import pi_sparkles_stock_technicals/decode
 import pi_sparkles_stock_technicals/domain
+import pi_sparkles_stock_technicals/return_comparison
 
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   register_sma(api)
   register_rsi(api)
   register_atr(api)
+  register_return_comparison(api)
   promise.resolve(Nil)
+}
+
+fn register_return_comparison(api: pi.ExtensionApi) -> Nil {
+  tool.register_compact(
+    api,
+    "compare_series_returns",
+    "Compare exact receipt-bound series returns",
+    "Verify an explicit content-bound multi-series handoff and mechanically calculate latest-session, five-session, and requested-window relative returns without selecting a provider, universe, identity, or source",
+    "Use after an acquisition tool supplies comparisonInput and expectedInputSha256. Copy both unchanged; this calculator makes no network request and its ordering is only over the caller-selected input series, not proof of market completeness or a recommendation",
+    tool.parameters(return_comparison_schema(), return_comparison.decoder()),
+    tool.Parallel,
+    fn(_id, input, _signal, _updates, _ctx) {
+      case return_comparison.run(input) {
+        Ok(output) ->
+          tool.text_result(
+            return_comparison.model_content(output),
+            return_comparison.details(output),
+          )
+          |> promise.resolve
+        Error(error) -> tool.reject(return_comparison.error_message(error))
+      }
+    },
+  )
 }
 
 fn register_sma(api: pi.ExtensionApi) -> Nil {
@@ -94,6 +119,80 @@ fn atr_schema() -> schema.Schema {
     schema.Required(
       "bars",
       schema.array(bar_schema()) |> schema.with_array_length(1, 2000),
+    ),
+  ])
+}
+
+fn return_comparison_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("expectedInputSha256", hash_schema()),
+    schema.Required(
+      "comparisonInput",
+      schema.object([
+        schema.Required(
+          "schema",
+          schema.string_enum(["pi-sparkles/series-return-comparison-input"]),
+        ),
+        schema.Required(
+          "schemaVersion",
+          schema.integer() |> schema.with_number_range(1.0, 1.0),
+        ),
+        schema.Required("track", schema.string_enum(["cn", "hk", "us"])),
+        schema.Required("sourceProfile", bounded_string(1, 500)),
+        schema.Required("requestedStartDate", date_schema()),
+        schema.Required("requestedEndDate", date_schema()),
+        schema.Required(
+          "series",
+          schema.array(return_series_schema())
+            |> schema.with_array_length(2, 50),
+        ),
+      ]),
+    ),
+  ])
+}
+
+fn return_series_schema() -> schema.Schema {
+  schema.object([
+    schema.Required("seriesId", bounded_string(1, 200)),
+    schema.Required("label", bounded_string(1, 500)),
+    schema.Required("unit", bounded_string(1, 200)),
+    schema.Required("authorityLabel", bounded_string(1, 500)),
+    schema.Required("providerName", bounded_string(1, 500)),
+    schema.Required(
+      "source",
+      schema.object([
+        schema.Required("provider", bounded_string(1, 200)),
+        schema.Required("sourceReference", bounded_string(1, 4000)),
+        schema.Required("acquisitionReceipt", hash_schema()),
+        schema.Required("retrievalTimeUnixMilliseconds", schema.integer()),
+        schema.Required(
+          "responseBytes",
+          schema.integer() |> schema.with_number_range(1.0, 2_000_000.0),
+        ),
+      ]),
+    ),
+    schema.Required(
+      "observations",
+      schema.array(
+        schema.object([
+          schema.Required(
+            "role",
+            schema.string_enum([
+              "window_start",
+              "five_sessions_ago",
+              "previous_session",
+              "latest",
+            ]),
+          ),
+          schema.Required("date", date_schema()),
+          schema.Required("value", bounded_string(1, 500)),
+        ]),
+      )
+        |> schema.with_array_length(4, 4),
+    ),
+    schema.Required(
+      "availableObservationCount",
+      schema.integer() |> schema.with_number_range(6.0, 2000.0),
     ),
   ])
 }

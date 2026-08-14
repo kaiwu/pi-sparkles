@@ -24,6 +24,16 @@ candidate resolution and returns bounded Tushare `stock_basic` candidates with
 short/legal names, pinyin, provider market/exchange, mapped MIC/board, currency,
 status, and listing dates. Every venue/board field is visibly vendor-reported or
 mapped from exact provider labels; it is not exchange-authenticated.
+The visible tool schema and prompt state the conditional requirement explicitly:
+code mode cannot discover a venue from a bare code, and name mode is not a
+fallback for missing venue evidence. This is a single-query Tushare operation,
+not a per-row batch enrichment surface; both modes require caller-owned
+`TUSHARE_TOKEN` and the applicable provider permission. Tushare may impose a
+much smaller account-specific `stock_basic` quota than its generic published
+limits. Provider code `40203` is therefore surfaced as an explicit quota or
+permission rejection with no retry/fallback, never as invalid listing rows.
+Composition should reuse an already returned symbol receipt and must not fan out
+or issue code-to-name workaround calls.
 
 `cn_stock_alias_history` requires an already resolved venue/code plus upstream
 identity-evidence reference and returns every `namechange` row with separate

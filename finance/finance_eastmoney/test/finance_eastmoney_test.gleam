@@ -3,6 +3,7 @@ import finance_core/time
 import finance_eastmoney
 import finance_eastmoney/fundamentals
 import finance_eastmoney/history
+import finance_eastmoney/movers
 import finance_eastmoney/overview
 import finance_eastmoney/query
 import finance_eastmoney/quote
@@ -133,6 +134,40 @@ pub fn cn_sector_profile_separates_financials_and_real_estate_test() {
   request.query(request_value)
   |> list.contains(request.QueryParameter("secid", "0.399965", request.Public))
   |> should.be_true
+}
+
+pub fn cn_movers_request_and_decoder_preserve_provider_order_and_lexemes_test() {
+  let assert Ok(plan) = query.cn_movers(finance_track.Cn, 2)
+  let assert Ok(request_value) = provider_request.cn_movers(access(), plan)
+  request.path(request_value) |> should.equal(provider_request.cn_movers_path)
+  request.maximum_response_bytes(request_value) |> should.equal(250_000)
+  request.query(request_value)
+  |> list.contains(request.QueryParameter("fid", "f3", request.Public))
+  |> should.be_true
+  request.query(request_value)
+  |> list.contains(request.QueryParameter("po", "1", request.Public))
+  |> should.be_true
+  request.query(request_value)
+  |> list.contains(request.QueryParameter(
+    "fs",
+    "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048",
+    request.Public,
+  ))
+  |> should.be_true
+
+  let assert Ok(value) = movers.decode(cn_movers_fixture(), for: plan)
+  movers.provider_total(value) |> should.equal(3)
+  let assert [first, second] = movers.rows(value)
+  movers.code(first) |> should.equal("688001")
+  movers.change_percent(first) |> should.equal(movers.Observed("19.9876"))
+  movers.code(second) |> should.equal("300001")
+  movers.provider_market_id(second) |> should.equal("0")
+
+  movers.decode(
+    string.replace(cn_movers_fixture(), "19.9876", "9.5"),
+    for: plan,
+  )
+  |> should.be_error
 }
 
 pub fn quote_decoder_uses_integer_scale_and_preserves_hk_precision_test() {
@@ -294,6 +329,10 @@ fn history_fixture() -> String {
 
 fn cn_overview_fixture() -> String {
   "{\"rc\":0,\"data\":{\"total\":4,\"diff\":[{\"f2\":392718,\"f3\":1,\"f4\":22,\"f5\":499525613,\"f6\":990371924237.7,\"f12\":\"000001\",\"f13\":1,\"f14\":\"上证指数\",\"f15\":393264,\"f16\":390370,\"f17\":393002,\"f18\":392696,\"f104\":1012,\"f105\":1254,\"f106\":85},{\"f2\":1435431,\"f3\":45,\"f4\":6487,\"f5\":642557319,\"f6\":1152471301164.9692,\"f12\":\"399001\",\"f13\":0,\"f14\":\"深证成指\",\"f15\":1438418,\"f16\":1420399,\"f17\":1433541,\"f18\":1428944,\"f104\":1338,\"f105\":1499,\"f106\":95},{\"f2\":362630,\"f3\":112,\"f4\":4026,\"f5\":199294854,\"f6\":556471146251.9,\"f12\":\"399006\",\"f13\":0,\"f14\":\"创业板指\",\"f15\":363303,\"f16\":357861,\"f17\":361019,\"f18\":358604,\"f104\":753,\"f105\":612,\"f106\":36},{\"f2\":466588,\"f3\":4,\"f4\":193,\"f5\":178430696,\"f6\":549769606284.4,\"f12\":\"000300\",\"f13\":1,\"f14\":\"沪深300\",\"f15\":467671,\"f16\":463713,\"f17\":467298,\"f18\":466395,\"f104\":108,\"f105\":186,\"f106\":6}]}}"
+}
+
+fn cn_movers_fixture() -> String {
+  "{\"rc\":0,\"data\":{\"total\":3,\"diff\":[{\"f2\":18.21,\"f3\":19.9876,\"f4\":3.03,\"f5\":100001,\"f6\":1821000.25,\"f8\":6.5,\"f12\":\"688001\",\"f13\":1,\"f14\":\"测试甲\",\"f15\":18.21,\"f16\":15.01,\"f17\":15.18,\"f18\":15.18,\"f20\":1821000000,\"f21\":910500000},{\"f2\":12.34,\"f3\":10.001,\"f4\":1.12,\"f5\":200002,\"f6\":2468000,\"f8\":3.25,\"f12\":\"300001\",\"f13\":0,\"f14\":\"测试乙\",\"f15\":12.5,\"f16\":11.2,\"f17\":11.3,\"f18\":11.22,\"f20\":1234000000,\"f21\":617000000}]}}"
 }
 
 fn cn_income_fixture() -> String {

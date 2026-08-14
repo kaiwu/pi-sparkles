@@ -118,6 +118,29 @@ pub fn amount_thousand_cny(value: Bar) -> String {
   value.amount_thousand_cny
 }
 
+pub fn error_message(value: DecodeError) -> String {
+  case value {
+    InvalidPayload(error) -> response.error_message(error)
+    UnexpectedFields ->
+      "Tushare daily fields did not match the requested documented schema"
+    TooManyRows(limit, received) ->
+      "Tushare daily row count "
+      <> int.to_string(received)
+      <> " exceeded the caller budget "
+      <> int.to_string(limit)
+    InvalidRow(index) ->
+      "Tushare daily row was invalid at index " <> int.to_string(index)
+    CodeMismatch(_, _) ->
+      "Tushare daily row identity did not match the exact requested listing"
+    BarOutsideRange(index) ->
+      "Tushare daily row was outside the requested range at index "
+      <> int.to_string(index)
+    OutOfOrder(index) ->
+      "Tushare daily rows were duplicate or out of descending date order at index "
+      <> int.to_string(index)
+  }
+}
+
 fn decode_rows(
   rows: List(List(Cell)),
   expected: String,

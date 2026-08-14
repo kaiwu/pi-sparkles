@@ -14,6 +14,7 @@ pub opaque type Runtime {
   Runtime(
     quote: bounded_runtime.Runtime,
     cn_overview: bounded_runtime.Runtime,
+    cn_movers: bounded_runtime.Runtime,
     history: bounded_runtime.Runtime,
     cn_fundamentals: bounded_runtime.Runtime,
     hk_fundamentals: bounded_runtime.Runtime,
@@ -23,6 +24,7 @@ pub opaque type Runtime {
 pub type InitError {
   InvalidQuoteRuntime(bounded_runtime.InitError)
   InvalidCnOverviewRuntime(bounded_runtime.InitError)
+  InvalidCnMoversRuntime(bounded_runtime.InitError)
   InvalidHistoryRuntime(bounded_runtime.InitError)
   InvalidCnFundamentalsRuntime(bounded_runtime.InitError)
   InvalidHkFundamentalsRuntime(bounded_runtime.InitError)
@@ -48,6 +50,13 @@ pub fn new(_access: Access) -> Result(Runtime, InitError) {
     ))
     |> result.map_error(InvalidCnOverviewRuntime),
   )
+  use cn_movers <- result.try(
+    bounded_runtime.new(one_shot_policy(
+      provider_request.quote_origin,
+      provider_request.cn_movers_path,
+    ))
+    |> result.map_error(InvalidCnMoversRuntime),
+  )
   use history <- result.try(
     bounded_runtime.new(policy(
       provider_request.history_origin,
@@ -69,7 +78,14 @@ pub fn new(_access: Access) -> Result(Runtime, InitError) {
     ))
     |> result.map_error(InvalidHkFundamentalsRuntime),
   )
-  Ok(Runtime(quote, cn_overview, history, cn_fundamentals, hk_fundamentals))
+  Ok(Runtime(
+    quote,
+    cn_overview,
+    cn_movers,
+    history,
+    cn_fundamentals,
+    hk_fundamentals,
+  ))
 }
 
 pub fn new_with(
@@ -95,6 +111,18 @@ pub fn new_with(
       clock,
     )
     |> result.map_error(InvalidCnOverviewRuntime),
+  )
+  use cn_movers <- result.try(
+    bounded_runtime.new_with(
+      one_shot_policy(
+        provider_request.quote_origin,
+        provider_request.cn_movers_path,
+      ),
+      sender,
+      sleeper,
+      clock,
+    )
+    |> result.map_error(InvalidCnMoversRuntime),
   )
   use history <- result.try(
     bounded_runtime.new_with(
@@ -129,7 +157,14 @@ pub fn new_with(
     )
     |> result.map_error(InvalidHkFundamentalsRuntime),
   )
-  Ok(Runtime(quote, cn_overview, history, cn_fundamentals, hk_fundamentals))
+  Ok(Runtime(
+    quote,
+    cn_overview,
+    cn_movers,
+    history,
+    cn_fundamentals,
+    hk_fundamentals,
+  ))
 }
 
 pub fn send(
@@ -150,6 +185,10 @@ pub fn send(
       if origin == provider_request.quote_origin
       && path == provider_request.cn_overview_path
     -> Ok(runtime.cn_overview)
+    origin, path
+      if origin == provider_request.quote_origin
+      && path == provider_request.cn_movers_path
+    -> Ok(runtime.cn_movers)
     origin, _ if origin == provider_request.history_origin -> Ok(runtime.history)
     origin, _ if origin == provider_request.cn_fundamentals_origin ->
       Ok(runtime.cn_fundamentals)
@@ -189,6 +228,27 @@ fn policy(origin: String, path: String) -> bounded_runtime.Policy {
       maximum_in_flight: 1,
       maximum_waiting: 20,
       maximum_attempts: 2,
+      maximum_elapsed: maximum_elapsed,
+      base_delay: base_delay,
+      maximum_delay: maximum_delay,
+    )
+  value
+}
+
+fn one_shot_policy(origin: String, path: String) -> bounded_runtime.Policy {
+  let assert Ok(window) = time.duration(1000)
+  let assert Ok(maximum_elapsed) = time.duration(15_000)
+  let assert Ok(base_delay) = time.duration(500)
+  let assert Ok(maximum_delay) = time.duration(2000)
+  let assert Ok(value) =
+    bounded_runtime.policy(
+      origin: origin,
+      allowed_paths: [path],
+      admissions_per_window: 1,
+      window: window,
+      maximum_in_flight: 1,
+      maximum_waiting: 20,
+      maximum_attempts: 1,
       maximum_elapsed: maximum_elapsed,
       base_delay: base_delay,
       maximum_delay: maximum_delay,

@@ -10,7 +10,7 @@ import gleam/string
 import gleeunit
 import gleeunit/should
 import pi_sparkles_cn_market_snapshot/overview
-import pi_sparkles_cn_market_snapshot/sector_trends
+import pi_sparkles_cn_market_snapshot/sector_series
 
 pub fn main() -> Nil {
   gleeunit.main()
@@ -36,11 +36,11 @@ pub fn acquired_overview_retains_breadth_and_explicit_evidence_boundaries_test()
   |> should.be_true
 }
 
-pub fn sector_trends_use_exact_eleven_index_profile_and_mechanical_returns_test() {
+pub fn sector_series_use_exact_eleven_index_profile_and_emit_calculation_handoff_test() {
   let assert Ok(series) = build_sector_series(query.cn_sector_indices(), [])
   let assert Ok(manifest) = hash.text("exact-sector-manifest")
   let assert Ok(value) =
-    sector_trends.assemble(
+    sector_series.assemble(
       series,
       civil(2026, 8, 7),
       civil(2026, 8, 14),
@@ -48,29 +48,30 @@ pub fn sector_trends_use_exact_eleven_index_profile_and_mechanical_returns_test(
       manifest,
     )
 
-  sector_trends.summary(value)
-  |> string.contains("11 sectors")
+  sector_series.summary(value)
+  |> string.contains("11 receipt-bound CSI 800 sector series")
   |> should.be_true
-  sector_trends.content(value)
-  |> string.contains(
-    "000928,energy,中证能源指数,provider-000928,5.77,10,10,2026-08-07,2026-08-14",
-  )
+  sector_series.content(value)
+  |> string.contains("COMPARISON_INPUT")
   |> should.be_true
-  sector_trends.content(value)
-  |> string.contains("399965,real_estate,中证800地产指数")
+  sector_series.content(value)
+  |> string.contains("\"seriesId\":\"399965\"")
   |> should.be_true
-  sector_trends.content(value)
-  |> string.contains("do not establish fund flow")
+  sector_series.content(value)
+  |> string.contains("\"role\":\"five_sessions_ago\"")
   |> should.be_true
-  sector_trends.content(value)
+  sector_series.content(value)
+  |> string.contains("latestSessionReturnPercent")
+  |> should.be_false
+  sector_series.content(value)
   |> string.contains("000934")
   |> should.be_false
 }
 
 fn build_sector_series(
   indices: List(query.CnSectorIndex),
-  acquired: List(sector_trends.AcquiredSeries),
-) -> Result(List(sector_trends.AcquiredSeries), Nil) {
+  acquired: List(sector_series.AcquiredSeries),
+) -> Result(List(sector_series.AcquiredSeries), Nil) {
   case indices {
     [] -> Ok(list.reverse(acquired))
     [index, ..rest] -> {
@@ -88,7 +89,7 @@ fn build_sector_series(
       )
       use digest <- result.try(result_nil(hash.text(body)))
       build_sector_series(rest, [
-        sector_trends.AcquiredSeries(
+        sector_series.AcquiredSeries(
           index,
           value,
           query.history_source_reference(plan),

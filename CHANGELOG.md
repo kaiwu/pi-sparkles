@@ -5,6 +5,24 @@ here. Versions follow Semantic Versioning. The exact selected tier, plugin
 inventory, maturity, and content hashes remain authoritative in each tarball's
 `release-lock.json` and `aggregate-lock.json`.
 
+## 0.1.4 - 2026-08-14
+
+- Compose broad CN sector analysis from a bounded `cn_sector_series`
+  acquisition receipt and the provider-neutral `compare_series_returns`
+  calculator instead of one query-shaped acquisition/calculation tool.
+- Add one bounded Eastmoney provider-ranked CN movers page with exact lexemes,
+  source order, request/attempt receipts, and explicit HK/US `track_partial`
+  boundaries; forbid automatic per-row enrichment and fallback cascades.
+- Strengthen Pi routing and repository composition rules around orthogonal
+  tools, exact preconditions, explicit provider/track authority, typed receipt
+  handoffs, and unknown-preserving optional enrichment.
+- Correct Tushare HTTP-200 provider-error decoding when `data` is absent or
+  null; surface quota/permission code `40203` safely across symbol, alias,
+  quote, history, corporate-action, and earnings tools without retry or
+  fallback, and reject duplicate `stock_basic` identities.
+- Align the npm release gate with the releasable T5 aggregate while T6 remains
+  a private blocked preview.
+
 ## 0.1.3 - 2026-08-14
 
 - Publish the complete 124-plugin ProductUseful T1-through-T5 aggregate under

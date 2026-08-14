@@ -37,8 +37,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "cn_stock_symbol_search",
     "CN stock symbol search",
-    "Use only when a mainland listing identity is unresolved or ambiguous, including lookup by name or historical status; preserve ambiguity and vendor identity evidence. Do not call this for a caller-supplied exact venue and code merely to fetch prices or technical indicators",
-    "Known exact venue-plus-code market-data requests bypass this tool; no code prefix, name match, or vendor venue field is silently upgraded to exchange-authenticated identity",
+    "Tushare-backed mainland listing discovery. Use name mode only for genuine name discovery. Exact-code mode requires a caller-proven sse, szse, or bse venue in the same call; it cannot discover a venue from a bare code. TUSHARE_TOKEN and provider permission are required for either mode",
+    "Do not fan this single-query network tool across a result list or switch from code mode to name mode as a workaround for missing venue evidence. Known exact venue-plus-code market-data requests bypass it; no prefix, name match, or vendor field is upgraded to exchange-authenticated identity",
     tool.parameters(search_schema(), search_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
@@ -105,10 +105,7 @@ fn run_search(provider, plan, id, cancellation) {
                   )
                   |> promise.resolve
                 }
-                Error(_), _ ->
-                  tool.reject(
-                    "Tushare returned invalid or mismatched stock-basic rows",
-                  )
+                Error(error), _ -> tool.reject(stock_basic.error_message(error))
                 _, Error(message) -> tool.reject(message)
               }
           }
@@ -204,14 +201,23 @@ fn provider() -> Provider {
 fn search_schema() -> schema.Schema {
   schema.object([
     schema.Required("track", schema.string_enum(["cn"])),
-    schema.Required("queryKind", schema.string_enum(["code", "name"])),
+    schema.Required(
+      "queryKind",
+      schema.string_enum(["code", "name"])
+        |> schema.described(
+          "code requires an explicit venue; name is discovery and does not authenticate identity",
+        ),
+    ),
     schema.Required(
       "query",
       schema.string() |> schema.with_string_length(1, 100),
     ),
     schema.Optional(
       "venue",
-      schema.nullable(schema.string_enum(["sse", "szse", "bse"])),
+      schema.nullable(schema.string_enum(["sse", "szse", "bse"]))
+        |> schema.described(
+          "Required when queryKind is code; optional narrowing input only for name discovery",
+        ),
     ),
     schema.Optional(
       "listStatus",

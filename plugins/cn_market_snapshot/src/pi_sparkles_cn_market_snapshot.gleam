@@ -26,14 +26,14 @@ import pi/schema
 import pi/tool
 import pi_sparkles_cn_market_snapshot/effect/environment
 import pi_sparkles_cn_market_snapshot/overview
-import pi_sparkles_cn_market_snapshot/sector_trends
+import pi_sparkles_cn_market_snapshot/sector_series
 
 pub type Input {
   Input(path: String, expected_sha256: String, maximum_bytes: Int)
 }
 
-pub type SectorTrendInput {
-  SectorTrendInput(start_date: time.Date, end_date: time.Date)
+pub type SectorSeriesInput {
+  SectorSeriesInput(start_date: time.Date, end_date: time.Date)
 }
 
 type Provider {
@@ -74,14 +74,14 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   )
   tool.register_compact(
     api,
-    "cn_sector_trends",
-    "Compare CN industry-sector price trends",
-    "Acquire the exact pinned 11-index CSI 800 level-one industry profile through bounded Eastmoney daily-history requests and mechanically calculate latest-session, five-session, and requested-window relative returns",
-    "Use once for broad CN industry-sector or sector-rotation questions. Supply the requested analysis window; do not probe guessed sector codes through cn_raw_vendor_history. Results are price-only and never establish fund flow, constituent breadth, causal rotation, theme exposure, or trend reversal",
-    tool.parameters(sector_trend_schema(), sector_trend_decoder()),
+    "cn_sector_series",
+    "Acquire CN industry-sector comparison inputs",
+    "Acquire the exact pinned 11-index CSI 800 level-one industry profile through one homogeneous bounded Eastmoney daily-history batch and return receipt-bound observations for a separate comparison calculation",
+    "Use as the acquisition leg for broad CN industry-sector questions. Pass comparisonInput and expectedInputSha256 unchanged to compare_series_returns; this tool performs no return calculation, ranking, fund-flow inference, causal interpretation, or recommendation",
+    tool.parameters(sector_series_schema(), sector_series_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
-      acquire_sector_trends(provider, id, input, signal)
+      acquire_sector_series(provider, id, input, signal)
     },
   )
   promise.resolve(Nil)
@@ -104,10 +104,10 @@ fn provider() -> Provider {
   }
 }
 
-fn acquire_sector_trends(
+fn acquire_sector_series(
   provider: Provider,
   id: String,
-  input: SectorTrendInput,
+  input: SectorSeriesInput,
   signal,
 ) {
   case provider {
@@ -137,7 +137,7 @@ fn acquire_sector_trends(
               )
             Ok(manifest_digest) ->
               case
-                sector_trends.assemble(
+                sector_series.assemble(
                   series,
                   input.start_date,
                   input.end_date,
@@ -148,12 +148,12 @@ fn acquire_sector_trends(
                 Error(error) ->
                   reject_sector(
                     "sector_assembly_failed",
-                    sector_trends.error_message(error),
+                    sector_series.error_message(error),
                   )
                 Ok(output) ->
                   tool.text_result(
-                    sector_trends.content(output),
-                    sector_trends.details(output),
+                    sector_series.content(output),
+                    sector_series.details(output),
                   )
                   |> promise.resolve
               }
@@ -167,13 +167,13 @@ fn fetch_sector_series(
   access: finance_eastmoney.Access,
   runtime: provider_runtime.Runtime,
   id: String,
-  input: SectorTrendInput,
+  input: SectorSeriesInput,
   query_sector_indices indices: List(provider_query.CnSectorIndex),
   cancellation cancellation: transport.Cancellation,
-  acquired acquired: List(sector_trends.AcquiredSeries),
+  acquired acquired: List(sector_series.AcquiredSeries),
   receipt_lines receipt_lines: List(String),
 ) -> Promise(
-  Result(#(List(sector_trends.AcquiredSeries), List(String)), String),
+  Result(#(List(sector_series.AcquiredSeries), List(String)), String),
 ) {
   case indices {
     [] -> promise.resolve(Ok(#(list.reverse(acquired), receipt_lines)))
@@ -252,7 +252,7 @@ fn fetch_sector_series(
                             query_sector_indices: rest,
                             cancellation: cancellation,
                             acquired: [
-                              sector_trends.AcquiredSeries(
+                              sector_series.AcquiredSeries(
                                 index,
                                 value,
                                 provider_query.history_source_reference(plan),
@@ -283,7 +283,7 @@ fn reject_sector(code: String, message: String) -> Promise(value) {
       #("code", json.string(code)),
       #("track", json.string("cn")),
       #("provider", json.string("eastmoney")),
-      #("operation", json.string("acquire_cn_sector_trends")),
+      #("operation", json.string("acquire_cn_sector_series")),
       #("profileId", json.string(provider_query.cn_sector_profile_id())),
       #("fallbackAttempted", json.bool(False)),
     ]),
@@ -455,7 +455,7 @@ fn input_decoder() -> decode.Decoder(Input) {
   decode.success(Input(path, digest, maximum))
 }
 
-fn sector_trend_schema() -> schema.Schema {
+fn sector_series_schema() -> schema.Schema {
   schema.object([
     schema.Required(
       "startDate",
@@ -468,17 +468,17 @@ fn sector_trend_schema() -> schema.Schema {
   ])
 }
 
-fn sector_trend_decoder() -> decode.Decoder(SectorTrendInput) {
+fn sector_series_decoder() -> decode.Decoder(SectorSeriesInput) {
   use start <- decode.field("startDate", decode.string)
   use end <- decode.field("endDate", decode.string)
   let assert Ok(placeholder) = time.date(2026, 1, 1)
   case parse_date(start), parse_date(end) {
     Ok(start_date), Ok(end_date) ->
-      decode.success(SectorTrendInput(start_date, end_date))
+      decode.success(SectorSeriesInput(start_date, end_date))
     _, _ ->
       decode.failure(
-        SectorTrendInput(placeholder, placeholder),
-        "valid CN sector trend date window",
+        SectorSeriesInput(placeholder, placeholder),
+        "valid CN sector series date window",
       )
   }
 }

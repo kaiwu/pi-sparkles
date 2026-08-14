@@ -17,12 +17,24 @@ Responses must match the requested field order and identity, remain within the
 caller row budget, and preserve numeric JSON tokens as exact strings. Daily
 volume is retained in provider lots and amount in thousands of CNY. The adapter
 does not adjust prices and does not silently substitute another provider.
+Nonzero provider envelopes are classified before `data` is decoded because
+Tushare may omit or null that field for quota, point, token, parameter, or
+permission failures. The typed error retains the original provider message for
+controlled diagnostics, while the public renderer emits only a bounded provider
+code and remediation categories so a provider message cannot echo credentials
+into Pi output. Code `40203` is reported as a caller-account rate/permission
+limit, not as malformed market data.
 
 Network execution is read-only, POST-repeatable, HTTPS-origin/path allowlisted,
-15-second bounded, 2 MB bounded, cancellable, paced, and retry-limited. Unit
-tests use fixtures only. Provider access rights, redistribution rights, point
-requirements, and freshness remain caller/provider facts rather than product
-claims.
+15-second bounded, 2 MB bounded, cancellable, paced, and retry-limited. Only
+transient transport failures and retryable HTTP statuses are eligible for the
+second attempt; HTTP-200 provider errors, schema failures, permission failures,
+and parameter failures are never retried. Unit tests use fixtures only. Provider
+access rights, redistribution rights, point requirements, endpoint-specific
+quota windows, completeness, and freshness remain caller/provider facts rather
+than product claims. Consumers must avoid fan-out over `stock_basic`; any reuse
+or caching must stay explicit and content-bound rather than becoming hidden
+mutable adapter state.
 
 Primary contracts:
 

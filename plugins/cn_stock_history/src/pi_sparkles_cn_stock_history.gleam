@@ -231,10 +231,8 @@ fn fetch_tushare(
                         }
                       }
                     }
-                    Error(_), _ ->
-                      tool.reject(
-                        "Tushare returned invalid or mismatched daily bars",
-                      )
+                    Error(error), _ ->
+                      tool.reject(tushare_daily.error_message(error))
                     _, Error(message) -> tool.reject(message)
                   }
                 }

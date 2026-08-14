@@ -1,6 +1,8 @@
 import finance_tushare/query.{type StockBasicQuery}
 import finance_tushare/request
 import finance_tushare/response.{type Cell}
+import gleam/dict
+import gleam/int
 import gleam/list
 import gleam/option.{type Option}
 import gleam/result
@@ -27,6 +29,7 @@ pub type DecodeError {
   UnexpectedFields
   TooManyRows(limit: Int, received: Int)
   InvalidRow(index: Int)
+  DuplicateSecurity(ts_code: String)
   UnexpectedSecurity(expected: String, received: String)
   UnexpectedExchange(expected: String, received: String)
   UnexpectedStatus(expected: String, received: String)
@@ -51,7 +54,7 @@ pub fn decode(
     False ->
       Error(TooManyRows(query.stock_basic_limit(plan), list.length(rows)))
   })
-  decode_rows(rows, plan, 0, [])
+  decode_rows(rows, plan, 0, [], dict.new())
 }
 
 pub fn ts_code(value: Security) -> String {
@@ -98,11 +101,35 @@ pub fn delist_date(value: Security) -> Option(String) {
   value.delist_date
 }
 
+pub fn error_message(value: DecodeError) -> String {
+  case value {
+    InvalidPayload(error) -> response.error_message(error)
+    UnexpectedFields ->
+      "Tushare stock-basic fields did not match the requested documented schema"
+    TooManyRows(limit, received) ->
+      "Tushare stock-basic row count "
+      <> int.to_string(received)
+      <> " exceeded the provider-query budget "
+      <> int.to_string(limit)
+    InvalidRow(index) ->
+      "Tushare stock-basic row was invalid at index " <> int.to_string(index)
+    DuplicateSecurity(_) ->
+      "Tushare stock-basic response contained a duplicate listing identity"
+    UnexpectedSecurity(_, _) ->
+      "Tushare stock-basic row identity did not match the requested listing or name"
+    UnexpectedExchange(_, _) ->
+      "Tushare stock-basic row exchange did not match the requested venue"
+    UnexpectedStatus(_, _) ->
+      "Tushare stock-basic row status did not match the requested listing status"
+  }
+}
+
 fn decode_rows(
   rows: List(List(Cell)),
   plan: StockBasicQuery,
   index: Int,
   decoded: List(Security),
+  seen: dict.Dict(String, Nil),
 ) -> Result(List(Security), DecodeError) {
   case rows {
     [] -> Ok(list.reverse(decoded))
@@ -111,7 +138,17 @@ fn decode_rows(
         decode_row(row) |> result.map_error(fn(_) { InvalidRow(index) }),
       )
       use _ <- result.try(validate_security(security, plan))
-      decode_rows(rest, plan, index + 1, [security, ..decoded])
+      use _ <- result.try(case dict.has_key(seen, security.ts_code) {
+        True -> Error(DuplicateSecurity(security.ts_code))
+        False -> Ok(Nil)
+      })
+      decode_rows(
+        rest,
+        plan,
+        index + 1,
+        [security, ..decoded],
+        dict.insert(seen, security.ts_code, Nil),
+      )
     }
   }
 }

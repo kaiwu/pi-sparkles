@@ -220,10 +220,8 @@ fn fetch_tushare(api, provider, plan, id, cancellation) {
                         }
                       }
                     }
-                    Error(_), _ ->
-                      tool.reject(
-                        "Tushare returned invalid or mismatched daily snapshot data",
-                      )
+                    Error(error), _ ->
+                      tool.reject(tushare_daily.error_message(error))
                     _, Error(message) -> tool.reject(message)
                   }
                 }

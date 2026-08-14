@@ -126,6 +126,78 @@ pub fn provider_error_and_field_reordering_fail_closed_test() {
   |> should.be_error
 }
 
+pub fn provider_error_without_data_is_classified_and_safely_explained_test() {
+  let body = "{\"code\":40203,\"msg\":\"quota for test-secret-token exceeded\"}"
+  let assert Error(error) = response.decode(body)
+  let assert response.ProviderError(code, original_message) = error
+  code |> should.equal("40203")
+  original_message |> should.equal("quota for test-secret-token exceeded")
+  let public_message = response.error_message(error)
+  public_message |> string.contains("40203") |> should.be_true
+  public_message |> string.contains("rate or permission") |> should.be_true
+  public_message |> string.contains("test-secret-token") |> should.be_false
+  public_message |> string.contains("no provider-error retry") |> should.be_true
+
+  let body_with_null_data =
+    "{\"code\":40203,\"msg\":\"quota exceeded\",\"data\":null}"
+  response.decode(body_with_null_data)
+  |> should.equal(Error(response.ProviderError("40203", "quota exceeded")))
+}
+
+pub fn provider_error_propagates_through_each_shared_decoder_test() {
+  let body = "{\"code\":-2001,\"msg\":\"permission denied\"}"
+  let assert Ok(daily_plan) =
+    query.daily(
+      finance_track.Cn,
+      query.Sse,
+      "600519",
+      civil(2026, 8, 1),
+      civil(2026, 8, 5),
+      3,
+    )
+  let assert Error(daily_error) = daily.decode(body, for: daily_plan)
+  daily.error_message(daily_error)
+  |> string.contains("provider code -2001")
+  |> should.be_true
+
+  let assert Ok(stock_plan) =
+    query.stock_basic(
+      finance_track.Cn,
+      Some(query.Sse),
+      Some("600519"),
+      query.Listed,
+      10,
+    )
+  let assert Error(stock_error) = stock_basic.decode(body, for: stock_plan)
+  stock_basic.error_message(stock_error)
+  |> string.contains("provider code -2001")
+  |> should.be_true
+
+  let assert Error(table_error) = table.decode(body, ["ts_code"], 1)
+  table.error_message(table_error)
+  |> string.contains("provider code -2001")
+  |> should.be_true
+}
+
+pub fn stock_basic_duplicate_listing_identity_fails_closed_test() {
+  let assert Ok(plan) =
+    query.stock_basic(
+      finance_track.Cn,
+      Some(query.Sse),
+      Some("600519"),
+      query.Listed,
+      10,
+    )
+  let duplicate =
+    string.replace(
+      stock_basic_fixture(),
+      "]]}}",
+      "],[\"600519.SH\",\"600519\",\"贵州茅台\",\"贵州茅台酒股份有限公司\",\"gzmt\",\"主板\",\"SSE\",\"CNY\",\"L\",\"20010827\",null]]}}",
+    )
+  stock_basic.decode(duplicate, for: plan)
+  |> should.equal(Error(stock_basic.DuplicateSecurity("600519.SH")))
+}
+
 pub fn structured_reference_endpoints_share_secret_safe_bounded_transport_test() {
   let access = access()
   let assert Ok(security) =

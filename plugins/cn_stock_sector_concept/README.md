@@ -24,6 +24,13 @@ membership, return the full PDF, judge the classification, or make an investment
 decision. A no-match means only that the requested code was not found in this
 pinned snapshot.
 
+One invocation downloads and parses the complete bounded PDF for one requested
+code. It is therefore an explicit single-code classification tool, not an
+automatic enrichment surface for every row in a movers or screener result.
+Callers must not fan it out in parallel; an acquisition or extraction failure
+ends that optional enrichment instead of triggering alternate lookup cascades.
+CAPCO is a CN-only taxonomy source, so this behavior is unsupported for `hk`
+and `us` rather than copied across tracks.
+
 The implementation follows
 [Course Session 20](../../../trading-course/sessions/20_cg_portfolio_classification_source_addendum_20260809.md).
-

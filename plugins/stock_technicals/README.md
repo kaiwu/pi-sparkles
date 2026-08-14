@@ -4,8 +4,9 @@ Status: **Experimental — Session 17 rank 1 complete** · version: `0.1.0` ·
 target: JavaScript/Bun
 
 `stock_technicals` is the first thin Pi shell over the existing
-`finance_indicators` functional core. It exposes three neutral calculation
-tools—`sma`, `rsi`, and `atr`—for exact caller/LLM-supplied observations. It
+`finance_indicators` functional core. It exposes four neutral calculation
+tools—`sma`, `rsi`, `atr`, and `compare_series_returns`—for exact
+caller/LLM-supplied observations. It
 fetches no market data and makes no choice about instrument, provider, field,
 price basis, formula, period, gap handling, parseable-value handling, rounding,
 projection, interpretation, or next operation.
@@ -94,9 +95,17 @@ Each identifier is explicit in the request and result. True range,
 high-minus-low, high-minus-previous-close, and low-minus-previous-close remain
 visible in intermediate output.
 
+### `compare_series_returns`
+
+Verifies one content-bound `cn`, `hk`, or `us` multi-series acquisition handoff
+and calculates latest-session, five-session, and requested-window relative
+returns. It makes no network request and does not choose the provider,
+universe, identities, or series. Its mechanical ordering covers only the exact
+receipt-bound inputs and is not a market-completeness claim or recommendation.
+
 ## Shared immutable request
 
-All three tools require the following caller/LLM-supplied information; there
+The three indicator tools require the following caller/LLM-supplied information; there
 are no ambient defaults:
 
 - optional `instructionRef`: a retained caller/LLM SHA-256 reference when one

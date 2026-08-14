@@ -2,6 +2,7 @@ import gleam/dynamic/decode
 import gleam/int
 import gleam/json
 import gleam/option.{type Option, None, Some}
+import gleam/string
 
 pub type Cell {
   Text(String)
@@ -31,6 +32,21 @@ pub fn decode(body: String) -> Result(Payload, DecodeError) {
         "0" -> Ok(payload)
         code -> Error(ProviderError(code, payload.message))
       }
+  }
+}
+
+/// Render a credential-safe, user-facing explanation while retaining the
+/// provider's original message in `ProviderError` for typed diagnostics.
+pub fn error_message(value: DecodeError) -> String {
+  case value {
+    InvalidJson(_) ->
+      "Tushare response did not match the documented JSON envelope"
+    ProviderError("40203", _) ->
+      "Tushare rejected the request (provider code 40203): this API's caller-account rate or permission limit was exceeded; no provider-error retry or fallback was attempted"
+    ProviderError(code, _) ->
+      "Tushare rejected the request (provider code "
+      <> code
+      <> "); check the caller-owned token, request parameters, points, permissions, and provider quota; no fallback was attempted"
   }
 }
 
@@ -74,12 +90,21 @@ pub fn optional_scalar(value: Cell) -> Result(Option(String), Nil) {
 fn payload_decoder() -> decode.Decoder(Payload) {
   use code <- decode.field("code", number_decoder())
   use message <- decode.field("msg", decode.string)
-  use data <- decode.field("data", data_decoder())
-  let #(fields, rows) = data
-  let value = Payload(code, message, fields, rows)
-  case int.parse(code) {
-    Ok(_) -> decode.success(value)
-    Error(_) -> decode.failure(value, "integer Tushare response code")
+  case string.length(code) <= 20, int.parse(code) {
+    False, _ | _, Error(_) ->
+      decode.failure(
+        Payload(code, message, [], []),
+        "bounded integer Tushare response code",
+      )
+    True, Ok(_) ->
+      case code {
+        "0" -> {
+          use data <- decode.field("data", data_decoder())
+          let #(fields, rows) = data
+          decode.success(Payload(code, message, fields, rows))
+        }
+        _ -> decode.success(Payload(code, message, [], []))
+      }
   }
 }
 

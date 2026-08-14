@@ -38,24 +38,31 @@ coverage unavailable. It therefore supports an honest current Shanghai/Shenzhen
 overview without implying those missing facts or replacing the exact imported
 member-packet calculation.
 
-## Acquisition-backed sector comparison
+## Composed sector comparison
 
-`cn_sector_trends` is the one-call route for broad CN industry-sector trend
+`cn_sector_series` is the acquisition leg for broad CN industry-sector trend
 questions. The caller supplies one date window; the tool performs exactly 11
 bounded, paced Eastmoney daily-history requests for the pinned CSI 800
-level-one profile and calculates one-session, five-session, and complete
-observed-window close returns in the pure Gleam domain. It never probes guessed
-codes or repeats a shorter acquisition window.
+level-one profile. It emits a typed `comparisonInput` plus its content SHA-256,
+but performs no return calculation or ranking. The shared calculation-only
+`compare_series_returns` tool verifies that handoff and calculates
+one-session, five-session, and complete observed-window returns without
+network access, provider selection, or universe selection.
 
 The profile follows the pinned CSI methodology's 11-sector projection:
 financials (`000974`) and real estate (`399965`) are separate, and the legacy
 combined financials-and-real-estate index `000934` is excluded. CSI is the
 classification/index authority; Eastmoney remains only the price-observation
-vendor. The result exposes both identities, actual observed dates, exact closes,
-mechanical return formula/rounding, individual response hashes, an ordered
-manifest receipt, and the provider request count.
+vendor. The acquisition result exposes both identities, actual observed dates,
+exact closes, individual response hashes, an ordered manifest receipt, and the
+provider request count. The calculator separately exposes its formula,
+rounding, verified input receipt, and mechanical ordering.
 
 This is a CSI 800 large/mid-cap industry proxy, not every A-share sector,
 concept board, or theme. Fund flow, constituent breadth, causal rotation,
 AI/theme exposure, confirmed tops, stabilization, and reversals are explicitly
 unavailable and must not be inferred from relative price returns.
+
+Cross-track review: the comparison calculator is shared by `cn`, `hk`, and
+`us`. The CSI profile remains CN-only because the classification and index
+identities are market-owned; no HK or US sector acquisition is inferred from it.

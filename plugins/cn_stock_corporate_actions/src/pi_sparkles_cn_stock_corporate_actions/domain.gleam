@@ -252,8 +252,7 @@ pub fn error_message(value: Error) -> String {
     InvalidIdentityEvidenceId -> "identityEvidenceId is invalid"
     InvalidLimit -> "maximumRows must be between 1 and 1000"
     InvalidProviderQuery -> "provider query is invalid"
-    InvalidTable(error) ->
-      "Tushare dividend response is invalid: " <> string.inspect(error)
+    InvalidTable(error) -> table.error_message(error)
     InvalidRow(index) ->
       "Tushare dividend row is invalid at index " <> int.to_string(index)
     IdentityMismatch(_, _) ->
