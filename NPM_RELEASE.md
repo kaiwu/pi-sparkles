@@ -104,3 +104,41 @@ npm view @pi-sparkles/pi-sparkles@0.1.5 \
   name version dist.integrity repository --json
 pi install npm:@pi-sparkles/pi-sparkles@0.1.5
 ```
+
+---
+
+# DeepSeek Harness release — @dsh-sparkles/dsh-sparkles
+
+The DeepSeek Harness distribution is a separate npm identity built from the
+same T1–T6 ledger. It is an npm bundle whose manifest declares
+`dsh.bundle.patch`, installed with `dsh plugin`:
+
+```sh
+bun run dsh:bundle                      # dist/dsh/dsh-sparkles (all-in-one plugin)
+bun run dsh:npm:pack                    # content-lock and pack the tarball, never publish
+bun run dsh:npm:release:verify          # workflow tests + install smoke + publish dry-run + registry check
+dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles
+```
+
+The packed package has one self-contained entrypoint registering the included
+tools through `ctx.tools` and the finance commands through `ctx.commands`. The
+inventory is the Pi ledger minus the Pi-specific plugins listed in
+`dsh/bundle.json` (`exclude_pi`, currently the TUI statusline plugin) plus any
+future `extra_dsh` plugins; the exact excluded/extra lists are recorded in
+`dsh-lock.json` and the manifest's `dshSparkles` section. It declares
+`@deepseek-ai/dsh-tools` and `@deepseek-ai/dsh-commands` as `"*"` peer ranges,
+pins `pdfjs-dist` for the CN PDF CMap runtime resolution, carries the
+`dsh.bundle.patch` manifest and a content lock (`dsh-lock.json` +
+`release-lock.json` + inner/outer `SHA256SUMS`), and has no lifecycle scripts
+or credential values. The install smoke installs the exact tarball into a clean
+npm prefix, imports the entrypoint to verify its Cordis plugin shape, and
+composes it in an isolated `DSH_HOME` profile with the real `dsh` CLI.
+
+Publication is identical in spirit to the Pi line: an npm name/version is
+immutable, the first publication is an authenticated maintainer action, and
+packaging/verification never publish. The explicit first-publish command is:
+
+```sh
+npm publish ./dist/dsh/npm/t6/dsh-sparkles-dsh-sparkles-0.1.5.tgz --access public
+```
+

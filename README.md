@@ -38,7 +38,8 @@ a whole role tier. Tiers are not a 6×3 track matrix. See
 | --- | --- |
 | [PRODUCT_TIERS.md](PRODUCT_TIERS.md), [tiers.json](tiers.json) | six role products, blockers, promotion |
 | [PRODUCT_READINESS.md](PRODUCT_READINESS.md) | input paths, compact/drill-down contract, non-executing broker boundary |
-| [CHANGELOG.md](CHANGELOG.md), [NPM_RELEASE.md](NPM_RELEASE.md) | published npm identity and release gate |
+| [CHANGELOG.md](CHANGELOG.md), [NPM_RELEASE.md](NPM_RELEASE.md) | published npm identity and release gate (Pi and DSH lines) |
+| [dsh/README.md](dsh/README.md) | DeepSeek Harness all-in-one plugin builder + adapter |
 | [FUNCTIONAL_DESIGN.md](FUNCTIONAL_DESIGN.md) | functional core / effect shell |
 | [TRACK_GUIDE.md](TRACK_GUIDE.md) | adding another closed market track |
 | [SECURITY.md](SECURITY.md) | trusted-local-code model |
@@ -130,10 +131,11 @@ pi-sparkles/
 ├── pi_gleam/          Gleam binding for Pi's extension API
 ├── finance/           77 reusable non-Pi libraries (no Pi imports)
 ├── plugins/           142 Gleam plugin packages; 135 are the T1–T6 ledger
+├── dsh/               DeepSeek Harness adapter + bundle (parallel npm line)
 ├── scripts/           Bun task drivers
 ├── test/              binding, architecture, artifact, acceptance, workflow
 ├── tiers.json         exclusive proposal ownership and promotion state
-└── dist/              generated, gitignored Pi artifacts
+└── dist/              generated, gitignored Pi and DSH artifacts
 ```
 
 The root is not a Gleam package. Every `finance/` and `plugins/` package owns
@@ -157,6 +159,9 @@ index: [plugins/README.md](plugins/README.md). Binding surface:
 | `bun run tier:install -- T1` | verify and `pi install` (user scope default) |
 | `bun run aggregate:build -- [T5\|T6]` | one Pi entrypoint; T6 is T1–T6 |
 | `bun run npm:pack -- [T5\|T6]` | all-in-one npm tarball, no publish |
+| `bun run dsh:bundle -- [T5\|T6]` | all-in-one DeepSeek Harness plugin (dist/dsh/dsh-sparkles) |
+| `bun run dsh:verify` | schema bridge vs the real dsh-tools validator |
+| `bun run dsh:npm:pack -- [T5\|T6]` | `@dsh-sparkles/dsh-sparkles` npm tarball, no publish |
 | `bun run check` | format and warnings-as-errors for every package |
 | `bun run build [-- name]` | diagnostic plugin bundle |
 | `bun run test:unit [-- name]` | Gleam tests |

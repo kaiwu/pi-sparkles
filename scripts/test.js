@@ -4,7 +4,7 @@ import { buildAcceptanceFixture } from "./build-acceptance-fixture.js";
 
 run("bun", ["scripts/check.js"], { cwd: ROOT });
 run("bun", ["scripts/test-unit.js"], { cwd: ROOT });
-run("bun", ["test", "test/architecture", "test/finance", "test/workflow"], {
+run("bun", ["test", "test/architecture", "test/finance", "test/dsh", "test/workflow"], {
   cwd: ROOT,
 });
 run("bun", ["scripts/build.js"], { cwd: ROOT });

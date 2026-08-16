@@ -8,7 +8,7 @@
     "type": "git",
     "url": "git+https://github.com/kaiwu/pi-sparkles.git"
   },
-  "homepage": "https://github.com/kaiwu/pi-sparkles#readme",
+  "homepage": "https://sparkes.extensio.cn",
   "bugs": {
     "url": "https://github.com/kaiwu/pi-sparkles/issues"
   },
@@ -46,6 +46,10 @@
     "tier:verify": "bun scripts/tier.js verify",
     "npm:pack": "bun scripts/npm-package.js",
     "npm:release:verify": "bun test test/workflow/aggregate_bundle.test.js test/workflow/npm_package.test.js && bun scripts/npm-package.js T6 --install-smoke --publish-dry-run --check-registry",
+    "dsh:bundle": "bun scripts/dsh-bundle.js",
+    "dsh:verify": "bun scripts/dsh-verify.js",
+    "dsh:npm:pack": "bun scripts/dsh-npm-package.js",
+    "dsh:npm:release:verify": "bun test test/workflow/dsh_npm_package.test.js && bun scripts/dsh-npm-package.js T6 --install-smoke --publish-dry-run --check-registry",
     "test": "bun scripts/test.js",
     "clean": "bun scripts/clean.js"
   },

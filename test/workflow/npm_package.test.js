@@ -180,6 +180,7 @@ describe("all-in-one npm packaging", () => {
     expect(packageManifest.description).toBe(
       "Turn Pi into a finance research assistant for China, Hong Kong, and US markets",
     );
+    expect(packageManifest.homepage).toBe("https://sparkes.extensio.cn");
     const packageReadme = readFileSync(
       join(plan.npmOutputDirectory, "package", "README.md"),
       "utf8",
