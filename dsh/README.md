@@ -6,7 +6,7 @@ Pi builder, aggregate, tier ledger, or maturity. Shared finance behavior stays
 in the existing pure Gleam/domain modules; only host effects are adapted.
 
 - `scripts/dsh-bundle.js` builds the bundle (`bun run dsh:bundle`).
-- `scripts/dsh-npm-package.js` builds the separate npm preview.
+- `scripts/dsh-npm-package.js` builds the separate npm release.
 - `scripts/dsh-verify.js` validates schemas and executes the generated bundle
   through the installed DSH runtime (`bun run dsh:verify`).
 - `dsh/bundle.json` owns DSH release status, global Pi-shell exclusions,
@@ -20,7 +20,7 @@ in the existing pure Gleam/domain modules; only host effects are adapted.
 ## Inventory and release boundary
 
 The effective inventory is `global-safe Pi shells + per-agent Pi counterparts
-+ DSH-native host surfaces`. The current T6 preview covers all 135 ledger
++ DSH-native host surfaces`. The accepted T6 release covers all 135 ledger
 components: 131 mount globally and four use fresh DSH agent scopes. The four
 original Pi shells remain excluded from the global lane, with normative
 reasons in `bundle.json`:
@@ -38,11 +38,12 @@ their ownership boundary. An `extra_dsh` entry resolves only to
 `dsh/plugins/<name>.mjs`; it can never silently pull a Pi plugin into the
 DSH-only lane.
 
-DSH maturity is independent from Pi maturity. `dsh_release.status` is currently
-`preview`, so both T5 and T6 npm outputs are private blocked previews even when
-the corresponding Pi aggregate is ProductUseful. Promotion requires a DSH role
-acceptance lane. The counterparts themselves are implemented and tested; they
-do not promote the independent DSH release gate.
+DSH maturity is independent from Pi maturity. `dsh_release.status` is
+`product_useful` for the exact T6 boundary after installed-profile operator
+acceptance on 2026-08-17. T6 is therefore publishable; T5 remains an unaccepted,
+private build. Pi maturity is recorded for provenance only and cannot promote or
+block the DSH release. Conversely, DSH verification never edits `tiers.json` or
+Pi package metadata.
 
 ## Host mapping
 
@@ -79,7 +80,7 @@ changing variables.
 ```sh
 bun run dsh:bundle
 bun run dsh:verify
-bun run dsh:npm:preview:verify
+bun run dsh:npm:release:verify
 dsh plugin --profile <name> add ./dist/dsh/dsh-sparkles
 dsh --profile <name> --dump-config
 ```

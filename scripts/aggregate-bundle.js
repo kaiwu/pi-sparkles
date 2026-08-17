@@ -182,6 +182,7 @@ function tierDefinition(tier) {
 export function aggregateBundlePlan(
   manifest,
   throughTierId = DEFAULT_AGGREGATE_TARGET,
+  { enforcePiReleaseGate = true } = {},
 ) {
   const manifestErrors = validateTierManifest(manifest);
   if (manifestErrors.length > 0) {
@@ -200,6 +201,7 @@ export function aggregateBundlePlan(
     return tier;
   });
   for (const tier of includedTiers.filter((value) => value.id !== "T6")) {
+    if (!enforcePiReleaseGate) continue;
     if (tier.status !== "product_useful") {
       throw new Error(
         `${tier.id} is ${tier.status}; aggregate bundles require T1-T5 to remain ProductUseful`,

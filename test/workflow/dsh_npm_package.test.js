@@ -215,13 +215,27 @@ describe("dsh-sparkles npm packaging", () => {
     expect(t6.omittedProposals).toEqual([]);
     expect(t6.partialImplementations).toEqual([]);
     expect(t6.openBlockers).toEqual([]);
-    expect(t6.maturity).toBe("dsh_blocked_preview");
-    expect(t6.dshRelease.status).toBe("preview");
-    expect(t6.releasable).toBeFalse();
+    expect(t6.maturity).toBe("product_useful_dsh_aggregate");
+    expect(t6.dshRelease).toMatchObject({
+      status: "product_useful",
+      target: "T6",
+    });
+    expect(t6.releasable).toBeTrue();
 
     const t5 = dshNpmPackagePlan(manifest, "T5");
     expect(t5.plugins).toHaveLength(120);
     expect(t5.releasable).toBeFalse();
+  });
+
+  test("keeps the DSH release gate independent from Pi maturity", () => {
+    const manifest = structuredClone(readTierManifest());
+    for (const tier of manifest.tiers) tier.status = "building";
+
+    const t6 = dshNpmPackagePlan(manifest, "T6");
+    expect(t6.piAggregateMaturity).toBe("blocked_inventory_preview");
+    expect(t6.dshRelease.status).toBe("product_useful");
+    expect(t6.maturity).toBe("product_useful_dsh_aggregate");
+    expect(t6.releasable).toBeTrue();
   });
 
   test("packs a content-locked tarball with the dsh.bundle manifest", async () => {
@@ -287,7 +301,7 @@ describe("dsh-sparkles npm packaging", () => {
       registry: "https://registry.npmjs.org/",
     });
     expect(manifest.keywords).toContain("deepseek-harness");
-    expect(manifest.homepage).toBe("https://sparkes.extensio.cn");
+    expect(manifest.homepage).toBe("https://sparkles.extensio.cn");
 
     const packageReadme = readFileSync(
       join(plan.npmOutputDirectory, "package", "README.md"),

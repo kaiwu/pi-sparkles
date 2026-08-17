@@ -39,9 +39,10 @@ mutation in one agent leaves the other at revision zero. The installed DSH web
 server also discovers and serves the package browser entry after
 `@deepseek-ai/dsh-client-ui-layout`.
 
-This completes the counterpart implementation, but does not by itself promote
-the independent DSH release gate. `dsh_release.status` remains `preview` until
-the DSH role-level acceptance lane is declared complete.
+This completes the counterpart implementation. Installed-profile operator
+acceptance on 2026-08-17 promoted the independent T6 DSH release gate to
+`product_useful`. This does not alter or inherit Pi tier maturity; the two hosts
+retain separate verification, packaging, and publication decisions.
 
 ## Remaining DSH-only opportunity — browser finance charts
 

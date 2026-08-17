@@ -230,7 +230,7 @@ function dshNpmManifest(plan) {
       type: "git",
       url: "git+https://github.com/kaiwu/pi-sparkles.git",
     },
-    homepage: "https://sparkes.extensio.cn",
+    homepage: "https://sparkles.extensio.cn",
     bugs: { url: "https://github.com/kaiwu/pi-sparkles/issues" },
     keywords: [
       "deepseek-harness",

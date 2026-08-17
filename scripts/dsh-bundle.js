@@ -51,7 +51,7 @@ const DSH_MANIFEST_PATH = join(ROOT, "dsh", "bundle.json");
 const ENTRY_DIR = join(WORK_DIR, "dsh");
 const ENTRY_PATH = join(ENTRY_DIR, "entry.mjs");
 const LOCK_SCHEMA_VERSION = 2;
-const DSH_MANIFEST_SCHEMA_VERSION = 3;
+const DSH_MANIFEST_SCHEMA_VERSION = 4;
 const PDFJS_VERSION = "6.2.108";
 const PLUGIN_SHORT_NAME = /^[a-z][a-z0-9_]*$/;
 export const DSH_RUNTIME_PEERS = {
@@ -198,10 +198,13 @@ export function readDshManifest() {
   if (
     !isRecord(release) ||
     !["preview", "product_useful"].includes(release.status) ||
+    !ALLOWED_TARGETS.has(release.target) ||
     (release.status === "preview" &&
       (typeof release.reason !== "string" || release.reason.trim() === ""))
   ) {
-    throw new Error("DSH release must declare preview/product_useful status and a preview reason");
+    throw new Error(
+      "DSH release must declare preview/product_useful status, a T5/T6 target, and a preview reason",
+    );
   }
   return {
     schemaVersion: manifest.schema_version,
@@ -211,7 +214,11 @@ export function readDshManifest() {
     ),
     scopedPi: [...scoped],
     extraDsh: [...extra],
-    release: { status: release.status, reason: release.reason ?? null },
+    release: {
+      status: release.status,
+      target: release.target,
+      reason: release.reason ?? null,
+    },
   };
 }
 
@@ -223,7 +230,11 @@ export function dshBundlePlan(
   if (!ALLOWED_TARGETS.has(target)) {
     throw new Error("DSH bundle target must be T5 or T6");
   }
-  const base = aggregateBundlePlan(tierManifest, target);
+  // Reuse the Pi ledger only as an inventory catalog. Pi tier maturity remains
+  // informational here and must never gate the independent DSH release lane.
+  const base = aggregateBundlePlan(tierManifest, target, {
+    enforcePiReleaseGate: false,
+  });
   const manifest = readDshManifest();
 
   const allPlugins = plugins();
@@ -256,15 +267,30 @@ export function dshBundlePlan(
   const included = base.plugins.filter((plugin) => !exclude.has(plugin.shortName));
   const relevantExclusions = manifest.excludePi.filter((name) => baseByName.has(name));
   const dshProductUseful = manifest.release.status === "product_useful";
+  const acceptedTarget = manifest.release.target === target;
+  const completeInventory = base.omittedProposals.length === 0;
+  const dshReleasable = dshProductUseful && acceptedTarget && completeInventory;
+  const dshBlockers = [];
+  if (!dshProductUseful) dshBlockers.push(manifest.release.reason);
+  if (!acceptedTarget) {
+    dshBlockers.push(
+      `DSH acceptance covers ${manifest.release.target}, not ${target}`,
+    );
+  }
+  for (const { tierId, proposal } of base.omittedProposals) {
+    dshBlockers.push(`DSH inventory is missing ${tierId}/pi_${proposal}`);
+  }
   return {
     ...base,
     plugins: included,
     pluginTiers: { ...base.pluginTiers },
     piAggregateMaturity: base.maturity,
-    maturity: dshProductUseful ? "product_useful_dsh_aggregate" : "dsh_blocked_preview",
-    releasable: base.releasable && dshProductUseful,
+    maturity: dshReleasable
+      ? "product_useful_dsh_aggregate"
+      : "dsh_blocked_preview",
+    releasable: dshReleasable,
     dshRelease: manifest.release,
-    dshBlockers: dshProductUseful ? [] : [manifest.release.reason],
+    dshBlockers,
     excludedPiProposals: relevantExclusions,
     exclusionReasons: Object.fromEntries(
       relevantExclusions.map((name) => [name, manifest.exclusionReasons[name]]),
@@ -463,7 +489,7 @@ function readmeSource(plan) {
   const version = rootVersion();
   return `# @dsh-sparkles/dsh-sparkles
 
-One DeepSeek Harness preview registering ${plan.componentCount} pi-sparkles
+One DeepSeek Harness ${plan.releasable ? "release" : "preview"} registering ${plan.componentCount} pi-sparkles
 ${plan.throughTierId} plugin components as read-only finance tools
 behind a Pi-API compatibility shell. The Pi tier ledger remains authoritative
 only for Pi; DSH has its own release gate and this build is
@@ -605,7 +631,7 @@ export async function buildDshBundle(
   const manifest = {
     name: PACKAGE_NAME,
     version,
-    description: `DeepSeek Harness preview for ${plan.componentCount} pi-sparkles ${plan.throughTierId} plugin components`,
+    description: `DeepSeek Harness ${plan.releasable ? "release" : "preview"} for ${plan.componentCount} pi-sparkles ${plan.throughTierId} plugin components`,
     private: !plan.releasable,
     type: "module",
     main: "index.js",
