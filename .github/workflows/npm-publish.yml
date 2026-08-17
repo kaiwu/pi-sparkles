@@ -1,4 +1,4 @@
-name: Publish all-in-one npm package
+name: Publish Sparkles npm packages
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: npm-publish-pi-sparkles-pi-sparkles
+  group: npm-publish-sparkles
   cancel-in-progress: false
 
 jobs:
@@ -61,28 +61,40 @@ jobs:
       - name: Install locked build dependencies
         run: bun install --frozen-lockfile
 
-      - name: Install the tested plain Pi host
-        run: npm install --global @earendil-works/pi-coding-agent@0.84.1
+      - name: Install the tested Pi and DSH hosts
+        run: |
+          npm install --global @earendil-works/pi-coding-agent@0.84.1
+          npm install --global @deepseek-ai/dsh@0.1.0-rc.6
 
-      - name: Build and verify the all-in-one T5 release
-        run: bun run npm:release:verify
+      - name: Build and verify both T6 releases
+        run: |
+          bun run npm:release:verify
+          bun run dsh:npm:release:verify
 
-      - name: Resolve the locked tarball path
-        id: tarball
+      - name: Resolve the locked tarball paths
+        id: tarballs
         shell: bash
         run: |
-          filename="$(node --input-type=module -e "import record from './dist/npm/t5/npm-pack.json' with { type: 'json' }; process.stdout.write(record.tarball)")"
-          printf 'path=dist/npm/t5/%s\n' "$filename" >> "$GITHUB_OUTPUT"
+          pi_filename="$(node --input-type=module -e "import record from './dist/npm/t6/npm-pack.json' with { type: 'json' }; process.stdout.write(record.tarball)")"
+          dsh_filename="$(node --input-type=module -e "import record from './dist/dsh/npm/t6/npm-pack.json' with { type: 'json' }; process.stdout.write(record.tarball)")"
+          printf 'pi_path=dist/npm/t6/%s\n' "$pi_filename" >> "$GITHUB_OUTPUT"
+          printf 'dsh_path=dist/dsh/npm/t6/%s\n' "$dsh_filename" >> "$GITHUB_OUTPUT"
 
       - name: Retain the reviewed release artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: pi-sparkles-pi-sparkles-T5
+          name: sparkles-npm-T6
           path: |
-            ${{ steps.tarball.outputs.path }}
+            ${{ steps.tarballs.outputs.pi_path }}
+            ${{ steps.tarballs.outputs.dsh_path }}
             dist/npm/*/npm-pack.json
             dist/npm/*/RELEASE_SHA256SUMS
+            dist/dsh/npm/*/npm-pack.json
+            dist/dsh/npm/*/RELEASE_SHA256SUMS
           if-no-files-found: error
 
-      - name: Publish through npm trusted publishing
-        run: npm publish "${{ steps.tarball.outputs.path }}" --tag "${{ inputs.dist_tag }}" --access public --ignore-scripts
+      - name: Publish the Pi package through npm trusted publishing
+        run: npm publish "${{ steps.tarballs.outputs.pi_path }}" --tag "${{ inputs.dist_tag }}" --access public --ignore-scripts
+
+      - name: Publish the DSH package through npm trusted publishing
+        run: npm publish "${{ steps.tarballs.outputs.dsh_path }}" --tag "${{ inputs.dist_tag }}" --access public --ignore-scripts

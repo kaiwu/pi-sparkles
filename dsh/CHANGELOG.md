@@ -7,6 +7,25 @@ content hashes remain authoritative in each tarball's `dsh-lock.json` and
 
 ## Unreleased
 
+## 0.1.6 - 2026-08-17
+
+- Add the responsive keyed `chart_ohlcv` browser card: inline SVG
+  candlesticks, volume, supplied indicators/trades/gaps, width-proportional
+  latest-suffix selection, pan/zoom/reset controls, and exact text fallback.
+- Apply market-native direction colors: red-up/green-down for Mainland China,
+  green-up/red-down for Hong Kong and the United States, and neutral gray for
+  flat candles, with a matching per-track legend.
+- Complete installed-profile browser discovery, resize, interaction,
+  persistence, and visual acceptance for the chart without using images,
+  attachments, files, data URLs, or overlays for chart output.
+- Reframe the package as Sparkles for DeepSeek Harness, move repository links
+  to `github.com/kaiwu/sparkles`, and introduce the sibling
+  `@pi-sparkles/pi-sparkles` terminal distribution.
+- Keep the clean tarball smoke isolated from npm's automatic host-peer install;
+  the real DSH profile supplies and verifies the exact tested `rc.6` peer graph.
+- Restore the independent T6 DSH release gate to ProductUseful after completing
+  the chart's installed-profile browser acceptance.
+
 ## 0.1.5 - 2026-08-17
 
 - Promote the independently verified T6 DSH lane to ProductUseful after

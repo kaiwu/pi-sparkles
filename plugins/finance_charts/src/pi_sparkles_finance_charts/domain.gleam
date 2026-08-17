@@ -181,10 +181,22 @@ fn validate_context(
       limitations: input.limitations,
     )
     |> result.map_error(fn(error) {
-      InvalidField("context.trackContext", string.inspect(error))
+      InvalidField("context.trackContext", track_context_error_message(error))
     }),
   )
   Ok(ValidatedContext(input, shared))
+}
+
+fn track_context_error_message(error: track_context.ContextError) -> String {
+  case error {
+    track_context.InvalidEntitlement ->
+      "entitlement must use only lowercase a-z, 0-9, and underscore"
+    track_context.InvalidLimitation ->
+      "each limitation must be a lowercase identifier using only a-z, 0-9, and underscore"
+    track_context.DuplicateLimitation(limitation) ->
+      "duplicate limitation identifier " <> limitation
+    _ -> string.inspect(error)
+  }
 }
 
 fn track_market_match(
@@ -376,7 +388,7 @@ fn parse_indicators(
   case list.length(values) <= 4 {
     False ->
       Error(InvalidField("indicators", "at most four series are rendered"))
-    True -> parse_indicators_loop(values, price_unit, bar_count, [], None, [])
+    True -> parse_indicators_loop(values, price_unit, bar_count, [], [])
   }
 }
 
@@ -385,7 +397,6 @@ fn parse_indicators_loop(
   price_unit: String,
   bar_count: Int,
   seen_ids: List(String),
-  lower_unit: Option(String),
   reversed: List(ParsedIndicator),
 ) -> Result(List(ParsedIndicator), DomainError) {
   case values {
@@ -414,21 +425,15 @@ fn parse_indicators_loop(
           InvalidIndicator(value.indicator_id, "empty or padded unit")
         }),
       )
-      use next_lower_unit <- result.try(case value.panel, lower_unit {
-        "price_overlay", _ if value.unit == price_unit -> Ok(lower_unit)
-        "price_overlay", _ ->
+      use _ <- result.try(case value.panel {
+        "price_overlay" if value.unit == price_unit -> Ok(Nil)
+        "price_overlay" ->
           Error(InvalidIndicator(
             value.indicator_id,
             "price_overlay unit must exactly equal context.priceUnit",
           ))
-        "lower_panel", None -> Ok(Some(value.unit))
-        "lower_panel", Some(unit) if unit == value.unit -> Ok(lower_unit)
-        "lower_panel", Some(_) ->
-          Error(InvalidIndicator(
-            value.indicator_id,
-            "all lower_panel indicators must share one exact unit",
-          ))
-        _, _ -> Error(InvalidIndicator(value.indicator_id, "unsupported panel"))
+        "lower_panel" -> Ok(Nil)
+        _ -> Error(InvalidIndicator(value.indicator_id, "unsupported panel"))
       })
       use _ <- result.try(
         case value.warmup_sessions >= 0 && value.warmup_sessions < bar_count {
@@ -452,7 +457,6 @@ fn parse_indicators_loop(
         price_unit,
         bar_count,
         [value.indicator_id, ..seen_ids],
-        next_lower_unit,
         [ParsedIndicator(value, points), ..reversed],
       )
     }

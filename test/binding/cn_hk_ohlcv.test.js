@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
@@ -191,6 +192,24 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
     expect(requests[0].headers.get("user-agent")).toContain(
       "market-data@example.test",
     );
+
+    const crashRegression = structuredClone(result);
+    crashRegression.content[0].text =
+      "CN track | Eastmoney raw daily OHLCV | cn_sse 588000 科创50ETF华夏 | 210 bars | volume unit and calendar gaps unknown | complete\nexact rows";
+    const coloredTheme = {
+      fg: (_color, text) => `\u001b[38;2;128;128;128m${text}\u001b[39m`,
+    };
+    const crashLines = tools
+      .get("cn_stock_ohlcv")
+      .renderResult(
+        crashRegression,
+        { expanded: false, isPartial: false },
+        coloredTheme,
+        {},
+      )
+      .render(116);
+    expect(crashLines.every((line) => visibleWidth(line) <= 112)).toBeTrue();
+    expect(crashLines[0]).toContain("科创50ETF华夏");
   });
 
   test("keeps HK currency caller-declared and exposes an exhausted row budget", async () => {
@@ -246,6 +265,18 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
       .join("\n");
     expect(collapsed).toContain("2 bars");
     expect(collapsed).not.toContain("date,open,high,low,close");
+
+    const narrowLines = tools
+      .get("hk_stock_ohlcv")
+      .renderResult(
+        result,
+        { expanded: false, isPartial: false },
+        theme,
+        {},
+      )
+      .render(116);
+    expect(narrowLines.every((line) => visibleWidth(line) <= 112)).toBeTrue();
+    expect(narrowLines[0]).toContain("腾讯控股");
 
     const receipt = result.details.gapAssessmentReceipt;
     expect(receipt).toMatchObject({

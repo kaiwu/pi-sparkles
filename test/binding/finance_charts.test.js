@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { visibleWidth } from "@earendil-works/pi-tui";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
 const artifact = resolve(import.meta.dir, "../../dist/finance_charts/index.js");
@@ -131,17 +133,125 @@ function input() {
   };
 }
 
-async function execute(tool, value) {
+async function execute(
+  tool,
+  value,
+  executionContext = { hasUI: false, ui: {} },
+) {
   return tool.execute(
     "finance-chart-query",
     value,
     new AbortController().signal,
     undefined,
-    { hasUI: false, ui: {} },
+    executionContext,
   );
 }
 
+function receiptFixture() {
+  const direct = input();
+  const sourceReference = direct.context.source.sourceReference;
+  const retrievedAt = direct.context.source.retrievedAtUnixMilliseconds;
+  const rows = direct.series.map((bar) =>
+    [bar.date, bar.open, bar.high, bar.low, bar.close, bar.volume, "0"].join(","),
+  ).join("\n");
+  const receipt = createHash("sha256").update(
+    `${sourceReference}\nretrievedAtUnixMilliseconds=${retrievedAt}\ndate,open,high,low,close,volume,amount\n${rows}`,
+  ).digest("hex");
+  const series = {
+    schema: "pi-sparkles/ohlcv-series-handoff",
+    schemaVersion: 1,
+    track: direct.context.track,
+    instrumentId: direct.context.instrumentId,
+    mic: direct.context.mic,
+    timezone: direct.context.timezone,
+    sourceLanguage: direct.context.sourceLanguage,
+    priceUnit: direct.context.priceUnit,
+    volumeUnit: direct.context.volumeUnit,
+    adjustment: "raw",
+    provider: direct.context.source.provider,
+    sourceReference,
+    acquisitionReceipt: receipt,
+    retrievedAtUnixMilliseconds: retrievedAt,
+    sourceCutoffUnixMilliseconds:
+      direct.context.source.sourceCutoffUnixMilliseconds,
+    entitlement: direct.context.source.entitlement,
+    limitations: direct.context.limitations,
+    bars: direct.series.map((bar) => ({ ...bar, amount: "0" })),
+  };
+  const calculationReceipt = hash("3");
+  const indicatorPayload = {
+    schema: "pi-sparkles/indicator-chart-handoff-payload",
+    schemaVersion: 1,
+    seriesReceipt: receipt,
+    calculationReceipt,
+    indicatorId: "sma_2",
+    label: "SMA 2",
+    panel: "price_overlay",
+    unit: "USD",
+    warmupSessions: 1,
+    points: direct.indicators[0].points,
+  };
+  const indicatorReceipt = createHash("sha256")
+    .update(JSON.stringify(indicatorPayload))
+    .digest("hex");
+  const indicator = {
+    schema: "pi-sparkles/indicator-chart-handoff",
+    schemaVersion: 1,
+    handoffReceipt: indicatorReceipt,
+    seriesReceipt: receipt,
+    calculationReceipt,
+    indicatorId: indicatorPayload.indicatorId,
+    label: indicatorPayload.label,
+    panel: indicatorPayload.panel,
+    unit: indicatorPayload.unit,
+    warmupSessions: indicatorPayload.warmupSessions,
+    points: indicatorPayload.points,
+  };
+  const entries = [
+    {
+      type: "custom",
+      id: "series-entry",
+      parentId: null,
+      timestamp: "2026-02-04T12:00:00.000Z",
+      customType: "pi_sparkles_finance_ohlcv.series_handoff.v1",
+      data: series,
+    },
+    {
+      type: "custom",
+      id: "indicator-entry",
+      parentId: "series-entry",
+      timestamp: "2026-02-04T12:00:01.000Z",
+      customType: "pi_sparkles_finance_indicators.chart_handoff.v1",
+      data: indicator,
+    },
+  ];
+  return {
+    receipt,
+    indicatorReceipt,
+    executionContext: {
+      hasUI: false,
+      ui: {},
+      sessionManager: { getBranch: () => entries },
+    },
+  };
+}
+
 describe("finance charts bundled boundary", () => {
+  test("documents conditional adjustment and identifier-only context fields", async () => {
+    const tools = await harness();
+    const context = tools.get("chart_ohlcv").parameters.properties.context;
+
+    expect(context.properties.adjustment.properties.label.description).toContain(
+      "use null for raw",
+    );
+    expect(context.properties.source.properties.entitlement.description).toContain(
+      "lowercase entitlement identifier",
+    );
+    expect(context.properties.limitations.items.description).toContain(
+      "lowercase limitation identifier",
+    );
+  });
+
   test("registers one chart tool and returns only exact text plus structured details", async () => {
     const tools = await harness();
     expect([...tools.keys()]).toEqual(["chart_ohlcv"]);
@@ -152,6 +262,37 @@ describe("finance charts bundled boundary", () => {
       "| Date | Session | Open | High | Low | Close | Volume |",
     );
     expect(first.content[0].text).toContain("active host renders this result inline");
+  });
+
+  test("resolves short active-session receipts without copied bars or indicator points", async () => {
+    const tools = await harness();
+    const fixture = receiptFixture();
+    const request = {
+      seriesReceipt: fixture.receipt,
+      maximumBars: 2,
+      indicatorReceipts: [fixture.indicatorReceipt],
+      trades: [],
+      gaps: [],
+      inputOmissions: [],
+      fallbackMaximumRows: 2,
+    };
+    expect(Buffer.byteLength(JSON.stringify(request))).toBeLessThan(400);
+
+    const result = await execute(
+      tools.get("chart_ohlcv"),
+      request,
+      fixture.executionContext,
+    );
+    expect(result.details.bars.map((bar) => bar.date)).toEqual([
+      "2026-02-03",
+      "2026-02-04",
+    ]);
+    expect(result.details.indicators).toHaveLength(1);
+    expect(result.details.indicators[0]).toMatchObject({
+      indicatorId: "sma_2",
+      calculationReceipt: hash("3"),
+    });
+    expect(result.details.inputOmissions).toEqual([]);
   });
 
   test("retains exact decimals and mandatory structured fallback", async () => {
@@ -198,7 +339,7 @@ describe("finance charts bundled boundary", () => {
     expect(result.details.structuredFallback.table.rows).toHaveLength(2);
   });
 
-  test("renders a width-bounded latest suffix as inline ASCII", async () => {
+  test("renders a width-bounded latest suffix as inline terminal Unicode", async () => {
     const tools = await harness();
     const definition = tools.get("chart_ohlcv");
     const value = input();
@@ -223,11 +364,15 @@ describe("finance charts bundled boundary", () => {
       {},
       { lastComponent: null },
     );
-    const narrowLines = narrow.render(60);
-    expect(narrowLines[0]).toContain("2026-01-06..2026-01-30");
-    expect(narrowLines[0]).toContain("25/30 bars");
-    expect(narrowLines.every((line) => line.length <= 60)).toBeTrue();
-    expect(narrowLines.join("\n")).toContain("legend # up");
+    const narrowLines = narrow.render(40);
+    expect(narrowLines[1]).toContain("2026-01-05..2026-01-30");
+    expect(narrowLines[2]).toContain("26/30 bars");
+    expect(narrowLines[2]).toContain("4 earlier hidden");
+    expect(narrowLines.every((line) => visibleWidth(line) <= 36)).toBeTrue();
+    expect(narrowLines.join("\n")).toContain("legend █/▮ rise");
+    expect(narrowLines.join("\n")).toContain("│");
+    expect(narrowLines.join("\n")).toMatch(/[█▮━│]/u);
+    expect(narrowLines.join("\n")).not.toMatch(/[\u2801-\u28ff]/u);
 
     const wide = definition.renderResult(
       result,
@@ -237,10 +382,67 @@ describe("finance charts bundled boundary", () => {
     );
     const wideLines = wide.render(80);
     expect(wide).toBe(narrow);
-    expect(wideLines[0]).toContain("2026-01-01..2026-01-30");
-    expect(wideLines[0]).toContain("30/30 bars");
-    expect(wideLines.every((line) => line.length <= 80)).toBeTrue();
+    expect(wideLines[1]).toContain("2026-01-01..2026-01-30");
+    expect(wideLines[2]).toContain("30/30 bars");
+    expect(wideLines.every((line) => visibleWidth(line) <= 76)).toBeTrue();
     expect(wideLines.join("\n")).not.toContain("\u001b[");
+  });
+
+  test("renders small volume as proportional columns, not a dot baseline", async () => {
+    const tools = await harness();
+    const definition = tools.get("chart_ohlcv");
+    const value = input();
+    value.series[0].volume = "1";
+    value.series[1].volume = "1000";
+    value.series[2].volume = "0";
+    value.indicators = [];
+    value.trades = [];
+    value.gaps = [];
+    const result = await execute(definition, value);
+    const component = definition.renderResult(
+      result,
+      { expanded: false },
+      {},
+      { lastComponent: null },
+    );
+    const lines = component.render(80);
+    const volumeStart = lines.findIndex((line) => line.includes("VOL"));
+    const volume = lines.slice(volumeStart, volumeStart + 3).join("\n");
+
+    expect(volumeStart).toBeGreaterThan(0);
+    expect(volume).toMatch(/[▂▃▄▅▆▇█]/u);
+    expect(volume).not.toMatch(/[·●_▁]/u);
+  });
+
+  test("renders RSI and ATR in independent exact-unit lower panes", async () => {
+    const tools = await harness();
+    const definition = tools.get("chart_ohlcv");
+    const value = input();
+    value.indicators.push({
+      indicatorId: "atr_2",
+      label: "ATR 2",
+      panel: "lower_panel",
+      unit: "USD",
+      warmupSessions: 1,
+      calculationReceipt: hash("8"),
+      points: [
+        { state: "unperformed", date: "2026-02-02", reason: "warmup" },
+        { state: "calculated", date: "2026-02-03", value: "0.5" },
+        { state: "calculated", date: "2026-02-04", value: "0.6" },
+      ],
+    });
+    const result = await execute(definition, value);
+    const component = definition.renderResult(
+      result,
+      { expanded: false },
+      {},
+      { lastComponent: null },
+    );
+    const rendered = component.render(100).join("\n");
+
+    expect(result.details.indicators).toHaveLength(3);
+    expect(rendered).toContain("ratio_0_100  ─ RSI 2");
+    expect(rendered).toContain("USD  ─ ATR 2");
   });
 
   test("expanded Pi output keeps the exact text fallback inline", async () => {
@@ -254,8 +456,69 @@ describe("finance charts bundled boundary", () => {
       { lastComponent: null },
     );
     const rendered = component.render(100).join("\n");
-    expect(rendered).toContain("legend # up");
+    expect(rendered).toContain("legend █/▮ rise");
+    expect(rendered).toMatch(/[╱╲─]/u);
+    expect(rendered).toContain("┤");
     expect(rendered).toContain("| Date | Session | Open | High | Low | Close | Volume |");
+  });
+
+  test("colors CN opposite to HK and US through the active Pi theme", async () => {
+    const tools = await harness();
+    const definition = tools.get("chart_ohlcv");
+    const base = await execute(definition, input());
+    base.details.bars = [base.details.bars[0], base.details.bars[2]];
+    base.details.indicators = [];
+    base.details.trades = [];
+    base.details.gaps = [];
+
+    for (const { track, upTone, downTone } of [
+      { track: "cn", upTone: "error", downTone: "success" },
+      { track: "hk", upTone: "success", downTone: "error" },
+      { track: "us", upTone: "success", downTone: "error" },
+    ]) {
+      const calls = [];
+      const theme = {
+        fg(tone, text) {
+          calls.push({ tone, text });
+          const code = tone === "error" ? 31 : tone === "success" ? 32 : 36;
+          return `\u001b[${code}m${text}\u001b[39m`;
+        },
+      };
+      const result = structuredClone(base);
+      result.details.track = track;
+      const component = definition.renderResult(
+        result,
+        { expanded: false },
+        theme,
+        { lastComponent: null },
+      );
+      const rendered = component.render(80);
+
+      expect(calls.some(({ tone, text }) =>
+        tone === upTone && /[█▮━│]/u.test(text),
+      )).toBeTrue();
+      expect(calls.some(({ tone, text }) =>
+        tone === downTone && /[█▮━│]/u.test(text),
+      )).toBeTrue();
+      expect(rendered.some((line) => line.includes("\u001b["))).toBeTrue();
+      expect(rendered.every((line) => visibleWidth(line) <= 76)).toBeTrue();
+    }
+  });
+
+  test("reserves a TUI margin and clips CJK text by visible terminal width", async () => {
+    const tools = await harness();
+    const definition = tools.get("chart_ohlcv");
+    const result = await execute(definition, input());
+    result.details.instrumentId = "CN-588000-科创50ETF华夏";
+    const component = definition.renderResult(
+      result,
+      { expanded: true },
+      {},
+      { lastComponent: null },
+    );
+
+    const lines = component.render(116);
+    expect(lines.every((line) => visibleWidth(line) <= 112)).toBeTrue();
   });
 
   test("discloses warm-up, gaps, omissions, and unmatched marker dates", async () => {

@@ -76,7 +76,7 @@ function loadChartComponent(React) {
   return registered.get("tool.call.toolview:chart_ohlcv");
 }
 
-function chartBlock(count = 100) {
+function chartBlock(count = 100, track = "us") {
   return {
     kind: "tool-result",
     content: [{ type: "text", text: "exact chart fallback" }],
@@ -85,7 +85,7 @@ function chartBlock(count = 100) {
       schemaVersion: 1,
       valid: true,
       chart: {
-        track: "us",
+        track,
         instrumentId: "US-AAPL",
         mic: "XNAS",
         timezone: "America/New_York",
@@ -116,6 +116,18 @@ function textContent(node) {
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (Array.isArray(node)) return node.map(textContent).join(" ");
   return textContent(node.children);
+}
+
+function findByKey(node, key) {
+  if (node === null || node === undefined || typeof node !== "object") return undefined;
+  if (!Array.isArray(node) && node.props?.key === key) return node;
+  const children = Array.isArray(node) ? node : node.children;
+  if (!Array.isArray(children)) return findByKey(children, key);
+  for (const child of children) {
+    const match = findByKey(child, key);
+    if (match !== undefined) return match;
+  }
+  return undefined;
 }
 
 describe("DSH inline finance chart client", () => {
@@ -167,5 +179,86 @@ describe("DSH inline finance chart client", () => {
     });
     expect(rendered.props["data-dsh-sparkles-chart"]).toBe("fallback");
     expect(textContent(rendered)).toContain("safe exact fallback");
+  });
+
+  test("uses Mainland red-up/green-down and Hong Kong/US green-up/red-down", () => {
+    const cases = [
+      {
+        track: "cn",
+        up: "#ef5b5b",
+        down: "#20b486",
+        legend: "red up · green down · gray flat",
+      },
+      {
+        track: "hk",
+        up: "#20b486",
+        down: "#ef5b5b",
+        legend: "green up · red down · gray flat",
+      },
+      {
+        track: "us",
+        up: "#20b486",
+        down: "#ef5b5b",
+        legend: "green up · red down · gray flat",
+      },
+    ];
+
+    for (const { track, up, down, legend } of cases) {
+      const React = fakeReact();
+      const entry = loadChartComponent(React);
+      const block = chartBlock(3, track);
+      block.meta.chart.bars[1].close = "99";
+      block.meta.chart.bars[2].close = block.meta.chart.bars[2].open;
+
+      React.begin();
+      const rendered = entry.component({ block });
+
+      expect(findByKey(rendered, "body-0")?.props.fill).toBe(up);
+      expect(findByKey(rendered, "wick-0")?.props.stroke).toBe(up);
+      expect(findByKey(rendered, "body-1")?.props.fill).toBe(down);
+      expect(findByKey(rendered, "wick-1")?.props.stroke).toBe(down);
+      expect(findByKey(rendered, "body-2")?.props.fill).toBe("#94a3b8");
+      expect(textContent(rendered)).toContain(legend);
+    }
+  });
+
+  test("renders RSI and ATR in separate exact-unit lower panes", () => {
+    const React = fakeReact();
+    const entry = loadChartComponent(React);
+    const block = chartBlock(3, "cn");
+    block.meta.chart.indicators = [
+      {
+        indicatorId: "rsi_2",
+        label: "RSI 2",
+        panel: "lower_panel",
+        unit: "dimensionless_0_100",
+        points: block.meta.chart.bars.map((bar, index) => ({
+          state: "calculated",
+          date: bar.date,
+          value: String(40 + index * 5),
+        })),
+      },
+      {
+        indicatorId: "atr_2",
+        label: "ATR 2",
+        panel: "lower_panel",
+        unit: "CNY",
+        points: block.meta.chart.bars.map((bar, index) => ({
+          state: "calculated",
+          date: bar.date,
+          value: String(0.5 + index * 0.1),
+        })),
+      },
+    ];
+
+    React.begin();
+    const rendered = entry.component({ block });
+    const svg = rendered.children.find((child) => child?.type === "svg");
+
+    expect(svg.props.height).toBe("428");
+    expect(findByKey(rendered, "lower-indicator-0-0")?.type).toBe("polyline");
+    expect(findByKey(rendered, "lower-indicator-1-0")?.type).toBe("polyline");
+    expect(textContent(findByKey(rendered, "lower-unit-0"))).toContain("dimensionless_0_100");
+    expect(textContent(findByKey(rendered, "lower-unit-1"))).toContain("CNY");
   });
 });

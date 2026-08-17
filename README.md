@@ -1,28 +1,52 @@
-# pi-sparkles
+# Sparkles
 
-Read-only finance evidence tools for the [Pi](https://pi.dev) coding agent.
-Gleam packages compile to JavaScript and ship as one Pi extension.
+Read-only finance evidence tools for two coding-agent hosts:
+[Pi](https://pi.dev) in the terminal and
+[DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) in
+the browser. Both distributions reuse the same Gleam functional cores while
+keeping host registration, session ownership, presentation, packaging, and
+release maturity separate.
 
-**0.1.5** is the ProductUseful T1–T6 all-in-one package. It registers 135
-ledger plugins behind one entrypoint. No plugin can place, route, cancel,
-replace, or otherwise mutate a paper or live order.
+**0.1.6** is the next shared source version for both npm packages. The Pi and
+DSH distributions are independently ProductUseful T1–T6 releases covering the
+same 135 ledger components through separate host-native entrypoints. No
+component can place, route, cancel, replace, or otherwise mutate a paper or
+live order.
+
+| Host | npm package | Host-native output | Release state |
+| --- | --- | --- | --- |
+| Pi | [`@pi-sparkles/pi-sparkles@0.1.6`](https://www.npmjs.com/package/@pi-sparkles/pi-sparkles) | terminal components, including responsive colored Unicode OHLCV charts | ProductUseful T1–T6 |
+| DSH | [`@dsh-sparkles/dsh-sparkles@0.1.6`](https://www.npmjs.com/package/@dsh-sparkles/dsh-sparkles) | browser slots, session projections, and responsive inline SVG OHLCV charts | ProductUseful T1–T6 |
+
+## Install and start
+
+Pi:
 
 ```sh
-pi install npm:@pi-sparkles/pi-sparkles@0.1.5
+pi install npm:@pi-sparkles/pi-sparkles@0.1.6
 export AGENT_CONTACT="ops@example.com"
 pi --finance-track=cn
 ```
 
-Then run `/finance-setup` and `/finance-track` before any fetch. A missing
-adapter is allowed and never triggers fallback.
+DeepSeek Harness:
+
+```sh
+dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles@0.1.6
+export AGENT_CONTACT="ops@example.com"
+dsh --profile <name>
+```
+
+In either host, run `/finance-setup` and `/finance-track` before the first
+provider fetch. A missing adapter is allowed and never triggers fallback.
 
 | | |
 | --- | --- |
-| Release | [`@pi-sparkles/pi-sparkles@0.1.5`](NPM_RELEASE.md) |
-| Tiers | T1–T6 ProductUseful · 0 open blockers · [tiers.json](tiers.json) |
+| Repository | [`github.com/kaiwu/sparkles`](https://github.com/kaiwu/sparkles) |
+| Release guide | [Pi and DSH npm lines](NPM_RELEASE.md) |
+| Tiers | T1–T6 ProductUseful in independent Pi and DSH lanes · 0 open Pi blockers · [tiers.json](tiers.json) |
 | Inventory | 135 ledger plugins · 142 Gleam plugin packages · 77 finance libraries |
 | Tracks | closed `cn` / `hk` / `us` |
-| Tested with | Pi `0.83.0` (`305c014dc`) · Gleam `1.18.0` · Bun `1.3.14` |
+| Tested with | Pi `0.84.1` · DSH `0.1.0-rc.6` · Gleam `1.18.0` · Bun `1.3.14` |
 
 The seven packages excluded from the aggregate (`hello`, `lifecycle`,
 `safety_gate`, `cn_setup`, `hk_setup`, `cn_fundamentals`, `hk_fundamentals`)
@@ -32,10 +56,11 @@ Package-level Experimental labels are inventory. ProductUseful applies only to
 a whole role tier. Tiers are not a 6×3 track matrix. See
 [PRODUCT_TIERS.md](PRODUCT_TIERS.md).
 
-The separate DSH preview also covers all 135 ledger components: 131 global-safe
-shells plus per-agent counterparts for track status, swing workbench,
-portfolio, and watchlist. Its finance track status is rendered through DSH's
-browser `shell.overlay`; see [dsh/README.md](dsh/README.md).
+The DSH distribution mounts 131 global-safe shells plus per-agent counterparts for
+track status, swing workbench, portfolio, and watchlist. Its finance track
+status is rendered through DSH's browser `shell.overlay`; its OHLCV chart is a
+keyed inline tool-result card rather than a Pi terminal component. See
+[dsh/README.md](dsh/README.md).
 
 ## Docs
 
@@ -55,8 +80,9 @@ browser `shell.overlay`; see [dsh/README.md](dsh/README.md).
 
 ## Develop
 
-Requirements: Gleam, Bun, and either a hydrated Pi checkout or an installed
-`pi`.
+Requirements: Gleam and Bun, plus the host used by the lane being tested:
+either a hydrated Pi checkout or installed `pi`, and installed `dsh` for DSH
+runtime verification.
 
 ```sh
 bun run tier:audit
@@ -97,8 +123,8 @@ the user-facing product. `pi_gleam` is an unpublished `0.1.0` binding.
 
 ## Runtime environment
 
-Set variables in the environment that launches Pi. This repository does not
-load `.env` files. Restart Pi after changes.
+Set variables in the environment that launches Pi or DSH. This repository does
+not load `.env` files. Restart the selected host after changes.
 
 | Variable | Kind | Used by |
 | --- | --- | --- |
@@ -123,7 +149,11 @@ export ALPACA_API_KEY_ID="<secret-manager:alpaca-key-id>"
 export ALPACA_API_SECRET_KEY="<secret-manager:alpaca-secret>"
 export TWELVE_DATA_API_KEY="<secret-manager:twelve-data>"
 export FRED_API_KEY="<secret-manager:fred>"
+# Pi
 pi --finance-track=cn
+
+# DSH (select the track with /cn-track after launch)
+dsh --profile <name>
 ```
 
 Generated `CONFIGURATION.md` lists names only. Per-plugin contracts live in
@@ -132,7 +162,7 @@ each plugin README.
 ## Layout
 
 ```text
-pi-sparkles/
+sparkles/
 ├── pi_gleam/          Gleam binding for Pi's extension API
 ├── finance/           77 reusable non-Pi libraries (no Pi imports)
 ├── plugins/           142 Gleam plugin packages; 135 are the T1–T6 ledger
@@ -187,8 +217,9 @@ is never part of `build` or `test`.
 
 ## Still open
 
-The finance product is shipped. Remaining work is Hex **source** publication
-and further typed `pi_gleam` coverage — not missing role tiers.
+The Pi and DSH finance products are shipped through independent release lanes.
+Remaining work is Hex **source** publication and further typed `pi_gleam`
+coverage — not missing role tiers.
 
 - Hex name, consumer builder, and `hex:check` / `hex:publish` are unbuilt.
 - `pi_gleam` typed wrappers still grow only when a plugin needs them; `pi/raw`

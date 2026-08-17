@@ -1,16 +1,16 @@
 {
   "name": "pi-sparkles",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kaiwu/pi-sparkles.git"
+    "url": "git+https://github.com/kaiwu/sparkles.git"
   },
   "homepage": "https://sparkles.extensio.cn",
   "bugs": {
-    "url": "https://github.com/kaiwu/pi-sparkles/issues"
+    "url": "https://github.com/kaiwu/sparkles/issues"
   },
   "engines": {
     "node": ">=22.19.0"
@@ -57,13 +57,14 @@
   "dependencies": {
     "pdfjs-dist": "6.2.108"
   },
-  "description": "Gleam plugins for the Pi coding agent, compiled with Gleam and bundled for Pi with Bun.",
+  "description": "Shared Gleam finance tools with host-native npm distributions for Pi and DeepSeek Harness.",
   "main": "index.js",
   "directories": {
     "test": "test"
   },
   "keywords": [],
   "devDependencies": {
+    "@earendil-works/pi-tui": "0.84.2",
     "futu-api": "10.10.7008",
     "zod": "4.4.3"
   }

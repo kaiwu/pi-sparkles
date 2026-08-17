@@ -1,3 +1,12 @@
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+
+const COMPACT_CONTENT_MARGIN = 4;
+
+function contentWidth(width) {
+  const available = Number.isInteger(width) && width > 0 ? width : 80;
+  return Math.max(1, available - COMPACT_CONTENT_MARGIN);
+}
+
 class CompactText {
   constructor(text = "") {
     this.text = text;
@@ -9,8 +18,14 @@ class CompactText {
 
   invalidate() {}
 
-  render() {
-    return this.text.trim() === "" ? [] : this.text.split("\n");
+  render(width) {
+    if (this.text.trim() === "") return [];
+    const maximum = contentWidth(width);
+    return this.text.split("\n").map((line) =>
+      visibleWidth(line) <= maximum
+        ? line
+        : truncateToWidth(line, maximum, ""),
+    );
   }
 }
 

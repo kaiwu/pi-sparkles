@@ -1,9 +1,12 @@
+import finance_indicators/chart_handoff
 import gleam/javascript/promise.{type Promise}
 import pi
+import pi/raw
 import pi/schema
 import pi/tool
 import pi_sparkles_stock_technicals/decode
 import pi_sparkles_stock_technicals/domain
+import pi_sparkles_stock_technicals/handoff
 import pi_sparkles_stock_technicals/return_comparison
 
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
@@ -38,61 +41,85 @@ fn register_return_comparison(api: pi.ExtensionApi) -> Nil {
 }
 
 fn register_sma(api: pi.ExtensionApi) -> Nil {
-  tool.register(
+  tool.register_compact(
     api,
     "sma",
     "Exact simple moving average",
-    "Calculate explicitly requested sma_v1 values over exact caller-supplied observations. When CN, HK, or US history/OHLCV rows are available, use SMA evidence for ordinary buy-now, sell-timing, entry, exit, trend, or timing questions even when the user does not name an indicator or explicitly request tools; call this tool instead of writing or executing calculation code",
-    "Map the returned CSV close column to observations for relevant current-data-dependent opinions and copy its model-visible source/receipt metadata; omit instructionRef unless a real retained hash already exists—the plugin derives it, so never calculate it with a script",
+    "Calculate explicitly requested sma_v1 values over exact caller-supplied observations or one verified active-session OHLCV series receipt. When CN, HK, or US history/OHLCV rows are available, use SMA evidence for ordinary buy-now, sell-timing, entry, exit, trend, or timing questions even when the user does not name an indicator or explicitly request tools; call this tool instead of writing or executing calculation code",
+    "When history returns seriesReceipt, pass only seriesReceipt plus calculation and projection; omit context and observations and never copy the CSV rows. Use context plus observations only for an external series with no session receipt. Omit instructionRef unless a real retained hash already exists—the plugin derives it, so never calculate it with a script",
     tool.parameters(sma_schema(), decode.sma()),
     tool.Parallel,
-    fn(_id, input, _signal, _updates, _ctx) { complete(domain.run_sma(input)) },
+    fn(_id, input, _signal, _updates, ctx) {
+      case handoff.resolve_sma(input, ctx) {
+        Ok(value) -> complete(api, domain.run_sma(value))
+        Error(message) -> tool.reject(message)
+      }
+    },
   )
 }
 
 fn register_rsi(api: pi.ExtensionApi) -> Nil {
-  tool.register(
+  tool.register_compact(
     api,
     "rsi",
     "Exact Wilder RSI",
-    "Calculate explicitly requested rsi_wilder_v1 values over exact caller-supplied observations. When CN, HK, or US history/OHLCV rows are available, use RSI evidence for ordinary buy-now, sell-timing, entry, exit, momentum, or timing questions even when the user does not name an indicator or explicitly request tools; call this tool instead of writing or executing calculation code",
-    "Map the returned CSV close column to observations for relevant current-data-dependent opinions and copy its model-visible source/receipt metadata; omit instructionRef unless a real retained hash already exists—the plugin derives it, so never calculate it with a script",
+    "Calculate explicitly requested rsi_wilder_v1 values over exact caller-supplied observations or one verified active-session OHLCV series receipt. When CN, HK, or US history/OHLCV rows are available, use RSI evidence for ordinary buy-now, sell-timing, entry, exit, momentum, or timing questions even when the user does not name an indicator or explicitly request tools; call this tool instead of writing or executing calculation code",
+    "When history returns seriesReceipt, pass only seriesReceipt plus calculation and projection; omit context and observations and never copy the CSV rows. Use context plus observations only for an external series with no session receipt. Omit instructionRef unless a real retained hash already exists—the plugin derives it, so never calculate it with a script",
     tool.parameters(rsi_schema(), decode.rsi()),
     tool.Parallel,
-    fn(_id, input, _signal, _updates, _ctx) { complete(domain.run_rsi(input)) },
+    fn(_id, input, _signal, _updates, ctx) {
+      case handoff.resolve_rsi(input, ctx) {
+        Ok(value) -> complete(api, domain.run_rsi(value))
+        Error(message) -> tool.reject(message)
+      }
+    },
   )
 }
 
 fn register_atr(api: pi.ExtensionApi) -> Nil {
-  tool.register(
+  tool.register_compact(
     api,
     "atr",
     "Exact Wilder ATR",
-    "Calculate explicitly requested atr_wilder_v1 values over exact caller-supplied high/low/close facts. When CN, HK, or US history/OHLCV rows are available, use ATR evidence for ordinary buy-now, sell-timing, stop, target, volatility, or timing questions even when the user does not name an indicator or explicitly request tools; call this tool instead of writing or executing calculation code",
-    "Map the returned CSV high, low, and close columns to bars for relevant current-data-dependent opinions and copy its model-visible source/receipt metadata; omit instructionRef unless a real retained hash already exists—the plugin derives it, so never calculate it with a script",
+    "Calculate explicitly requested atr_wilder_v1 values over exact caller-supplied high/low/close facts or one verified active-session OHLCV series receipt. When CN, HK, or US history/OHLCV rows are available, use ATR evidence for ordinary buy-now, sell-timing, stop, target, volatility, or timing questions even when the user does not name an indicator or explicitly request tools; call this tool instead of writing or executing calculation code",
+    "When history returns seriesReceipt, pass only seriesReceipt plus calculation and projection; omit context and bars and never copy the CSV rows. Use context plus bars only for an external series with no session receipt. Omit instructionRef unless a real retained hash already exists—the plugin derives it, so never calculate it with a script",
     tool.parameters(atr_schema(), decode.atr()),
     tool.Parallel,
-    fn(_id, input, _signal, _updates, _ctx) { complete(domain.run_atr(input)) },
+    fn(_id, input, _signal, _updates, ctx) {
+      case handoff.resolve_atr(input, ctx) {
+        Ok(value) -> complete(api, domain.run_atr(value))
+        Error(message) -> tool.reject(message)
+      }
+    },
   )
 }
 
 fn complete(
+  api: pi.ExtensionApi,
   value: Result(domain.Response, domain.DomainError),
 ) -> Promise(tool.ToolResult) {
   case value {
-    Ok(value) ->
+    Ok(value) -> {
+      let handoff = domain.chart_handoff(value)
+      pi.append_entry(
+        api,
+        chart_handoff.event_type,
+        raw.dynamic(chart_handoff.encode(handoff)),
+      )
       tool.text_result(domain.model_content(value), domain.details(value))
       |> promise.resolve
+    }
     Error(error) -> tool.reject(domain.error_message(error))
   }
 }
 
 fn sma_schema() -> schema.Schema {
   schema.object([
-    schema.Required("context", context_schema()),
+    schema.Optional("seriesReceipt", series_receipt_schema()),
+    schema.Optional("context", context_schema()),
     schema.Required("calculation", sma_calculation_schema()),
     schema.Required("projection", projection_schema()),
-    schema.Required(
+    schema.Optional(
       "observations",
       schema.array(observation_schema()) |> schema.with_array_length(1, 2000),
     ),
@@ -101,10 +128,11 @@ fn sma_schema() -> schema.Schema {
 
 fn rsi_schema() -> schema.Schema {
   schema.object([
-    schema.Required("context", context_schema()),
+    schema.Optional("seriesReceipt", series_receipt_schema()),
+    schema.Optional("context", context_schema()),
     schema.Required("calculation", rsi_calculation_schema()),
     schema.Required("projection", projection_schema()),
-    schema.Required(
+    schema.Optional(
       "observations",
       schema.array(observation_schema()) |> schema.with_array_length(1, 2000),
     ),
@@ -113,14 +141,22 @@ fn rsi_schema() -> schema.Schema {
 
 fn atr_schema() -> schema.Schema {
   schema.object([
-    schema.Required("context", context_schema()),
+    schema.Optional("seriesReceipt", series_receipt_schema()),
+    schema.Optional("context", context_schema()),
     schema.Required("calculation", atr_calculation_schema()),
     schema.Required("projection", projection_schema()),
-    schema.Required(
+    schema.Optional(
       "bars",
       schema.array(bar_schema()) |> schema.with_array_length(1, 2000),
     ),
   ])
+}
+
+fn series_receipt_schema() -> schema.Schema {
+  hash_schema()
+  |> schema.described(
+    "Exact seriesReceipt returned by a history tool in this active Pi/DSH session. When present, omit context and observations/bars; the plugin verifies and resolves the stored OHLCV rows without model-side copying",
+  )
 }
 
 fn return_comparison_schema() -> schema.Schema {

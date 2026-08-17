@@ -9,6 +9,7 @@ import finance_eastmoney/request as provider_request
 import finance_eastmoney/runtime
 import finance_http/response as http_response
 import finance_http/transport
+import finance_ohlcv/series_handoff
 import finance_provenance/hash
 import finance_provenance/identity as provenance_identity
 import finance_track
@@ -266,6 +267,13 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                       )
                     Ok(value) -> {
                       let retrieved_at = environment.now_milliseconds()
+                      let handoff =
+                        history_series_handoff(input, value, retrieved_at)
+                      pi.append_entry(
+                        api,
+                        series_handoff.event_type,
+                        raw.dynamic(series_handoff.encode(handoff)),
+                      )
                       let details = history_json(input, value, retrieved_at)
                       tool.text_result(
                         history_model_content(input, value, retrieved_at),
@@ -913,6 +921,9 @@ fn history_model_content(
   <> source_reference
   <> ";acquisitionReceiptCanonicalSha256="
   <> receipt_digest
+  <> ";seriesReceipt="
+  <> receipt_digest
+  <> ";seriesHandoff=session_bound_v1_use_receipt_for_sma_rsi_atr_chart"
   <> "\ndate,open,high,low,close,volume,amount\n"
   <> rows
 }
@@ -922,21 +933,19 @@ fn history_handoff(
   value: history.History,
   retrieved_at: Int,
 ) -> #(String, String, String) {
-  let rows =
-    history.bars(value)
-    |> list.map(fn(bar) {
-      [
-        date_text(history.date(bar)),
-        history.open(bar),
-        history.high(bar),
-        history.low(bar),
-        history.close(bar),
-        history.volume(bar),
-        history.amount(bar),
-      ]
-      |> string.join(",")
-    })
-    |> string.join("\n")
+  let handoff = history_series_handoff(input, value, retrieved_at)
+  #(
+    series_handoff.source_reference(handoff),
+    series_handoff.receipt(handoff),
+    series_handoff.csv_rows(handoff),
+  )
+}
+
+fn history_series_handoff(
+  input: HistoryInput,
+  value: history.History,
+  retrieved_at: Int,
+) -> series_handoff.Handoff {
   let source_reference =
     "eastmoney:cn:"
     <> query.market_name(input.market)
@@ -947,14 +956,47 @@ fn history_handoff(
     <> ":"
     <> date_text(input.end_date)
     <> ":raw_unadjusted_fqt_0"
-  let canonical =
-    source_reference
-    <> "\nretrievedAtUnixMilliseconds="
-    <> int.to_string(retrieved_at)
-    <> "\ndate,open,high,low,close,volume,amount\n"
-    <> rows
-  let assert Ok(digest) = hash.text(canonical)
-  #(source_reference, provenance_identity.sha256_value(digest), rows)
+  let bars =
+    history.bars(value)
+    |> list.map(fn(bar) {
+      series_handoff.Bar(
+        date: date_text(history.date(bar)),
+        open: history.open(bar),
+        high: history.high(bar),
+        low: history.low(bar),
+        close: history.close(bar),
+        volume: history.volume(bar),
+        amount: history.amount(bar),
+      )
+    })
+  let assert Ok(handoff) =
+    series_handoff.new(
+      track: "cn",
+      instrument_id: history.code(value),
+      mic: market_mic(input.market),
+      timezone: "Asia/Shanghai",
+      source_language: "zh-CN",
+      price_unit: "CNY",
+      volume_unit: "provider_defined_unknown",
+      adjustment: "raw",
+      provider: "eastmoney",
+      source_reference:,
+      retrieved_at_unix_milliseconds: retrieved_at,
+      source_cutoff_unix_milliseconds: None,
+      entitlement: "public_web_local_analysis",
+      limitations: limitations(),
+      bars:,
+    )
+  handoff
+}
+
+fn market_mic(value: query.Market) -> String {
+  case value {
+    query.CnSse -> "XSHG"
+    query.CnSzse -> "XSHE"
+    query.CnBse -> "XBSE"
+    query.Hk -> "XHKG"
+  }
 }
 
 fn quote_json(

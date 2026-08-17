@@ -1,8 +1,15 @@
-# All-in-one npm release
+# Sparkles npm releases
 
-The npm package has one stable identity: `@pi-sparkles/pi-sparkles`. Its selected
-aggregate target is recorded separately in `package.json`, `release-lock.json`,
-and `aggregate-lock.json`.
+Sparkles has two stable, host-specific npm identities built from
+[`github.com/kaiwu/sparkles`](https://github.com/kaiwu/sparkles):
+`@pi-sparkles/pi-sparkles` for Pi and `@dsh-sparkles/dsh-sparkles` for
+DeepSeek Harness. They reuse functional cores but retain independent host
+entrypoints, presentation, locks, verification, and release maturity.
+
+## Pi release — @pi-sparkles/pi-sparkles
+
+The selected aggregate target is recorded separately in `package.json`,
+`release-lock.json`, and `aggregate-lock.json`.
 
 ## Build and inspect
 
@@ -44,8 +51,8 @@ release verification load the T6 all-in-one aggregate entrypoint once so all
 135 plugin registrations are exercised at the actual distribution boundary.
 The loader rejects earlier-tier and per-plugin target overrides.
 
-The T5 selection remains the published 0.1.4 boundary. T6 is ProductUseful with
-zero omissions, partials, or blockers and is selected for version 0.1.5.
+The T5 selection remains the historical 0.1.4 boundary. T6 is ProductUseful
+with zero omissions, partials, or blockers and is selected for version 0.1.6.
 
 ## Local consumer verification
 
@@ -56,7 +63,7 @@ provider variable from the child environment, and asks plain Pi to load the
 entrypoint with `--list-models`. For a manual equivalent:
 
 ```sh
-npm install ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.5.tgz
+npm install ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.6.tgz
 pi --no-extensions \
   --extension ./node_modules/@pi-sparkles/pi-sparkles/index.js \
   --list-models
@@ -88,7 +95,7 @@ because a trusted-publisher relationship cannot be attached until the package
 exists. The explicit command is:
 
 ```sh
-npm publish ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.5.tgz --access public
+npm publish ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.6.tgz --access public
 ```
 
 Publishing changes external state and is never performed by builds, tests, or
@@ -100,9 +107,9 @@ protected GitHub `npm` environment if review approval is required.
 After publication, verify the registry artifact and install through Pi:
 
 ```sh
-npm view @pi-sparkles/pi-sparkles@0.1.5 \
+npm view @pi-sparkles/pi-sparkles@0.1.6 \
   name version dist.integrity repository --json
-pi install npm:@pi-sparkles/pi-sparkles@0.1.5
+pi install npm:@pi-sparkles/pi-sparkles@0.1.6
 ```
 
 ---
@@ -137,14 +144,31 @@ or credential values. The install smoke installs the exact tarball into a clean
 npm prefix, imports the entrypoint to verify its Cordis plugin shape, and
 composes it in an isolated `DSH_HOME` profile with the real `dsh` CLI.
 
-The DSH manifest is currently `preview`: the four global exclusions now have
-implemented per-agent counterparts, but the independent DSH role acceptance
-lane has not been declared complete. Therefore T5 and T6 pack only as private
-blocked previews; the publish dry-run, registry check, and real publication
-gate refuse them. Do not run an npm publish command until
-`dsh_release.status` is independently promoted to `product_useful` with its
-acceptance evidence. Packaging/verification never publish.
+The DSH manifest is independently `product_useful` for T6. The four global
+exclusions have per-agent counterparts, and the inline chart has completed
+installed-profile discovery, resize/interaction, persistence, and visual
+browser acceptance. T5 remains outside the selected DSH release boundary.
+Packaging and verification never publish.
 
 ```sh
-bun run dsh:npm:release:verify          # intentionally refuses while preview
+bun run dsh:npm:release:verify
+```
+
+That gate builds the exact 0.1.6 tarball, installs it without synthesizing a
+standalone DSH host, composes it in an isolated profile using the installed
+tested `0.1.0-rc.6` runtime, runs `npm publish --dry-run`, and confirms that the
+version is unused. The reviewed artifact is:
+
+```text
+dist/dsh/npm/t6/dsh-sparkles-dsh-sparkles-0.1.6.tgz
+```
+
+After explicit publication authorization, publish that exact tarball and then
+verify it through DSH:
+
+```sh
+npm publish ./dist/dsh/npm/t6/dsh-sparkles-dsh-sparkles-0.1.6.tgz --access public
+npm view @dsh-sparkles/dsh-sparkles@0.1.6 \
+  name version dist.integrity repository --json
+dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles@0.1.6
 ```

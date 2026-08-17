@@ -6,7 +6,8 @@ target: JavaScript/Bun
 `stock_technicals` is the first thin Pi shell over the existing
 `finance_indicators` functional core. It exposes four neutral calculation
 tools—`sma`, `rsi`, `atr`, and `compare_series_returns`—for exact
-caller/LLM-supplied observations. It
+caller/LLM-supplied observations or a content-verified OHLCV receipt stored on
+the active Pi/DSH session. It
 fetches no market data and makes no choice about instrument, provider, field,
 price basis, formula, period, gap handling, parseable-value handling, rounding,
 projection, interpretation, or next operation.
@@ -42,13 +43,17 @@ Every result will include `decisionOwner: "llm"` and
 
 ## Professional routine
 
-1. The LLM obtains or constructs one exact, single-track input series and its
-   source/evidence receipts.
-2. The LLM calls exactly one of `sma`, `rsi`, or `atr`, explicitly naming the
-   supported formula and every parameter.
+1. An acquisition tool obtains one exact, single-track input series and stores
+   its immutable, content-bound session handoff; an external caller may instead
+   supply the complete observations and source context directly.
+2. The LLM calls exactly one of `sma`, `rsi`, or `atr`, passing the short
+   `seriesReceipt` plus the supported formula and every parameter. It does not
+   copy history CSV rows into the tool call.
 3. For `projection: "compact"`, the plugin returns the latest calculated
    value, the requested prior calculated value, counts, receipt handles,
-   unknown/conflict facts, and neutral available operations.
+   unknown/conflict facts, a `chartHandoffReceipt`, and neutral available
+   operations. The complete ordered chart projection is stored on the active
+   session rather than copied into the compact model output.
 4. When more evidence is useful, the LLM repeats the same request with
    `projection: "intermediate"`. Equal semantic inputs produce the same
    semantic receipt hash; the response additionally exposes the ordered output
@@ -57,10 +62,19 @@ Every result will include `decisionOwner: "llm"` and
    formula, change a parameter, inspect another input series, or continue a
    professional workflow.
 
-The first slice is intentionally stateless. A receipt handle is a stable
-content identifier, not a mutable cache key. Drill-down repeats the immutable
-request rather than relying on session memory, so interruption and replay do
-not change the result.
+The calculator owns no mutable series cache. A receipt is a stable content
+identifier, not a process-global cache key: Pi persists the exact acquisition
+handoff on the active branch and DSH persists the same event on the invoking
+agent's session. The shell resolves and rehashes it for every call. Session
+replay therefore reconstructs the same input, while another session or agent
+cannot access it by ambient process state.
+
+Each successful SMA, RSI, or ATR calculation also appends a versioned,
+content-bound indicator chart handoff. `chart_ohlcv` accepts its short
+`chartHandoffReceipt` as an `indicatorReceipt`, verifies the stored points, and
+checks their source `seriesReceipt`. This avoids an intermediate projection and
+large model-authored chart arguments while preserving the calculator/chart
+responsibility boundary.
 
 ## Tool surface
 
@@ -71,8 +85,10 @@ field and period. Partial windows and unavailable slots are returned as
 unperformed outputs; the tool never substitutes `sma_partial_v1`, skips slots,
 or imputes values.
 
-Input values are ordered `observations` containing a date and an exact numeric
-fact. The first slice accepts at most 2,000 observations per call.
+The preferred history path passes `seriesReceipt`; the shell maps its exact
+close lexemes to ordered observations. Direct external inputs may instead pass
+ordered `observations` containing a date and exact numeric fact. Both paths
+accept at most 2,000 observations per call.
 
 ### `rsi`
 
@@ -105,8 +121,12 @@ receipt-bound inputs and is not a market-completeness claim or recommendation.
 
 ## Shared immutable request
 
-The three indicator tools require the following caller/LLM-supplied information; there
-are no ambient defaults:
+The three indicator tools accept exactly one input mode. The normal host path
+uses `seriesReceipt` plus `calculation` and `projection`, omitting `context` and
+`observations`/`bars`. The shell resolves only a matching, content-verified
+OHLCV handoff on the active session. An external series with no host handoff
+instead supplies the following complete context and observations; there are no
+ambient defaults:
 
 - optional `instructionRef`: a retained caller/LLM SHA-256 reference when one
   already exists. Ordinary history-to-indicator handoffs omit it; the plugin
@@ -193,10 +213,12 @@ result.
 ## Architecture
 
 ```text
-untrusted Pi parameters
+untrusted Pi/DSH parameters
           │
           ▼
 typed boundary decoder
+          │
+          ├── short receipt ──► active-session handoff decode + SHA-256 verify
           │
           ▼
 pure stock_technicals request preparation/rendering
@@ -212,11 +234,15 @@ Pi text + structured result
   shell.
 - `pi_sparkles_stock_technicals/decode.gleam` decodes untrusted tool values
   into immutable boundary values.
+- `pi_sparkles_stock_technicals/handoff.gleam` resolves only the invoking
+  session's versioned OHLCV entry, verifies its canonical receipt, and projects
+  exact close or high/low/close facts into the existing typed request.
 - `pi_sparkles_stock_technicals/domain.gleam` converts those values into exact
   `finance_indicators` requests/inputs, invokes the pure calculation, and
   renders deterministic projections.
-- No module performs network, filesystem, environment, clock, randomness,
-  storage, entitlement, or mutable-cache effects.
+- The domain and indicator core perform no network, filesystem, environment,
+  clock, randomness, storage, entitlement, or mutable-cache effects. The thin
+  host shell has one read-only active-session lookup for receipt input.
 - The package imports the provider-neutral `finance_indicators` core and never
   imports track-owned CN, HK, or US packages. A call carries exactly one
   explicit track leg.

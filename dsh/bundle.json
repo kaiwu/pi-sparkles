@@ -1,9 +1,9 @@
 {
   "schema_version": 4,
   "dsh_release": {
-    "status": "preview",
+    "status": "product_useful",
     "target": "T6",
-    "reason": "The new inline OHLCV tool-result card is implemented but still requires installed-profile browser discovery, resize, interaction, persistence, and visual acceptance."
+    "reason": null
   },
   "exclude_pi": [
     "finance_track_status",

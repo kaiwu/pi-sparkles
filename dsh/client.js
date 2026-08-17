@@ -161,6 +161,9 @@ function FinanceTrackOverlay(props) {
 var CHART_META_SCHEMA = "pi-sparkles/dsh-finance-chart-meta";
 var CHART_PRICE_GUTTER = 72;
 var CHART_SLOT_WIDTH = 9;
+var CHART_UP_COLOR = "#20b486";
+var CHART_DOWN_COLOR = "#ef5b5b";
+var CHART_FLAT_COLOR = "#94a3b8";
 function record(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -203,6 +206,20 @@ function chartNumber(value) {
   var absolute = Math.abs(value);
   if (absolute !== 0 && (absolute >= 10000000 || absolute < 0.0001)) return value.toExponential(2);
   return value.toFixed(absolute >= 1000 ? 0 : absolute >= 10 ? 2 : 4);
+}
+function chartDirectionPalette(track) {
+  if (track === "cn") {
+    return {
+      up: CHART_DOWN_COLOR,
+      down: CHART_UP_COLOR,
+      legend: "red up · green down · gray flat"
+    };
+  }
+  return {
+    up: CHART_UP_COLOR,
+    down: CHART_DOWN_COLOR,
+    legend: "green up · red down · gray flat"
+  };
 }
 function DshFinanceChart(props) {
   var block = props.block;
@@ -250,6 +267,7 @@ function DshFinanceChart(props) {
   var end = manual === null ? model.bars.length : Math.max(count, Math.min(model.bars.length, manual.end));
   var start = Math.max(0, end - count);
   var visible = model.bars.slice(start, end);
+  var directionPalette = chartDirectionPalette(model.track);
   var svgWidth = 900;
   var priceTop = 18;
   var priceBottom = 190;
@@ -286,7 +304,7 @@ function DshFinanceChart(props) {
     var center = x(index);
     var up = bar.close > bar.open;
     var flat = bar.close === bar.open;
-    var color = flat ? "#94a3b8" : up ? "#20b486" : "#ef5b5b";
+    var color = flat ? CHART_FLAT_COLOR : up ? directionPalette.up : directionPalette.down;
     var bodyTop = Math.min(y(bar.open), y(bar.close));
     var bodyHeight = Math.max(1, Math.abs(y(bar.open) - y(bar.close)));
     var volumeHeight = maximumVolume === 0 ? 0 : Math.max(1, bar.volume / maximumVolume * (volumeBottom - volumeTop));
@@ -304,37 +322,44 @@ function DshFinanceChart(props) {
     });
     if (points.length > 0) svgChildren.push(React.createElement("polyline", { key: "indicator-" + seriesIndex, points: points.join(" "), fill: "none", stroke: indicatorColors[seriesIndex % indicatorColors.length], strokeWidth: 1.5 }));
   });
-  var lowerPoints = [];
-  lowerSeries.forEach(function (indicator) {
+  var lowerGroupMap = new Map();
+  lowerSeries.forEach(function (indicator, seriesIndex) {
+    var unit = typeof indicator.unit === "string" ? indicator.unit : "unknown";
+    if (!lowerGroupMap.has(unit)) lowerGroupMap.set(unit, { unit: unit, series: [], values: [] });
+    var group = lowerGroupMap.get(unit);
+    group.series.push({ indicator: indicator, seriesIndex: seriesIndex });
     (indicator.points || []).forEach(function (point) {
       var value = Number(point && point.value);
-      if (point && point.state === "calculated" && visibleDates.has(point.date) && Number.isFinite(value)) lowerPoints.push(value);
+      if (point && point.state === "calculated" && visibleDates.has(point.date) && Number.isFinite(value)) group.values.push(value);
     });
   });
-  var hasLower = lowerPoints.length > 0;
-  var lowerTop = 280;
-  var lowerBottom = 340;
-  if (hasLower) {
-    var lowerMinimum = Math.min.apply(Math, lowerPoints);
-    var lowerMaximum = Math.max.apply(Math, lowerPoints);
+  var lowerGroups = Array.from(lowerGroupMap.values()).filter(function (group) { return group.values.length > 0; });
+  var hasLower = lowerGroups.length > 0;
+  lowerGroups.forEach(function (group, groupIndex) {
+    var lowerTop = 280 + groupIndex * 72;
+    var lowerBottom = lowerTop + 60;
+    var lowerMinimum = Math.min.apply(Math, group.values);
+    var lowerMaximum = Math.max.apply(Math, group.values);
     function lowerY(value) {
       if (lowerMaximum === lowerMinimum) return (lowerTop + lowerBottom) / 2;
       return lowerTop + (lowerMaximum - value) * (lowerBottom - lowerTop) / (lowerMaximum - lowerMinimum);
     }
-    svgChildren.push(React.createElement("line", { key: "lower-top", x1: CHART_PRICE_GUTTER, x2: svgWidth - 8, y1: lowerTop, y2: lowerTop, stroke: "var(--dsw-alias-border-l2)", strokeWidth: 1 }));
-    svgChildren.push(React.createElement("line", { key: "lower-bottom", x1: CHART_PRICE_GUTTER, x2: svgWidth - 8, y1: lowerBottom, y2: lowerBottom, stroke: "var(--dsw-alias-border-l2)", strokeWidth: 1 }));
-    svgChildren.push(React.createElement("text", { key: "lower-max", x: CHART_PRICE_GUTTER - 6, y: lowerTop + 4, textAnchor: "end", fill: "var(--dsw-alias-text-secondary)", fontSize: 11 }, chartNumber(lowerMaximum)));
-    svgChildren.push(React.createElement("text", { key: "lower-min", x: CHART_PRICE_GUTTER - 6, y: lowerBottom + 4, textAnchor: "end", fill: "var(--dsw-alias-text-secondary)", fontSize: 11 }, chartNumber(lowerMinimum)));
-    lowerSeries.forEach(function (indicator, seriesIndex) {
+    svgChildren.push(React.createElement("line", { key: "lower-top-" + groupIndex, x1: CHART_PRICE_GUTTER, x2: svgWidth - 8, y1: lowerTop, y2: lowerTop, stroke: "var(--dsw-alias-border-l2)", strokeWidth: 1 }));
+    svgChildren.push(React.createElement("line", { key: "lower-bottom-" + groupIndex, x1: CHART_PRICE_GUTTER, x2: svgWidth - 8, y1: lowerBottom, y2: lowerBottom, stroke: "var(--dsw-alias-border-l2)", strokeWidth: 1 }));
+    svgChildren.push(React.createElement("text", { key: "lower-max-" + groupIndex, x: CHART_PRICE_GUTTER - 6, y: lowerTop + 4, textAnchor: "end", fill: "var(--dsw-alias-text-secondary)", fontSize: 11 }, chartNumber(lowerMaximum)));
+    svgChildren.push(React.createElement("text", { key: "lower-min-" + groupIndex, x: CHART_PRICE_GUTTER - 6, y: lowerBottom + 4, textAnchor: "end", fill: "var(--dsw-alias-text-secondary)", fontSize: 11 }, chartNumber(lowerMinimum)));
+    svgChildren.push(React.createElement("text", { key: "lower-unit-" + groupIndex, x: svgWidth - 8, y: lowerTop + 12, textAnchor: "end", fill: "var(--dsw-alias-text-secondary)", fontSize: 11 }, group.unit));
+    group.series.forEach(function (entry, groupSeriesIndex) {
+      var indicator = entry.indicator;
       var points = [];
       (indicator.points || []).forEach(function (point) {
         var index = visibleDates.get(point && point.date);
         var value = Number(point && point.value);
         if (point && point.state === "calculated" && index !== undefined && Number.isFinite(value)) points.push(x(index) + "," + lowerY(value));
       });
-      if (points.length > 0) svgChildren.push(React.createElement("polyline", { key: "lower-indicator-" + seriesIndex, points: points.join(" "), fill: "none", stroke: indicatorColors[(seriesIndex + overlaySeries.length) % indicatorColors.length], strokeWidth: 1.5 }));
+      if (points.length > 0) svgChildren.push(React.createElement("polyline", { key: "lower-indicator-" + groupIndex + "-" + groupSeriesIndex, points: points.join(" "), fill: "none", stroke: indicatorColors[(entry.seriesIndex + overlaySeries.length) % indicatorColors.length], strokeWidth: 1.5 }));
     });
-  }
+  });
   (model.trades || []).forEach(function (trade, tradeIndex) {
     var index = visibleDates.get(trade && trade.date);
     var price = Number(trade && trade.price);
@@ -376,11 +401,12 @@ function DshFinanceChart(props) {
       ),
       controls
     ),
-    React.createElement("svg", { viewBox: "0 0 " + svgWidth + " " + (hasLower ? 356 : 276), width: "100%", height: hasLower ? "356" : "276", preserveAspectRatio: "none", role: "img", "aria-hidden": "true", style: { display: "block", minWidth: 0 } }, svgChildren),
+    React.createElement("svg", { viewBox: "0 0 " + svgWidth + " " + (hasLower ? 356 + (lowerGroups.length - 1) * 72 : 276), width: "100%", height: hasLower ? String(356 + (lowerGroups.length - 1) * 72) : "276", preserveAspectRatio: "none", role: "img", "aria-hidden": "true", style: { display: "block", minWidth: 0 } }, svgChildren),
     React.createElement("div", { style: { display: "flex", gap: "12px", flexWrap: "wrap", color: "var(--dsw-alias-text-secondary)", fontSize: "11px" } },
-      React.createElement("span", null, "green up · red down · purple half-day volume"),
+      React.createElement("span", null, directionPalette.legend + " · purple half-day volume"),
       React.createElement("span", null, "B/S supplied trade · dashed supplied gap"),
-      React.createElement("span", null, model.priceUnit + " · " + model.volumeUnit)
+      React.createElement("span", null, model.priceUnit + " · " + model.volumeUnit),
+      lowerGroups.length === 0 ? null : React.createElement("span", null, lowerGroups.map(function (group) { return group.unit; }).join(" · "))
     ),
     exactText === "" ? null : React.createElement("details", { style: { marginTop: "8px" } },
       React.createElement("summary", null, "Exact table output"),

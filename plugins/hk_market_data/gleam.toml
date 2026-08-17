@@ -14,6 +14,7 @@ finance_core = { path = "../../finance/finance_core" }
 finance_eastmoney = { path = "../../finance/finance_eastmoney" }
 finance_hk_identity = { path = "../../finance/finance_hk_identity" }
 finance_http = { path = "../../finance/finance_http" }
+finance_ohlcv = { path = "../../finance/finance_ohlcv" }
 finance_provenance = { path = "../../finance/finance_provenance" }
 finance_track = { path = "../../finance/finance_track" }
 pi_gleam = { path = "../../pi_gleam" }

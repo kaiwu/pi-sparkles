@@ -132,15 +132,20 @@ afterEach(() => {
 
 async function harness(track) {
   const tools = new Map();
+  const sessionEntries = [];
   const api = {
     registerTool(definition) {
       tools.set(definition.name, definition);
+    },
+    appendEntry(customType, data) {
+      sessionEntries.push({ customType, data });
     },
   };
   const module = await import(
     `${artifacts[track]}?market-data=${Date.now()}-${Math.random()}`
   );
   await module.default(api);
+  tools.sessionEntries = sessionEntries;
   return tools;
 }
 
@@ -227,6 +232,22 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
     expect(history.content[0].text).toContain(
       `acquisitionReceiptCanonicalSha256=${history.details.acquisitionReceipt.canonicalSha256}`,
     );
+    expect(history.content[0].text).toContain(
+      `seriesReceipt=${history.details.acquisitionReceipt.canonicalSha256}`,
+    );
+    expect(tools.sessionEntries).toHaveLength(1);
+    expect(tools.sessionEntries[0]).toMatchObject({
+      customType: "pi_sparkles_finance_ohlcv.series_handoff.v1",
+      data: {
+        schema: "pi-sparkles/ohlcv-series-handoff",
+        schemaVersion: 1,
+        track: "cn",
+        instrumentId: "920079",
+        mic: "XBSE",
+        acquisitionReceipt:
+          history.details.acquisitionReceipt.canonicalSha256,
+      },
+    });
     expect(history.content[0].text).toContain(
       "2026-08-04,14.91,15.31,14.80,15.16,100327,1516000.00",
     );
@@ -493,6 +514,20 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
     expect(history.content[0].text).toContain(
       "2026-08-04,14.91,15.31,14.80,15.16,100327,1516000.00",
     );
+    expect(history.content[0].text).toContain(
+      `seriesReceipt=${history.details.acquisitionReceipt.canonicalSha256}`,
+    );
+    expect(tools.sessionEntries.at(-1)).toMatchObject({
+      customType: "pi_sparkles_finance_ohlcv.series_handoff.v1",
+      data: {
+        track: "hk",
+        instrumentId: "00700",
+        mic: "XHKG",
+        priceUnit: "HKD",
+        acquisitionReceipt:
+          history.details.acquisitionReceipt.canonicalSha256,
+      },
+    });
     expect(typeof tools.get("hk_stock_history").renderResult).toBe("function");
     const theme = { fg: (_color, text) => text };
     const collapsed = tools

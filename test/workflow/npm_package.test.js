@@ -120,6 +120,7 @@ describe("all-in-one npm packaging", () => {
     expect(t6.omittedProposals).toEqual([]);
     expect(t6.partialImplementations).toEqual([]);
     expect(t6.openBlockers).toEqual([]);
+    expect(t6.packageVersion).toBe("0.1.6");
     expect(t6.releasable).toBe(
       t6.includedTiers.at(-1).status === "product_useful",
     );
@@ -180,7 +181,13 @@ describe("all-in-one npm packaging", () => {
     expect(packageManifest.description).toBe(
       "Turn Pi into a finance research assistant for China, Hong Kong, and US markets",
     );
-    expect(packageManifest.homepage).toBe("https://sparkes.extensio.cn");
+    expect(packageManifest.homepage).toBe("https://sparkles.extensio.cn");
+    expect(packageManifest.repository.url).toBe(
+      "git+https://github.com/kaiwu/sparkles.git",
+    );
+    expect(packageManifest.bugs.url).toBe(
+      "https://github.com/kaiwu/sparkles/issues",
+    );
     const packageReadme = readFileSync(
       join(plan.npmOutputDirectory, "package", "README.md"),
       "utf8",
@@ -190,6 +197,9 @@ describe("all-in-one npm packaging", () => {
     expect(packageReadme).toContain("## Optional data-service setup");
     expect(packageReadme).toContain('AGENT_CONTACT="you@example.com"');
     expect(packageReadme).toContain("You do not need to ask it");
+    expect(packageReadme).toContain("https://github.com/kaiwu/sparkles");
+    expect(packageReadme).toContain("@dsh-sparkles/dsh-sparkles");
+    expect(packageReadme).toContain("This is the Pi distribution");
     expect(packageReadme).not.toContain("T5");
     expect(packageReadme).not.toContain("ProductUseful");
     expect(packageReadme).not.toContain("tier");

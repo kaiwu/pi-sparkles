@@ -80,6 +80,24 @@ pub fn wrong_track_mic_timezone_combination_fails_without_fallback_test() {
   }
 }
 
+pub fn limitation_error_explains_the_identifier_contract_test() {
+  let input = fixture()
+  let context =
+    decode.ContextInput(..input.context, limitations: [
+      "synthetic visual fixture",
+    ])
+
+  case domain.run(decode.Input(..input, context: context)) {
+    Error(domain.InvalidField("context.trackContext", reason)) -> {
+      reason
+      |> string.contains("lowercase identifier")
+      |> should.be_true
+      reason |> string.contains("InvalidLimitation") |> should.be_false
+    }
+    _ -> should.fail()
+  }
+}
+
 pub fn bars_must_be_strictly_increasing_and_unique_test() {
   let input = fixture()
   let assert [first, second, third] = input.series
@@ -116,7 +134,7 @@ pub fn price_overlay_unit_must_match_price_unit_test() {
   }
 }
 
-pub fn lower_panel_units_cannot_be_mixed_test() {
+pub fn lower_panel_units_form_independent_host_panes_test() {
   let input = fixture()
   let assert [overlay, lower] = input.indicators
   let second_lower =
@@ -126,15 +144,15 @@ pub fn lower_panel_units_cannot_be_mixed_test() {
       decode.Calculated("2026-02-04", "0.6"),
     ])
 
-  case
+  let assert Ok(response) =
     domain.run(
       decode.Input(..input, indicators: [overlay, lower, second_lower]),
     )
-  {
-    Error(domain.InvalidIndicator("atr_2", reason)) ->
-      reason |> string.contains("share one exact unit") |> should.be_true
-    _ -> should.fail()
-  }
+  let details = json.to_string(response.details)
+  details |> string.contains("\"indicatorId\":\"rsi_2\"") |> should.be_true
+  details |> string.contains("\"unit\":\"ratio_0_100\"") |> should.be_true
+  details |> string.contains("\"indicatorId\":\"atr_2\"") |> should.be_true
+  details |> string.contains("\"unit\":\"USD\"") |> should.be_true
 }
 
 pub fn indicator_point_dates_must_be_ordered_test() {

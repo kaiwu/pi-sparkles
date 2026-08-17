@@ -2,6 +2,7 @@ import finance_core/decimal
 import finance_core/time
 import finance_indicators/atr
 import finance_indicators/calculation
+import finance_indicators/chart_handoff
 import finance_indicators/input
 import finance_indicators/model
 import finance_indicators/receipt
@@ -21,7 +22,7 @@ import pi_sparkles_stock_technicals/decode
 const maximum_inputs = 2000
 
 pub opaque type Response {
-  Response(summary: String, details: Json)
+  Response(summary: String, details: Json, chart_handoff: chart_handoff.Handoff)
 }
 
 pub type DomainError {
@@ -63,6 +64,10 @@ pub fn model_content(value: Response) -> String {
 
 pub fn details(value: Response) -> Json {
   value.details
+}
+
+pub fn chart_handoff(value: Response) -> chart_handoff.Handoff {
+  value.chart_handoff
 }
 
 pub fn error_message(value: DomainError) -> String {
@@ -621,6 +626,29 @@ fn response(
   let counts = fact_counts(calculated.inputs)
   let context = model.request_context(request)
   let calculation_spec = model.calculation(request)
+  let source_leg = model.context_source_leg(context)
+  let source_series_receipt =
+    model.acquisition_receipt(source_leg) |> identity.sha256_value
+  let calculation_receipt =
+    receipt.canonical_content_hash(semantic_receipt)
+    |> identity.sha256_value
+  let #(indicator_id, indicator_label, indicator_panel) =
+    chart_identity(calculation_spec)
+  use chart_binding <- result.try(
+    chart_handoff.new(
+      series_receipt: source_series_receipt,
+      calculation_receipt: calculation_receipt,
+      indicator_id: indicator_id,
+      label: indicator_label,
+      panel: indicator_panel,
+      unit: chart_unit(calculation_spec, calculated.outputs, context),
+      warmup_sessions: leading_unperformed(calculated.outputs),
+      points: list.map(calculated.outputs, chart_point),
+    )
+    |> result.map_error(fn(error) {
+      OperationFailed("chart_handoff", chart_handoff.error_message(error))
+    }),
+  )
   let projection_name = case projection {
     Compact(_) -> "compact"
     Intermediate(_) -> "intermediate"
@@ -655,11 +683,11 @@ fn response(
         |> identity.sha256_value
         |> json.string,
     ),
+    #("semanticReceiptHandle", json.string(calculation_receipt)),
+    #("sourceSeriesReceipt", json.string(source_series_receipt)),
     #(
-      "semanticReceiptHandle",
-      receipt.canonical_content_hash(semantic_receipt)
-        |> identity.sha256_value
-        |> json.string,
+      "chartHandoffReceipt",
+      chart_handoff.handoff_receipt(chart_binding) |> json.string,
     ),
     #(
       "counts",
@@ -728,7 +756,90 @@ fn response(
     <> ", unperformed "
     <> int.to_string(list.length(unperformed_outputs))
     <> " | values and evidence only; interpretation belongs to the LLM"
-  Ok(Response(summary, details))
+  Ok(Response(summary, details, chart_binding))
+}
+
+fn chart_identity(spec: model.CalculationSpec) -> #(String, String, String) {
+  let period = model.period(spec)
+  case spec {
+    model.SmaV1(_, _) -> #(
+      "sma_" <> int.to_string(period),
+      "SMA " <> int.to_string(period),
+      "price_overlay",
+    )
+    model.WilderRsiV1(_, _, _, _) -> #(
+      "rsi_" <> int.to_string(period),
+      "RSI " <> int.to_string(period),
+      "lower_panel",
+    )
+    model.WilderAtrV1(_, _, _) -> #(
+      "atr_" <> int.to_string(period),
+      "ATR " <> int.to_string(period),
+      "lower_panel",
+    )
+  }
+}
+
+fn chart_unit(
+  spec: model.CalculationSpec,
+  outputs: List(calculation.Output),
+  context: model.Context,
+) -> String {
+  case first_calculated_unit(outputs) {
+    Some(value) -> value
+    None ->
+      case spec, model.input_unit(context) {
+        model.WilderRsiV1(_, _, _, _), _ -> "ratio_0_100"
+        _, model.KnownUnit(value) -> value
+        _, model.UnknownUnit(_) -> "unknown_unit"
+      }
+  }
+}
+
+fn first_calculated_unit(outputs: List(calculation.Output)) -> Option(String) {
+  case outputs {
+    [] -> None
+    [calculation.Calculated(_, _, unit, _), ..] -> Some(unit)
+    [_, ..rest] -> first_calculated_unit(rest)
+  }
+}
+
+fn leading_unperformed(outputs: List(calculation.Output)) -> Int {
+  leading_unperformed_loop(outputs, 0)
+}
+
+fn leading_unperformed_loop(
+  outputs: List(calculation.Output),
+  count: Int,
+) -> Int {
+  case outputs {
+    [calculation.Unperformed(_, _, _), ..rest] ->
+      leading_unperformed_loop(rest, count + 1)
+    _ -> count
+  }
+}
+
+fn chart_point(value: calculation.Output) -> chart_handoff.Point {
+  case value {
+    calculation.Calculated(date, value, _, _) ->
+      chart_handoff.Calculated(date_text(date), value)
+    calculation.Unperformed(date, reason, _) ->
+      chart_handoff.Unperformed(date_text(date), unperformed_text(reason))
+  }
+}
+
+fn unperformed_text(value: calculation.UnperformedReason) -> String {
+  case value {
+    calculation.InsufficientInputs(available, required) ->
+      "insufficient_inputs:available="
+      <> int.to_string(available)
+      <> ":required="
+      <> int.to_string(required)
+    calculation.InputUnavailable(details) ->
+      "input_unavailable:" <> string.join(details, with: ",")
+    calculation.StoppedAfterGap(reason) -> "stopped_after_gap:" <> reason
+    calculation.ZeroGainAndLoss -> "zero_gain_and_loss"
+  }
 }
 
 fn instruction_ref_origin_name(value: InstructionRefOrigin) -> String {

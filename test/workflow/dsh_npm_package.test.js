@@ -216,12 +216,13 @@ describe("dsh-sparkles npm packaging", () => {
     expect(t6.omittedProposals).toEqual([]);
     expect(t6.partialImplementations).toEqual([]);
     expect(t6.openBlockers).toEqual([]);
-    expect(t6.maturity).toBe("dsh_blocked_preview");
+    expect(t6.packageVersion).toBe("0.1.6");
+    expect(t6.maturity).toBe("product_useful_dsh_aggregate");
     expect(t6.dshRelease).toMatchObject({
-      status: "preview",
+      status: "product_useful",
       target: "T6",
     });
-    expect(t6.releasable).toBeFalse();
+    expect(t6.releasable).toBeTrue();
 
     const t5 = dshNpmPackagePlan(manifest, "T5");
     expect(t5.plugins).toHaveLength(120);
@@ -234,9 +235,9 @@ describe("dsh-sparkles npm packaging", () => {
 
     const t6 = dshNpmPackagePlan(manifest, "T6");
     expect(t6.piAggregateMaturity).toBe("blocked_inventory_preview");
-    expect(t6.dshRelease.status).toBe("preview");
-    expect(t6.maturity).toBe("dsh_blocked_preview");
-    expect(t6.releasable).toBeFalse();
+    expect(t6.dshRelease.status).toBe("product_useful");
+    expect(t6.maturity).toBe("product_useful_dsh_aggregate");
+    expect(t6.releasable).toBeTrue();
   });
 
   test("packs a content-locked tarball with the dsh.bundle manifest", async () => {
@@ -305,6 +306,12 @@ describe("dsh-sparkles npm packaging", () => {
     });
     expect(manifest.keywords).toContain("deepseek-harness");
     expect(manifest.homepage).toBe("https://sparkles.extensio.cn");
+    expect(manifest.repository.url).toBe(
+      "git+https://github.com/kaiwu/sparkles.git",
+    );
+    expect(manifest.bugs.url).toBe(
+      "https://github.com/kaiwu/sparkles/issues",
+    );
 
     const packageReadme = readFileSync(
       join(plan.npmOutputDirectory, "package", "README.md"),
@@ -313,6 +320,9 @@ describe("dsh-sparkles npm packaging", () => {
     expect(packageReadme).toContain("## Install");
     expect(packageReadme).toContain("dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles");
     expect(packageReadme).toContain("## Boundaries");
+    expect(packageReadme).toContain("https://github.com/kaiwu/sparkles");
+    expect(packageReadme).toContain("@pi-sparkles/pi-sparkles");
+    expect(packageReadme).toContain("This is the DSH distribution");
     expect(() => assertDshNpmPublishable(summary)).not.toThrow();
 
     const rebuilt = await assembleDshNpmRelease(
@@ -340,6 +350,15 @@ describe("dsh-sparkles npm packaging", () => {
       maturity: "blocked_inventory_preview",
       publishable: false,
     });
+    const packageReadme = readFileSync(
+      join(plan.npmOutputDirectory, "package", "README.md"),
+      "utf8",
+    );
+    expect(packageReadme).toContain("## Local preview install");
+    expect(packageReadme).toContain("./dist/dsh/npm/t6/package");
+    expect(packageReadme).not.toContain(
+      "add @dsh-sparkles/dsh-sparkles@0.1.0",
+    );
     expect(() => assertDshNpmPublishable(summary)).toThrow(
       "blocked preview and cannot be published",
     );

@@ -1,5 +1,5 @@
 import gleam/dynamic/decode as decoder
-import gleam/option.{type Option}
+import gleam/option.{type Option, None, Some}
 
 pub type SourceInput {
   SourceInput(
@@ -94,12 +94,41 @@ pub type Input {
   )
 }
 
-pub fn chart_ohlcv() -> decoder.Decoder(Input) {
-  use context <- decoder.field("context", context_decoder())
-  use series <- decoder.field("series", decoder.list(of: bar_decoder()))
-  use indicators <- decoder.field(
+pub type Request {
+  Direct(Input)
+  SessionReceipt(
+    series_receipt: String,
+    maximum_bars: Int,
+    indicator_receipts: List(String),
+    trades: List(TradeInput),
+    gaps: List(GapInput),
+    input_omissions: List(String),
+    fallback_maximum_rows: Int,
+  )
+}
+
+pub fn chart_ohlcv() -> decoder.Decoder(Request) {
+  use series_receipt <- optional_string("seriesReceipt")
+  use maximum_bars <- optional_int("maximumBars")
+  use indicator_receipts <- decoder.optional_field(
+    "indicatorReceipts",
+    [],
+    decoder.list(of: decoder.string),
+  )
+  use context <- decoder.optional_field(
+    "context",
+    None,
+    decoder.optional(context_decoder()),
+  )
+  use series <- decoder.optional_field(
+    "series",
+    None,
+    decoder.optional(decoder.list(of: bar_decoder())),
+  )
+  use indicators <- decoder.optional_field(
     "indicators",
-    decoder.list(of: indicator_decoder()),
+    None,
+    decoder.optional(decoder.list(of: indicator_decoder())),
   )
   use trades <- decoder.field("trades", decoder.list(of: trade_decoder()))
   use gaps <- decoder.field("gaps", decoder.list(of: gap_decoder()))
@@ -108,15 +137,64 @@ pub fn chart_ohlcv() -> decoder.Decoder(Input) {
     decoder.list(of: decoder.string),
   )
   use fallback_maximum_rows <- decoder.field("fallbackMaximumRows", decoder.int)
-  decoder.success(Input(
+  case
+    series_receipt,
+    maximum_bars,
+    indicator_receipts,
     context,
     series,
-    indicators,
-    trades,
-    gaps,
-    input_omissions,
-    fallback_maximum_rows,
-  ))
+    indicators
+  {
+    Some(receipt), Some(maximum), receipts, None, None, None ->
+      decoder.success(SessionReceipt(
+        receipt,
+        maximum,
+        receipts,
+        trades,
+        gaps,
+        input_omissions,
+        fallback_maximum_rows,
+      ))
+    None, None, [], Some(context), Some(series), Some(indicators) ->
+      decoder.success(
+        Direct(Input(
+          context,
+          series,
+          indicators,
+          trades,
+          gaps,
+          input_omissions,
+          fallback_maximum_rows,
+        )),
+      )
+    _, _, _, _, _, _ ->
+      decoder.failure(
+        SessionReceipt(
+          "",
+          1,
+          [],
+          trades,
+          gaps,
+          input_omissions,
+          fallback_maximum_rows,
+        ),
+        "exactly one of seriesReceipt plus maximumBars or context plus series plus indicators",
+      )
+  }
+}
+
+fn optional_string(
+  name: String,
+  next: fn(Option(String)) -> decoder.Decoder(value),
+) -> decoder.Decoder(value) {
+  decoder.optional_field(name, None, decoder.optional(decoder.string), next)
+}
+
+fn optional_int(
+  name: String,
+  next: fn(Option(Int)) -> decoder.Decoder(value),
+) -> decoder.Decoder(value) {
+  decoder.optional_field(name, None, decoder.optional(decoder.int), next)
 }
 
 fn context_decoder() -> decoder.Decoder(ContextInput) {

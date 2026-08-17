@@ -1,8 +1,12 @@
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+
 const AXIS_WIDTH = 10;
-const SLOT_WIDTH = 2;
-const PRICE_ROWS = 9;
+const SLOT_WIDTH = 1;
+const PRICE_ROWS = 10;
 const VOLUME_ROWS = 3;
 const MIN_CHART_WIDTH = AXIS_WIDTH + SLOT_WIDTH;
+const CONTENT_MARGIN = 4;
+const INDICATOR_TONES = ["accent", "warning", "thinkingText", "success"];
 
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -30,7 +34,14 @@ function resultText(result) {
 function clip(text, width) {
   if (width <= 0) return "";
   const value = String(text);
-  return value.length <= width ? value : value.slice(0, width);
+  if (visibleWidth(value) <= width) return value;
+  const truncated = truncateToWidth(value, width, "");
+  return value.includes("\u001b") ? truncated : truncated.replace(/\u001b\[0m$/, "");
+}
+
+function contentWidth(width) {
+  const available = Number.isInteger(width) && width > 0 ? width : 80;
+  return Math.max(1, available - CONTENT_MARGIN);
 }
 
 function finite(value) {
@@ -58,17 +69,89 @@ function rowFor(value, minimum, maximum, rows) {
   );
 }
 
-function put(matrix, row, column, character, { replace = true } = {}) {
+const VOLUME_GLYPHS = [null, "▂", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
+
+function volumeGlyph(cellRow, units, rows) {
+  const unitsBelow = (rows - cellRow - 1) * 8;
+  const filled = Math.max(0, Math.min(8, units - unitsBelow));
+  return VOLUME_GLYPHS[filled];
+}
+
+function cells(rows, columns) {
+  return Array.from({ length: rows }, () => Array(columns).fill(null));
+}
+
+function put(matrix, row, column, glyph, tone = null, priority = 0) {
   if (
     row < 0 ||
     row >= matrix.length ||
     column < 0 ||
     column >= matrix[row].length ||
-    (!replace && matrix[row][column] !== " ")
+    (matrix[row][column] !== null && matrix[row][column].priority > priority)
   ) {
     return;
   }
-  matrix[row][column] = character;
+  matrix[row][column] = { glyph, tone, priority };
+}
+
+function paint(theme, tone, text) {
+  if (text === "" || tone === null || typeof theme?.fg !== "function") return text;
+  return theme.fg(tone, text);
+}
+
+function renderCells(row, theme) {
+  let rendered = "";
+  let run = "";
+  let tone = null;
+  function flush() {
+    rendered += paint(theme, tone, run);
+    run = "";
+  }
+  for (const cell of row) {
+    const nextTone = cell?.tone ?? null;
+    if (nextTone !== tone) {
+      flush();
+      tone = nextTone;
+    }
+    run += cell?.glyph ?? " ";
+  }
+  flush();
+  return rendered;
+}
+
+function directionPalette(track) {
+  return track === "cn"
+    ? { up: "error", down: "success", flat: "muted" }
+    : { up: "success", down: "error", flat: "muted" };
+}
+
+function directionTone(bar, palette) {
+  return bar.close > bar.open
+    ? palette.up
+    : bar.close < bar.open
+      ? palette.down
+      : palette.flat;
+}
+
+function indicatorTone(seriesIndex) {
+  return INDICATOR_TONES[seriesIndex % INDICATOR_TONES.length];
+}
+
+function trendGlyph(previous, current) {
+  if (previous === undefined || current.column - previous.column > 1) return "•";
+  if (current.row === previous.row) return "─";
+  return current.row < previous.row ? "╱" : "╲";
+}
+
+function axisTick(row, rows) {
+  const ticks = new Set([
+    0,
+    Math.round((rows - 1) * 0.25),
+    Math.round((rows - 1) * 0.5),
+    Math.round((rows - 1) * 0.75),
+    rows - 1,
+  ]);
+  return ticks.has(row);
 }
 
 function numericBars(bars) {
@@ -113,8 +196,8 @@ function matchingPoints(details, panel, dates) {
   return points;
 }
 
-function priceChart(details, visible, plotWidth) {
-  const matrix = Array.from({ length: PRICE_ROWS }, () => Array(plotWidth).fill(" "));
+function priceChart(details, visible, plotWidth, theme, palette) {
+  const matrix = cells(PRICE_ROWS, plotWidth);
   const dates = new Map(visible.map((bar, index) => [bar.date, index]));
   const overlays = matchingPoints(details, "price_overlay", dates);
   const priceValues = visible.flatMap((bar) => [bar.low, bar.high]);
@@ -122,110 +205,205 @@ function priceChart(details, visible, plotWidth) {
   const minimum = Math.min(...priceValues);
   const maximum = Math.max(...priceValues);
 
+  const previousBySeries = new Map();
+  for (const point of overlays) {
+    const position = {
+      column: dates.get(point.date),
+      row: rowFor(point.value, minimum, maximum, PRICE_ROWS),
+    };
+    put(
+      matrix,
+      position.row,
+      position.column,
+      trendGlyph(previousBySeries.get(point.seriesIndex), position),
+      indicatorTone(point.seriesIndex),
+      2,
+    );
+    previousBySeries.set(point.seriesIndex, position);
+  }
+
   for (const [index, bar] of visible.entries()) {
-    const x = index * SLOT_WIDTH + 1;
+    const x = index;
+    const tone = directionTone(bar, palette);
     const high = rowFor(bar.high, minimum, maximum, PRICE_ROWS);
     const low = rowFor(bar.low, minimum, maximum, PRICE_ROWS);
     const open = rowFor(bar.open, minimum, maximum, PRICE_ROWS);
     const close = rowFor(bar.close, minimum, maximum, PRICE_ROWS);
     for (let row = Math.min(high, low); row <= Math.max(high, low); row += 1) {
-      put(matrix, row, x, "|", { replace: false });
+      put(matrix, row, x, "│", tone, 1);
     }
-    const body = bar.close > bar.open ? "#" : bar.close < bar.open ? "=" : "-";
-    for (let row = Math.min(open, close); row <= Math.max(open, close); row += 1) {
-      put(matrix, row, x, body);
-      put(matrix, row, x - 1, body);
+    const bodyTop = Math.min(open, close);
+    const bodyBottom = Math.max(open, close);
+    if (bodyTop === bodyBottom) {
+      put(matrix, bodyTop, x, bar.close === bar.open ? "━" : "▮", tone, 3);
+    } else {
+      for (let row = bodyTop; row <= bodyBottom; row += 1) {
+        put(matrix, row, x, "█", tone, 3);
+      }
     }
-  }
-
-  for (const point of overlays) {
-    const index = dates.get(point.date);
-    put(
-      matrix,
-      rowFor(point.value, minimum, maximum, PRICE_ROWS),
-      index * SLOT_WIDTH,
-      String((point.seriesIndex % 9) + 1),
-    );
   }
   for (const trade of details.trades ?? []) {
     const index = dates.get(trade?.date);
     const price = finite(trade?.price);
     if (index === undefined || price === null) continue;
-    put(
-      matrix,
-      rowFor(price, minimum, maximum, PRICE_ROWS),
-      index * SLOT_WIDTH + 1,
-      trade.side === "buy" ? "B" : "S",
-    );
+    put(matrix, rowFor(price, minimum, maximum, PRICE_ROWS), index,
+      trade.side === "buy" ? "B" : "S", trade.side === "buy" ? "accent" : "warning", 5);
   }
 
   return matrix.map((row, index) => {
     const value = maximum - ((maximum - minimum) * index) / (PRICE_ROWS - 1);
-    return `${axisLabel(value).padStart(AXIS_WIDTH - 2)} |${row.join("")}`;
+    const tick = axisTick(index, PRICE_ROWS);
+    const label = tick ? axisLabel(value).padStart(AXIS_WIDTH - 2) : " ".repeat(AXIS_WIDTH - 2);
+    return `${paint(theme, "dim", label)} ${paint(theme, "borderMuted", tick ? "┤" : " ")}${renderCells(row, theme)}`;
   });
 }
 
-function volumeChart(details, visible, plotWidth) {
-  const matrix = Array.from({ length: VOLUME_ROWS }, () => Array(plotWidth).fill(" "));
+function volumeChart(visible, plotWidth, theme, palette) {
+  const matrix = cells(VOLUME_ROWS, plotWidth);
   const maximum = Math.max(0, ...visible.map((bar) => bar.volume));
   for (const [index, bar] of visible.entries()) {
-    const height = maximum === 0 ? 0 : Math.max(1, Math.round((bar.volume / maximum) * VOLUME_ROWS));
-    for (let row = VOLUME_ROWS - 1; row >= VOLUME_ROWS - height; row -= 1) {
-      put(matrix, row, index * SLOT_WIDTH + 1, "#");
+    const units = maximum === 0 || bar.volume === 0
+      ? 0
+      : Math.max(2, Math.round((bar.volume / maximum) * VOLUME_ROWS * 8));
+    const tone = bar.sessionType === "half_day"
+      ? "accent"
+      : directionTone(bar, palette);
+    for (let row = 0; row < VOLUME_ROWS; row += 1) {
+      const glyph = volumeGlyph(row, units, VOLUME_ROWS);
+      if (glyph !== null) {
+        put(matrix, row, index, glyph, tone, 1);
+      }
     }
   }
   return matrix.map((row, index) =>
-    `${index === 0 ? "volume".padStart(AXIS_WIDTH - 2) : " ".repeat(AXIS_WIDTH - 2)} |${row.join("")}`,
+    `${paint(theme, "dim", index === 0 ? "VOL".padStart(AXIS_WIDTH - 2) : " ".repeat(AXIS_WIDTH - 2))}  ${renderCells(row, theme)}`,
   );
 }
 
-function lowerChart(details, visible, plotWidth) {
+function lowerCharts(details, visible, plotWidth, theme) {
   const dates = new Map(visible.map((bar, index) => [bar.date, index]));
-  const points = matchingPoints(details, "lower_panel", dates);
-  if (points.length === 0) return [];
-  const rows = 3;
-  const matrix = Array.from({ length: rows }, () => Array(plotWidth).fill(" "));
-  const minimum = Math.min(...points.map((point) => point.value));
-  const maximum = Math.max(...points.map((point) => point.value));
-  for (const point of points) {
-    put(
-      matrix,
-      rowFor(point.value, minimum, maximum, rows),
-      dates.get(point.date) * SLOT_WIDTH + 1,
-      String((point.seriesIndex % 9) + 1),
-    );
+  const groups = new Map();
+  for (const [seriesIndex, indicator] of (details.indicators ?? []).entries()) {
+    if (indicator?.panel !== "lower_panel" || !Array.isArray(indicator.points)) continue;
+    const unit = typeof indicator.unit === "string" ? indicator.unit : "unknown";
+    if (!groups.has(unit)) groups.set(unit, { unit, series: [], points: [] });
+    const group = groups.get(unit);
+    group.series.push({
+      label: typeof indicator.label === "string" ? indicator.label : indicator.indicatorId,
+      seriesIndex,
+    });
+    for (const point of indicator.points) {
+      if (point?.state !== "calculated" || !dates.has(point.date)) continue;
+      const value = finite(point.value);
+      if (value !== null) group.points.push({ ...point, value, seriesIndex });
+    }
   }
-  return matrix.map((row, index) => {
-    const value = maximum - ((maximum - minimum) * index) / (rows - 1);
-    return `${axisLabel(value).padStart(AXIS_WIDTH - 2)} :${row.join("")}`;
-  });
+  const lines = [];
+  for (const group of groups.values()) {
+    if (group.points.length === 0) continue;
+    lines.push(lowerChart(group, dates, plotWidth, theme));
+  }
+  return lines.flat();
 }
 
-function gapLine(details, visible, plotWidth) {
+function lowerChart(group, dates, plotWidth, theme) {
+  const rows = 4;
+  const matrix = cells(rows, plotWidth);
+  const minimum = Math.min(...group.points.map((point) => point.value));
+  const maximum = Math.max(...group.points.map((point) => point.value));
+  const previousBySeries = new Map();
+  for (const point of group.points) {
+    const position = {
+      column: dates.get(point.date),
+      row: rowFor(point.value, minimum, maximum, rows),
+    };
+    const tone = indicatorTone(point.seriesIndex);
+    put(
+      matrix,
+      position.row,
+      position.column,
+      trendGlyph(previousBySeries.get(point.seriesIndex), position),
+      tone,
+      2,
+    );
+    previousBySeries.set(point.seriesIndex, position);
+  }
+  const legend = group.series.map((series) =>
+    paint(theme, indicatorTone(series.seriesIndex), `─ ${series.label}`),
+  ).join("  ");
+  return [
+    `${paint(theme, "dim", group.unit)}  ${legend}`,
+    ...matrix.map((row, index) => {
+      const value = maximum - ((maximum - minimum) * index) / (rows - 1);
+      const tick = axisTick(index, rows);
+      const label = tick
+        ? axisLabel(value).padStart(AXIS_WIDTH - 2)
+        : " ".repeat(AXIS_WIDTH - 2);
+      return `${paint(theme, "dim", label)} ${paint(theme, "borderMuted", tick ? "┤" : " ")}${renderCells(row, theme)}`;
+    }),
+  ];
+}
+
+function gapLine(details, visible, plotWidth, theme) {
   const gaps = details.gaps ?? [];
   if (gaps.length === 0 || visible.length === 0) return [];
-  const row = Array(plotWidth).fill(" ");
+  const row = cells(1, plotWidth)[0];
   const first = visible[0].date;
   const last = visible.at(-1).date;
   for (const gap of gaps) {
     if (typeof gap?.date !== "string" || gap.date < first || gap.date > last) continue;
     let index = visible.findIndex((bar) => bar.date >= gap.date);
     if (index < 0) index = visible.length - 1;
-    row[index * SLOT_WIDTH + 1] = "!";
+    put([row], 0, index, "┊", "warning", 1);
   }
-  return row.includes("!") ? [`${"gaps".padStart(AXIS_WIDTH - 2)} !${row.join("")}`] : [];
+  return row.some((cell) => cell !== null)
+    ? [`${paint(theme, "dim", "GAP".padStart(AXIS_WIDTH - 2))}  ${renderCells(row, theme)}`]
+    : [];
 }
 
-function summaryLine(details, visible, hidden) {
+function summaryLines(details, visible, hidden, theme) {
   const first = visible[0]?.date ?? "?";
   const last = visible.at(-1)?.date ?? "?";
-  return `OHLCV ${details.track}/${details.mic} ${details.instrumentId} | ${first}..${last} | ${visible.length}/${details.bars.length} bars | ${hidden} earlier hidden`;
+  return [
+    paint(theme, "accent", `OHLCV ${details.track}/${details.mic} ${details.instrumentId}`),
+    paint(theme, "dim", `${first}..${last}`),
+    paint(
+      theme,
+      "dim",
+      `${visible.length}/${details.bars.length} bars · ${hidden} earlier hidden`,
+    ),
+  ];
 }
 
-function renderChart(result, width) {
+function legendLines(theme, palette) {
+  return [
+    [
+      "legend ",
+      paint(theme, palette.up, "█/▮ rise"),
+      "  ",
+      paint(theme, palette.down, "█/▮ fall"),
+      "  ",
+      paint(theme, palette.flat, "█ flat"),
+      "  ",
+      paint(theme, "muted", "│ wick ▂…█ volume"),
+    ].join(""),
+    [
+      "       ",
+      paint(theme, "accent", "─╱╲ indicator"),
+      "  ",
+      paint(theme, "accent", "B"),
+      "/",
+      paint(theme, "warning", "S"),
+      " trades  ",
+      paint(theme, "warning", "┊ supplied gap"),
+    ].join(""),
+  ];
+}
+
+function renderChart(result, width, theme) {
   const details = chartDetails(result);
   if (details === null || details.bars.length === 0) return null;
-  const safeWidth = Number.isInteger(width) && width > 0 ? width : 80;
+  const safeWidth = contentWidth(width);
   if (safeWidth < MIN_CHART_WIDTH) {
     return [clip(`OHLCV ${details.track}/${details.mic} ${details.instrumentId} | ${details.bars.length} bars`, safeWidth)];
   }
@@ -233,14 +411,15 @@ function renderChart(result, width) {
   const visible = numericBars(selected.bars);
   if (visible === null || visible.length === 0) return null;
   const plotWidth = visible.length * SLOT_WIDTH;
+  const palette = directionPalette(details.track);
   const lines = [
-    summaryLine(details, visible, selected.start),
-    ...priceChart(details, visible, plotWidth),
-    `${" ".repeat(AXIS_WIDTH - 2)} +${"-".repeat(plotWidth)}`,
-    ...volumeChart(details, visible, plotWidth),
-    ...lowerChart(details, visible, plotWidth),
-    ...gapLine(details, visible, plotWidth),
-    "legend # up  = down  - flat  | wick  B/S trade  ! supplied gap  1-4 indicator",
+    ...summaryLines(details, visible, selected.start, theme),
+    ...priceChart(details, visible, plotWidth, theme, palette),
+    "",
+    ...volumeChart(visible, plotWidth, theme, palette),
+    ...lowerCharts(details, visible, plotWidth, theme),
+    ...gapLine(details, visible, plotWidth, theme),
+    ...legendLines(theme, palette),
   ];
   return lines.map((line) => clip(line, safeWidth));
 }
@@ -249,30 +428,33 @@ class FinanceChartResult {
   constructor() {
     this.result = null;
     this.expanded = false;
+    this.theme = null;
   }
 
-  setResult(result, expanded) {
+  setResult(result, expanded, theme) {
     this.result = result;
     this.expanded = expanded;
+    this.theme = theme;
   }
 
   invalidate() {}
 
   render(width) {
-    const chart = renderChart(this.result, width);
+    const chart = renderChart(this.result, width, this.theme);
     const text = resultText(this.result);
+    const safeWidth = contentWidth(width);
     if (chart === null) {
-      return text === "" ? ["Chart result unavailable"] : text.split("\n").map((line) => clip(line, width));
+      return text === "" ? [clip("Chart result unavailable", safeWidth)] : text.split("\n").map((line) => clip(line, safeWidth));
     }
     if (!this.expanded || text === "") return chart;
-    return [...chart, "", ...text.split("\n")].map((line) => clip(line, width));
+    return [...chart, "", ...text.split("\n")].map((line) => clip(line, safeWidth));
   }
 }
 
-export function render_result(result, expanded, _theme, lastComponent) {
+export function render_result(result, expanded, theme, lastComponent) {
   const component = lastComponent instanceof FinanceChartResult
     ? lastComponent
     : new FinanceChartResult();
-  component.setResult(result, expanded === true);
+  component.setResult(result, expanded === true, theme);
   return component;
 }

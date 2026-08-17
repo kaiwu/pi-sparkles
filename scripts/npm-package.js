@@ -169,6 +169,7 @@ function requireSuccess(result, label) {
 }
 
 function packageReadme(plan) {
+  const version = plan.packageVersion;
   const previewNotice = plan.releasable
     ? ""
     : `> Development preview: version ${plan.packageVersion} is private and is not intended for publication.\n\n`;
@@ -197,7 +198,7 @@ or live order.
     ? `## Quick start
 
 \`\`\`sh
-pi install npm:${NPM_PACKAGE_NAME}
+pi install npm:${NPM_PACKAGE_NAME}@${version}
 \`\`\`
 `
     : `## Local preview
@@ -208,10 +209,17 @@ Install only the exact locally built tarball for development inspection:
 npm install ./pi-sparkles-pi-sparkles-${plan.packageVersion}.tgz
 \`\`\`
 `;
-  return `# Pi Sparkles
+  return `# Sparkles for Pi
 
 ${previewNotice}Turn [Pi](https://github.com/badlogic/pi-mono) into a finance research
 assistant for mainland China, Hong Kong, and US markets.
+
+This is the Pi distribution of
+[Sparkles](https://github.com/kaiwu/sparkles). DeepSeek Harness users should
+install the sibling
+[@dsh-sparkles/dsh-sparkles](https://www.npmjs.com/package/@dsh-sparkles/dsh-sparkles)
+package, which reuses the same finance cores but owns separate DSH tools,
+agent/session lifecycle, browser presentation, and release maturity.
 
 Ask about a stock or ETF in everyday language. Pi Sparkles brings current market
 data, price history, company filings, fundamentals, and financial calculations
@@ -292,7 +300,7 @@ ALPACA_API_SECRET_KEY="..." \\
 pi --finance-track=us
 \`\`\`
 
-Your credentials stay in your runtime environment. Pi Sparkles does not add them
+Your credentials stay in your runtime environment. Sparkles for Pi does not add them
 to the package or save them in Pi settings. For a project-local installation,
 add \`--local\` to \`pi install\`.
 
@@ -303,12 +311,14 @@ or receipts from an explicitly selected provider, gateway, export, or adapter.
 Futu OpenD, Alpaca, IBKR, their SDKs, credentials, login state, and equivalent
 provider components are external dependencies and are not included in this npm
 package. Results preserve the declared provider, entitlement, track, venue,
-clocks, limits, and unsupported claims; Pi Sparkles never silently selects or
+clocks, limits, and unsupported claims; Sparkles never silently selects or
 falls back to another provider.
 
-Pi Sparkles is read-only research software: it cannot place, change, or cancel
+Sparkles for Pi is read-only research software: it cannot place, change, or cancel
 broker orders. It is not investment, legal, accounting, or tax advice. See
 \`CONFIGURATION.md\` for the complete source and configuration reference.
+
+Version ${version} · Pi package \`${NPM_PACKAGE_NAME}\`
 `;
 }
 
@@ -331,10 +341,10 @@ function npmManifest(plan) {
     license: "Apache-2.0",
     repository: {
       type: "git",
-      url: "git+https://github.com/kaiwu/pi-sparkles.git",
+      url: "git+https://github.com/kaiwu/sparkles.git",
     },
-    homepage: "https://sparkes.extensio.cn",
-    bugs: { url: "https://github.com/kaiwu/pi-sparkles/issues" },
+    homepage: "https://sparkles.extensio.cn",
+    bugs: { url: "https://github.com/kaiwu/sparkles/issues" },
     keywords: [
       "pi-package",
       "pi-extension",

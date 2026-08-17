@@ -39,13 +39,13 @@ mutation in one agent leaves the other at revision zero. The installed DSH web
 server also discovers and serves the package browser entry after
 `@deepseek-ai/dsh-client-ui-layout` and `@deepseek-ai/dsh-client-ui-tool`.
 
-The previously accepted counterpart inventory remains complete. The independent
-T6 DSH release gate is temporarily back at `preview` while the new chart client
-surface receives its own installed-profile browser acceptance. This does not
-alter or inherit Pi tier maturity; the two hosts retain separate verification,
+The previously accepted counterpart inventory remains complete. The new chart
+client surface has passed its installed-profile browser acceptance, restoring
+the independent T6 DSH release gate to `product_useful`. This does not alter or
+inherit Pi tier maturity; the two hosts retain separate verification,
 packaging, and publication decisions.
 
-## Implemented preview — browser finance charts
+## Implemented — browser finance charts
 
 `finance_charts` remains a stateless global-safe shell with shared Gleam
 validation and exact text/details. It now emits no Pi image. The DSH bridge adds
@@ -67,6 +67,6 @@ browser client renders it inline without an overlay or attachment.
 - Browser-native inline SVG supports container-proportional latest-suffix
   display, earlier/later pan, zoom, and reset from persisted result metadata.
 
-Remaining evidence is client discovery through an installed DSH profile,
-resize/interaction checks, session replay, and visual browser QA. The feature
-is not a missing product-tier component and does not change Pi maturity.
+Client discovery through an installed DSH profile, resize/interaction checks,
+session replay, and visual browser QA are complete. The feature does not change
+Pi maturity.

@@ -91,6 +91,19 @@ pub type SmaInput {
   )
 }
 
+pub type SmaRequest {
+  DirectSma(SmaInput)
+  ReceiptSma(
+    series_receipt: String,
+    formula_variant: String,
+    period: Int,
+    window_variant: String,
+    parseable_policy: String,
+    rounding: RoundingInput,
+    projection: ProjectionInput,
+  )
+}
+
 pub type RsiInput {
   RsiInput(
     context: ContextInput,
@@ -104,6 +117,22 @@ pub type RsiInput {
     rounding: RoundingInput,
     projection: ProjectionInput,
     observations: List(ObservationInput),
+  )
+}
+
+pub type RsiRequest {
+  DirectRsi(RsiInput)
+  ReceiptRsi(
+    series_receipt: String,
+    formula_variant: String,
+    period: Int,
+    window_variant: String,
+    seed_variant: String,
+    gap_policy: String,
+    zero_zero_convention: String,
+    parseable_policy: String,
+    rounding: RoundingInput,
+    projection: ProjectionInput,
   )
 }
 
@@ -123,72 +152,196 @@ pub type AtrInput {
   )
 }
 
-pub fn sma() -> decoder.Decoder(SmaInput) {
-  use context <- decoder.field("context", context_decoder())
-  use calculation <- decoder.field("calculation", sma_calculation_decoder())
-  use projection <- decoder.field("projection", projection_decoder())
-  use observations <- decoder.field(
-    "observations",
-    decoder.list(of: observation_decoder()),
+pub type AtrRequest {
+  DirectAtr(AtrInput)
+  ReceiptAtr(
+    series_receipt: String,
+    formula_variant: String,
+    period: Int,
+    window_variant: String,
+    seed_variant: String,
+    first_true_range: String,
+    gap_policy: String,
+    parseable_policy: String,
+    rounding: RoundingInput,
+    projection: ProjectionInput,
   )
-  let #(formula, period, window, parseable, rounding) = calculation
-  decoder.success(SmaInput(
-    context,
-    formula,
-    period,
-    window,
-    parseable,
-    rounding,
-    projection,
-    observations,
-  ))
 }
 
-pub fn rsi() -> decoder.Decoder(RsiInput) {
-  use context <- decoder.field("context", context_decoder())
+pub fn sma() -> decoder.Decoder(SmaRequest) {
+  use context <- optional_context()
+  use series_receipt <- optional_string("seriesReceipt")
+  use calculation <- decoder.field("calculation", sma_calculation_decoder())
+  use projection <- decoder.field("projection", projection_decoder())
+  use observations <- decoder.optional_field(
+    "observations",
+    None,
+    decoder.optional(decoder.list(of: observation_decoder())),
+  )
+  let #(formula, period, window, parseable, rounding) = calculation
+  case context, series_receipt, observations {
+    Some(context), None, Some(observations) ->
+      decoder.success(
+        DirectSma(SmaInput(
+          context,
+          formula,
+          period,
+          window,
+          parseable,
+          rounding,
+          projection,
+          observations,
+        )),
+      )
+    None, Some(receipt), None ->
+      decoder.success(ReceiptSma(
+        receipt,
+        formula,
+        period,
+        window,
+        parseable,
+        rounding,
+        projection,
+      ))
+    _, _, _ ->
+      decoder.failure(
+        ReceiptSma("", formula, period, window, parseable, rounding, projection),
+        "exactly one of seriesReceipt or context plus observations",
+      )
+  }
+}
+
+pub fn rsi() -> decoder.Decoder(RsiRequest) {
+  use context <- optional_context()
+  use series_receipt <- optional_string("seriesReceipt")
   use calculation <- decoder.field("calculation", rsi_calculation_decoder())
   use projection <- decoder.field("projection", projection_decoder())
-  use observations <- decoder.field(
+  use observations <- decoder.optional_field(
     "observations",
-    decoder.list(of: observation_decoder()),
+    None,
+    decoder.optional(decoder.list(of: observation_decoder())),
   )
   let #(formula, period, window, seed, gap, zero_zero, parseable, rounding) =
     calculation
-  decoder.success(RsiInput(
-    context,
-    formula,
-    period,
-    window,
-    seed,
-    gap,
-    zero_zero,
-    parseable,
-    rounding,
-    projection,
-    observations,
-  ))
+  case context, series_receipt, observations {
+    Some(context), None, Some(observations) ->
+      decoder.success(
+        DirectRsi(RsiInput(
+          context,
+          formula,
+          period,
+          window,
+          seed,
+          gap,
+          zero_zero,
+          parseable,
+          rounding,
+          projection,
+          observations,
+        )),
+      )
+    None, Some(receipt), None ->
+      decoder.success(ReceiptRsi(
+        receipt,
+        formula,
+        period,
+        window,
+        seed,
+        gap,
+        zero_zero,
+        parseable,
+        rounding,
+        projection,
+      ))
+    _, _, _ ->
+      decoder.failure(
+        ReceiptRsi(
+          "",
+          formula,
+          period,
+          window,
+          seed,
+          gap,
+          zero_zero,
+          parseable,
+          rounding,
+          projection,
+        ),
+        "exactly one of seriesReceipt or context plus observations",
+      )
+  }
 }
 
-pub fn atr() -> decoder.Decoder(AtrInput) {
-  use context <- decoder.field("context", context_decoder())
+pub fn atr() -> decoder.Decoder(AtrRequest) {
+  use context <- optional_context()
+  use series_receipt <- optional_string("seriesReceipt")
   use calculation <- decoder.field("calculation", atr_calculation_decoder())
   use projection <- decoder.field("projection", projection_decoder())
-  use bars <- decoder.field("bars", decoder.list(of: bar_decoder()))
+  use bars <- decoder.optional_field(
+    "bars",
+    None,
+    decoder.optional(decoder.list(of: bar_decoder())),
+  )
   let #(formula, period, window, seed, first_tr, gap, parseable, rounding) =
     calculation
-  decoder.success(AtrInput(
-    context,
-    formula,
-    period,
-    window,
-    seed,
-    first_tr,
-    gap,
-    parseable,
-    rounding,
-    projection,
-    bars,
-  ))
+  case context, series_receipt, bars {
+    Some(context), None, Some(bars) ->
+      decoder.success(
+        DirectAtr(AtrInput(
+          context,
+          formula,
+          period,
+          window,
+          seed,
+          first_tr,
+          gap,
+          parseable,
+          rounding,
+          projection,
+          bars,
+        )),
+      )
+    None, Some(receipt), None ->
+      decoder.success(ReceiptAtr(
+        receipt,
+        formula,
+        period,
+        window,
+        seed,
+        first_tr,
+        gap,
+        parseable,
+        rounding,
+        projection,
+      ))
+    _, _, _ ->
+      decoder.failure(
+        ReceiptAtr(
+          "",
+          formula,
+          period,
+          window,
+          seed,
+          first_tr,
+          gap,
+          parseable,
+          rounding,
+          projection,
+        ),
+        "exactly one of seriesReceipt or context plus bars",
+      )
+  }
+}
+
+fn optional_context(
+  next: fn(Option(ContextInput)) -> decoder.Decoder(value),
+) -> decoder.Decoder(value) {
+  decoder.optional_field(
+    "context",
+    None,
+    decoder.optional(context_decoder()),
+    next,
+  )
 }
 
 fn context_decoder() -> decoder.Decoder(ContextInput) {

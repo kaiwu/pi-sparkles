@@ -5,6 +5,35 @@ here. Versions follow Semantic Versioning. The exact selected tier, plugin
 inventory, maturity, and content hashes remain authoritative in each tarball's
 `release-lock.json` and `aggregate-lock.json`.
 
+## 0.1.6 - 2026-08-17
+
+- Present Sparkles as one shared finance product with separate host-native npm
+  distributions for Pi and DeepSeek Harness, rather than as a Pi-only project.
+- Add responsive ordinary-output OHLCV charts: colored terminal Unicode for Pi
+  and a keyed inline SVG tool-result card for the DSH browser, with exact
+  textual and structured fallbacks retained.
+- Render Pi candles with compact one-column `│`/`█`/`▮` Unicode geometry,
+  sparse price ticks, proportional `▂`…`█` volume, and unit-separated lower
+  panes. RSI and ATR can coexist without sharing a scale; tiny volume does not
+  collapse into a dot/circle/underscore baseline. Theme-native CN versus HK/US
+  colors require no embedded ANSI palette.
+- Pass short, active-session OHLCV and indicator receipts into `chart_ohlcv`,
+  eliminating model-side copies of dozens of bars or ordered indicator points
+  that could truncate the tool arguments before execution.
+- Pass session-bound, content-verified OHLCV receipts into SMA, RSI, and ATR so
+  the model no longer re-emits hundreds of bars, and restore their compact Pi
+  result renderer so successful indicators occupy one collapsed terminal line.
+- Keep Pi chart and compact tool-result lines inside a four-column safety
+  margin using Unicode-aware visible-width truncation, preventing wide CJK
+  summaries from exceeding the terminal viewport.
+- Move repository metadata and documentation links to
+  `github.com/kaiwu/sparkles` ahead of the repository rename.
+- Cross-reference and introduce `@pi-sparkles/pi-sparkles` and
+  `@dsh-sparkles/dsh-sparkles` from both generated npm READMEs while preserving
+  their independent host lifecycle, presentation, and release gates.
+- Restore the independent DSH T6 release gate to ProductUseful after its new
+  chart completes installed-profile browser acceptance.
+
 ## 0.1.5 - 2026-08-15
 
 - Complete and promote the eleven-proposal T6 day-trader and execution-review

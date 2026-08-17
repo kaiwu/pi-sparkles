@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
+import { resolve } from "node:path";
 import { assertRawSubset } from "../../dsh/schema-translate.mjs";
 import {
   createPiApi,
@@ -355,6 +357,89 @@ describe("pi-api facade", () => {
     expect(entries[0].type).toBe("custom");
     expect(agent.session.events[0].type).toBe("pi-sparkles/custom");
     expect(captured.cwd).toBe("/work/agent-1");
+  });
+
+  test("session-bound OHLCV receipts feed short indicator calls without crossing DSH agents", async () => {
+    const ctx = fakeCtx();
+    const api = createPiApi({ ctx });
+    const artifact = resolve(import.meta.dir, "../../dist/stock_technicals/index.js");
+    const extension = await import(
+      `${artifact}?dsh-series-receipt=${Date.now()}-${Math.random()}`
+    );
+    await extension.default(api);
+    const sma = ctx.__tools.find((tool) => tool.name === "sma");
+    expect(sma).toBeDefined();
+
+    const sourceReference = "fixture://dsh/session-bars";
+    const retrievedAtUnixMilliseconds = 1_770_000_000_000;
+    const rows = [
+      ["2026-02-18", "10.50", "11.00", "10.00", "10.85", "100", "1085"],
+      ["2026-02-19", "10.85", "11.10", "10.70", "10.92", "110", "1201"],
+      ["2026-02-20", "10.92", "11.20", "10.80", "10.95", "120", "1314"],
+      ["2026-02-24", "10.95", "11.05", "10.70", "10.88", "130", "1414"],
+      ["2026-02-25", "10.88", "11.10", "10.80", "10.91", "140", "1527"],
+    ];
+    const canonical = `${sourceReference}\nretrievedAtUnixMilliseconds=${retrievedAtUnixMilliseconds}\ndate,open,high,low,close,volume,amount\n${rows.map((row) => row.join(",")).join("\n")}`;
+    const receipt = createHash("sha256").update(canonical).digest("hex");
+    const owner = fakeAgent("receipt-owner");
+    owner.session.append(DSH_CUSTOM_EVENT, {
+      customType: "pi_sparkles_finance_ohlcv.series_handoff.v1",
+      data: {
+        schema: "pi-sparkles/ohlcv-series-handoff",
+        schemaVersion: 1,
+        track: "cn",
+        instrumentId: "588000",
+        mic: "XSHG",
+        timezone: "Asia/Shanghai",
+        sourceLanguage: "zh-CN",
+        priceUnit: "CNY",
+        volumeUnit: "provider_defined_unknown",
+        adjustment: "raw",
+        provider: "fixture-provider",
+        sourceReference,
+        acquisitionReceipt: receipt,
+        retrievedAtUnixMilliseconds,
+        sourceCutoffUnixMilliseconds: null,
+        entitlement: "fixture_local_analysis",
+        limitations: ["fixture_only"],
+        bars: rows.map(([date, open, high, low, close, volume, amount]) => ({
+          date,
+          open,
+          high,
+          low,
+          close,
+          volume,
+          amount,
+        })),
+      },
+    });
+    const args = {
+      seriesReceipt: receipt,
+      calculation: {
+        formulaVariant: "sma_v1",
+        period: 3,
+        windowVariant: "slot_window_v1",
+        parseablePolicy: "exclude_parseable_with_checks",
+        rounding: {
+          mode: "half_up",
+          policy: "per_step",
+          outputScale: 2,
+          intermediateScale: 6,
+        },
+      },
+      projection: { kind: "compact", priorOffset: 1 },
+    };
+
+    const value = await sma.execute(args, toolRunContext(owner, "receipt-sma"));
+    expect(value.details.latestValue.output).toMatchObject({
+      date: "2026-02-25",
+      value: "10.91",
+      unit: "CNY",
+    });
+    expect(Buffer.byteLength(JSON.stringify(args))).toBeLessThan(512);
+    await expect(
+      sma.execute(args, toolRunContext(fakeAgent("other"), "other-sma")),
+    ).rejects.toThrow("No active-session OHLCV handoff matched seriesReceipt");
   });
 
   test("scoped status UI writes whole-value DSH session events", async () => {

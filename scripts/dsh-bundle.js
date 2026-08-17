@@ -488,11 +488,15 @@ function configurationSource(plan) {
 
 function readmeSource(plan) {
   const version = rootVersion();
-  return `# @dsh-sparkles/dsh-sparkles
+  return `# Sparkles for DeepSeek Harness
 
-One DeepSeek Harness ${plan.releasable ? "release" : "preview"} registering ${plan.componentCount} pi-sparkles
-${plan.throughTierId} plugin components as read-only finance tools
-behind a Pi-API compatibility shell. The Pi tier ledger remains authoritative
+One DeepSeek Harness ${plan.releasable ? "release" : "preview"} registering ${plan.componentCount} Sparkles
+${plan.throughTierId} plugin components as read-only finance tools behind a
+Pi-API compatibility shell. This DSH package and the sibling
+[@pi-sparkles/pi-sparkles](https://www.npmjs.com/package/@pi-sparkles/pi-sparkles)
+distribution reuse the finance cores from
+[github.com/kaiwu/sparkles](https://github.com/kaiwu/sparkles), but each owns
+its host lifecycle and presentation. The Pi tier ledger remains authoritative
 only for Pi; DSH has its own release gate and this build is
 \`${plan.maturity}\`. No plugin can place, route, cancel, replace, or otherwise
 mutate a paper or live order.
@@ -633,7 +637,7 @@ export async function buildDshBundle(
   const manifest = {
     name: PACKAGE_NAME,
     version,
-    description: `DeepSeek Harness ${plan.releasable ? "release" : "preview"} for ${plan.componentCount} pi-sparkles ${plan.throughTierId} plugin components`,
+    description: `DeepSeek Harness ${plan.releasable ? "release" : "preview"} for ${plan.componentCount} Sparkles ${plan.throughTierId} plugin components`,
     private: !plan.releasable,
     type: "module",
     main: "index.js",

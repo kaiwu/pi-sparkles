@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
 const artifact = resolve(
@@ -8,9 +9,13 @@ const artifact = resolve(
 
 async function harness() {
   const tools = new Map();
+  tools.appendedEntries = [];
   const api = {
     registerTool(definition) {
       tools.set(definition.name, definition);
+    },
+    appendEntry(customType, data) {
+      tools.appendedEntries.push({ customType, data });
     },
   };
   const module = await import(
@@ -151,14 +156,73 @@ function atrInput() {
   };
 }
 
-async function execute(tool, input) {
+async function execute(tool, input, executionContext = { hasUI: false, ui: {} }) {
   return tool.execute(
     "stock-technicals-query",
     input,
     new AbortController().signal,
     undefined,
-    { hasUI: false, ui: {} },
+    executionContext,
   );
+}
+
+function receiptFixture() {
+  const sourceReference = "fixture://session-bound-bars";
+  const retrievedAtUnixMilliseconds = 1_770_000_000_000;
+  const bars = [
+    ["2026-02-18", "10.50", "11.00", "10.00", "10.85", "100", "1085"],
+    ["2026-02-19", "10.85", "11.10", "10.70", "10.92", "110", "1201"],
+    ["2026-02-20", "10.92", "11.20", "10.80", "10.95", "120", "1314"],
+    ["2026-02-24", "10.95", "11.05", "10.70", "10.88", "130", "1414"],
+    ["2026-02-25", "10.88", "11.10", "10.80", "10.91", "140", "1527"],
+  ];
+  const rows = bars.map((row) => row.join(",")).join("\n");
+  const canonical = `${sourceReference}\nretrievedAtUnixMilliseconds=${retrievedAtUnixMilliseconds}\ndate,open,high,low,close,volume,amount\n${rows}`;
+  const receipt = createHash("sha256").update(canonical).digest("hex");
+  const data = {
+    schema: "pi-sparkles/ohlcv-series-handoff",
+    schemaVersion: 1,
+    track: "cn",
+    instrumentId: "588000",
+    mic: "XSHG",
+    timezone: "Asia/Shanghai",
+    sourceLanguage: "zh-CN",
+    priceUnit: "CNY",
+    volumeUnit: "provider_defined_unknown",
+    adjustment: "raw",
+    provider: "fixture-provider",
+    sourceReference,
+    acquisitionReceipt: receipt,
+    retrievedAtUnixMilliseconds,
+    sourceCutoffUnixMilliseconds: null,
+    entitlement: "fixture_local_analysis",
+    limitations: ["fixture_only"],
+    bars: bars.map(([date, open, high, low, close, volume, amount]) => ({
+      date,
+      open,
+      high,
+      low,
+      close,
+      volume,
+      amount,
+    })),
+  };
+  const entry = {
+    type: "custom",
+    id: "session-entry-1",
+    parentId: null,
+    timestamp: "2026-02-25T12:00:00.000Z",
+    customType: "pi_sparkles_finance_ohlcv.series_handoff.v1",
+    data,
+  };
+  return {
+    receipt,
+    executionContext: {
+      hasUI: false,
+      ui: {},
+      sessionManager: { getBranch: () => [entry] },
+    },
+  };
 }
 
 describe("stock technicals bundled boundary", () => {
@@ -192,10 +256,10 @@ describe("stock technicals bundled boundary", () => {
         "instead of writing or executing calculation code",
       );
       expect(tools.get(name).promptSnippet).toContain(
-        "copy its model-visible source/receipt metadata",
+        "pass only seriesReceipt plus calculation and projection",
       );
-      expect(tools.get(name).promptSnippet).toContain(
-        "omit instructionRef unless a real retained hash already exists",
+      expect(tools.get(name).promptSnippet.toLowerCase()).toContain(
+        "omit instructionRef unless a real retained hash already exists".toLowerCase(),
       );
       const calculation =
         tools.get(name).parameters.properties.calculation.properties;
@@ -257,6 +321,104 @@ describe("stock technicals bundled boundary", () => {
     expect(JSON.stringify(drilldown.details)).not.toMatch(
       /"(signal|rank|recommended|correct|ready|nextAction)"/,
     );
+  });
+
+  test("resolves one short session receipt for all indicators and renders compactly in Pi", async () => {
+    const tools = await harness();
+    const fixture = receiptFixture();
+    const common = {
+      seriesReceipt: fixture.receipt,
+      projection: { kind: "compact", priorOffset: 1 },
+    };
+    const sma = await execute(
+      tools.get("sma"),
+      {
+        ...common,
+        calculation: {
+          formulaVariant: "sma_v1",
+          period: 3,
+          windowVariant: "slot_window_v1",
+          parseablePolicy: "exclude_parseable_with_checks",
+          rounding: rounding(2, 6),
+        },
+      },
+      fixture.executionContext,
+    );
+    const rsi = await execute(
+      tools.get("rsi"),
+      {
+        ...common,
+        calculation: {
+          formulaVariant: "rsi_wilder_v1",
+          period: 3,
+          windowVariant: "slot_window_v1",
+          seedVariant: "seed_wilder_first_n",
+          gapPolicy: "stop_at_gap_v1",
+          zeroZeroConvention: "zero_zero_unperformed_v1",
+          parseablePolicy: "exclude_parseable_with_checks",
+          rounding: rounding(4, 8),
+        },
+      },
+      fixture.executionContext,
+    );
+    const atr = await execute(
+      tools.get("atr"),
+      {
+        ...common,
+        calculation: {
+          formulaVariant: "atr_wilder_v1",
+          period: 3,
+          windowVariant: "slot_window_v1",
+          seedVariant: "seed_wilder_tr_mean_v1",
+          firstTrueRange: "tr_first_hl_v1",
+          gapPolicy: "stop_at_gap_v1",
+          parseablePolicy: "exclude_parseable_with_checks",
+          rounding: rounding(4, 8),
+        },
+      },
+      fixture.executionContext,
+    );
+
+    expect(sma.details.latestValue.output).toMatchObject({
+      date: "2026-02-25",
+      value: "10.91",
+      unit: "CNY",
+    });
+    expect(rsi.details.latestValue.state).toBe("known");
+    expect(atr.details.latestValue.state).toBe("known");
+    expect(tools.appendedEntries).toHaveLength(3);
+    for (const [index, result] of [sma, rsi, atr].entries()) {
+      const entry = tools.appendedEntries[index];
+      expect(entry.customType).toBe(
+        "pi_sparkles_finance_indicators.chart_handoff.v1",
+      );
+      expect(entry.data.handoffReceipt).toBe(result.details.chartHandoffReceipt);
+      expect(entry.data.seriesReceipt).toBe(fixture.receipt);
+      expect(entry.data.points).toHaveLength(5);
+    }
+    for (const [name, result] of [
+      ["sma", sma],
+      ["rsi", rsi],
+      ["atr", atr],
+    ]) {
+      expect(typeof tools.get(name).renderResult).toBe("function");
+      const rendered = tools
+        .get(name)
+        .renderResult(
+          result,
+          { expanded: false },
+          { fg: (_color, text) => text },
+          {},
+        )
+        .render(80);
+      expect(rendered).toHaveLength(1);
+      expect(rendered[0]).not.toContain("MODEL_DATA");
+      expect(Buffer.byteLength(JSON.stringify({
+        seriesReceipt: fixture.receipt,
+        calculation: name,
+        projection: common.projection,
+      }))).toBeLessThan(256);
+    }
   });
 
   test("accepts matching redundant rounding fields and rejects conflicts", async () => {

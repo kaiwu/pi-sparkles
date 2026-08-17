@@ -1,9 +1,13 @@
-# DSH all-in-one plugin (builder + compatibility shell)
+# Sparkles for DeepSeek Harness
 
-This directory is the DeepSeek Harness lane of pi-sparkles. It builds a DSH
-Cordis plugin from compatible compiled Pi effect shells without changing the
-Pi builder, aggregate, tier ledger, or maturity. Shared finance behavior stays
-in the existing pure Gleam/domain modules; only host effects are adapted.
+This directory owns the DeepSeek Harness lane of
+[Sparkles](https://github.com/kaiwu/sparkles). It builds the
+`@dsh-sparkles/dsh-sparkles` Cordis package from compatible compiled Pi effect
+shells without changing the Pi builder, aggregate, tier ledger, or maturity.
+Shared finance behavior stays in the existing pure Gleam/domain modules; only
+host effects are adapted. Pi users install the sibling
+[`@pi-sparkles/pi-sparkles`](https://www.npmjs.com/package/@pi-sparkles/pi-sparkles)
+package instead.
 
 - `scripts/dsh-bundle.js` builds the bundle (`bun run dsh:bundle`).
 - `scripts/dsh-npm-package.js` builds the separate npm release.
@@ -39,12 +43,13 @@ their ownership boundary. An `extra_dsh` entry resolves only to
 `dsh/plugins/<name>.mjs`; it can never silently pull a Pi plugin into the
 DSH-only lane.
 
-DSH maturity is independent from Pi maturity. `dsh_release.status` is `preview`
-while the new inline OHLCV card awaits installed-profile browser discovery,
-resize/interaction, persistence, and visual acceptance. Both T5 and T6 DSH
-packages are private during this gate. Pi maturity is recorded for provenance
-only and cannot promote the DSH release. Conversely, DSH verification never
-edits `tiers.json` or Pi package metadata.
+DSH maturity is independent from Pi maturity. Its complete role-level lane and
+installed-profile discovery, resize/interaction, persistence, and visual
+acceptance for the inline OHLCV card are complete. `dsh_release.status` is
+`product_useful` for T6, so the T6 DSH package is releasable. T5 remains outside
+that selected boundary. Pi maturity is recorded for provenance only and cannot
+promote the DSH release. Conversely, DSH verification never edits `tiers.json`
+or Pi package metadata.
 
 ## Host mapping
 
@@ -65,8 +70,8 @@ edits `tiers.json` or Pi package metadata.
 | flags | Defaults may be overridden by bundle `config.flags` or `PI_SPARKLES_FLAG_<NAME>`. |
 | unsupported Pi effects | Fail explicitly; they never return placeholder success. |
 
-Charts do not use either host's image or attachment path. Pi owns an ASCII TUI
-result component; DSH persists bounded chart metadata and owns an inline SVG
+Charts do not use either host's image or attachment path. Pi owns a colored
+Unicode TUI result component; DSH persists bounded chart metadata and owns an inline SVG
 tool-result card. Both keep the exact text fallback in the ordinary tool
 output. See [`../CHARTS.md`](../CHARTS.md).
 

@@ -135,22 +135,39 @@ function requireSuccess(result, label) {
 
 function dshPackageReadme(plan) {
   const version = plan.packageVersion;
-  return `# dsh-sparkles
+  const installSection = plan.releasable
+    ? `## Install
+
+\`\`\`sh
+dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles@${version}
+\`\`\`
+`
+    : `## Local preview install
+
+This content-locked package is private. Install the generated package directory
+from a Sparkles checkout; do not attempt a registry install:
+
+\`\`\`sh
+dsh plugin --profile <name> add ./dist/dsh/npm/${plan.throughTierId.toLowerCase()}/package
+\`\`\`
+`;
+  return `# Sparkles for DeepSeek Harness
 
 Turn [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) into a
 read-only finance evidence assistant for mainland China, Hong Kong, and US
-markets. This is the DeepSeek Harness distribution of
-[pi-sparkles](https://github.com/kaiwu/pi-sparkles): ${componentCount(plan)}
-compatible ${plan.throughTierId} plugin components registered as native Harness
-tools. This package is a \`${plan.maturity}\` and is ${
-    plan.releasable ? "publishable" : "not publishable yet"
-  }.
+markets. This is the DSH distribution of
+[Sparkles](https://github.com/kaiwu/sparkles): ${componentCount(plan)} compatible
+${plan.throughTierId} plugin components registered as native Harness tools.
+Pi users should install the sibling
+[@pi-sparkles/pi-sparkles](https://www.npmjs.com/package/@pi-sparkles/pi-sparkles)
+package, which reuses the same finance cores but owns separate Pi lifecycle and
+terminal presentation. ${
+    plan.releasable
+      ? "The independent DSH T6 release gate is ProductUseful and this package is publishable."
+      : `This package is a \`${plan.maturity}\` and is not publishable yet.`
+  }
 
-## Install
-
-\`\`\`sh
-dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles
-\`\`\`
+${installSection}
 
 The bundle patch layer is applied on the next \`dsh --profile <name>\` boot.
 Uninstall with \`dsh plugin --profile <name> remove @dsh-sparkles/dsh-sparkles\`.
@@ -166,6 +183,7 @@ Uninstall with \`dsh plugin --profile <name> remove @dsh-sparkles/dsh-sparkles\`
   simulation, read-only broker evidence review, compound compliance checks,
   non-executable handoffs, and receipt reconciliation.
 - Clear source, timestamp, currency, freshness, and data-limit context in answers.
+- Responsive inline SVG OHLCV charts rendered as ordinary DSH tool output.
 
 Ask about a stock or ETF in everyday language, for example \`get a current quote
 for AAPL\`, \`compare SMA/RSI/ATR for 600519.SH\`, or \`summarize AAPL's latest
@@ -187,7 +205,7 @@ changing environment configuration because some adapters initialize at boot.
 
 ## Boundaries
 
-dsh-sparkles keeps Pi-only global shells out of the DSH lane, then instantiates
+Sparkles for DSH keeps Pi-only global shells out of the DSH lane, then instantiates
 their existing Gleam cores once per DSH agent. Finance track status is rendered
 by a DSH \`shell.overlay\` client surface over a session projection. It is
 read-only: no plugin can
@@ -214,7 +232,7 @@ function dshNpmManifest(plan) {
     name: DSH_NPM_PACKAGE_NAME,
     version: plan.packageVersion,
     description:
-      "DeepSeek Harness finance plugin: compatible pi-sparkles evidence tools with an independently gated DSH host shell",
+      "Sparkles finance evidence tools with a host-native DeepSeek Harness shell and browser client",
     private: !plan.releasable,
     type: "module",
     main: "./index.js",
@@ -228,10 +246,10 @@ function dshNpmManifest(plan) {
     license: "Apache-2.0",
     repository: {
       type: "git",
-      url: "git+https://github.com/kaiwu/pi-sparkles.git",
+      url: "git+https://github.com/kaiwu/sparkles.git",
     },
     homepage: "https://sparkles.extensio.cn",
-    bugs: { url: "https://github.com/kaiwu/pi-sparkles/issues" },
+    bugs: { url: "https://github.com/kaiwu/sparkles/issues" },
     keywords: [
       "deepseek-harness",
       "dsh",
@@ -802,9 +820,11 @@ function resolveDshCli() {
 
 /**
  * Install the exact tarball into a clean npm prefix and smoke its DSH bundle
- * contract offline: import the entrypoint, assert the Cordis plugin shape and
+ * contract: import the entrypoint, assert the Cordis plugin shape and
  * `dsh.bundle.patch`, then compose it into an isolated profile with the real
- * `dsh` CLI when one is available.
+ * `dsh` CLI when one is available. The standalone prefix intentionally does
+ * not auto-install host peers: the verified manifest pins their versions, and
+ * the installed DSH runtime is the authority that supplies and exercises them.
  */
 export function dshNpmInstallSmoke(
   releaseDirectory,
@@ -827,6 +847,7 @@ export function dshNpmInstallSmoke(
           "--no-audit",
           "--no-fund",
           "--package-lock=false",
+          "--legacy-peer-deps",
           summary.tarball,
         ],
         { cwd: installation },
