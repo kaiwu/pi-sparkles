@@ -28,6 +28,10 @@ function resolveDshRuntime() {
     const dshRoot = dirname(dirname(real));
     const packages = join(dshRoot, "node_modules", "@deepseek-ai");
     const entries = {
+      agent: join(packages, "dsh-agent", "lib", "index.js"),
+      scope: join(packages, "dsh-scope", "lib", "index.js"),
+      session: join(packages, "dsh-session", "lib", "index.js"),
+      sessionProjection: join(packages, "dsh-session-projection", "lib", "index.js"),
       context: join(packages, "cordis", "lib", "index.js"),
       systemPrompt: join(packages, "dsh-system-prompt", "lib", "index.js"),
       tools: join(packages, "dsh-tools", "lib", "index.js"),
@@ -122,23 +126,198 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
   const bundleEntry = join(DSH_OUTPUT_DIR, "index.js");
   let runtimeSmoke = false;
   let toolCount = 0;
+  let scopedCounterparts = false;
+  let overlayProjection = false;
   if (existsSync(bundleEntry)) {
-    const [{ Context }, { default: SystemPrompt }, { default: ToolRuntime }, { default: CommandRuntime }, { default: plugin }] =
+    const [
+      { Context },
+      { default: SystemPrompt },
+      { default: ToolRuntime },
+      { default: CommandRuntime },
+      { default: SessionStore, SessionId },
+      { default: SessionProjectionRegistry },
+      { default: AgentRegistry, Inbox, agentEvents },
+      { createScope },
+      { default: plugin },
+    ] =
       await Promise.all([
         import(pathToFileURL(runtime.context).href),
         import(pathToFileURL(runtime.systemPrompt).href),
         import(pathToFileURL(runtime.tools).href),
         import(pathToFileURL(runtime.commands).href),
+        import(pathToFileURL(runtime.session).href),
+        import(pathToFileURL(runtime.sessionProjection).href),
+        import(pathToFileURL(runtime.agent).href),
+        import(pathToFileURL(runtime.scope).href),
         import(`${pathToFileURL(bundleEntry).href}?verify=${Date.now()}`),
       ]);
     const ctx = new Context();
     await ctx.plugin(SystemPrompt);
     await ctx.plugin(ToolRuntime);
     await ctx.plugin(CommandRuntime);
-    await plugin.apply(ctx, {});
-    toolCount = ctx.tools.schemas().length;
-    if (toolCount === 0) failures.push("runtime bundle registered no tools");
+    await ctx.plugin(SessionStore);
+    await ctx.plugin(SessionProjectionRegistry);
+    await ctx.plugin(AgentRegistry);
+    await ctx.plugin(plugin, {});
+    let createAgentScope;
+    await ctx.plugin({
+      name: "dsh-sparkles-verify-agent-scope",
+      inject: ["tools", "commands", "systemPrompt"],
+      apply(scopedCtx) {
+        createAgentScope = (key) => createScope(scopedCtx, key);
+      },
+    });
+    if (typeof createAgentScope !== "function") {
+      throw new Error("real DSH runtime did not initialize the agent scope factory");
+    }
+
+    const createAgent = (rawId, retainedSession, source = "startup") => {
+      const id = SessionId(rawId);
+      const session = retainedSession ??
+        ctx.sessions.create(id, { meta: { cwd: process.cwd() } });
+      const agent = {};
+      const scope = createAgentScope(agent);
+      Object.assign(agent, {
+        id,
+        options: {},
+        session,
+        inbox: new Inbox(session, {
+          inserted() {},
+          discarded() {},
+          claimed() {},
+        }),
+        status: "idle",
+        ctx: scope.ctx,
+        send() {},
+        followup() {},
+        steer() {
+          return { outcome: Promise.resolve({ status: "rejected" }) };
+        },
+        inject() {},
+        cancel() {},
+        runMaintenance: (task) => task(new AbortController().signal),
+        whenIdle: () => Promise.resolve(),
+      });
+      const unregister = ctx.agents.register(agent);
+      agentEvents(ctx, agent).emit("agent/session-start", { source });
+      return { agent, scope, unregister };
+    };
+
+    const first = createAgent("dsh-sparkles-verify-1");
+    const second = createAgent("dsh-sparkles-verify-2");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    toolCount = ctx.tools.schemas(first.agent).length;
+    const scopedNames = new Set(
+      ctx.tools.schemas(first.agent).map((schema) => schema.name),
+    );
+    for (const name of [
+      "finance_track_status",
+      "swing_snapshot",
+      "portfolio_summary",
+      "watchlist_snapshot",
+    ]) {
+      if (!scopedNames.has(name)) failures.push(`scoped counterpart tool is missing: ${name}`);
+    }
+    const commandNames = new Set(
+      ctx.commands.list(first.agent).map((command) => command.name),
+    );
+    for (const name of ["finance-track", "cn-track", "swing", "watch"]) {
+      if (!commandNames.has(name)) failures.push(`scoped counterpart command is missing: ${name}`);
+    }
+    const prompt = await ctx.systemPrompt.assemble({
+      agent: first.agent,
+      scope: first.agent,
+    });
+    if (
+      !prompt.sections.some(
+        (section) =>
+          section.name === "pi-sparkles:finance-routing" &&
+          section.text.includes("Pi Sparkles finance routing"),
+      )
+    ) {
+      failures.push("shared finance routing prompt is missing from the DSH agent scope");
+    }
+    scopedCounterparts = true;
+
+    await ctx.commands.execute(
+      first.agent,
+      "/cn-track",
+      new AbortController().signal,
+    );
+    const status = ctx.sessionProjections.snapshot(first.agent.session)
+      .values.piSparklesStatus?.values?.["finance-track"];
+    if (typeof status !== "string" || !status.startsWith("CN · CNY ·")) {
+      failures.push(`finance track overlay projection is invalid: ${String(status)}`);
+    } else {
+      overlayProjection = true;
+    }
+
+    const executeFor = (agent, name, args, callId) =>
+      ctx.tools.execute({
+        agent,
+        signal: new AbortController().signal,
+        callId,
+        name,
+        arguments: args,
+      });
+    await executeFor(
+      first.agent,
+      "watchlist_add",
+      {
+        watchlist: "verify",
+        track: "us",
+        instrumentId: "ticker:AAPL",
+        symbol: "AAPL",
+        mic: "XNAS",
+        tags: ["verify"],
+      },
+      "dsh-verify-watchlist-add",
+    );
+    const firstWatchlist = await executeFor(
+      first.agent,
+      "watchlist_snapshot",
+      {},
+      "dsh-verify-watchlist-first",
+    );
+    const secondWatchlist = await executeFor(
+      second.agent,
+      "watchlist_snapshot",
+      {},
+      "dsh-verify-watchlist-second",
+    );
+    if (
+      firstWatchlist.value?.details?.revision !== 1 ||
+      secondWatchlist.value?.details?.revision !== 0
+    ) {
+      failures.push("watchlist state leaked between real DSH agent scopes");
+    }
+
+    const retainedFirstSession = first.agent.session;
+    first.unregister();
+    await first.scope.dispose();
+    const resumed = createAgent(
+      "dsh-sparkles-verify-1",
+      retainedFirstSession,
+      "resume",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const resumedWatchlist = await executeFor(
+      resumed.agent,
+      "watchlist_snapshot",
+      {},
+      "dsh-verify-watchlist-resumed",
+    );
+    if (resumedWatchlist.value?.details?.revision !== 1) {
+      failures.push("watchlist state did not restore from the resumed DSH session log");
+    }
+    const resumedStatus = ctx.sessionProjections.snapshot(resumed.agent.session)
+      .values.piSparklesStatus?.values?.["finance-track"];
+    if (typeof resumedStatus !== "string" || !resumedStatus.startsWith("CN · CNY ·")) {
+      failures.push(`finance track overlay did not restore on resume: ${String(resumedStatus)}`);
+    }
+
     const result = await ctx.tools.execute({
+      agent: resumed.agent,
       signal: new AbortController().signal,
       callId: "dsh-verify-finance-capabilities",
       name: "finance_capabilities",
@@ -150,6 +329,10 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
     if (!Array.isArray(result?.value?.content)) {
       failures.push("runtime canonical tool value does not match the bridge output schema");
     }
+    resumed.unregister();
+    second.unregister();
+    await resumed.scope.dispose();
+    await second.scope.dispose();
     runtimeSmoke = true;
   }
 
@@ -161,6 +344,8 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
     cases: Object.keys(REPRESENTATIVE).length,
     runtimeSmoke,
     toolCount,
+    scopedCounterparts,
+    overlayProjection,
   };
 }
 
@@ -174,7 +359,7 @@ if (import.meta.main) {
     console.log(
       `dsh:verify passed ${result.cases} representative schemas against real dsh-tools` +
         (result.runtimeSmoke
-          ? ` and executed the generated bundle (${result.toolCount} tools) in the real DSH runtime`
+          ? ` and executed the generated bundle (${result.toolCount} tools, scoped counterparts=${result.scopedCounterparts}, overlay projection=${result.overlayProjection}) in the real DSH runtime`
           : "; generated bundle not present, runtime execution skipped"),
     );
   } catch (error) {

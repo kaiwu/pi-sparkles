@@ -13,9 +13,18 @@ content hashes remain authoritative in each tarball's `dsh-lock.json` and
 - Isolate concurrent invocations and bind queued messages, custom entries, cwd,
   and lifecycle to the exact DSH agent/session.
 - Exclude the Pi-global `watchlist`, `swing_workbench`, and `portfolio` shells;
-  keep their functional cores reusable for DSH-native per-agent shells.
+  mount fresh copies of their existing compiled Gleam cores in each DSH agent
+  scope, and verify that state cannot cross agents.
+- Restore `finance_track_status` as a per-agent shared-core counterpart,
+  contribute its exported routing guidance through DSH `systemPrompt`, and map
+  its status updates into a session projection.
+- Ship a browser client entry that renders finance track status through DSH's
+  `shell.overlay` slot; the installed DSH web server discovers and serves it.
+- Cover all 135 T1–T6 ledger components in DSH (131 global-safe shells and four
+  scoped counterparts), while retaining explicit global-shell exclusions.
 - Add an independent blocked-preview release gate, exact rc.6 service peers,
-  stronger bundle locks/checksums, and real ToolRuntime execution verification.
+  stronger bundle/client locks and checksums, and real two-agent ToolRuntime,
+  command, prompt, projection, and isolation verification.
 
 ## 0.1.5 - 2026-08-15
 

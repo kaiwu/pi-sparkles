@@ -47,7 +47,7 @@ import {
 import { DIST_DIR, ROOT } from "./modules.js";
 import { readTierManifest } from "./tiers.js";
 
-const DSH_NPM_RELEASE_SCHEMA_VERSION = 1;
+const DSH_NPM_RELEASE_SCHEMA_VERSION = 2;
 const DSH_NPM_PACKAGE_NAME = DSH_PACKAGE_NAME;
 const DSH_NPM_REGISTRY = "https://registry.npmjs.org/";
 const DSH_PEERS = DSH_RUNTIME_PEERS;
@@ -60,6 +60,7 @@ const DSH_NPM_PACKAGE_FILES = [
   "SHA256SUMS",
   "THIRD_PARTY_NOTICES.md",
   "cordis.patch.yml",
+  "client.js",
   "dsh-lock.json",
   "index.js",
   "index.js.map",
@@ -67,6 +68,7 @@ const DSH_NPM_PACKAGE_FILES = [
 ];
 const DSH_BUNDLE_COPY_FILES = [
   "CONFIGURATION.md",
+  "client.js",
   "cordis.patch.yml",
   "dsh-lock.json",
   "index.js",
@@ -102,6 +104,10 @@ function rootManifest() {
   return JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
 }
 
+function componentCount(plan) {
+  return plan.componentCount ?? plan.plugins.length;
+}
+
 function isInside(parent, candidate) {
   const path = relative(parent, candidate);
   return path === "" || (!path.startsWith(`..${sep}`) && path !== "..");
@@ -134,7 +140,7 @@ function dshPackageReadme(plan) {
 Turn [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) into a
 read-only finance evidence assistant for mainland China, Hong Kong, and US
 markets. This is the DeepSeek Harness distribution of
-[pi-sparkles](https://github.com/kaiwu/pi-sparkles): ${plan.plugins.length}
+[pi-sparkles](https://github.com/kaiwu/pi-sparkles): ${componentCount(plan)}
 compatible ${plan.throughTierId} plugin components registered as native Harness
 tools. This package is a \`${plan.maturity}\` and is ${
     plan.releasable ? "publishable" : "not publishable yet"
@@ -181,9 +187,9 @@ changing environment configuration because some adapters initialize at boot.
 
 ## Boundaries
 
-dsh-sparkles ships the Pi ledger minus the Pi-specific or process-global state
-shells listed in \`CONFIGURATION.md\`. Their pure cores remain reusable, while
-DSH-native per-agent replacements belong in a separate bundle lane. It is
+dsh-sparkles keeps Pi-only global shells out of the DSH lane, then instantiates
+their existing Gleam cores once per DSH agent. Finance track status is rendered
+by a DSH \`shell.overlay\` client surface over a session projection. It is
 read-only: no plugin can
 place, route, cancel, replace, or otherwise mutate a paper or live order.
 Provider identity, entitlement, and completeness are never authenticated by
@@ -195,7 +201,7 @@ their text and structured details remain available. It is not investment,
 legal, accounting, or tax advice. See \`CONFIGURATION.md\` for the source and
 configuration reference.
 
-Version ${version} · ${plan.throughTierId} · ${plan.plugins.length} plugin components
+Version ${version} · ${plan.throughTierId} · ${componentCount(plan)} plugin components
 `;
 }
 
@@ -214,6 +220,7 @@ function dshNpmManifest(plan) {
     main: "./index.js",
     exports: {
       ".": "./index.js",
+      "./client": "./client.js",
       "./cordis.patch.yml": "./cordis.patch.yml",
       "./package.json": "./package.json",
     },
@@ -236,7 +243,16 @@ function dshNpmManifest(plan) {
     engines: { node: ">=22.19.0" },
     dependencies: { "pdfjs-dist": pdfVersion },
     peerDependencies: DSH_PEERS,
-    dsh: { bundle: { patch: "./cordis.patch.yml" } },
+    dsh: {
+      bundle: { patch: "./cordis.patch.yml" },
+      client: {
+        inject: [
+          "@deepseek-ai/dsh-client-runtime",
+          "@deepseek-ai/dsh-client-ui-layout",
+        ],
+        platform: "web",
+      },
+    },
     dshSparkles: {
       aggregateThrough: plan.throughTierId,
       maturity: plan.maturity,
@@ -244,7 +260,7 @@ function dshNpmManifest(plan) {
       dshReleaseStatus: plan.dshRelease?.status ??
         (plan.releasable ? "product_useful" : "preview"),
       dshBlockerCount: (plan.dshBlockers ?? []).length,
-      pluginCount: plan.plugins.length,
+      pluginCount: componentCount(plan),
       omittedProposalCount: plan.omittedProposals.length,
       partialImplementationCount: plan.partialImplementations.length,
       openBlockerCount: plan.openBlockers.length,
@@ -280,7 +296,7 @@ function dshReleaseLock(plan, packageDirectory) {
     },
     dshBlockers: plan.dshBlockers ?? [],
     publishable: plan.releasable,
-    pluginCount: plan.plugins.length,
+    pluginCount: componentCount(plan),
     excludedPiProposals: plan.excludedPiProposals ?? [],
     extraDshPlugins: plan.extraDshPlugins ?? [],
     sourceBundle: {
@@ -397,7 +413,14 @@ export function verifyDshNpmPackageDirectory(directory, expectedPlan) {
     manifest.private !== !lock.publishable ||
     manifest.main !== "./index.js" ||
     manifest.dsh?.bundle?.patch !== "./cordis.patch.yml" ||
+    manifest.dsh?.client?.platform !== "web" ||
+    JSON.stringify(manifest.dsh?.client?.inject) !==
+      JSON.stringify([
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-layout",
+      ]) ||
     manifest.exports?.["."] !== "./index.js" ||
+    manifest.exports?.["./client"] !== "./client.js" ||
     JSON.stringify(manifest.files) !== JSON.stringify(DSH_NPM_PACKAGE_FILES) ||
     manifest.license !== "Apache-2.0" ||
     manifest.engines?.node !== ">=22.19.0" ||
@@ -447,7 +470,7 @@ export function verifyDshNpmPackageDirectory(directory, expectedPlan) {
       manifest.version !== expectedPlan.packageVersion ||
       lock.throughTierId !== expectedPlan.throughTierId ||
       lock.publishable !== expectedPlan.releasable ||
-      lock.pluginCount !== expectedPlan.plugins.length ||
+      lock.pluginCount !== componentCount(expectedPlan) ||
       manifest.dshSparkles?.aggregateThrough !== expectedPlan.throughTierId ||
       manifest.dshSparkles?.maturity !== expectedPlan.maturity ||
       manifest.dshSparkles?.piAggregateMaturity !==
@@ -457,7 +480,7 @@ export function verifyDshNpmPackageDirectory(directory, expectedPlan) {
           (expectedPlan.releasable ? "product_useful" : "preview")) ||
       manifest.dshSparkles?.dshBlockerCount !==
         (expectedPlan.dshBlockers ?? []).length ||
-      manifest.dshSparkles?.pluginCount !== expectedPlan.plugins.length ||
+      manifest.dshSparkles?.pluginCount !== componentCount(expectedPlan) ||
       manifest.dshSparkles?.omittedProposalCount !== expectedPlan.omittedProposals.length ||
       manifest.dshSparkles?.partialImplementationCount !==
         expectedPlan.partialImplementations.length ||
@@ -697,7 +720,7 @@ export async function assembleDshNpmRelease(
       package: { name: npmResult.name, version: npmResult.version },
       throughTierId: plan.throughTierId,
       maturity: plan.maturity,
-      pluginCount: plan.plugins.length,
+      pluginCount: componentCount(plan),
       publishable: plan.releasable,
       tarball: npmResult.filename,
       tarballSha256: sha256File(tarball),
@@ -843,7 +866,7 @@ const loaded = await import(pathToFileURL(process.argv[1]).href);
 const plugin = loaded.default;
 if (typeof plugin?.apply !== "function") throw new Error("entrypoint has no apply");
 if (plugin.name !== "dsh-sparkles") throw new Error("unexpected plugin name: " + plugin.name);
-if (JSON.stringify(plugin.inject) !== JSON.stringify(["tools", "commands", "agents"])) throw new Error("unexpected inject: " + JSON.stringify(plugin.inject));`,
+if (JSON.stringify(plugin.inject) !== JSON.stringify(["tools", "commands", "agents", "systemPrompt"])) throw new Error("unexpected inject: " + JSON.stringify(plugin.inject));`,
           entrypoint,
         ],
         { cwd: installation },

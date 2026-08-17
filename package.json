@@ -64,6 +64,7 @@
   },
   "keywords": [],
   "devDependencies": {
-    "futu-api": "10.10.7008"
+    "futu-api": "10.10.7008",
+    "zod": "4.4.3"
   }
 }

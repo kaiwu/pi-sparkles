@@ -32,6 +32,11 @@ Package-level Experimental labels are inventory. ProductUseful applies only to
 a whole role tier. Tiers are not a 6×3 track matrix. See
 [PRODUCT_TIERS.md](PRODUCT_TIERS.md).
 
+The separate DSH preview also covers all 135 ledger components: 131 global-safe
+shells plus per-agent counterparts for track status, swing workbench,
+portfolio, and watchlist. Its finance track status is rendered through DSH's
+browser `shell.overlay`; see [dsh/README.md](dsh/README.md).
+
 ## Docs
 
 | Doc | Use it for |

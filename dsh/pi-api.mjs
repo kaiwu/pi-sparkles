@@ -16,7 +16,10 @@ import {
 
 const SESSION_START = "session_start";
 const SESSION_SHUTDOWN = "session_shutdown";
+const SESSION_TREE = "session_tree";
+const BEFORE_AGENT_START = "before_agent_start";
 const DSH_CUSTOM_EVENT = "pi-sparkles/custom";
+export const DSH_STATUS_EVENT = "pi-sparkles/status";
 
 /** A minimal EventBus matching pi_gleam's `events(api)` contract. */
 class EventBus {
@@ -83,7 +86,7 @@ function customEntries(agent) {
     }));
 }
 
-function invocationUi(storage) {
+function invocationUi(storage, { statusEvents = false } = {}) {
   const notify = (message, kind = "info") => {
     const invocation = storage.getStore();
     if (!invocation) {
@@ -91,13 +94,22 @@ function invocationUi(storage) {
     }
     invocation.notifications.push({ message: String(message), kind: String(kind) });
   };
+  const writeStatus = (key, text) => {
+    if (!statusEvents) unsupported(text === null ? "ui.clearStatus" : "ui.setStatus");
+    const agent = currentAgent(storage, text === null ? "ui.clearStatus" : "ui.setStatus");
+    agent.session.append(DSH_STATUS_EVENT, {
+      key: String(key),
+      text: text === null ? null : String(text),
+    });
+  };
   const reject = (name) => () => unsupported(`ui.${name}`);
   return {
     notify,
     select: reject("select"),
     confirm: reject("confirm"),
     input: reject("input"),
-    setStatus: reject("setStatus"),
+    setStatus: (key, text) => writeStatus(key, text),
+    clearStatus: (key) => writeStatus(key, null),
     setWorkingMessage: reject("setWorkingMessage"),
     setWorkingVisible: reject("setWorkingVisible"),
     setHiddenThinkingLabel: reject("setHiddenThinkingLabel"),
@@ -115,7 +127,7 @@ function invocationUi(storage) {
 }
 
 /** Build the Pi Context handed to one exact DSH invocation or lifecycle hook. */
-function bridgedContext({ storage, signal, bus }) {
+function bridgedContext({ storage, signal, bus, statusEvents }) {
   const agent = storage.getStore()?.agent;
   const session = agent?.session;
   const cwd = session?.header?.cwd ?? process.cwd();
@@ -133,7 +145,7 @@ function bridgedContext({ storage, signal, bus }) {
     cwd,
     mode: "dsh",
     hasUI: true,
-    ui: invocationUi(storage),
+    ui: invocationUi(storage, { statusEvents }),
     signal,
     sessionManager,
     events: bus,
@@ -211,9 +223,17 @@ export function normalizeToolResult(value, notifications = []) {
  * @param {object} options
  * @param {object} options.ctx - Cordis context with tools and commands.
  * @param {object} [options.config] - bundle config ({ flags?: Record<string,string> }).
+ * @param {() => string[]} [options.activeTools] - other visible DSH/Pi tool names.
+ * @param {boolean} [options.scopedState] - enable session-scoped Pi lifecycle/UI mappings.
  * @param {(message: string, error?: unknown) => void} [options.log] - diagnostics.
  */
-export function createPiApi({ ctx, config = {}, log = console.warn }) {
+export function createPiApi({
+  ctx,
+  config = {},
+  activeTools = () => [],
+  scopedState = false,
+  log = console.warn,
+}) {
   const flags = new Map();
   const configFlags = isRecord(config.flags) ? config.flags : {};
   const registeredToolNames = [];
@@ -221,11 +241,13 @@ export function createPiApi({ ctx, config = {}, log = console.warn }) {
   const invocations = new AsyncLocalStorage();
   const sessionStart = new Set();
   const sessionShutdown = new Set();
+  const sessionTree = new Set();
+  const beforeAgentStart = new Set();
 
   const flagNameEnv = (name) =>
     `PI_SPARKLES_FLAG_${name.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase()}`;
   const invocationContext = (signal) =>
-    bridgedContext({ storage: invocations, signal, bus });
+    bridgedContext({ storage: invocations, signal, bus, statusEvents: scopedState });
   const runWithAgent = (agent, signal, action) =>
     invocations.run({ agent, signal, notifications: [] }, action);
 
@@ -345,7 +367,7 @@ export function createPiApi({ ctx, config = {}, log = console.warn }) {
     },
 
     getActiveTools() {
-      return [...registeredToolNames];
+      return [...new Set([...activeTools(), ...registeredToolNames])];
     },
     setActiveTools() {
       unsupported("setActiveTools");
@@ -373,6 +395,10 @@ export function createPiApi({ ctx, config = {}, log = console.warn }) {
       let listeners;
       if (event === SESSION_START) listeners = sessionStart;
       else if (event === SESSION_SHUTDOWN) listeners = sessionShutdown;
+      else if (scopedState && event === SESSION_TREE) listeners = sessionTree;
+      else if (scopedState && event === BEFORE_AGENT_START) {
+        listeners = beforeAgentStart;
+      }
       else unsupported(`on('${event}')`);
       listeners.add(handler);
       return () => listeners.delete(handler);
@@ -413,6 +439,17 @@ export function createPiApi({ ctx, config = {}, log = console.warn }) {
           await runEventHook("session_shutdown", handler, { reason }, context, log);
         }
       });
+    },
+
+    _registeredToolNames() {
+      return [...registeredToolNames];
+    },
+
+    _scopedEventCounts() {
+      return {
+        beforeAgentStart: beforeAgentStart.size,
+        sessionTree: sessionTree.size,
+      };
     },
   };
 

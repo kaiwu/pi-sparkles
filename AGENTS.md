@@ -120,6 +120,67 @@ adapters, or README claims. Unfinished work remains private compilable code or
 explicit tier backlog. This checkpoint is an integrity rule, not plugin-level
 delivery or promotion.
 
+## Pi and DSH Host Lanes
+
+Pi and DeepSeek Harness (DSH) are separate host and release lanes over the same
+product inventory. The tier ledger and ProductUseful status govern Pi only;
+`dsh/bundle.json` owns an independent DSH maturity gate. A passing Pi tier,
+aggregate, or package must never imply that DSH is releasable, and a DSH build
+or test must never change `tiers.json` or promote a tier.
+
+Classify every loadable component into exactly one DSH ownership mode:
+
+- A host-compatible, stateless Pi shell stays in `plugins/<name>/` and may be
+  mounted once in the DSH process through `dsh/pi-api.mjs`.
+- A Pi shell with mutable session state, session-tree behavior, or agent-owned
+  UI must remain in `exclude_pi` for the DSH global lane and enter `scoped_pi`
+  only when DSH creates a fresh extension/API instance in `agent.ctx`. Never
+  share its mutable cell, registrations, invocation context, or restored state
+  between agents.
+- A genuinely DSH-only server surface lives in `dsh/plugins/<name>.mjs` and is
+  named by `extra_dsh`. A DSH browser surface is packaged as a `dsh.client`
+  entry. Neither may enter Pi manifests, Pi aggregation, or Pi load tests.
+
+Share functional cores, typed contracts, decoders, provider ports, receipts,
+and model-facing policy whenever their semantics are host-neutral. Keep Pi and
+DSH registration, lifecycle, session, and presentation code as thin sibling
+shells. Do not import a Pi shell into a DSH-only module or duplicate finance
+business logic in JavaScript merely to make a host counterpart. An
+`extra_dsh` entry resolves only under `dsh/plugins/`; a `scoped_pi` entry must
+also be globally excluded so it cannot be mounted twice.
+
+Audit every Pi host effect used by a bundled plugin against `dsh/pi-api.mjs`.
+Map a capability only when DSH has an equivalent contract and bind it to the
+exact invoking agent/session. Otherwise fail explicitly or isolate the plugin;
+never return a placeholder success. Provider networking continues through
+`finance_http` and explicit capabilities. Do not add plugin-local fetch stacks
+or assume a Pi-provided fetch API exists in DSH; verify the shared interpreter
+under DSH's supported Node runtime.
+
+DSH agent creation is composition-only. Instantiate scoped shells on
+`agent/created`, restore them on the real `agent/session-start`, and release
+them on `agent/disposed`. DSH append-only forks/resumes are distinct sessions;
+do not synthesize Pi `session_tree` navigation. Custom entries, queued
+messages, cwd, cancellation, notifications, and tool execution must always use
+the invoking agent carried through async-local context. Persistence must be
+proved by dispose/resume tests in addition to simultaneous-agent isolation.
+
+Keep presentation host-native. Pi terminal widgets and statuslines stay in the
+Pi lane. DSH status UI uses typed session events, a registered session
+projection, and a browser client slot; the finance track status belongs in
+`shell.overlay`. A DSH client reads the current session projection and must not
+depend on process-global state. Pi inline base64 images are not DSH attachment
+blocks: preserve safe text/structured output or implement an explicit DSH
+attachment/client renderer instead of forging compatibility.
+
+The generated DSH package must pin its tested DSH service peers, declare exact
+server and client entrypoints, include a content lock and checksum inventory,
+install in a clean prefix/profile, and load through the installed DSH CLI.
+`exclude_pi`, `scoped_pi`, and `extra_dsh` are reviewed manifest boundaries,
+not convenience lists. DSH remains a private preview until its own complete
+role-level acceptance lane is declared ProductUseful; packaging and
+verification never publish.
+
 ## Architecture & Distribution
 
 Plugin root modules export
@@ -349,6 +410,17 @@ and an annual-shaped complete window.
   behind one Pi entrypoint without changing tier maturity.
 - `bun run npm:pack -- T5|T6`: prepare and verify the selected aggregate as the
   stable all-in-one npm package; it never publishes.
+- `bun run dsh:bundle [-- T5|T6]`: build the independent DSH all-in-one bundle;
+  `--no-build` verifies that all required compiled inputs already exist.
+- `bun test test/dsh test/workflow/dsh_npm_package.test.js`: run the focused DSH
+  adapter, scoped-state, overlay, bundle-lock, and npm-inventory tests.
+- `bun run dsh:verify`: load the generated bundle through the installed DSH
+  services and exercise schemas, tools, commands, prompts, projections,
+  isolation, and persisted-session resume.
+- `bun run dsh:npm:preview:verify`: pack the private DSH preview, install it into
+  a clean npm prefix/profile, and run the real-runtime smoke without publishing.
+- `bun run dsh:npm:release:verify`: run only after the independent DSH release
+  status is ProductUseful; it remains a verification gate and never publishes.
 - `bun run check`, `bun run build [-- hello]`, and
   `bun run test:unit [-- hello]`: inner-loop diagnostics only; a package-level
   pass never changes delivery status.
@@ -378,6 +450,12 @@ tests while building, but do not run or cite the full promotion matrix for an
 individual plugin. At the completed tier boundary, change the tier to
 `verifying` and run `bun run tier:verify -- Tn` once before ProductUseful
 promotion.
+DSH counterparts additionally require focused bridge tests and a real installed
+DSH smoke. Stateful shells must prove two-agent isolation and dispose/resume
+restoration. Browser surfaces must prove client discovery, exact slot
+registration, projection-driven rendering, and web asset loading; perform
+visual browser QA when a browser instance is available. These DSH diagnostics
+do not substitute for either the Pi tier gate or the independent DSH role lane.
 Provider plugin unit tests use fixtures or scripted transports, never live
 network calls, real sleeps, ambient credentials, or mutable shared caches.
 The normal sole live-provider lane is the explicit `bun run test:live:sec`
@@ -417,6 +495,6 @@ Add screenshots only for interactive TUI changes.
 
 ## Security & Configuration
 
-Pi extensions execute with full user permissions. Never commit or emit secrets.
-Finance plugins must report source, freshness, units, and data entitlement, and
-keep read-only, paper, and live-trading capabilities separate.
+Pi and DSH extensions execute with full user permissions. Never commit or emit
+secrets. Finance plugins must report source, freshness, units, and data
+entitlement, and keep read-only, paper, and live-trading capabilities separate.

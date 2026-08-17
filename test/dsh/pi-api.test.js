@@ -2,10 +2,16 @@ import { describe, expect, test } from "bun:test";
 import { assertRawSubset } from "../../dsh/schema-translate.mjs";
 import { createPiApi } from "../../dsh/pi-api.mjs";
 import { createPlugin } from "../../dsh/plugin.mjs";
+import { dshClientFactorySource } from "../../dsh/client.js";
+import {
+  STATUS_PROJECTION_KEY,
+  statusProjection,
+} from "../../dsh/plugins/finance_track_overlay.mjs";
 
 function fakeCtx() {
   const tools = [];
   const commands = [];
+  const promptSections = [];
   const listeners = new Map();
   return {
     tools: {
@@ -19,6 +25,12 @@ function fakeCtx() {
       },
     },
     logger: { info() {}, warn() {} },
+    systemPrompt: {
+      section(value) {
+        promptSections.push(value);
+        return () => {};
+      },
+    },
     on(event, handler) {
       if (!listeners.has(event)) listeners.set(event, new Set());
       listeners.get(event).add(handler);
@@ -33,6 +45,7 @@ function fakeCtx() {
     },
     __tools: tools,
     __commands: commands,
+    __promptSections: promptSections,
   };
 }
 
@@ -238,6 +251,43 @@ describe("pi-api facade", () => {
     expect(captured.cwd).toBe("/work/agent-1");
   });
 
+  test("scoped status UI writes whole-value DSH session events", async () => {
+    const ctx = fakeCtx();
+    const api = createPiApi({
+      ctx,
+      scopedState: true,
+      activeTools: () => ["global_tool"],
+    });
+    api.registerTool({
+      name: "scoped_tool",
+      description: "scoped",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      execute: async () => ({ content: [{ type: "text", text: "ok" }], details: {} }),
+    });
+    expect(api.getActiveTools()).toEqual(["global_tool", "scoped_tool"]);
+    api.registerCommand("status-probe", {
+      description: "status",
+      handler: async (_args, context) => {
+        context.ui.setStatus("finance-track", "CN · CNY");
+        context.ui.clearStatus("finance-track");
+      },
+    });
+    const agent = fakeAgent("status");
+    await ctx.__commands[0].handler({
+      agent,
+      rawInput: "",
+      signal: new AbortController().signal,
+    });
+    expect(agent.session.events.map((event) => event.type)).toEqual([
+      "pi-sparkles/status",
+      "pi-sparkles/status",
+    ]);
+    expect(agent.session.events.map((event) => event.data)).toEqual([
+      { key: "finance-track", text: "CN · CNY" },
+      { key: "finance-track", text: null },
+    ]);
+  });
+
   test("sendUserMessage queues on the exact invocation agent", async () => {
     const ctx = fakeCtx();
     const api = createPiApi({ ctx });
@@ -370,7 +420,7 @@ describe("pi-api facade", () => {
       return Promise.resolve(undefined);
     };
     const plugin = createPlugin([["only", extension]]);
-    expect(plugin.inject).toEqual(["tools", "commands", "agents"]);
+    expect(plugin.inject).toEqual(["tools", "commands", "agents", "systemPrompt"]);
     await plugin.apply(ctx, {});
     expect(ctx.__tools).toHaveLength(1);
     expect(started).toEqual([]);
@@ -379,6 +429,136 @@ describe("pi-api facade", () => {
       source: "startup",
     });
     expect(started).toEqual(["started"]);
+  });
+
+  test("scoped Pi counterparts get isolated registrations, state, lifecycle, and prompt", async () => {
+    const root = fakeCtx();
+    const starts = [];
+    const extension = (api) => {
+      let count = 0;
+      api.on("before_agent_start", () => Promise.resolve({ systemPrompt: "shared" }));
+      api.on("session_tree", () => Promise.resolve());
+      api.on("session_start", (_event, context) => {
+        count += 1;
+        starts.push(context.sessionManager.getSessionId());
+        context.ui.setStatus("finance-track", `count:${count}`);
+        return Promise.resolve();
+      });
+      api.registerTool({
+        name: "scoped_counter",
+        description: "counter",
+        parameters: { type: "object", properties: {}, additionalProperties: false },
+        execute: async () => ({
+          content: [{ type: "text", text: String(count) }],
+          details: { count },
+        }),
+      });
+      return Promise.resolve();
+    };
+    const plugin = createPlugin(
+      [],
+      [],
+      "dsh-sparkles",
+      [["state", extension, { systemPrompt: "shared", promptName: "shared-state" }]],
+    );
+    await plugin.apply(root, {});
+
+    const first = fakeAgent("first");
+    first.ctx = fakeCtx();
+    const second = fakeAgent("second");
+    second.ctx = fakeCtx();
+    await root.__emit("agent/created", { agent: first });
+    await root.__emit("agent/created", { agent: second });
+    expect(root.__tools).toHaveLength(0);
+    expect(first.ctx.__tools.map((tool) => tool.name)).toEqual(["scoped_counter"]);
+    expect(second.ctx.__tools.map((tool) => tool.name)).toEqual(["scoped_counter"]);
+    expect(first.ctx.__promptSections).toEqual([
+      { name: "shared-state", order: 99, text: "shared" },
+    ]);
+
+    await root.__emit("agent/session-start", { agent: first, source: "startup" });
+    await root.__emit("agent/session-start", { agent: second, source: "resume" });
+    expect(starts).toEqual(["session-first", "session-second"]);
+    expect(first.session.events.at(-1).data.text).toBe("count:1");
+    expect(second.session.events.at(-1).data.text).toBe("count:1");
+    const firstResult = await first.ctx.__tools[0].execute(
+      {},
+      toolRunContext(first, "first-counter"),
+    );
+    const secondResult = await second.ctx.__tools[0].execute(
+      {},
+      toolRunContext(second, "second-counter"),
+    );
+    expect(firstResult.details.count).toBe(1);
+    expect(secondResult.details.count).toBe(1);
+  });
+
+  test("status projection folds updates and the client registers shell.overlay", () => {
+    const projection = statusProjection();
+    expect(projection.key).toBe(STATUS_PROJECTION_KEY);
+    let state = projection.init();
+    state = projection.apply(state, {
+      type: "pi-sparkles/status",
+      data: { key: "finance-track", text: "HK · HKD" },
+    });
+    expect(projection.view(state)).toEqual({
+      values: { "finance-track": "HK · HKD" },
+    });
+    const unchanged = projection.apply(state, { type: "turn/start", data: {} });
+    expect(unchanged).toBe(state);
+
+    let loaded;
+    const window = {
+      __ModuleLoader__: {
+        load(definition) {
+          loaded = definition.factory((name) => {
+            if (name === "react") {
+              return {
+                createElement(type, props, child) {
+                  return { type, props, child };
+                },
+              };
+            }
+            throw new Error(`unexpected client module: ${name}`);
+          });
+        },
+      },
+    };
+    new Function("window", dshClientFactorySource("@fixture/dsh"))(window);
+    let registered;
+    loaded.apply({
+      slots: {
+        inject(name, callback) {
+          expect(name).toBe("shell.overlay");
+          callback();
+        },
+        register(definition, component) {
+          registered = { definition, component };
+          return () => {};
+        },
+      },
+    });
+    expect(registered.definition).toMatchObject({
+      name: "shell.overlay",
+      id: "pi-sparkles-finance-track",
+    });
+    const rendered = registered.component({
+      useSessions: (selector) => selector({
+        current: "s1",
+        byId: {
+          s1: {
+            projectionValues: {
+              piSparklesStatus: { values: { "finance-track": "US · USD" } },
+            },
+          },
+        },
+      }),
+    });
+    expect(rendered).toMatchObject({
+      type: "div",
+      props: { role: "status" },
+      child: "US · USD",
+    });
   });
 
   test("unsupported Pi host effects fail explicitly", () => {

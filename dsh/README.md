@@ -9,34 +9,40 @@ in the existing pure Gleam/domain modules; only host effects are adapted.
 - `scripts/dsh-npm-package.js` builds the separate npm preview.
 - `scripts/dsh-verify.js` validates schemas and executes the generated bundle
   through the installed DSH runtime (`bun run dsh:verify`).
-- `dsh/bundle.json` owns DSH release status, Pi-shell exclusions, reasons, and
-  future DSH-native entries.
+- `dsh/bundle.json` owns DSH release status, global Pi-shell exclusions,
+  per-agent shared-core counterparts, reasons, and DSH-native entries.
 - `dsh/pi-api.mjs` maps the supported Pi effect surface to DSH.
-- `dsh/plugins/` is reserved for DSH-native Cordis shells; it is separate from
-  Pi `plugins/` and is empty today.
+- `dsh/plugins/` contains DSH-native Cordis shells and remains separate from
+  Pi `plugins/`.
+- `dsh/client.js` generates the DSH browser half that occupies
+  `shell.overlay`.
 
 ## Inventory and release boundary
 
-The effective inventory is `Pi tier closure − excluded Pi shells + DSH-native
-shells`. The current T6 preview contains 131 compatible Pi plugin components.
-Four Pi shells are excluded, with normative reasons in `bundle.json`:
+The effective inventory is `global-safe Pi shells + per-agent Pi counterparts
++ DSH-native host surfaces`. The current T6 preview covers all 135 ledger
+components: 131 mount globally and four use fresh DSH agent scopes. The four
+original Pi shells remain excluded from the global lane, with normative
+reasons in `bundle.json`:
 
-- `finance_track_status`: Pi TUI/system-prompt navigation needs a DSH-native
-  per-agent surface.
+- `finance_track_status`: the same compiled Gleam state/readiness/tool core is
+  mounted per agent; DSH contributes its prompt through `systemPrompt` and
+  renders status through a session projection and `shell.overlay`.
 - `swing_workbench` and `watchlist`: their Pi shells use session-tree lifecycle
-  and extension-global mutable state.
-- `portfolio`: its Pi shell owns one extension-global imported snapshot.
+  and therefore receive a fresh extension instance per agent.
+- `portfolio`: its non-durable imported snapshot cell is likewise per agent.
 
 Loading those state shells once at DSH process scope would mix independent
-agents. Their pure cores remain available for native, session-scoped DSH shells.
-An `extra_dsh` entry resolves only to `dsh/plugins/<name>.mjs`; it can never
-silently pull a Pi plugin into the DSH-only lane.
+agents. `scoped_pi` keeps the existing compiled functional cores but changes
+their ownership boundary. An `extra_dsh` entry resolves only to
+`dsh/plugins/<name>.mjs`; it can never silently pull a Pi plugin into the
+DSH-only lane.
 
 DSH maturity is independent from Pi maturity. `dsh_release.status` is currently
 `preview`, so both T5 and T6 npm outputs are private blocked previews even when
 the corresponding Pi aggregate is ProductUseful. Promotion requires a DSH role
-acceptance lane and completion or explicit product disposition of the excluded
-host shells.
+acceptance lane. The counterparts themselves are implemented and tested; they
+do not promote the independent DSH release gate.
 
 ## Host mapping
 
@@ -47,6 +53,11 @@ host shells.
 | queued user messages | Routed to the invoking agent's `followup` or `steer` inbox. |
 | custom entries/session reads | Stored in and projected from the invoking DSH agent's session log. |
 | session lifecycle | Pi start/shutdown hooks follow `agent/session-start` and `agent/disposed`. |
+| stateful Pi shells | Instantiated once in each `agent.ctx`; registrations and mutable cells disappear with that scope. |
+| Pi session-tree hooks | Registered for compatibility but not synthetically fired; DSH forks/resumes as a distinct session and restores on real session-start. |
+| Pi statusline | `setStatus`/`clearStatus` append whole-value DSH status events; `finance_track_overlay` folds them into `piSparklesStatus`. |
+| browser status | The package's `dsh.client` entry registers `pi-sparkles-finance-track` in `shell.overlay`. |
+| finance routing prompt | Exported once by the Gleam track module and contributed as an agent-scoped DSH system-prompt section. |
 | flags | Defaults may be overridden by bundle `config.flags` or `PI_SPARKLES_FLAG_<NAME>`. |
 | unsupported Pi effects | Fail explicitly; they never return placeholder success. |
 
@@ -73,10 +84,12 @@ dsh --profile <name> --dump-config
 ```
 
 `bun test test/dsh test/workflow/dsh_npm_package.test.js` covers the adapter,
-parallel invocation isolation, lifecycle/session mapping, image projection,
-release gate, locks, and npm inventory. `bun run dsh:verify` uses the installed
-DSH rc.6 implementation to validate schemas, mount the generated entrypoint,
-and execute `finance_capabilities` through the real ToolRuntime.
+parallel invocation isolation, per-agent state ownership, lifecycle/session
+mapping, overlay component/projection, image projection, release gate, locks,
+and npm inventory. `bun run dsh:verify` uses the installed DSH rc.6
+implementation to create two real agent scopes, expose all 244 effective tools,
+verify the shared prompt and track projection, and prove that a watchlist
+mutation cannot leak to the second agent.
 
 The generated package pins its tested DSH service peers to `0.1.0-rc.6`, pins
 `pdfjs-dist`, requires Node 22.19+, carries exact locks/checksums, and contains

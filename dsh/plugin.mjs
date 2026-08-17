@@ -56,12 +56,16 @@ function scopedApi(api, pluginName, registrations) {
  * @param {Array<[string, object|Function]>|string} dshExtensionsOrName
  *   DSH-native Cordis plugins, or the plugin name for the legacy two-argument form.
  * @param {string} pluginName - Cordis plugin name.
+ * @param {Array<[string, Function, object?]>} scopedExtensions
+ *   Pi shells that must be instantiated once per DSH agent rather than once
+ *   per host process. The optional metadata can contribute one shared prompt.
  * @returns the Cordis plugin `{ name, inject, apply }`.
  */
 export function createPlugin(
   extensions,
   dshExtensionsOrName = [],
   pluginName = "dsh-sparkles",
+  scopedExtensions = [],
 ) {
   const dshExtensions = Array.isArray(dshExtensionsOrName)
     ? dshExtensionsOrName
@@ -76,7 +80,7 @@ export function createPlugin(
   };
   return {
     name: resolvedPluginName,
-    inject: ["tools", "commands", "agents"],
+    inject: ["tools", "commands", "agents", "systemPrompt"],
     async apply(ctx, config) {
       const registrations = new Map();
       const api = createPiApi({ ctx, config: config ?? {} });
@@ -104,16 +108,70 @@ export function createPlugin(
             : {};
         await ctx.plugin(extension, extensionConfig);
       }
+      const scopedApis = new Map();
+      ctx.on("agent/created", ({ agent }) => {
+        if (!agent?.ctx) {
+          throw new Error("DSH agent has no scoped Cordis context");
+        }
+        const scopedRegistrations = new Map(registrations);
+        const scopedApi = createPiApi({
+          ctx: agent.ctx,
+          config: config ?? {},
+          activeTools: () => api._registeredToolNames(),
+          scopedState: true,
+        });
+        let expectedBeforeAgentStart = 0;
+        for (const [shortName, extension, metadata = {}] of scopedExtensions) {
+          if (typeof extension !== "function") {
+            throw new Error(`${shortName} has no scoped extension factory`);
+          }
+          trace(`loading scoped ${shortName} for ${String(agent.id)}`);
+          const loaded = extension(
+            scopedApiForAgent(
+              scopedApi,
+              shortName,
+              scopedRegistrations,
+            ),
+          );
+          Promise.resolve(loaded).catch((error) => {
+            ctx.logger?.warn?.(
+              `[dsh-sparkles] scoped ${shortName} initialization failed: ${String(error)}`,
+            );
+          });
+          if (typeof metadata.systemPrompt === "string") {
+            expectedBeforeAgentStart += 1;
+            agent.ctx.systemPrompt.section({
+              name: metadata.promptName ?? `pi-sparkles:${shortName}`,
+              order: metadata.promptOrder ?? 99,
+              text: metadata.systemPrompt,
+            });
+          }
+        }
+        const eventCounts = scopedApi._scopedEventCounts();
+        if (eventCounts.beforeAgentStart !== expectedBeforeAgentStart) {
+          throw new Error(
+            `Scoped Pi before_agent_start handlers (${eventCounts.beforeAgentStart}) do not match DSH prompt contributions (${expectedBeforeAgentStart})`,
+          );
+        }
+        scopedApis.set(agent, scopedApi);
+      });
       ctx.on("agent/session-start", async ({ agent, source }) => {
         const reason = source === "resume" ? "resume" : "startup";
         await api._fireSessionStart(agent, reason);
+        await scopedApis.get(agent)?._fireSessionStart(agent, reason);
       });
       ctx.on("agent/disposed", async ({ agent }) => {
+        await scopedApis.get(agent)?._fireSessionShutdown(agent, "quit");
+        scopedApis.delete(agent);
         await api._fireSessionShutdown(agent, "quit");
       });
       trace(
-        `registered ${registrations.size} named registrations from ${extensions.length} Pi extensions and ${dshExtensions.length} DSH-native extensions`,
+        `registered ${registrations.size} global named registrations from ${extensions.length} Pi extensions, ${scopedExtensions.length} scoped Pi counterparts, and ${dshExtensions.length} DSH-native extensions`,
       );
     },
   };
+}
+
+function scopedApiForAgent(api, pluginName, registrations) {
+  return scopedApi(api, `scoped:${pluginName}`, registrations);
 }

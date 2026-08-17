@@ -121,28 +121,29 @@ bun run dsh:npm:preview:verify          # allowed private-preview gate
 dsh plugin --profile <name> add ./dist/dsh/dsh-sparkles
 ```
 
-The packed package has one self-contained entrypoint registering the included
-tools through `ctx.tools` and the finance commands through `ctx.commands`. The
-inventory is the Pi ledger minus the Pi-specific or DSH-unsafe state shells
-listed with reasons in `dsh/bundle.json`, plus DSH-native Cordis entries from
-the isolated `dsh/plugins/` lane. The exact excluded/extra lists are recorded
-in `dsh-lock.json` and the manifest's `dshSparkles` section. It pins the tested
-`@deepseek-ai/dsh-agent`, `@deepseek-ai/dsh-tools`, and
-`@deepseek-ai/dsh-commands` peers to `0.1.0-rc.6`, pins `pdfjs-dist` for the CN
-PDF CMap runtime resolution, requires Node 22.19+, carries the
+The packed package has one self-contained server entrypoint registering tools
+through `ctx.tools` and finance commands through `ctx.commands`, plus one DSH
+browser entrypoint for `shell.overlay`. All 135 ledger components are covered:
+131 global-safe Pi shells and four `scoped_pi` counterparts instantiated once
+per DSH agent. DSH-only Cordis entries remain in the isolated `dsh/plugins/`
+lane. The exact excluded/scoped/extra lists are recorded in `dsh-lock.json` and
+the manifest's `dshSparkles` section. It pins the tested agent, tool, command,
+system-prompt, session-projection, client-runtime, and UI-layout peers to
+`0.1.0-rc.6`, pins `pdfjs-dist` for the CN PDF CMap runtime resolution,
+requires Node 22.19+, carries the
 `dsh.bundle.patch` manifest and a content lock (`dsh-lock.json` +
 `release-lock.json` + inner/outer `SHA256SUMS`), and has no lifecycle scripts
 or credential values. The install smoke installs the exact tarball into a clean
 npm prefix, imports the entrypoint to verify its Cordis plugin shape, and
 composes it in an isolated `DSH_HOME` profile with the real `dsh` CLI.
 
-The DSH manifest is currently `preview`: four Pi host shells are excluded and
-the DSH role acceptance lane/native session-scoped replacements are incomplete.
-Therefore T5 and T6 pack only as private blocked previews; the publish dry-run,
-registry check, and real publication gate refuse them. Do not run an npm
-publish command until `dsh_release.status` is independently promoted to
-`product_useful` with its acceptance evidence. Packaging/verification never
-publish.
+The DSH manifest is currently `preview`: the four global exclusions now have
+implemented per-agent counterparts, but the independent DSH role acceptance
+lane has not been declared complete. Therefore T5 and T6 pack only as private
+blocked previews; the publish dry-run, registry check, and real publication
+gate refuse them. Do not run an npm publish command until
+`dsh_release.status` is independently promoted to `product_useful` with its
+acceptance evidence. Packaging/verification never publish.
 
 ```sh
 bun run dsh:npm:release:verify          # intentionally refuses while preview

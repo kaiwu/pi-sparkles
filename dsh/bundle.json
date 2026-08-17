@@ -1,8 +1,8 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "dsh_release": {
     "status": "preview",
-    "reason": "DSH role acceptance and native session-scoped replacements for excluded Pi effect shells are incomplete."
+    "reason": "The DSH counterparts are implemented, but the independent DSH role-level acceptance lane has not yet been declared complete."
   },
   "exclude_pi": [
     "finance_track_status",
@@ -11,10 +11,18 @@
     "watchlist"
   ],
   "exclusion_reasons": {
-    "finance_track_status": "Pi TUI statusline and navigation shell; DSH needs a native per-agent track surface.",
-    "swing_workbench": "Pi session-tree lifecycle shell stores mutable extension-global state; unsafe across DSH agents.",
-    "portfolio": "Pi shell stores imported portfolio state in one extension-global cell; unsafe across DSH agents.",
-    "watchlist": "Pi session-tree lifecycle shell stores mutable extension-global state; unsafe across DSH agents."
+    "finance_track_status": "Pi TUI statusline cannot run in DSH; its Gleam core is mounted per agent and projected through the DSH shell.overlay counterpart.",
+    "swing_workbench": "Pi process-global shell is replaced by a fresh per-agent DSH mount of the same Gleam core.",
+    "portfolio": "Pi process-global shell is replaced by a fresh per-agent DSH mount of the same Gleam core.",
+    "watchlist": "Pi process-global shell is replaced by a fresh per-agent DSH mount of the same Gleam core."
   },
-  "extra_dsh": []
+  "scoped_pi": [
+    "finance_track_status",
+    "swing_workbench",
+    "portfolio",
+    "watchlist"
+  ],
+  "extra_dsh": [
+    "finance_track_overlay"
+  ]
 }
