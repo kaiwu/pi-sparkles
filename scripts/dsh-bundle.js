@@ -58,6 +58,7 @@ export const DSH_RUNTIME_PEERS = {
   "@deepseek-ai/dsh-agent": "0.1.0-rc.6",
   "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
   "@deepseek-ai/dsh-client-ui-layout": "0.1.0-rc.6",
+  "@deepseek-ai/dsh-client-ui-tool": "0.1.0-rc.6",
   "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
   "@deepseek-ai/dsh-session": "0.1.0-rc.6",
   "@deepseek-ai/dsh-session-projection": "0.1.0-rc.6",
@@ -537,8 +538,9 @@ AAPL" or "compare SMA/RSI/ATR for 600519.SH".
   log. No extension-global synthetic session is used.
 - Pi notifications become DSH command/tool text. Unsupported Pi UI and host
   effects fail explicitly instead of reporting placeholder success.
-- Pi inline base64 images are not DSH attachment references; the bridge keeps
-  text/structured chart output and omits the incompatible image block.
+- Charts remain ordinary inline tool output: Pi owns its ASCII result component;
+  DSH persists bounded chart metadata and renders a keyed browser SVG card. No
+  image, attachment, overlay, file, or data URL carries chart output.
 - Provider identity, entitlement, and completeness are never authenticated by
   this bundle; providers and credentials stay caller-owned.
 
@@ -660,6 +662,7 @@ export async function buildDshBundle(
         inject: [
           "@deepseek-ai/dsh-client-runtime",
           "@deepseek-ai/dsh-client-ui-layout",
+          "@deepseek-ai/dsh-client-ui-tool",
         ],
         platform: "web",
       },
@@ -755,6 +758,7 @@ export function verifyDshBundle(directory, plan) {
       JSON.stringify([
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-tool",
       ]) ||
     manifest.main !== "index.js" ||
     manifest.exports?.["./client"] !== "./client.js" ||

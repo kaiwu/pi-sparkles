@@ -249,6 +249,7 @@ function dshNpmManifest(plan) {
         inject: [
           "@deepseek-ai/dsh-client-runtime",
           "@deepseek-ai/dsh-client-ui-layout",
+          "@deepseek-ai/dsh-client-ui-tool",
         ],
         platform: "web",
       },
@@ -418,6 +419,7 @@ export function verifyDshNpmPackageDirectory(directory, expectedPlan) {
       JSON.stringify([
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-tool",
       ]) ||
     manifest.exports?.["."] !== "./index.js" ||
     manifest.exports?.["./client"] !== "./client.js" ||

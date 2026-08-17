@@ -2,7 +2,7 @@
 
 Status: **Experimental** · version: `0.1.0` · target: JavaScript/Bun
 
-`pi_sparkles_finance_charts` renders one bounded, deterministic PNG view from
+`pi_sparkles_finance_charts` renders one bounded, responsive ASCII view from
 exact caller-supplied OHLCV bars, already-calculated indicator points, and
 trade markers. The same result always includes a compact `finance_table`
 Markdown fallback and every exact input row in structured details.
@@ -23,19 +23,23 @@ interpolation, ranking, signal interpretation, or trade decision.
 
 ## Rendering boundary
 
-Pure Gleam code validates inputs and produces integer pixel primitives. A small
-effect interpreter rasterizes only those primitives and encodes a non-animated
-PNG. It contains no finance policy or calculation. Fixed dimensions and colors
-make equal validated input byte-deterministic.
+Pure Gleam code validates inputs and produces renderer-neutral structured
+details. Pi's effect shell registers a native result component whose
+`render(width)` method selects the latest contiguous suffix at two terminal
+columns per bar. Widening the pane reveals earlier bars; it never downsamples,
+aggregates, interpolates, changes interval, or infers gaps.
 
-The PNG is an inspection aid. Exact decimal strings and source facts in
-structured details remain controlling; integer pixel projection is not a new
-observation, analytics result, or evidence claim.
+The ASCII chart is ordinary inline tool output, not an overlay, image, file, or
+attachment. Exact decimal strings and source facts in structured details remain
+controlling; terminal coordinates are not a new observation, analytics result,
+or evidence claim. DSH consumes the same validated result but owns a separate
+inline browser renderer described in [`../../CHARTS.md`](../../CHARTS.md).
 
 ## Verification
 
 Eleven pure domain tests cover track, chronology, OHLC, units, gaps, omissions,
-warm-up, unmatched trades, flat ranges, cutoff, and deterministic-plan behavior.
-Five bundled scenarios verify actual deterministic PNG bytes and dimensions,
-structured fallback, failures, and cancellation. Architecture, artifact,
-installed-Pi smoke, and full `bun run test` passed on 2026-08-08.
+warm-up, unmatched trades, flat ranges, cutoff, and deterministic structured
+behavior. Seven bundled scenarios verify text-only results, exact details,
+width-bounded/latest-suffix ASCII, expanded fallback, failures, and
+cancellation. The current focused package and binding lanes pass; tier maturity
+still follows the normative tier gate rather than this package-level evidence.

@@ -4,17 +4,18 @@ import pi/schema
 import pi/tool
 import pi_sparkles_finance_charts/decode
 import pi_sparkles_finance_charts/domain
-import pi_sparkles_finance_charts/effect/png
+import pi_sparkles_finance_charts/effect/terminal
 
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
-  tool.register(
+  tool.register_rendered(
     api,
     "chart_ohlcv",
     "Render an exact OHLCV chart",
-    "Validate bounded caller-supplied completed-daily OHLCV, already-calculated indicators, trade markers, gaps, units, adjustment, and source context; return a deterministic PNG plus exact structured and table fallbacks without analytics or interpretation",
-    "Supply exact sourced inputs and explicit omissions; the PNG is only a view and structured decimal facts remain controlling",
+    "Validate bounded caller-supplied completed-daily OHLCV, already-calculated indicators, trade markers, gaps, units, adjustment, and source context; return a responsive inline terminal chart plus exact structured and table fallbacks without analytics or interpretation",
+    "Supply exact sourced inputs and explicit omissions; the host chart is only a view and structured decimal facts remain controlling",
     tool.parameters(chart_schema(), decode.chart_ohlcv()),
     tool.Parallel,
+    terminal.render_result,
     fn(_id, input, signal, _updates, _ctx) {
       case tool.is_cancelled(signal) {
         True ->
@@ -22,14 +23,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
         False ->
           case domain.run(input) {
             Ok(value) ->
-              tool.result(
-                [
-                  tool.text(value.fallback),
-                  tool.image(png.render(value.plan_json), "image/png"),
-                ],
-                value.details,
-                False,
-              )
+              tool.result([tool.text(value.fallback)], value.details, False)
               |> promise.resolve
             Error(error) -> tool.reject(domain.error_message(error))
           }

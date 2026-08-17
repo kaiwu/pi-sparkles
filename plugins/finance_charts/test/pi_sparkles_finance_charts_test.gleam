@@ -11,7 +11,7 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
-pub fn exact_view_has_png_plan_and_mandatory_structured_fallback_test() {
+pub fn exact_view_has_responsive_policy_and_mandatory_structured_fallback_test() {
   let assert Ok(response) = domain.run(fixture())
   let details = json.to_string(response.details)
 
@@ -19,7 +19,7 @@ pub fn exact_view_has_png_plan_and_mandatory_structured_fallback_test() {
   |> string.contains("| Date | Session | Open | High | Low | Close | Volume |")
   |> should.be_true
   response.fallback
-  |> string.contains("A deterministic 960×640 PNG view follows")
+  |> string.contains("The active host renders this result inline")
   |> should.be_true
   details
   |> string.contains("\"allExactRowsRetainedInDetails\":true")
@@ -28,12 +28,10 @@ pub fn exact_view_has_png_plan_and_mandatory_structured_fallback_test() {
   |> string.contains("\"omittedRows\":1")
   |> should.be_true
   details
-  |> string.contains("\"kind\":\"integer_pixel_projection_only\"")
+  |> string.contains("\"kind\":\"responsive_ohlcv_view\"")
   |> should.be_true
-  response.plan_json
-  |> string.starts_with(
-    "{\"width\":960,\"height\":640,\"background\":\"#0b1220\",\"primitives\":[",
-  )
+  details
+  |> string.contains("\"selection\":\"latest_contiguous_suffix\"")
   |> should.be_true
 }
 
@@ -64,11 +62,10 @@ pub fn unperformed_points_gaps_and_unmatched_trades_remain_explicit_test() {
   |> should.be_true
 }
 
-pub fn equal_input_produces_equal_plan_and_details_test() {
+pub fn equal_input_produces_equal_details_test() {
   let assert Ok(first) = domain.run(fixture())
   let assert Ok(second) = domain.run(fixture())
 
-  first.plan_json |> should.equal(second.plan_json)
   json.to_string(first.details) |> should.equal(json.to_string(second.details))
 }
 
@@ -156,7 +153,7 @@ pub fn indicator_point_dates_must_be_ordered_test() {
   }
 }
 
-pub fn flat_price_and_zero_volume_still_produce_bounded_plan_test() {
+pub fn flat_price_and_zero_volume_still_produce_exact_bounds_test() {
   let input = fixture()
   let flat =
     input.series
@@ -173,7 +170,6 @@ pub fn flat_price_and_zero_volume_still_produce_bounded_plan_test() {
 
   let assert Ok(response) =
     domain.run(decode.Input(..input, series: flat, indicators: [], trades: []))
-  response.plan_json |> string.contains("\"kind\":\"rect\"") |> should.be_true
   json.to_string(response.details)
   |> string.contains("\"minimum\":\"10\",\"maximum\":\"10\"")
   |> should.be_true

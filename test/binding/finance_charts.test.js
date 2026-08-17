@@ -142,24 +142,16 @@ async function execute(tool, value) {
 }
 
 describe("finance charts bundled boundary", () => {
-  test("registers one chart tool and returns a valid deterministic PNG", async () => {
+  test("registers one chart tool and returns only exact text plus structured details", async () => {
     const tools = await harness();
     expect([...tools.keys()]).toEqual(["chart_ohlcv"]);
 
     const first = await execute(tools.get("chart_ohlcv"), input());
-    const second = await execute(tools.get("chart_ohlcv"), input());
-    expect(first.content.map((part) => part.type)).toEqual(["text", "image"]);
+    expect(first.content.map((part) => part.type)).toEqual(["text"]);
     expect(first.content[0].text).toContain(
       "| Date | Session | Open | High | Low | Close | Volume |",
     );
-    expect(first.content[1].mimeType).toBe("image/png");
-    expect(first.content[1].data).toBe(second.content[1].data);
-
-    const bytes = Buffer.from(first.content[1].data, "base64");
-    expect([...bytes.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
-    expect(bytes.readUInt32BE(16)).toBe(960);
-    expect(bytes.readUInt32BE(20)).toBe(640);
-    expect(bytes.includes(Buffer.from("acTL"))).toBeFalse();
+    expect(first.content[0].text).toContain("active host renders this result inline");
   });
 
   test("retains exact decimals and mandatory structured fallback", async () => {
@@ -168,7 +160,7 @@ describe("finance charts bundled boundary", () => {
 
     expect(result.details).toMatchObject({
       schema: "pi-sparkles/finance-chart-result",
-      schemaVersion: 1,
+      schemaVersion: 2,
       track: "us",
       instrumentId: "US-AAPL",
       mic: "XNAS",
@@ -179,11 +171,18 @@ describe("finance charts bundled boundary", () => {
         omittedRows: 1,
         allExactRowsRetainedInDetails: true,
       },
-      projection: {
-        kind: "integer_pixel_projection_only",
-        width: 960,
-        height: 640,
-        mimeType: "image/png",
+      presentation: {
+        kind: "responsive_ohlcv_view",
+        interval: "completed_daily",
+        initialRangeAnchor: "latest_bar",
+        spanPolicy: {
+          kind: "available_plot_width_per_host_slot",
+          selection: "latest_contiguous_suffix",
+          downsampling: false,
+          aggregation: false,
+          interpolation: false,
+          inferredGaps: false,
+        },
       },
       decisionOwner: "llm",
       pluginDecisionFields: [],
@@ -197,6 +196,66 @@ describe("finance charts bundled boundary", () => {
       volume: "100",
     });
     expect(result.details.structuredFallback.table.rows).toHaveLength(2);
+  });
+
+  test("renders a width-bounded latest suffix as inline ASCII", async () => {
+    const tools = await harness();
+    const definition = tools.get("chart_ohlcv");
+    const value = input();
+    value.series = Array.from({ length: 30 }, (_, index) => ({
+      date: `2026-01-${String(index + 1).padStart(2, "0")}`,
+      sessionType: "regular",
+      open: String(100 + index),
+      high: String(102 + index),
+      low: String(99 + index),
+      close: String(101 + index),
+      volume: String(1000 + index * 10),
+    }));
+    value.indicators = [];
+    value.trades = [];
+    value.gaps = [];
+    const result = await execute(definition, value);
+
+    expect(typeof definition.renderResult).toBe("function");
+    const narrow = definition.renderResult(
+      result,
+      { expanded: false },
+      {},
+      { lastComponent: null },
+    );
+    const narrowLines = narrow.render(60);
+    expect(narrowLines[0]).toContain("2026-01-06..2026-01-30");
+    expect(narrowLines[0]).toContain("25/30 bars");
+    expect(narrowLines.every((line) => line.length <= 60)).toBeTrue();
+    expect(narrowLines.join("\n")).toContain("legend # up");
+
+    const wide = definition.renderResult(
+      result,
+      { expanded: false },
+      {},
+      { lastComponent: narrow },
+    );
+    const wideLines = wide.render(80);
+    expect(wide).toBe(narrow);
+    expect(wideLines[0]).toContain("2026-01-01..2026-01-30");
+    expect(wideLines[0]).toContain("30/30 bars");
+    expect(wideLines.every((line) => line.length <= 80)).toBeTrue();
+    expect(wideLines.join("\n")).not.toContain("\u001b[");
+  });
+
+  test("expanded Pi output keeps the exact text fallback inline", async () => {
+    const tools = await harness();
+    const definition = tools.get("chart_ohlcv");
+    const result = await execute(definition, input());
+    const component = definition.renderResult(
+      result,
+      { expanded: true },
+      {},
+      { lastComponent: null },
+    );
+    const rendered = component.render(100).join("\n");
+    expect(rendered).toContain("legend # up");
+    expect(rendered).toContain("| Date | Session | Open | High | Low | Close | Volume |");
   });
 
   test("discloses warm-up, gaps, omissions, and unmatched marker dates", async () => {
@@ -238,7 +297,7 @@ describe("finance charts bundled boundary", () => {
     );
   });
 
-  test("honors cancellation before bounded raster work", async () => {
+  test("honors cancellation before bounded validation work", async () => {
     const tools = await harness();
     const controller = new AbortController();
     controller.abort();

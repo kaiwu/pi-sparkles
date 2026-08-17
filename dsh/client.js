@@ -158,6 +158,236 @@ function FinanceTrackOverlay(props) {
     style: style
   }, text);
 }
+var CHART_META_SCHEMA = "pi-sparkles/dsh-finance-chart-meta";
+var CHART_PRICE_GUTTER = 72;
+var CHART_SLOT_WIDTH = 9;
+function record(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function chartModel(block) {
+  var meta = block && block.kind === "tool-result" ? block.meta : null;
+  if (!record(meta) || meta.schema !== CHART_META_SCHEMA || meta.schemaVersion !== 1 || meta.valid !== true) {
+    return null;
+  }
+  var chart = meta.chart;
+  if (!record(chart) || !Array.isArray(chart.bars) || chart.bars.length === 0) return null;
+  var bars = [];
+  for (var index = 0; index < chart.bars.length; index += 1) {
+    var source = chart.bars[index];
+    var open = Number(source && source.open);
+    var high = Number(source && source.high);
+    var low = Number(source && source.low);
+    var close = Number(source && source.close);
+    var volume = Number(source && source.volume);
+    if (
+      !source || typeof source.date !== "string" ||
+      !Number.isFinite(open) || !Number.isFinite(high) || !Number.isFinite(low) ||
+      !Number.isFinite(close) || !Number.isFinite(volume)
+    ) return null;
+    bars.push(Object.assign({}, source, { open: open, high: high, low: low, close: close, volume: volume }));
+  }
+  return Object.assign({}, chart, { bars: bars });
+}
+function blockText(block) {
+  if (!block || !Array.isArray(block.content)) return "";
+  return block.content
+    .filter(function (item) { return item && item.type === "text" && typeof item.text === "string"; })
+    .map(function (item) { return item.text; })
+    .join("\\n");
+}
+function chartCapacity(width, total) {
+  var usable = Math.max(CHART_SLOT_WIDTH, width - CHART_PRICE_GUTTER);
+  return Math.max(1, Math.min(total, Math.floor(usable / CHART_SLOT_WIDTH)));
+}
+function chartNumber(value) {
+  var absolute = Math.abs(value);
+  if (absolute !== 0 && (absolute >= 10000000 || absolute < 0.0001)) return value.toExponential(2);
+  return value.toFixed(absolute >= 1000 ? 0 : absolute >= 10 ? 2 : 4);
+}
+function DshFinanceChart(props) {
+  var block = props.block;
+  var model = chartModel(block);
+  var ref = React.useRef(null);
+  var widthState = React.useState(720);
+  var width = widthState[0];
+  var setWidth = widthState[1];
+  var manualState = React.useState(null);
+  var manual = manualState[0];
+  var setManual = manualState[1];
+  React.useEffect(function () {
+    var node = ref.current;
+    if (!node || typeof window.ResizeObserver !== "function") return undefined;
+    function update(candidate) {
+      var next = Math.max(1, Math.floor(candidate));
+      setWidth(function (previous) { return previous === next ? previous : next; });
+    }
+    var rect = node.getBoundingClientRect();
+    if (rect.width > 0) update(rect.width);
+    var observer = new window.ResizeObserver(function (entries) {
+      var entry = entries && entries[0];
+      var next = entry && entry.contentRect ? entry.contentRect.width : node.getBoundingClientRect().width;
+      if (next > 0) update(next);
+    });
+    observer.observe(node);
+    return function () { observer.disconnect(); };
+  }, []);
+  if (block && block.kind !== "tool-result") {
+    return React.createElement("div", {
+      role: "status",
+      "data-dsh-sparkles-chart": "running",
+      style: { padding: "8px 10px", color: "var(--dsw-alias-text-secondary)" }
+    }, "Rendering OHLCV chart…");
+  }
+  if (model === null) {
+    return React.createElement("div", {
+      role: "group",
+      "data-dsh-sparkles-chart": "fallback",
+      style: { padding: "8px 10px", whiteSpace: "pre-wrap", fontFamily: "var(--dsw-font-mono, ui-monospace, monospace)" }
+    }, blockText(block) || "Chart metadata is unavailable.");
+  }
+  var automatic = chartCapacity(width, model.bars.length);
+  var count = manual === null ? automatic : Math.max(1, Math.min(model.bars.length, manual.count));
+  var end = manual === null ? model.bars.length : Math.max(count, Math.min(model.bars.length, manual.end));
+  var start = Math.max(0, end - count);
+  var visible = model.bars.slice(start, end);
+  var svgWidth = 900;
+  var priceTop = 18;
+  var priceBottom = 190;
+  var volumeTop = 210;
+  var volumeBottom = 260;
+  var priceValues = [];
+  visible.forEach(function (bar) { priceValues.push(bar.low, bar.high); });
+  var visibleDates = new Map(visible.map(function (bar, index) { return [bar.date, index]; }));
+  var overlaySeries = (model.indicators || []).filter(function (indicator) { return indicator && indicator.panel === "price_overlay"; });
+  var lowerSeries = (model.indicators || []).filter(function (indicator) { return indicator && indicator.panel === "lower_panel"; });
+  overlaySeries.forEach(function (indicator) {
+    (indicator.points || []).forEach(function (point) {
+      var value = Number(point && point.value);
+      if (point && point.state === "calculated" && visibleDates.has(point.date) && Number.isFinite(value)) priceValues.push(value);
+    });
+  });
+  var minimum = Math.min.apply(Math, priceValues);
+  var maximum = Math.max.apply(Math, priceValues);
+  function x(index) { return CHART_PRICE_GUTTER + (index + 0.5) * (svgWidth - CHART_PRICE_GUTTER - 8) / visible.length; }
+  function y(value) {
+    if (maximum === minimum) return (priceTop + priceBottom) / 2;
+    return priceTop + (maximum - value) * (priceBottom - priceTop) / (maximum - minimum);
+  }
+  var candleWidth = Math.max(2, Math.min(12, (svgWidth - CHART_PRICE_GUTTER) / visible.length * 0.62));
+  var maximumVolume = Math.max.apply(Math, [0].concat(visible.map(function (bar) { return bar.volume; })));
+  var svgChildren = [];
+  for (var grid = 0; grid < 5; grid += 1) {
+    var gridY = priceTop + grid * (priceBottom - priceTop) / 4;
+    var gridValue = maximum - grid * (maximum - minimum) / 4;
+    svgChildren.push(React.createElement("line", { key: "grid-" + grid, x1: CHART_PRICE_GUTTER, x2: svgWidth - 8, y1: gridY, y2: gridY, stroke: "var(--dsw-alias-border-l2)", strokeWidth: 1 }));
+    svgChildren.push(React.createElement("text", { key: "label-" + grid, x: CHART_PRICE_GUTTER - 6, y: gridY + 4, textAnchor: "end", fill: "var(--dsw-alias-text-secondary)", fontSize: 11 }, chartNumber(gridValue)));
+  }
+  visible.forEach(function (bar, index) {
+    var center = x(index);
+    var up = bar.close > bar.open;
+    var flat = bar.close === bar.open;
+    var color = flat ? "#94a3b8" : up ? "#20b486" : "#ef5b5b";
+    var bodyTop = Math.min(y(bar.open), y(bar.close));
+    var bodyHeight = Math.max(1, Math.abs(y(bar.open) - y(bar.close)));
+    var volumeHeight = maximumVolume === 0 ? 0 : Math.max(1, bar.volume / maximumVolume * (volumeBottom - volumeTop));
+    svgChildren.push(React.createElement("line", { key: "wick-" + index, x1: center, x2: center, y1: y(bar.high), y2: y(bar.low), stroke: color, strokeWidth: 1 }));
+    svgChildren.push(React.createElement("rect", { key: "body-" + index, x: center - candleWidth / 2, y: bodyTop, width: candleWidth, height: bodyHeight, fill: color }));
+    svgChildren.push(React.createElement("rect", { key: "volume-" + index, x: center - candleWidth / 2, y: volumeBottom - volumeHeight, width: candleWidth, height: volumeHeight, fill: bar.sessionType === "half_day" ? "#8b5cf6" : "#486581", opacity: 0.8 }));
+  });
+  var indicatorColors = ["#59a5ff", "#f5b942", "#a855f7", "#14b8a6"];
+  overlaySeries.forEach(function (indicator, seriesIndex) {
+    var points = [];
+    (indicator.points || []).forEach(function (point) {
+      var index = visibleDates.get(point && point.date);
+      var value = Number(point && point.value);
+      if (point && point.state === "calculated" && index !== undefined && Number.isFinite(value)) points.push(x(index) + "," + y(value));
+    });
+    if (points.length > 0) svgChildren.push(React.createElement("polyline", { key: "indicator-" + seriesIndex, points: points.join(" "), fill: "none", stroke: indicatorColors[seriesIndex % indicatorColors.length], strokeWidth: 1.5 }));
+  });
+  var lowerPoints = [];
+  lowerSeries.forEach(function (indicator) {
+    (indicator.points || []).forEach(function (point) {
+      var value = Number(point && point.value);
+      if (point && point.state === "calculated" && visibleDates.has(point.date) && Number.isFinite(value)) lowerPoints.push(value);
+    });
+  });
+  var hasLower = lowerPoints.length > 0;
+  var lowerTop = 280;
+  var lowerBottom = 340;
+  if (hasLower) {
+    var lowerMinimum = Math.min.apply(Math, lowerPoints);
+    var lowerMaximum = Math.max.apply(Math, lowerPoints);
+    function lowerY(value) {
+      if (lowerMaximum === lowerMinimum) return (lowerTop + lowerBottom) / 2;
+      return lowerTop + (lowerMaximum - value) * (lowerBottom - lowerTop) / (lowerMaximum - lowerMinimum);
+    }
+    svgChildren.push(React.createElement("line", { key: "lower-top", x1: CHART_PRICE_GUTTER, x2: svgWidth - 8, y1: lowerTop, y2: lowerTop, stroke: "var(--dsw-alias-border-l2)", strokeWidth: 1 }));
+    svgChildren.push(React.createElement("line", { key: "lower-bottom", x1: CHART_PRICE_GUTTER, x2: svgWidth - 8, y1: lowerBottom, y2: lowerBottom, stroke: "var(--dsw-alias-border-l2)", strokeWidth: 1 }));
+    svgChildren.push(React.createElement("text", { key: "lower-max", x: CHART_PRICE_GUTTER - 6, y: lowerTop + 4, textAnchor: "end", fill: "var(--dsw-alias-text-secondary)", fontSize: 11 }, chartNumber(lowerMaximum)));
+    svgChildren.push(React.createElement("text", { key: "lower-min", x: CHART_PRICE_GUTTER - 6, y: lowerBottom + 4, textAnchor: "end", fill: "var(--dsw-alias-text-secondary)", fontSize: 11 }, chartNumber(lowerMinimum)));
+    lowerSeries.forEach(function (indicator, seriesIndex) {
+      var points = [];
+      (indicator.points || []).forEach(function (point) {
+        var index = visibleDates.get(point && point.date);
+        var value = Number(point && point.value);
+        if (point && point.state === "calculated" && index !== undefined && Number.isFinite(value)) points.push(x(index) + "," + lowerY(value));
+      });
+      if (points.length > 0) svgChildren.push(React.createElement("polyline", { key: "lower-indicator-" + seriesIndex, points: points.join(" "), fill: "none", stroke: indicatorColors[(seriesIndex + overlaySeries.length) % indicatorColors.length], strokeWidth: 1.5 }));
+    });
+  }
+  (model.trades || []).forEach(function (trade, tradeIndex) {
+    var index = visibleDates.get(trade && trade.date);
+    var price = Number(trade && trade.price);
+    if (index === undefined || !Number.isFinite(price)) return;
+    svgChildren.push(React.createElement("text", { key: "trade-" + tradeIndex, x: x(index), y: y(price) - 5, textAnchor: "middle", fill: trade.side === "buy" ? "#59a5ff" : "#f5b942", fontSize: 12, fontWeight: 700 }, trade.side === "buy" ? "B" : "S"));
+  });
+  (model.gaps || []).forEach(function (gap, gapIndex) {
+    if (!gap || typeof gap.date !== "string" || gap.date < visible[0].date || gap.date > visible[visible.length - 1].date) return;
+    var index = visible.findIndex(function (bar) { return bar.date >= gap.date; });
+    if (index < 0) return;
+    svgChildren.push(React.createElement("line", { key: "gap-" + gapIndex, x1: x(index), x2: x(index), y1: priceTop, y2: volumeBottom, stroke: "#f97316", strokeDasharray: "3 3", strokeWidth: 1.5 }));
+  });
+  var first = visible[0].date;
+  var last = visible[visible.length - 1].date;
+  function setView(nextEnd, nextCount) {
+    var boundedCount = Math.max(1, Math.min(model.bars.length, nextCount));
+    setManual({ count: boundedCount, end: Math.max(boundedCount, Math.min(model.bars.length, nextEnd)) });
+  }
+  var controls = React.createElement("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap" } },
+    React.createElement("button", { type: "button", onClick: function () { setView(end - Math.max(1, Math.floor(count / 3)), count); }, disabled: start === 0, title: "Earlier bars" }, "←"),
+    React.createElement("button", { type: "button", onClick: function () { setView(end + Math.max(1, Math.floor(count / 3)), count); }, disabled: end === model.bars.length, title: "Later bars" }, "→"),
+    React.createElement("button", { type: "button", onClick: function () { setView(end, Math.max(1, Math.floor(count * 0.7))); }, disabled: count === 1, title: "Show fewer bars" }, "+"),
+    React.createElement("button", { type: "button", onClick: function () { setView(end, Math.min(model.bars.length, Math.ceil(count * 1.4))); }, disabled: count === model.bars.length, title: "Show more bars" }, "−"),
+    React.createElement("button", { type: "button", onClick: function () { setManual(null); }, disabled: manual === null }, "Reset")
+  );
+  var exactText = blockText(block);
+  return React.createElement("section", {
+    ref: ref,
+    role: "figure",
+    "aria-label": "OHLCV chart for " + model.instrumentId + " from " + first + " through " + last,
+    "data-dsh-sparkles-chart": "inline",
+    "data-visible-bars": String(visible.length),
+    style: { margin: "4px 0", padding: "10px", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px", background: "var(--dsw-alias-bg-base)", color: "var(--dsw-alias-text-primary)", overflow: "hidden" }
+  },
+    React.createElement("header", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" } },
+      React.createElement("div", null,
+        React.createElement("strong", null, model.instrumentId + " · " + model.track + "/" + model.mic),
+        React.createElement("div", { style: { color: "var(--dsw-alias-text-secondary)", fontSize: "12px" } }, first + " – " + last + " · " + visible.length + "/" + model.bars.length + " bars · " + start + " earlier hidden")
+      ),
+      controls
+    ),
+    React.createElement("svg", { viewBox: "0 0 " + svgWidth + " " + (hasLower ? 356 : 276), width: "100%", height: hasLower ? "356" : "276", preserveAspectRatio: "none", role: "img", "aria-hidden": "true", style: { display: "block", minWidth: 0 } }, svgChildren),
+    React.createElement("div", { style: { display: "flex", gap: "12px", flexWrap: "wrap", color: "var(--dsw-alias-text-secondary)", fontSize: "11px" } },
+      React.createElement("span", null, "green up · red down · purple half-day volume"),
+      React.createElement("span", null, "B/S supplied trade · dashed supplied gap"),
+      React.createElement("span", null, model.priceUnit + " · " + model.volumeUnit)
+    ),
+    exactText === "" ? null : React.createElement("details", { style: { marginTop: "8px" } },
+      React.createElement("summary", null, "Exact table output"),
+      React.createElement("pre", { style: { overflowX: "auto", whiteSpace: "pre", fontSize: "11px" } }, exactText)
+    )
+  );
+}
 var inject = ["slots", "sessions"];
 function apply(ctx) {
   ctx.slots.inject("shell.overlay", function () {
@@ -167,6 +397,14 @@ function apply(ctx) {
       order: 100,
       label: "Pi Sparkles finance track"
     }, FinanceTrackOverlay);
+  });
+  ctx.slots.inject("tool.call.toolview", function () {
+    return ctx.slots.register({
+      name: "tool.call.toolview",
+      key: "chart_ohlcv",
+      order: 100,
+      label: "Pi Sparkles inline OHLCV chart"
+    }, DshFinanceChart);
   });
 }
 module.exports = { inject: inject, apply: apply };

@@ -1,9 +1,9 @@
 {
   "schema_version": 4,
   "dsh_release": {
-    "status": "product_useful",
+    "status": "preview",
     "target": "T6",
-    "reason": "Operator acceptance completed against an installed DSH profile on 2026-08-17."
+    "reason": "The new inline OHLCV tool-result card is implemented but still requires installed-profile browser discovery, resize, interaction, persistence, and visual acceptance."
   },
   "exclude_pi": [
     "finance_track_status",

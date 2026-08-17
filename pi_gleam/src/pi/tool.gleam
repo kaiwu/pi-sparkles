@@ -25,6 +25,12 @@ pub type Content
 /// Plain JavaScript object accepted by Pi as a tool result.
 pub type ToolResult
 
+/// Host renderer called by Pi for a completed tool result. The returned value
+/// is a Pi TUI Component. Plugins keep host-specific component construction in
+/// their JavaScript effect shell while typed decoding/execution stays here.
+pub type ResultRenderer =
+  fn(Dynamic, Bool, Dynamic, Dynamic) -> Dynamic
+
 pub fn parameters(
   schema: Schema,
   decoder: Decoder(value),
@@ -56,6 +62,20 @@ fn do_register_compact(
   execution_mode: String,
   execute: fn(String, Dynamic, AbortSignal, UpdateSink, Context) ->
     Promise(ToolResult),
+) -> Nil
+
+@external(javascript, "./tool_ffi.mjs", "register_rendered")
+fn do_register_rendered(
+  api: ExtensionApi,
+  name: String,
+  label: String,
+  description: String,
+  prompt_snippet: String,
+  schema: Schema,
+  execution_mode: String,
+  execute: fn(String, Dynamic, AbortSignal, UpdateSink, Context) ->
+    Promise(ToolResult),
+  renderer: ResultRenderer,
 ) -> Nil
 
 /// Register a typed tool. Invalid raw parameters reject before `execute` runs.
@@ -129,6 +149,46 @@ pub fn register_compact(
           )
       }
     },
+  )
+}
+
+/// Register a typed tool with a host-native Pi result component. `renderer`
+/// receives the raw result, expanded state, theme, and prior component so the
+/// effect shell can reuse a width-responsive component across rerenders.
+pub fn register_rendered(
+  api: ExtensionApi,
+  name: String,
+  label: String,
+  description: String,
+  prompt_snippet: String,
+  parameters: Parameters(value),
+  execution_mode: ExecutionMode,
+  renderer: ResultRenderer,
+  execute: fn(String, value, AbortSignal, UpdateSink, Context) ->
+    Promise(ToolResult),
+) -> Nil {
+  let Parameters(schema, decoder) = parameters
+  do_register_rendered(
+    api,
+    name,
+    label,
+    description,
+    prompt_snippet,
+    schema,
+    execution_mode_name(execution_mode),
+    fn(tool_call_id, raw, signal, updates, context) {
+      case decode.run(raw, decoder) {
+        Ok(value) -> execute(tool_call_id, value, signal, updates, context)
+        Error(errors) ->
+          reject(
+            "Invalid parameters for tool "
+            <> name
+            <> ": "
+            <> string.inspect(errors),
+          )
+      }
+    },
+    renderer,
   )
 }
 

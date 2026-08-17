@@ -4,6 +4,7 @@ import {
   createPiApi,
   DSH_CUSTOM_EVENT,
   DSH_STATUS_EVENT,
+  financeChartPresentationMeta,
 } from "../../dsh/pi-api.mjs";
 import { createPlugin } from "../../dsh/plugin.mjs";
 import { dshClientFactorySource } from "../../dsh/client.js";
@@ -179,6 +180,87 @@ describe("pi-api facade", () => {
     await expect(
       ctx.__tools[0].execute({}, toolRunContext()),
     ).rejects.toThrow("nope");
+  });
+
+  test("chart tool alone projects bounded DSH browser metadata", async () => {
+    const ctx = fakeCtx();
+    const api = createPiApi({ ctx });
+    api.registerTool({
+      name: "chart_ohlcv",
+      description: "chart",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      execute: async () => ({
+        content: [{ type: "text", text: "exact fallback" }],
+        details: {
+          schema: "pi-sparkles/finance-chart-result",
+          schemaVersion: 2,
+          track: "us",
+          instrumentId: "US-AAPL",
+          mic: "XNAS",
+          timezone: "America/New_York",
+          priceUnit: "USD",
+          volumeUnit: "shares",
+          adjustment: { kind: "raw", label: null },
+          presentation: { kind: "responsive_ohlcv_view" },
+          bars: [{
+            date: "2026-02-02",
+            sessionType: "regular",
+            open: "10.00",
+            high: "11.00",
+            low: "9.00",
+            close: "10.50",
+            volume: "100",
+          }],
+          indicators: [],
+          trades: [],
+          gaps: [],
+          inputOmissions: [],
+        },
+      }),
+    });
+    expect(ctx.__tools[0].output.presentationMeta).toBeTypeOf("function");
+    const value = await ctx.__tools[0].execute({}, toolRunContext());
+    expect(ctx.__tools[0].output.presentationMeta({}, value)).toEqual(
+      financeChartPresentationMeta(value),
+    );
+    expect(financeChartPresentationMeta(value)).toMatchObject({
+      schema: "pi-sparkles/dsh-finance-chart-meta",
+      schemaVersion: 1,
+      valid: true,
+      chart: {
+        instrumentId: "US-AAPL",
+        bars: [{ open: "10.00", close: "10.50" }],
+      },
+    });
+    const oversized = structuredClone(value);
+    oversized.details.indicators = Array.from({ length: 4 }, (_, series) => ({
+      indicatorId: `large-${series}`,
+      label: `Large ${series}`,
+      panel: "lower_panel",
+      unit: "ratio",
+      points: Array.from({ length: 240 }, (_, index) => ({
+        state: "unperformed",
+        date: `D${index}`,
+        reason: "x".repeat(1000),
+      })),
+    }));
+    const bounded = financeChartPresentationMeta(oversized);
+    expect(bounded).toMatchObject({
+      valid: true,
+      annotationsTruncated: true,
+      chart: { indicators: [], bars: [{ close: "10.50" }] },
+    });
+    expect(Buffer.byteLength(JSON.stringify(bounded), "utf8")).toBeLessThanOrEqual(
+      512 * 1024,
+    );
+
+    const ordinaryCtx = fakeCtx();
+    createPiApi({ ctx: ordinaryCtx }).registerTool({
+      name: "ordinary",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      execute: async () => ({ content: [{ type: "text", text: "ok" }] }),
+    });
+    expect(ordinaryCtx.__tools[0].output.presentationMeta).toBeUndefined();
   });
 
   test("registerCommand maps Pi handlers to the DSH CommandResult contract", async () => {
@@ -566,8 +648,12 @@ describe("pi-api facade", () => {
           loaded = definition.factory((name) => {
             if (name === "react") {
               return {
-                createElement(type, props, child) {
-                  return { type, props, child };
+                createElement(type, props, ...children) {
+                  return {
+                    type,
+                    props,
+                    child: children.length <= 1 ? children[0] : children,
+                  };
                 },
                 useRef(value) {
                   return { current: value };
@@ -583,24 +669,31 @@ describe("pi-api facade", () => {
       },
     };
     new Function("window", dshClientFactorySource("@fixture/dsh"))(window);
-    let registered;
+    const registered = new Map();
+    const injected = [];
     loaded.apply({
       slots: {
         inject(name, callback) {
-          expect(name).toBe("shell.overlay");
+          injected.push(name);
           callback();
         },
         register(definition, component) {
-          registered = { definition, component };
+          registered.set(definition.name, { definition, component });
           return () => {};
         },
       },
     });
-    expect(registered.definition).toMatchObject({
+    expect(injected).toEqual(["shell.overlay", "tool.call.toolview"]);
+    const overlay = registered.get("shell.overlay");
+    expect(overlay.definition).toMatchObject({
       name: "shell.overlay",
       id: "pi-sparkles-finance-track",
     });
-    const rendered = registered.component({
+    expect(registered.get("tool.call.toolview").definition).toMatchObject({
+      name: "tool.call.toolview",
+      key: "chart_ohlcv",
+    });
+    const rendered = overlay.component({
       useSessions: (selector) => selector({
         current: "s1",
         byId: {

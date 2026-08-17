@@ -121,6 +121,7 @@ function writeFixtureBundle(plan) {
             inject: [
               "@deepseek-ai/dsh-client-runtime",
               "@deepseek-ai/dsh-client-ui-layout",
+              "@deepseek-ai/dsh-client-ui-tool",
             ],
             platform: "web",
           },
@@ -215,12 +216,12 @@ describe("dsh-sparkles npm packaging", () => {
     expect(t6.omittedProposals).toEqual([]);
     expect(t6.partialImplementations).toEqual([]);
     expect(t6.openBlockers).toEqual([]);
-    expect(t6.maturity).toBe("product_useful_dsh_aggregate");
+    expect(t6.maturity).toBe("dsh_blocked_preview");
     expect(t6.dshRelease).toMatchObject({
-      status: "product_useful",
+      status: "preview",
       target: "T6",
     });
-    expect(t6.releasable).toBeTrue();
+    expect(t6.releasable).toBeFalse();
 
     const t5 = dshNpmPackagePlan(manifest, "T5");
     expect(t5.plugins).toHaveLength(120);
@@ -233,9 +234,9 @@ describe("dsh-sparkles npm packaging", () => {
 
     const t6 = dshNpmPackagePlan(manifest, "T6");
     expect(t6.piAggregateMaturity).toBe("blocked_inventory_preview");
-    expect(t6.dshRelease.status).toBe("product_useful");
-    expect(t6.maturity).toBe("product_useful_dsh_aggregate");
-    expect(t6.releasable).toBeTrue();
+    expect(t6.dshRelease.status).toBe("preview");
+    expect(t6.maturity).toBe("dsh_blocked_preview");
+    expect(t6.releasable).toBeFalse();
   });
 
   test("packs a content-locked tarball with the dsh.bundle manifest", async () => {
@@ -265,6 +266,7 @@ describe("dsh-sparkles npm packaging", () => {
       inject: [
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-tool",
       ],
       platform: "web",
     });
@@ -289,6 +291,7 @@ describe("dsh-sparkles npm packaging", () => {
       "@deepseek-ai/dsh-agent": "0.1.0-rc.6",
       "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
       "@deepseek-ai/dsh-client-ui-layout": "0.1.0-rc.6",
+      "@deepseek-ai/dsh-client-ui-tool": "0.1.0-rc.6",
       "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
       "@deepseek-ai/dsh-session": "0.1.0-rc.6",
       "@deepseek-ai/dsh-session-projection": "0.1.0-rc.6",

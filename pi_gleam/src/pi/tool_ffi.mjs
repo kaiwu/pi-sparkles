@@ -68,6 +68,31 @@ export function register_compact(
   });
 }
 
+export function register_rendered(
+  api,
+  name,
+  label,
+  description,
+  promptSnippet,
+  parameters,
+  executionMode,
+  execute,
+  renderer,
+) {
+  api.registerTool({
+    name,
+    label,
+    description,
+    ...(promptSnippet === "" ? {} : { promptSnippet }),
+    parameters,
+    ...(executionMode === "" ? {} : { executionMode }),
+    execute,
+    renderResult(result, { expanded }, theme, context) {
+      return renderer(result, expanded === true, theme, context.lastComponent);
+    },
+  });
+}
+
 export function text(value) {
   return { type: "text", text: value };
 }

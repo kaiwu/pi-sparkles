@@ -37,34 +37,36 @@ effective tools, commands and shared routing prompt, switches the track through
 the DSH command runtime, reads the overlay projection, and proves a watchlist
 mutation in one agent leaves the other at revision zero. The installed DSH web
 server also discovers and serves the package browser entry after
-`@deepseek-ai/dsh-client-ui-layout`.
+`@deepseek-ai/dsh-client-ui-layout` and `@deepseek-ai/dsh-client-ui-tool`.
 
-This completes the counterpart implementation. Installed-profile operator
-acceptance on 2026-08-17 promoted the independent T6 DSH release gate to
-`product_useful`. This does not alter or inherit Pi tier maturity; the two hosts
-retain separate verification, packaging, and publication decisions.
+The previously accepted counterpart inventory remains complete. The independent
+T6 DSH release gate is temporarily back at `preview` while the new chart client
+surface receives its own installed-profile browser acceptance. This does not
+alter or inherit Pi tier maturity; the two hosts retain separate verification,
+packaging, and publication decisions.
 
-## Remaining DSH-only opportunity — browser finance charts
+## Implemented preview — browser finance charts
 
-`finance_charts` remains included as text plus structured details; its inline
-Pi PNG is deliberately not projected as a DSH image attachment. A later
-DSH-native chart surface can add:
+`finance_charts` remains a stateless global-safe shell with shared Gleam
+validation and exact text/details. It now emits no Pi image. The DSH bridge adds
+bounded, schema-versioned presentation metadata only to `chart_ohlcv`, and the
+browser client renders it inline without an overlay or attachment.
 
 ### Server half
 
-- A pure `chart_spec` constructor over validated series (`line`, `candles`,
-  `area`, or `bars`) with exact metric/unit/period, axes and annotations.
-- A DSH content-block or presentation-metadata projection that retains the
-  existing model-visible text and numeric rows.
+- The shared pure result declares a renderer-neutral responsive span policy.
+- DSH `output.presentationMeta` retains the browser-required bars and supplied
+  annotations under a 512 KiB budget while the normal output retains exact
+  text and numeric rows.
 - No interpolation, implicit provider acquisition, duplicate-period coercion,
   or plugin-to-plugin source imports.
 
 ### Client half
 
-- A renderer registered through DSH's client slot/content presentation seams.
-- Browser-native SVG interaction while preserving replay from content-bound
-  session data.
+- A keyed `tool.call.toolview` renderer owns only `chart_ohlcv`.
+- Browser-native inline SVG supports container-proportional latest-suffix
+  display, earlier/later pan, zoom, and reset from persisted result metadata.
 
-This feature belongs only in the DSH lane unless a host-neutral chart spec is
-first factored into a pure finance package. It is not a missing product-tier
-component and must not weaken the existing Pi distribution.
+Remaining evidence is client discovery through an installed DSH profile,
+resize/interaction checks, session replay, and visual browser QA. The feature
+is not a missing product-tier component and does not change Pi maturity.

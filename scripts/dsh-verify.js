@@ -128,6 +128,7 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
   let toolCount = 0;
   let scopedCounterparts = false;
   let overlayProjection = false;
+  let chartPresentationMeta = false;
   if (existsSync(bundleEntry)) {
     const [
       { Context },
@@ -357,6 +358,63 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
     if (!Array.isArray(result?.value?.content)) {
       failures.push("runtime canonical tool value does not match the bridge output schema");
     }
+    const hash = (digit) => digit.repeat(64);
+    const chart = await executeFor(
+      resumed.agent,
+      "chart_ohlcv",
+      {
+        context: {
+          instructionRef: hash("1"),
+          track: "us",
+          instrumentId: "US-AAPL",
+          mic: "XNAS",
+          timezone: "America/New_York",
+          sourceLanguage: "en-US",
+          priceUnit: "USD",
+          volumeUnit: "shares",
+          adjustment: { kind: "raw", label: null },
+          source: {
+            provider: "dsh-verify-fixture",
+            sourceReference: "fixture://dsh-verify/chart",
+            acquisitionReceipt: hash("2"),
+            retrievedAtUnixMilliseconds: 1_800_000_000_000,
+            sourceCutoffUnixMilliseconds: 1_799_999_000_000,
+            entitlement: "fixture_local_analysis",
+          },
+          limitations: ["fixture_only"],
+        },
+        series: [{
+          date: "2026-02-02",
+          sessionType: "regular",
+          open: "10.00",
+          high: "11.00",
+          low: "9.00",
+          close: "10.50",
+          volume: "100",
+        }],
+        indicators: [],
+        trades: [],
+        gaps: [],
+        inputOmissions: [],
+        fallbackMaximumRows: 1,
+      },
+      "dsh-verify-finance-chart",
+    );
+    if (
+      chart.meta?.schema !== "pi-sparkles/dsh-finance-chart-meta" ||
+      chart.meta?.schemaVersion !== 1 ||
+      chart.meta?.valid !== true ||
+      chart.meta?.chart?.bars?.[0]?.close !== "10.50"
+    ) {
+      failures.push("chart_ohlcv did not persist the exact DSH browser metadata contract");
+    } else if (
+      !Array.isArray(chart.content) ||
+      chart.content.some((block) => block?.type !== "text")
+    ) {
+      failures.push("chart_ohlcv escaped the ordinary inline text output path");
+    } else {
+      chartPresentationMeta = true;
+    }
     resumed.unregister();
     second.unregister();
     await resumed.scope.dispose();
@@ -374,6 +432,7 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
     toolCount,
     scopedCounterparts,
     overlayProjection,
+    chartPresentationMeta,
   };
 }
 
@@ -387,7 +446,7 @@ if (import.meta.main) {
     console.log(
       `dsh:verify passed ${result.cases} representative schemas against real dsh-tools` +
         (result.runtimeSmoke
-          ? ` and executed the generated bundle (${result.toolCount} tools, scoped counterparts=${result.scopedCounterparts}, overlay projection=${result.overlayProjection}) in the real DSH runtime`
+          ? ` and executed the generated bundle (${result.toolCount} tools, scoped counterparts=${result.scopedCounterparts}, overlay projection=${result.overlayProjection}, chart metadata=${result.chartPresentationMeta}) in the real DSH runtime`
           : "; generated bundle not present, runtime execution skipped"),
     );
   } catch (error) {

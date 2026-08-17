@@ -20,6 +20,8 @@ const SESSION_TREE = "session_tree";
 const BEFORE_AGENT_START = "before_agent_start";
 export const DSH_CUSTOM_EVENT = "pi-sparkles/custom";
 export const DSH_STATUS_EVENT = "pi-sparkles/status";
+export const DSH_CHART_META_SCHEMA = "pi-sparkles/dsh-finance-chart-meta";
+const DSH_CHART_META_MAX_BYTES = 512 * 1024;
 
 /** A minimal EventBus matching pi_gleam's `events(api)` contract. */
 class EventBus {
@@ -218,6 +220,71 @@ export function normalizeToolResult(value, notifications = []) {
   };
 }
 
+function invalidChartMeta(reason) {
+  return {
+    schema: DSH_CHART_META_SCHEMA,
+    schemaVersion: 1,
+    valid: false,
+    reason,
+  };
+}
+
+/**
+ * Project the shared exact chart result into the persisted, browser-owned DSH
+ * card contract. Receipts and fallback tables remain in the canonical result;
+ * this projection contains only fields the inline renderer consumes.
+ */
+export function financeChartPresentationMeta(value) {
+  const details = value?.details;
+  if (
+    !isRecord(details) ||
+    details.schema !== "pi-sparkles/finance-chart-result" ||
+    details.schemaVersion !== 2 ||
+    !Array.isArray(details.bars)
+  ) {
+    return invalidChartMeta("unsupported_chart_result");
+  }
+  const meta = {
+    schema: DSH_CHART_META_SCHEMA,
+    schemaVersion: 1,
+    valid: true,
+    chart: {
+      track: details.track,
+      instrumentId: details.instrumentId,
+      mic: details.mic,
+      timezone: details.timezone,
+      priceUnit: details.priceUnit,
+      volumeUnit: details.volumeUnit,
+      adjustment: details.adjustment,
+      presentation: details.presentation,
+      bars: details.bars,
+      indicators: Array.isArray(details.indicators) ? details.indicators : [],
+      trades: Array.isArray(details.trades) ? details.trades : [],
+      gaps: Array.isArray(details.gaps) ? details.gaps : [],
+      inputOmissions: Array.isArray(details.inputOmissions)
+        ? details.inputOmissions
+        : [],
+    },
+  };
+  if (Buffer.byteLength(JSON.stringify(meta), "utf8") <= DSH_CHART_META_MAX_BYTES) {
+    return meta;
+  }
+  const barsOnly = {
+    ...meta,
+    annotationsTruncated: true,
+    chart: {
+      ...meta.chart,
+      indicators: [],
+      trades: [],
+      gaps: [],
+      inputOmissions: ["DSH chart annotations exceeded the presentation metadata budget"],
+    },
+  };
+  return Buffer.byteLength(JSON.stringify(barsOnly), "utf8") <= DSH_CHART_META_MAX_BYTES
+    ? barsOnly
+    : invalidChartMeta("chart_bars_exceed_presentation_metadata_budget");
+}
+
 /**
  * Create the Pi ExtensionApi facade backed by a DSH Cordis context.
  * @param {object} options
@@ -267,6 +334,9 @@ export function createPiApi({
         output: {
           schema: OUTPUT_SCHEMA,
           render: (_args, value) => renderToolValue(value),
+          ...(name === "chart_ohlcv"
+            ? { presentationMeta: (_args, value) => financeChartPresentationMeta(value) }
+            : {}),
         },
         ...(definition.executionMode === "parallel"
           ? { isConcurrencySafe: () => true }

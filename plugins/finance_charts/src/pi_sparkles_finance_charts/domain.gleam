@@ -12,21 +12,13 @@ import gleam/int
 import gleam/json.{type Json}
 import gleam/list
 import gleam/option.{type Option, None, Some}
-import gleam/order.{Eq, Gt, Lt}
+import gleam/order.{Gt, Lt}
 import gleam/result
 import gleam/string
 import pi_sparkles_finance_charts/decode
 
-const image_width = 960
-
-const image_height = 640
-
-const plot_left = 54
-
-const plot_right = 930
-
 pub type Response {
-  Response(fallback: String, details: Json, plan_json: String)
+  Response(fallback: String, details: Json)
 }
 
 pub type DomainError {
@@ -113,16 +105,6 @@ pub fn run(input: decode.Input) -> Result(Response, DomainError) {
     bars,
     input.fallback_maximum_rows,
   ))
-  let plan =
-    render_plan(
-      bars,
-      indicators,
-      trades,
-      input.gaps,
-      date_indexes,
-      price_bounds,
-      lower_bounds,
-    )
   let details =
     details_json(
       context,
@@ -152,9 +134,8 @@ pub fn run(input: decode.Input) -> Result(Response, DomainError) {
     summary
       <> "\n\n"
       <> markdown.render(fallback_table)
-      <> "\n\nA deterministic 960×640 PNG view follows. Exact structured decimal strings remain controlling.",
+      <> "\n\nThe active host renders this result inline. Exact structured decimal strings remain controlling.",
     details,
-    json.to_string(plan),
   ))
 }
 
@@ -904,449 +885,6 @@ fn fallback_table(
   Ok(#(truncated, omitted_rows))
 }
 
-fn render_plan(
-  bars: List(ParsedBar),
-  indicators: List(ParsedIndicator),
-  trades: List(ParsedTrade),
-  gaps: List(decode.GapInput),
-  date_indexes: Dict(String, Int),
-  price_bounds: Bounds,
-  lower_bounds: Option(Bounds),
-) -> Json {
-  let has_lower =
-    indicators
-    |> list.any(fn(indicator) { indicator.input.panel == "lower_panel" })
-  let price_bottom = case has_lower {
-    True -> 352
-    False -> 438
-  }
-  let volume_top = price_bottom + 20
-  let volume_bottom = case has_lower {
-    True -> 458
-    False -> 590
-  }
-  let base = [
-    line_json(plot_left, 28, plot_left, volume_bottom, 1, "#54627a"),
-    line_json(plot_right, 28, plot_right, volume_bottom, 1, "#54627a"),
-    line_json(plot_left, price_bottom, plot_right, price_bottom, 1, "#54627a"),
-    line_json(plot_left, volume_top, plot_right, volume_top, 1, "#354157"),
-    line_json(plot_left, volume_bottom, plot_right, volume_bottom, 1, "#54627a"),
-    ..grid_primitives(28, price_bottom)
-  ]
-  let lower_grid = case has_lower {
-    True -> [
-      line_json(plot_left, 478, plot_right, 478, 1, "#54627a"),
-      line_json(plot_left, 610, plot_right, 610, 1, "#54627a"),
-      ..grid_primitives(478, 610)
-    ]
-    False -> []
-  }
-  let gap_lines =
-    gaps
-    |> list.map(fn(gap) {
-      let x = gap_x(gap.date, bars)
-      line_json(
-        x,
-        28,
-        x,
-        case has_lower {
-          True -> 610
-          False -> volume_bottom
-        },
-        2,
-        gap_color(gap.state),
-      )
-    })
-  let volume_max =
-    bars
-    |> list.map(fn(bar) { bar.volume })
-    |> bounds
-  let candles =
-    bars
-    |> list.index_map(fn(bar, index) {
-      candle_primitives(
-        bar,
-        index,
-        list.length(bars),
-        price_bounds,
-        28,
-        price_bottom,
-        volume_max.maximum,
-        volume_top,
-        volume_bottom,
-      )
-    })
-    |> list.flatten
-  let indicator_lines =
-    indicators
-    |> list.index_map(fn(indicator, index) {
-      let panel_bounds = case indicator.input.panel, lower_bounds {
-        "price_overlay", _ -> price_bounds
-        "lower_panel", Some(value) -> value
-        "lower_panel", None -> Bounds(decimal.zero(), decimal.zero())
-        _, _ -> price_bounds
-      }
-      let #(top, bottom) = case indicator.input.panel {
-        "lower_panel" -> #(478, 610)
-        _ -> #(28, price_bottom)
-      }
-      indicator_primitives(
-        indicator.points,
-        date_indexes,
-        list.length(bars),
-        panel_bounds,
-        top,
-        bottom,
-        indicator_color(index),
-        None,
-        [],
-      )
-    })
-    |> list.flatten
-  let trade_markers =
-    trades
-    |> list.flat_map(fn(trade) {
-      trade_primitives(
-        trade,
-        date_indexes,
-        list.length(bars),
-        price_bounds,
-        28,
-        price_bottom,
-      )
-    })
-  json.object([
-    #("width", json.int(image_width)),
-    #("height", json.int(image_height)),
-    #("background", json.string("#0b1220")),
-    #(
-      "primitives",
-      json.array(
-        list.flatten([
-          base,
-          lower_grid,
-          gap_lines,
-          candles,
-          indicator_lines,
-          trade_markers,
-        ]),
-        fn(value) { value },
-      ),
-    ),
-  ])
-}
-
-fn grid_primitives(top: Int, bottom: Int) -> List(Json) {
-  [0, 1, 2, 3, 4]
-  |> list.map(fn(step) {
-    let y = top + step * { bottom - top } / 4
-    line_json(plot_left, y, plot_right, y, 1, "#253047")
-  })
-}
-
-fn candle_primitives(
-  bar: ParsedBar,
-  index: Int,
-  count: Int,
-  price_bounds: Bounds,
-  price_top: Int,
-  price_bottom: Int,
-  volume_maximum: Decimal,
-  volume_top: Int,
-  volume_bottom: Int,
-) -> List(Json) {
-  let x = x_coordinate(index, count)
-  let spacing = case count > 1 {
-    True -> { plot_right - plot_left } / count
-    False -> 20
-  }
-  let half_width = int.max(2, int.min(7, spacing / 3))
-  let open_y = y_coordinate(bar.open, price_bounds, price_top, price_bottom)
-  let high_y = y_coordinate(bar.high, price_bounds, price_top, price_bottom)
-  let low_y = y_coordinate(bar.low, price_bounds, price_top, price_bottom)
-  let close_y = y_coordinate(bar.close, price_bounds, price_top, price_bottom)
-  let body_top = int.min(open_y, close_y)
-  let body_height = int.max(int.absolute_value(close_y - open_y), 1)
-  let color = case decimal.compare(bar.close, bar.open) {
-    Gt -> "#20b486"
-    Lt -> "#ef5b5b"
-    Eq -> "#9aa7bd"
-  }
-  let volume_height =
-    scaled_height(bar.volume, volume_maximum, volume_bottom - volume_top)
-    |> int.max(1)
-  [
-    line_json(x, high_y, x, low_y, 1, color),
-    rect_json(x - half_width, body_top, half_width * 2 + 1, body_height, color),
-    rect_json(
-      x - half_width,
-      volume_bottom - volume_height,
-      half_width * 2 + 1,
-      volume_height,
-      session_volume_color(bar.input.session_type),
-    ),
-  ]
-}
-
-fn gap_x(date: String, bars: List(ParsedBar)) -> Int {
-  let before =
-    bars
-    |> list.take_while(fn(bar) { string.compare(bar.input.date, date) == Lt })
-    |> list.length
-  case before >= list.length(bars), before {
-    _, 0 -> plot_left
-    True, _ -> plot_right
-    False, value ->
-      {
-        x_coordinate(value - 1, list.length(bars))
-        + x_coordinate(value, list.length(bars))
-      }
-      / 2
-  }
-}
-
-fn indicator_primitives(
-  points: List(ParsedIndicatorPoint),
-  date_indexes: Dict(String, Int),
-  bar_count: Int,
-  value_bounds: Bounds,
-  top: Int,
-  bottom: Int,
-  color: String,
-  previous: Option(#(Int, Int)),
-  reversed: List(Json),
-) -> List(Json) {
-  case points {
-    [] -> list.reverse(reversed)
-    [point, ..rest] ->
-      case point {
-        SkippedPoint(_, _) ->
-          indicator_primitives(
-            rest,
-            date_indexes,
-            bar_count,
-            value_bounds,
-            top,
-            bottom,
-            color,
-            None,
-            reversed,
-          )
-        PlottedPoint(date, value, _) ->
-          case dict.get(date_indexes, date) {
-            Error(_) ->
-              indicator_primitives(
-                rest,
-                date_indexes,
-                bar_count,
-                value_bounds,
-                top,
-                bottom,
-                color,
-                None,
-                reversed,
-              )
-            Ok(index) -> {
-              let current = #(
-                x_coordinate(index, bar_count),
-                y_coordinate(value, value_bounds, top, bottom),
-              )
-              let next_reversed = case previous {
-                Some(#(x, y)) -> [
-                  line_json(x, y, current.0, current.1, 2, color),
-                  ..reversed
-                ]
-                None -> [
-                  rect_json(current.0 - 1, current.1 - 1, 3, 3, color),
-                  ..reversed
-                ]
-              }
-              indicator_primitives(
-                rest,
-                date_indexes,
-                bar_count,
-                value_bounds,
-                top,
-                bottom,
-                color,
-                Some(current),
-                next_reversed,
-              )
-            }
-          }
-      }
-  }
-}
-
-fn trade_primitives(
-  trade: ParsedTrade,
-  date_indexes: Dict(String, Int),
-  bar_count: Int,
-  price_bounds: Bounds,
-  top: Int,
-  bottom: Int,
-) -> List(Json) {
-  case dict.get(date_indexes, trade.input.date) {
-    Error(_) -> []
-    Ok(index) -> {
-      let x = x_coordinate(index, bar_count)
-      let y = y_coordinate(trade.price, price_bounds, top, bottom)
-      case trade.input.side {
-        "buy" -> [
-          triangle_json(
-            x,
-            int.min(y + 3, bottom),
-            x - 7,
-            int.min(y + 14, bottom),
-            x + 7,
-            int.min(y + 14, bottom),
-            "#59a5ff",
-          ),
-        ]
-        _ -> [
-          triangle_json(
-            x,
-            int.max(y - 3, top),
-            x - 7,
-            int.max(y - 14, top),
-            x + 7,
-            int.max(y - 14, top),
-            "#f5b942",
-          ),
-        ]
-      }
-    }
-  }
-}
-
-fn x_coordinate(index: Int, count: Int) -> Int {
-  case count <= 1 {
-    True -> { plot_left + plot_right } / 2
-    False -> plot_left + index * { plot_right - plot_left } / { count - 1 }
-  }
-}
-
-fn y_coordinate(
-  value: Decimal,
-  value_bounds: Bounds,
-  top: Int,
-  bottom: Int,
-) -> Int {
-  case decimal.compare(value_bounds.minimum, value_bounds.maximum) == Eq {
-    True -> { top + bottom } / 2
-    False -> {
-      let numerator = decimal.subtract(value, value_bounds.minimum)
-      let range = decimal.subtract(value_bounds.maximum, value_bounds.minimum)
-      let assert Ok(height) = decimal.parse(int.to_string(bottom - top))
-      let assert Ok(projected) =
-        decimal.divide(
-          decimal.multiply(numerator, height),
-          by: range,
-          scale: 0,
-          rounding: decimal.HalfEven,
-        )
-      let assert Ok(offset) = int.parse(decimal.coefficient(projected))
-      bottom - offset
-    }
-  }
-}
-
-fn scaled_height(value: Decimal, maximum: Decimal, height: Int) -> Int {
-  case decimal.compare(maximum, decimal.zero()) == Eq {
-    True -> 0
-    False -> {
-      let assert Ok(height_decimal) = decimal.parse(int.to_string(height))
-      let assert Ok(projected) =
-        decimal.divide(
-          decimal.multiply(value, height_decimal),
-          by: maximum,
-          scale: 0,
-          rounding: decimal.HalfEven,
-        )
-      let assert Ok(result) = int.parse(decimal.coefficient(projected))
-      result
-    }
-  }
-}
-
-fn indicator_color(index: Int) -> String {
-  case index % 4 {
-    0 -> "#f5cb5c"
-    1 -> "#a78bfa"
-    2 -> "#22d3ee"
-    _ -> "#f472b6"
-  }
-}
-
-fn session_volume_color(session_type: String) -> String {
-  case session_type {
-    "regular" -> "#486581"
-    "half_day" -> "#8b5cf6"
-    _ -> "#64748b"
-  }
-}
-
-fn gap_color(state: String) -> String {
-  case state {
-    "market_closure" -> "#475569"
-    "suspension" -> "#f97316"
-    "provider_omission" -> "#dc2626"
-    "unavailable_history" -> "#a855f7"
-    _ -> "#94a3b8"
-  }
-}
-
-fn line_json(
-  x1: Int,
-  y1: Int,
-  x2: Int,
-  y2: Int,
-  width: Int,
-  color: String,
-) -> Json {
-  json.object([
-    #("kind", json.string("line")),
-    #("x1", json.int(x1)),
-    #("y1", json.int(y1)),
-    #("x2", json.int(x2)),
-    #("y2", json.int(y2)),
-    #("width", json.int(width)),
-    #("color", json.string(color)),
-  ])
-}
-
-fn rect_json(x: Int, y: Int, width: Int, height: Int, color: String) -> Json {
-  json.object([
-    #("kind", json.string("rect")),
-    #("x", json.int(x)),
-    #("y", json.int(y)),
-    #("width", json.int(width)),
-    #("height", json.int(height)),
-    #("color", json.string(color)),
-  ])
-}
-
-fn triangle_json(
-  x1: Int,
-  y1: Int,
-  x2: Int,
-  y2: Int,
-  x3: Int,
-  y3: Int,
-  color: String,
-) -> Json {
-  json.object([
-    #("kind", json.string("triangle")),
-    #("x1", json.int(x1)),
-    #("y1", json.int(y1)),
-    #("x2", json.int(x2)),
-    #("y2", json.int(y2)),
-    #("x3", json.int(x3)),
-    #("y3", json.int(y3)),
-    #("color", json.string(color)),
-  ])
-}
-
 fn details_json(
   context: ValidatedContext,
   bars: List(ParsedBar),
@@ -1362,7 +900,7 @@ fn details_json(
 ) -> Json {
   json.object([
     #("schema", json.string("pi-sparkles/finance-chart-result")),
-    #("schemaVersion", json.int(1)),
+    #("schemaVersion", json.int(2)),
     #("track", json.string(context.input.track)),
     #("trackContext", track_json.to_json(context.shared)),
     #("instrumentId", json.string(context.input.instrument_id)),
@@ -1386,65 +924,25 @@ fn details_json(
     #("gaps", json.array(gaps, gap_json)),
     #("inputOmissions", json.array(input_omissions, json.string)),
     #(
-      "projection",
+      "presentation",
       json.object([
-        #("kind", json.string("integer_pixel_projection_only")),
-        #("width", json.int(image_width)),
-        #("height", json.int(image_height)),
-        #("mimeType", json.string("image/png")),
-        #("priceBounds", bounds_json(price_bounds)),
-        #("lowerPanelBounds", json.nullable(lower_bounds, bounds_json)),
+        #("kind", json.string("responsive_ohlcv_view")),
+        #("interval", json.string("completed_daily")),
+        #("timeOrder", json.string("ascending_input_order")),
+        #("initialRangeAnchor", json.string("latest_bar")),
         #(
-          "indicatorColors",
-          json.array(
-            indicators
-              |> list.index_map(fn(indicator, index) {
-                json.object([
-                  #("indicatorId", json.string(indicator.input.indicator_id)),
-                  #("color", json.string(indicator_color(index))),
-                ])
-              }),
-            fn(value) { value },
-          ),
-        ),
-        #(
-          "visualLegend",
+          "spanPolicy",
           json.object([
-            #(
-              "candles",
-              json.object([
-                #("up", json.string("#20b486")),
-                #("down", json.string("#ef5b5b")),
-                #("flat", json.string("#9aa7bd")),
-              ]),
-            ),
-            #(
-              "volumeSessions",
-              json.object([
-                #("regular", json.string("#486581")),
-                #("halfDay", json.string("#8b5cf6")),
-                #("unknown", json.string("#64748b")),
-              ]),
-            ),
-            #(
-              "tradeMarkers",
-              json.object([
-                #("buy", json.string("up_triangle_#59a5ff")),
-                #("sell", json.string("down_triangle_#f5b942")),
-              ]),
-            ),
-            #(
-              "gapLines",
-              json.object([
-                #("marketClosure", json.string("#475569")),
-                #("suspension", json.string("#f97316")),
-                #("providerOmission", json.string("#dc2626")),
-                #("unavailableHistory", json.string("#a855f7")),
-                #("unknown", json.string("#94a3b8")),
-              ]),
-            ),
+            #("kind", json.string("available_plot_width_per_host_slot")),
+            #("selection", json.string("latest_contiguous_suffix")),
+            #("downsampling", json.bool(False)),
+            #("aggregation", json.bool(False)),
+            #("interpolation", json.bool(False)),
+            #("inferredGaps", json.bool(False)),
           ]),
         ),
+        #("priceBounds", bounds_json(price_bounds)),
+        #("lowerPanelBounds", json.nullable(lower_bounds, bounds_json)),
       ]),
     ),
     #(
@@ -1464,7 +962,7 @@ fn details_json(
         [
           "view_only_no_analytics",
           "completed_daily_inputs_only",
-          "pixel_projection_is_not_source_evidence",
+          "host_projection_is_not_source_evidence",
           "no_interpolation_or_gap_inference",
           "no_provider_or_track_fallback",
         ],

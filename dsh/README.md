@@ -15,12 +15,13 @@ in the existing pure Gleam/domain modules; only host effects are adapted.
 - `dsh/plugins/` contains DSH-native Cordis shells and remains separate from
   Pi `plugins/`.
 - `dsh/client.js` generates the DSH browser half that occupies
-  `shell.overlay`.
+  `shell.overlay` for track status and keyed `tool.call.toolview` for inline
+  OHLCV output.
 
 ## Inventory and release boundary
 
 The effective inventory is `global-safe Pi shells + per-agent Pi counterparts
-+ DSH-native host surfaces`. The accepted T6 release covers all 135 ledger
++ DSH-native host surfaces`. The T6 preview covers all 135 ledger
 components: 131 mount globally and four use fresh DSH agent scopes. The four
 original Pi shells remain excluded from the global lane, with normative
 reasons in `bundle.json`:
@@ -38,12 +39,12 @@ their ownership boundary. An `extra_dsh` entry resolves only to
 `dsh/plugins/<name>.mjs`; it can never silently pull a Pi plugin into the
 DSH-only lane.
 
-DSH maturity is independent from Pi maturity. `dsh_release.status` is
-`product_useful` for the exact T6 boundary after installed-profile operator
-acceptance on 2026-08-17. T6 is therefore publishable; T5 remains an unaccepted,
-private build. Pi maturity is recorded for provenance only and cannot promote or
-block the DSH release. Conversely, DSH verification never edits `tiers.json` or
-Pi package metadata.
+DSH maturity is independent from Pi maturity. `dsh_release.status` is `preview`
+while the new inline OHLCV card awaits installed-profile browser discovery,
+resize/interaction, persistence, and visual acceptance. Both T5 and T6 DSH
+packages are private during this gate. Pi maturity is recorded for provenance
+only and cannot promote the DSH release. Conversely, DSH verification never
+edits `tiers.json` or Pi package metadata.
 
 ## Host mapping
 
@@ -58,15 +59,16 @@ Pi package metadata.
 | Pi session-tree hooks | Registered for compatibility but not synthetically fired; DSH forks/resumes as a distinct session and restores on real session-start. |
 | Pi statusline | `setStatus`/`clearStatus` append whole-value DSH status events; `finance_track_overlay` folds them into `piSparklesStatus`. |
 | browser status | The package's `dsh.client` entry registers the draggable, keyboard-movable `pi-sparkles-finance-track` badge in `shell.overlay`; double-click or Home resets its position. |
+| browser charts | `chart_ohlcv` adds bounded `output.presentationMeta`; the package client registers a keyed `tool.call.toolview` card that renders responsive SVG inline in the transcript. |
 | persisted event vocabulary | The generated rc.6 entry contributes `pi-sparkles/custom` and `pi-sparkles/status` to DSH's exported process-wide catalog before a cold session load, so required Sparkles state is readable after restart. |
 | finance routing prompt | Exported once by the Gleam track module and contributed as an agent-scoped DSH system-prompt section. |
 | flags | Defaults may be overridden by bundle `config.flags` or `PI_SPARKLES_FLAG_<NAME>`. |
 | unsupported Pi effects | Fail explicitly; they never return placeholder success. |
 
-DSH images are attachment references, while Pi chart images are inline base64
-blocks. The bridge therefore retains chart text and structured details but
-omits the incompatible Pi image block. A future DSH-native chart shell can mint
-host attachments and browser presentation.
+Charts do not use either host's image or attachment path. Pi owns an ASCII TUI
+result component; DSH persists bounded chart metadata and owns an inline SVG
+tool-result card. Both keep the exact text fallback in the ordinary tool
+output. See [`../CHARTS.md`](../CHARTS.md).
 
 Provider HTTP does not depend on a Pi fetch helper. The shared
 `finance_http` transport uses standard `globalThis.fetch`, AbortSignal,
@@ -80,14 +82,14 @@ changing variables.
 ```sh
 bun run dsh:bundle
 bun run dsh:verify
-bun run dsh:npm:release:verify
+bun run dsh:npm:preview:verify
 dsh plugin --profile <name> add ./dist/dsh/dsh-sparkles
 dsh --profile <name> --dump-config
 ```
 
 `bun test test/dsh test/workflow/dsh_npm_package.test.js` covers the adapter,
 parallel invocation isolation, per-agent state ownership, lifecycle/session
-mapping, overlay component/projection, image projection, release gate, locks,
+mapping, overlay component/projection, inline chart metadata/card, release gate, locks,
 and npm inventory. `bun run dsh:verify` uses the installed DSH rc.6
 implementation to create two real agent scopes, expose all 244 effective tools,
 verify the shared prompt and track projection, and prove that a watchlist
