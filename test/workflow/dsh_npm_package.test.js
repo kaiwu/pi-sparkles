@@ -276,6 +276,7 @@ describe("dsh-sparkles npm packaging", () => {
       "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
       "@deepseek-ai/dsh-client-ui-layout": "0.1.0-rc.6",
       "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
+      "@deepseek-ai/dsh-session": "0.1.0-rc.6",
       "@deepseek-ai/dsh-session-projection": "0.1.0-rc.6",
       "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.6",
       "@deepseek-ai/dsh-tools": "0.1.0-rc.6",

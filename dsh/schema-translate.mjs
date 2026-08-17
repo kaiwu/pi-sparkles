@@ -46,10 +46,57 @@ function isPlainObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Copy only the annotation keywords onto the target node. */
+function boundedHint(label, minimum, maximum) {
+  const hasMinimum = typeof minimum === "number" && Number.isFinite(minimum);
+  const hasMaximum = typeof maximum === "number" && Number.isFinite(maximum);
+  if (hasMinimum && hasMaximum) {
+    return minimum === maximum
+      ? `${label} exactly ${minimum}`
+      : `${label} ${minimum}..${maximum}`;
+  }
+  if (hasMinimum) return `${label} >= ${minimum}`;
+  if (hasMaximum) return `${label} <= ${maximum}`;
+  return undefined;
+}
+
+/**
+ * Preserve constraints which DSH cannot represent as schema keywords as
+ * concise annotations. The Pi decoder remains authoritative at execution;
+ * these hints keep the DSH model from seeing a misleadingly loose contract.
+ */
+function unsupportedConstraintHints(source) {
+  const hints = [];
+  if (source.type === "string") {
+    const length = boundedHint("length", source.minLength, source.maxLength);
+    if (length !== undefined) hints.push(length);
+    if (typeof source.pattern === "string") hints.push(`pattern ${source.pattern}`);
+    if (typeof source.format === "string") hints.push(`format ${source.format}`);
+  } else if (source.type === "number" || source.type === "integer") {
+    const value = boundedHint("value", source.minimum, source.maximum);
+    if (value !== undefined) hints.push(value);
+  } else if (source.type === "array") {
+    const items = boundedHint("items", source.minItems, source.maxItems);
+    if (items !== undefined) hints.push(items);
+  }
+  return hints;
+}
+
+/** Copy supported annotations and retain unsupported constraints as text. */
 function copyAnnotations(source, target) {
-  for (const key of ["description", "title", "default", "examples"]) {
+  for (const key of ["title", "default", "examples"]) {
     if (Object.hasOwn(source, key)) target[key] = source[key];
+  }
+  const hints = unsupportedConstraintHints(source);
+  const description =
+    typeof source.description === "string" && source.description.length > 0
+      ? source.description
+      : undefined;
+  if (hints.length > 0) {
+    const constraintText = `Call constraints: ${hints.join("; ")}.`;
+    target.description =
+      description === undefined ? constraintText : `${description}\n\n${constraintText}`;
+  } else if (description !== undefined) {
+    target.description = description;
   }
 }
 

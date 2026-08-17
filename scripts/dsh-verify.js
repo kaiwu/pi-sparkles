@@ -206,9 +206,10 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
     const first = createAgent("dsh-sparkles-verify-1");
     const second = createAgent("dsh-sparkles-verify-2");
     await new Promise((resolve) => setTimeout(resolve, 0));
-    toolCount = ctx.tools.schemas(first.agent).length;
+    const schemas = ctx.tools.schemas(first.agent);
+    toolCount = schemas.length;
     const scopedNames = new Set(
-      ctx.tools.schemas(first.agent).map((schema) => schema.name),
+      schemas.map((schema) => schema.name),
     );
     for (const name of [
       "finance_track_status",
@@ -232,10 +233,37 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
       !prompt.sections.some(
         (section) =>
           section.name === "pi-sparkles:finance-routing" &&
-          section.text.includes("Pi Sparkles finance routing"),
+          section.text.includes("Pi Sparkles finance routing") &&
+          section.text.includes("never invoke a shell merely to discover today's date") &&
+          section.text.includes("priorOffset is one-based"),
       )
     ) {
-      failures.push("shared finance routing prompt is missing from the DSH agent scope");
+      failures.push("shared finance routing/date/tool-handoff prompt is incomplete in the DSH agent scope");
+    }
+    const smaSchema = schemas.find((schema) => schema.name === "sma")?.parameters;
+    const priorOffsetDescription =
+      smaSchema?.properties?.projection?.properties?.priorOffset?.description;
+    if (
+      typeof priorOffsetDescription !== "string" ||
+      !priorOffsetDescription.includes("value 1..2000")
+    ) {
+      failures.push("DSH schema bridge did not preserve the sma priorOffset bounds");
+    }
+    const rawBasis = smaSchema?.properties?.context?.properties?.basis;
+    if (
+      rawBasis?.properties?.label?.oneOf !== undefined ||
+      rawBasis?.properties?.instructionRef?.oneOf !== undefined
+    ) {
+      failures.push("DSH schema still advertises nullable stock-technical basis fields");
+    }
+    const historySchema = schemas.find(
+      (schema) => schema.name === "cn_raw_vendor_history",
+    )?.parameters;
+    if (
+      !historySchema?.properties?.endDate?.description?.includes("future") ||
+      !historySchema?.properties?.limit?.description?.includes("value 1..1000")
+    ) {
+      failures.push("DSH schema is missing bounded current-date history guidance");
     }
     scopedCounterparts = true;
 

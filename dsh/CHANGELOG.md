@@ -7,6 +7,15 @@ content hashes remain authoritative in each tarball's `dsh-lock.json` and
 
 ## Unreleased
 
+- Make the finance-track overlay draggable and keyboard-movable, with bounded
+  placement and an explicit reset gesture.
+- Register Sparkles' required custom/status event vocabulary before DSH cold
+  session loading so rc.6 can resume persisted scoped state.
+- Add DSH runtime-date and bounded-history guidance, and clarify the one-based
+  stock-technicals projection and basis-field rules after auditing a real
+  failed-call trajectory.
+- Preserve Pi length, value, and item-count bounds as model-visible constraint
+  annotations when translating through DSH's narrower tool-schema subset.
 - Correct DSH tool rendering to return `ContentBlock[]`, forward real call IDs
   and cancellation, and normalize Pi inline images without forging DSH
   attachment references.

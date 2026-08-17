@@ -59,6 +59,7 @@ export const DSH_RUNTIME_PEERS = {
   "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
   "@deepseek-ai/dsh-client-ui-layout": "0.1.0-rc.6",
   "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
+  "@deepseek-ai/dsh-session": "0.1.0-rc.6",
   "@deepseek-ai/dsh-session-projection": "0.1.0-rc.6",
   "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.6",
   "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
@@ -317,7 +318,7 @@ function entrySource(plan) {
 
 import { createPlugin } from ${JSON.stringify(
     moduleSpecifier(ENTRY_DIR, join(ROOT, "dsh", "plugin.mjs")),
-  )};
+)};
 
 const extensions = [
 ${records.join("\n")}
@@ -494,7 +495,13 @@ AAPL" or "compare SMA/RSI/ATR for 600519.SH".
   existing compiled Gleam cores are mounted afresh in each DSH agent scope, so
   portfolio, watchlist, swing-workbench, and track state cannot cross sessions.
 - Finance track status is a DSH \`shell.overlay\` surface backed by the current
-  session's event-sourced status projection; it never calls Pi's TUI APIs.
+  session's event-sourced status projection; it never calls Pi's TUI APIs. Drag
+  the badge or move it with arrow keys when it covers content; double-click or
+  press Home to reset it.
+- The package contributes its required \`pi-sparkles/custom\` and
+  \`pi-sparkles/status\` types to DSH rc.6's process-wide persisted-event
+  catalog before cold session loading, so scoped state and the overlay survive
+  a host restart.
 - Tools register through \`ctx.tools\` and are validated against the DSH
   schema subset; the embedded Pi decoders still enforce the full argument
   contract (lengths, ranges, enums) at call time.

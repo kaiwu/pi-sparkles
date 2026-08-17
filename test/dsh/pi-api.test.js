@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { assertRawSubset } from "../../dsh/schema-translate.mjs";
-import { createPiApi } from "../../dsh/pi-api.mjs";
+import {
+  createPiApi,
+  DSH_CUSTOM_EVENT,
+  DSH_STATUS_EVENT,
+} from "../../dsh/pi-api.mjs";
 import { createPlugin } from "../../dsh/plugin.mjs";
 import { dshClientFactorySource } from "../../dsh/client.js";
 import {
@@ -8,12 +12,12 @@ import {
   statusProjection,
 } from "../../dsh/plugins/finance_track_overlay.mjs";
 
-function fakeCtx() {
+function fakeCtx({ guardInjectedServices = false } = {}) {
   const tools = [];
   const commands = [];
   const promptSections = [];
   const listeners = new Map();
-  return {
+  const services = {
     tools: {
       register(definition) {
         tools.push(definition);
@@ -31,6 +35,8 @@ function fakeCtx() {
         return () => {};
       },
     },
+  };
+  const context = {
     on(event, handler) {
       if (!listeners.has(event)) listeners.set(event, new Set());
       listeners.get(event).add(handler);
@@ -43,10 +49,25 @@ function fakeCtx() {
     async __emit(event, payload) {
       for (const handler of listeners.get(event) ?? []) await handler(payload);
     },
+    get(name) {
+      return services[name];
+    },
     __tools: tools,
     __commands: commands,
     __promptSections: promptSections,
   };
+  if (guardInjectedServices) {
+    for (const name of Object.keys(services)) {
+      Object.defineProperty(context, name, {
+        get() {
+          throw new Error(`cannot get property "${name}" without inject`);
+        },
+      });
+    }
+  } else {
+    Object.assign(context, services);
+  }
+  return context;
 }
 
 function fakeAgent(id = "agent-1") {
@@ -116,7 +137,10 @@ describe("pi-api facade", () => {
       additionalProperties: false,
       properties: {
         ticker: { type: "string" },
-        limit: { type: "integer" },
+        limit: {
+          type: "integer",
+          description: "Call constraints: value >= 1.",
+        },
       },
       required: ["ticker"],
     });
@@ -402,13 +426,20 @@ describe("pi-api facade", () => {
       });
       return Promise.resolve(undefined);
     };
-    const plugin = createPlugin([["first", extension("same_tool")], ["second", extension("same_tool")]]);
+    const plugin = createPlugin(
+      [["first", extension("same_tool")], ["second", extension("same_tool")]],
+      [],
+      "dsh-sparkles",
+      [],
+      new Set(),
+    );
     await expect(plugin.apply(ctx, {})).rejects.toThrow(/Registration collision for registerTool 'same_tool'/);
   });
 
   test("createPlugin follows DSH agent session lifecycle", async () => {
     const ctx = fakeCtx();
     const started = [];
+    const knownSessionEventTypes = new Set(["turn/start"]);
     const extension = (api) => {
       api.on("session_start", () => started.push("started"));
       api.registerTool({
@@ -419,9 +450,18 @@ describe("pi-api facade", () => {
       });
       return Promise.resolve(undefined);
     };
-    const plugin = createPlugin([["only", extension]]);
+    const plugin = createPlugin(
+      [["only", extension]],
+      [],
+      "dsh-sparkles",
+      [],
+      knownSessionEventTypes,
+    );
     expect(plugin.inject).toEqual(["tools", "commands", "agents", "systemPrompt"]);
     await plugin.apply(ctx, {});
+    expect(knownSessionEventTypes).toEqual(
+      new Set(["turn/start", DSH_CUSTOM_EVENT, DSH_STATUS_EVENT]),
+    );
     expect(ctx.__tools).toHaveLength(1);
     expect(started).toEqual([]);
     await ctx.__emit("agent/session-start", {
@@ -460,21 +500,30 @@ describe("pi-api facade", () => {
       [],
       "dsh-sparkles",
       [["state", extension, { systemPrompt: "shared", promptName: "shared-state" }]],
+      new Set(),
     );
     await plugin.apply(root, {});
 
     const first = fakeAgent("first");
-    first.ctx = fakeCtx();
+    first.ctx = fakeCtx({ guardInjectedServices: true });
     const second = fakeAgent("second");
-    second.ctx = fakeCtx();
+    second.ctx = fakeCtx({ guardInjectedServices: true });
     await root.__emit("agent/created", { agent: first });
     await root.__emit("agent/created", { agent: second });
     expect(root.__tools).toHaveLength(0);
     expect(first.ctx.__tools.map((tool) => tool.name)).toEqual(["scoped_counter"]);
     expect(second.ctx.__tools.map((tool) => tool.name)).toEqual(["scoped_counter"]);
-    expect(first.ctx.__promptSections).toEqual([
-      { name: "shared-state", order: 99, text: "shared" },
-    ]);
+    expect(first.ctx.__promptSections).toHaveLength(1);
+    expect(first.ctx.__promptSections[0]).toMatchObject({
+      name: "shared-state",
+      order: 99,
+    });
+    expect(first.ctx.__promptSections[0].text).toMatch(
+      /^shared\nDSH runtime date: \d{4}-\d{2}-\d{2}\./,
+    );
+    expect(first.ctx.__promptSections[0].text).toContain(
+      "never invoke a shell merely to discover today's date",
+    );
 
     await root.__emit("agent/session-start", { agent: first, source: "startup" });
     await root.__emit("agent/session-start", { agent: second, source: "resume" });
@@ -508,7 +557,10 @@ describe("pi-api facade", () => {
     expect(unchanged).toBe(state);
 
     let loaded;
+    const stateUpdates = [];
     const window = {
+      innerWidth: 1280,
+      innerHeight: 720,
       __ModuleLoader__: {
         load(definition) {
           loaded = definition.factory((name) => {
@@ -516,6 +568,12 @@ describe("pi-api facade", () => {
               return {
                 createElement(type, props, child) {
                   return { type, props, child };
+                },
+                useRef(value) {
+                  return { current: value };
+                },
+                useState(value) {
+                  return [value, (next) => stateUpdates.push(next)];
                 },
               };
             }
@@ -556,9 +614,52 @@ describe("pi-api facade", () => {
     });
     expect(rendered).toMatchObject({
       type: "div",
-      props: { role: "status" },
+      props: {
+        role: "status",
+        tabIndex: 0,
+        "data-dsh-sparkles-overlay": "finance-track",
+        style: { cursor: "grab", touchAction: "none" },
+      },
       child: "US · USD",
     });
+    let captured = false;
+    const overlayNode = {
+      offsetParent: {
+        getBoundingClientRect: () => ({ left: 100, top: 50, width: 1000, height: 700 }),
+      },
+      getBoundingClientRect: () => ({ left: 900, top: 700, width: 200, height: 30 }),
+      setPointerCapture(pointerId) {
+        expect(pointerId).toBe(7);
+        captured = true;
+      },
+      hasPointerCapture: () => captured,
+      releasePointerCapture(pointerId) {
+        expect(pointerId).toBe(7);
+        captured = false;
+      },
+    };
+    let prevented = 0;
+    rendered.props.onPointerDown({
+      button: 0,
+      pointerId: 7,
+      clientX: 900,
+      clientY: 700,
+      currentTarget: overlayNode,
+      preventDefault: () => prevented += 1,
+    });
+    rendered.props.onPointerMove({
+      pointerId: 7,
+      clientX: 650,
+      clientY: 500,
+      currentTarget: overlayNode,
+      preventDefault: () => prevented += 1,
+    });
+    expect(stateUpdates).toContainEqual({ left: 550, top: 450 });
+    rendered.props.onPointerUp({ pointerId: 7, currentTarget: overlayNode });
+    expect(captured).toBe(false);
+    expect(prevented).toBe(2);
+    rendered.props.onDoubleClick();
+    expect(stateUpdates.at(-1)).toBeNull();
   });
 
   test("unsupported Pi host effects fail explicitly", () => {

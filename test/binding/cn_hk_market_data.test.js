@@ -165,6 +165,13 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
     expect(tools.get("cn_raw_vendor_history").description).toContain(
       "reviewed CSI sector index",
     );
+    const historyProperties = tools.get("cn_raw_vendor_history").parameters.properties;
+    expect(historyProperties.endDate.description).toContain(
+      "never send a future date",
+    );
+    expect(historyProperties.limit.description).toContain(
+      "must cover the requested window's expected sessions",
+    );
     expect(tools.get("cn_raw_vendor_quote").description).toContain(
       "reviewed benchmark and sector indices are rejected locally",
     );

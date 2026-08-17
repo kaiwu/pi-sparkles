@@ -120,7 +120,10 @@ are no ambient defaults:
 - `inputField` and an explicit known or unknown `inputUnit` fact;
 - an explicit input basis: raw, split-adjusted, dividend-adjusted,
   total-return, provider-defined, or an LLM-requested projection, with the
-  applicable label, instruction reference, and factor evidence roots;
+  applicable label, instruction reference, and factor evidence roots. Raw,
+  split-adjusted, dividend-adjusted, and total-return inputs omit `label` and
+  `instructionRef` entirely rather than sending nulls; provider-defined uses a
+  label only, while an LLM projection requires both;
 - raw-basis `evidenceRoots` copied from an upstream history handoff are accepted
   and promoted to context evidence rather than rejected or treated as adjustment
   factors;
@@ -134,7 +137,8 @@ are no ambient defaults:
   `per_step` rounding policy. Matching `policy`, `outputScale`, and
   `intermediateScale` aliases repeated beside the canonical `rounding` object
   are accepted for LLM handoff compatibility; a conflict fails closed;
-- `projection`: `compact` or `intermediate`, plus a positive `priorOffset`;
+- `projection`: `compact` or `intermediate`, plus a one-based `priorOffset`
+  from one to 2,000 (`1` selects the newest calculated value; zero is invalid);
   and
 - one to 2,000 ascending, non-duplicated dated input observations.
 

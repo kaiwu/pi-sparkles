@@ -18,7 +18,7 @@ const SESSION_START = "session_start";
 const SESSION_SHUTDOWN = "session_shutdown";
 const SESSION_TREE = "session_tree";
 const BEFORE_AGENT_START = "before_agent_start";
-const DSH_CUSTOM_EVENT = "pi-sparkles/custom";
+export const DSH_CUSTOM_EVENT = "pi-sparkles/custom";
 export const DSH_STATUS_EVENT = "pi-sparkles/status";
 
 /** A minimal EventBus matching pi_gleam's `events(api)` contract. */

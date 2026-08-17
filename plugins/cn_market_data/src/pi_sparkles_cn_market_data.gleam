@@ -451,15 +451,27 @@ fn history_schema() -> schema.Schema {
     ),
     schema.Required(
       "startDate",
-      schema.string() |> schema.with_string_length(10, 10),
+      schema.string()
+        |> schema.with_string_length(10, 10)
+        |> schema.described(
+          "Inclusive YYYY-MM-DD start; choose a bounded window whose expected daily sessions fit limit",
+        ),
     ),
     schema.Required(
       "endDate",
-      schema.string() |> schema.with_string_length(10, 10),
+      schema.string()
+        |> schema.with_string_length(10, 10)
+        |> schema.described(
+          "Inclusive YYYY-MM-DD end; never send a future date for current-history requests",
+        ),
     ),
     schema.Optional(
       "limit",
-      schema.integer() |> schema.with_number_range(1.0, 1000.0),
+      schema.integer()
+        |> schema.with_number_range(1.0, 1000.0)
+        |> schema.described(
+          "Maximum returned daily rows; it must cover the requested window's expected sessions",
+        ),
     ),
   ])
 }

@@ -276,15 +276,15 @@ fn basis_schema() -> schema.Schema {
         "llm_projection",
       ]),
     ),
-    schema.Optional("label", schema.nullable(bounded_string(1, 500))),
-    schema.Optional("instructionRef", schema.nullable(hash_schema())),
+    schema.Optional("label", bounded_string(1, 500)),
+    schema.Optional("instructionRef", hash_schema()),
     schema.Required(
       "evidenceRoots",
       schema.array(hash_schema()) |> schema.with_array_length(0, 2000),
     ),
   ])
   |> schema.described(
-    "Exact input basis supplied by the LLM; this tool does not adjust observations. For raw basis, evidenceRoots may be empty or contain source evidence accidentally copied during handoff; such roots are preserved as context evidence, not treated as adjustment factors",
+    "Exact input basis supplied by the LLM; this tool does not adjust observations. raw, split_adjusted, dividend_adjusted, and total_return forbid label and instructionRef: omit those properties entirely, never send null. provider_defined requires label and forbids instructionRef; llm_projection requires both. For raw basis, evidenceRoots may be empty or contain source evidence accidentally copied during handoff; such roots are preserved as context evidence, not treated as adjustment factors",
   )
 }
 
@@ -398,7 +398,7 @@ fn projection_schema() -> schema.Schema {
     ),
   ])
   |> schema.described(
-    "Caller-selected output projection; prior offset counts calculated values newest-first",
+    "Caller-selected output projection; priorOffset is one-based from 1 through 2000 and counts calculated values newest-first, so use 1 for the newest calculated value and never 0",
   )
 }
 

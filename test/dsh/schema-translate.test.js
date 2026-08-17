@@ -47,7 +47,7 @@ describe("translateValueSchema", () => {
     expect(translateValueSchema({ anyOf: [string()] })).toEqual({ type: "string" });
   });
 
-  test("drops unsupported constraint keywords but keeps types", () => {
+  test("moves unsupported constraint keywords into model-visible descriptions", () => {
     expect(
       translateValueSchema({
         type: "string",
@@ -55,13 +55,34 @@ describe("translateValueSchema", () => {
         maxLength: 40,
         pattern: "^[A-Z]+$",
       }),
-    ).toEqual({ type: "string" });
+    ).toEqual({
+      type: "string",
+      description: "Call constraints: length 1..40; pattern ^[A-Z]+$.",
+    });
     expect(
       translateValueSchema({ type: "number", minimum: 0, maximum: 100 }),
-    ).toEqual({ type: "number" });
+    ).toEqual({
+      type: "number",
+      description: "Call constraints: value 0..100.",
+    });
     expect(
       translateValueSchema({ type: "array", items: string(), minItems: 1, maxItems: 10 }),
-    ).toEqual({ type: "array", items: { type: "string" } });
+    ).toEqual({
+      type: "array",
+      description: "Call constraints: items 1..10.",
+      items: { type: "string" },
+    });
+    expect(
+      translateValueSchema({
+        type: "integer",
+        minimum: 1,
+        maximum: 2000,
+        description: "Newest-first offset",
+      }),
+    ).toEqual({
+      type: "integer",
+      description: "Newest-first offset\n\nCall constraints: value 1..2000.",
+    });
   });
 
   test("translates tuples to element-guidance arrays", () => {
@@ -72,7 +93,11 @@ describe("translateValueSchema", () => {
         minItems: 2,
         maxItems: 2,
       }),
-    ).toEqual({ type: "array", items: { oneOf: [{ type: "string" }, { type: "integer" }] } });
+    ).toEqual({
+      type: "array",
+      description: "Call constraints: items exactly 2.",
+      items: { oneOf: [{ type: "string" }, { type: "integer" }] },
+    });
   });
 
   test("translates records to open objects", () => {

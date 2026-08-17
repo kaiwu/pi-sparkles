@@ -30,7 +30,10 @@ label. Normal tests never make live requests.
 tool content as well as structured result details; the count-only first line is
 only a compact display summary. Its result contains declarative evidence
 boundaries rather than instructions to the model, and each receipt digest is
-emitted once. Current overall-market requests belong to the batched
+emitted once. For current history, `endDate` must not be in the future and the
+one-to-1,000 `limit` must cover the expected daily sessions in the inclusive
+window; callers should narrow the window or raise the limit before calling,
+not probe the provider with mismatched ranges. Current overall-market requests belong to the batched
 `cn_market_overview` acquisition route.
 Broad industry-sector comparisons compose `cn_sector_series` with
 `compare_series_returns`; callers should not guess 申万 or Eastmoney board codes

@@ -162,6 +162,23 @@ async function execute(tool, input) {
 }
 
 describe("stock technicals bundled boundary", () => {
+  test("advertises one-based projections and omission-only basis fields", async () => {
+    const tools = await harness();
+    const parameters = tools.get("sma").parameters;
+    const basis = parameters.properties.context.properties.basis;
+    const projection = parameters.properties.projection;
+
+    expect(basis.description).toContain(
+      "omit those properties entirely, never send null",
+    );
+    expect(basis.properties.label.type).toBe("string");
+    expect(basis.properties.label.anyOf).toBeUndefined();
+    expect(basis.properties.instructionRef.type).toBe("string");
+    expect(projection.description).toContain(
+      "use 1 for the newest calculated value and never 0",
+    );
+  });
+
   test("supports compact then intermediate evidence queries without making a decision", async () => {
     const tools = await harness();
     expect([...tools.keys()]).toEqual([

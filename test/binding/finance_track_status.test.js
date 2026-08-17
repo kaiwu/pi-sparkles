@@ -213,6 +213,12 @@ describe("finance track status binding", () => {
     expect(result.systemPrompt).toContain(
       "never pause to calculate that hash",
     );
+    expect(result.systemPrompt).toContain(
+      "priorOffset is one-based: use 1 for the newest calculated value, never 0",
+    );
+    expect(result.systemPrompt).toContain(
+      "omit label and instructionRef entirely instead of copying display labels or null fields",
+    );
   });
 
   test("renders and switches all three isolated track profiles", async () => {

@@ -56,7 +56,8 @@ do not promote the independent DSH release gate.
 | stateful Pi shells | Instantiated once in each `agent.ctx`; registrations and mutable cells disappear with that scope. |
 | Pi session-tree hooks | Registered for compatibility but not synthetically fired; DSH forks/resumes as a distinct session and restores on real session-start. |
 | Pi statusline | `setStatus`/`clearStatus` append whole-value DSH status events; `finance_track_overlay` folds them into `piSparklesStatus`. |
-| browser status | The package's `dsh.client` entry registers `pi-sparkles-finance-track` in `shell.overlay`. |
+| browser status | The package's `dsh.client` entry registers the draggable, keyboard-movable `pi-sparkles-finance-track` badge in `shell.overlay`; double-click or Home resets its position. |
+| persisted event vocabulary | The generated rc.6 entry contributes `pi-sparkles/custom` and `pi-sparkles/status` to DSH's exported process-wide catalog before a cold session load, so required Sparkles state is readable after restart. |
 | finance routing prompt | Exported once by the Gleam track module and contributed as an agent-scoped DSH system-prompt section. |
 | flags | Defaults may be overridden by bundle `config.flags` or `PI_SPARKLES_FLAG_<NAME>`. |
 | unsupported Pi effects | Fail explicitly; they never return placeholder success. |
