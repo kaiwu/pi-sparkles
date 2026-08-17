@@ -1,14 +1,17 @@
 # DSH-dedicated plugins — roadmap
 
 DSH runs in a browser web app (React, `dsh-client-web-react`), not a terminal
-TUI. Two Pi ledger plugins are therefore Pi-specific and excluded from the DSH
-bundle (`dsh/bundle.json`):
+TUI, and one DSH process may host several agents. Four Pi effect shells are
+therefore excluded from the DSH bundle (`dsh/bundle.json`):
 
-- `finance_track_status` — owns Pi's TUI statusline (excluded; the DSH bundle
-  currently ships 134 plugins).
-- `finance_charts` — renders terminal/ASCII charts.
+- `finance_track_status` — Pi TUI statusline/system-prompt navigation.
+- `watchlist`, `swing_workbench`, and `portfolio` — Pi shells with
+  extension-global mutable state that cannot be shared across DSH agents.
 
-Their DSH-native counterparts are planned here. Each has a **server half**
+`finance_charts` remains included as text plus structured details; its inline
+Pi PNG is deliberately not projected as a DSH image attachment.
+
+DSH-native counterparts are planned here. Each has a **server half**
 (Cordis plugin, bundled by `dsh:bundle` and listed under `extra_dsh`) and a
 **client half** (browser React component, loaded by the DSH web app — a
 separate packaging lane, not the current `dsh:bundle`).
@@ -51,9 +54,20 @@ badge in the browser instead of a terminal statusline.
   `SlotMap` key confirmed at implementation), rendering a `CN`/`HK`/`US` badge
   that subscribes to the track store. No terminal writes.
 
-## Plugin 2 — `dsh_finance_charts` (browser diagram/plot)
+## Plugin 2 — session-scoped portfolio/workbench/watchlist shells
 
-Replace Pi's ASCII charts with browser-native SVG charts for validated series.
+- Reuse the existing pure portfolio, watchlist, and workbench domain modules.
+- Key every mutable value to the exact DSH session/agent and persist only
+  lossless, typed domain events in that session.
+- Revalidate receipt identity/content at the shell; do not introduce
+  plugin-to-plugin imports or ambient cross-agent state.
+- Add composed DSH role acceptance for import, mutation, resume, and isolation
+  between at least two simultaneous agents.
+
+## Plugin 3 — `dsh_finance_charts` (browser diagram/plot)
+
+Augment Pi's static PNG/text chart output with browser-native SVG charts for
+validated series.
 
 ### Server half (Gleam functional core + DSH shell)
 
@@ -76,9 +90,9 @@ Replace Pi's ASCII charts with browser-native SVG charts for validated series.
 
 ## Packaging boundary (important)
 
-- The **server halves** are normal DSH-dedicated packages: added to
-  `plugins/<name>/` and listed in `dsh/bundle.json` → `extra_dsh`; `bun run
-  dsh:bundle` compiles them exactly like the Pi plugins today.
+- The **server halves** are DSH-native modules under `dsh/plugins/<name>.mjs`,
+  listed in `dsh/bundle.json` → `extra_dsh`. They are mounted as Cordis plugins
+  and never enter the Pi package/build lane.
 - The **client halves** are browser assets, not part of the `dsh.bundle.patch`
   server bundle. They need a separate lane: either a companion client plugin
   package loaded by the DSH web app's client-module loader, or a small
@@ -92,8 +106,9 @@ Replace Pi's ASCII charts with browser-native SVG charts for validated series.
 2. `dsh_track_status` server half (track state + tools/commands) — usable
    headlessly even before the badge exists.
 3. `dsh_track_status` client badge (statusline counterpart).
-4. `dsh_finance_charts` server half (chart-spec core + tools + content block).
-5. `dsh_finance_charts` client renderer (SVG charts).
+4. Session-scoped portfolio/workbench/watchlist shells and isolation tests.
+5. `dsh_finance_charts` server half (chart-spec core + tools + content block).
+6. `dsh_finance_charts` client renderer (SVG charts).
 
 Each step is independently buildable and testable (pure laws for the server
 cores, fixture-driven for the client renderers); none is a tier or ledger

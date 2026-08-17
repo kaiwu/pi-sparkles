@@ -1,15 +1,16 @@
 // DSH all-in-one plugin bundler.
 //
-// A dedicated builder that turns the pi-sparkles ledger (T1–T6, 135 proposals)
-// into one npm bundle DeepSeek Harness can load: a Cordis plugin package whose
-// manifest declares `dsh.bundle.patch`, with every compiled Pi extension
-// mounted behind a Pi-API facade over the Harness `ctx` (tools -> ctx.tools,
-// commands -> ctx.commands).
+// A dedicated builder that turns the DSH-compatible portion of the
+// pi-sparkles ledger into one npm bundle DeepSeek Harness can load: a Cordis
+// plugin package whose manifest declares `dsh.bundle.patch`, with compatible
+// compiled Pi extensions mounted behind a Pi-API facade over the Harness
+// `ctx` (tools -> ctx.tools, commands -> ctx.commands).
 //
 // Not every Pi plugin is DSH-compatible: dsh/bundle.json declares which ledger
 // proposals are `exclude_pi` (Pi-specific surfaces such as the TUI statusline)
-// and which `extra_dsh` plugins (future DSH-dedicated packages) are added. The
-// bundle ships the ledger minus exclusions plus extras.
+// and which `extra_dsh` plugins (DSH-native modules in dsh/plugins/) are added.
+// The bundle ships the ledger minus exclusions plus DSH-native extras, with an
+// independent DSH release gate.
 //
 // The existing Pi builder/bundler (scripts/build.js, scripts/aggregate-bundle.js)
 // is untouched: this script consumes its `dist/<plugin>/index.js` artifacts
@@ -49,7 +50,14 @@ const DSH_MANIFEST_PATH = join(ROOT, "dsh", "bundle.json");
 const ENTRY_DIR = join(WORK_DIR, "dsh");
 const ENTRY_PATH = join(ENTRY_DIR, "entry.mjs");
 const LOCK_SCHEMA_VERSION = 1;
+const DSH_MANIFEST_SCHEMA_VERSION = 2;
 const PDFJS_VERSION = "6.2.108";
+const PLUGIN_SHORT_NAME = /^[a-z][a-z0-9_]*$/;
+export const DSH_RUNTIME_PEERS = {
+  "@deepseek-ai/dsh-agent": "0.1.0-rc.6",
+  "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
+  "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
+};
 
 /** Every file the DSH bundle emits; the npm packager consumes this inventory. */
 export const DSH_BUNDLE_FILES = [
@@ -72,6 +80,10 @@ function sha256(value) {
 
 function sha256File(path) {
   return sha256(readFileSync(path));
+}
+
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function moduleSpecifier(fromDirectory, target) {
@@ -110,72 +122,116 @@ function assertSafeOutput() {
     if (
       lock.schemaVersion !== LOCK_SCHEMA_VERSION ||
       lock.package?.name !== PACKAGE_NAME ||
-      lock.target !== targetForLock()
+      !ALLOWED_TARGETS.has(lock.target)
     ) {
       throw new Error(`Refusing to replace a different DSH output: ${output}`);
     }
   }
 }
 
-let lockTarget = "T6";
-function targetForLock() {
-  return lockTarget;
-}
-
 /**
  * The DSH bundle inventory: which Pi ledger proposals are excluded from the
- * Harness distribution and which DSH-dedicated plugins are added. See
+ * Harness distribution and which DSH-native plugins are added. See
  * dsh/bundle.json.
  */
 export function readDshManifest() {
   const manifest = JSON.parse(readFileSync(DSH_MANIFEST_PATH, "utf8"));
+  if (manifest.schema_version !== DSH_MANIFEST_SCHEMA_VERSION) {
+    throw new Error(
+      `DSH bundle manifest schema_version must be ${DSH_MANIFEST_SCHEMA_VERSION}`,
+    );
+  }
   const exclude = Array.isArray(manifest.exclude_pi) ? manifest.exclude_pi : [];
   const extra = Array.isArray(manifest.extra_dsh) ? manifest.extra_dsh : [];
   if (
-    exclude.some((name) => typeof name !== "string" || name.trim() === "") ||
-    extra.some((name) => typeof name !== "string" || name.trim() === "")
+    exclude.some((name) => typeof name !== "string" || !PLUGIN_SHORT_NAME.test(name)) ||
+    extra.some((name) => typeof name !== "string" || !PLUGIN_SHORT_NAME.test(name))
   ) {
     throw new Error("DSH bundle manifest must list plugin short names as strings");
   }
-  return { schemaVersion: manifest.schema_version ?? 1, excludePi: [...exclude], extraDsh: [...extra] };
+  if (new Set(exclude).size !== exclude.length || new Set(extra).size !== extra.length) {
+    throw new Error("DSH bundle manifest plugin lists must not contain duplicates");
+  }
+  const exclusionReasons = manifest.exclusion_reasons;
+  if (
+    !isRecord(exclusionReasons) ||
+    exclude.some(
+      (name) =>
+        typeof exclusionReasons[name] !== "string" ||
+        exclusionReasons[name].trim() === "",
+    )
+  ) {
+    throw new Error("Every excluded Pi plugin must have a non-empty exclusion reason");
+  }
+  const release = manifest.dsh_release;
+  if (
+    !isRecord(release) ||
+    !["preview", "product_useful"].includes(release.status) ||
+    (release.status === "preview" &&
+      (typeof release.reason !== "string" || release.reason.trim() === ""))
+  ) {
+    throw new Error("DSH release must declare preview/product_useful status and a preview reason");
+  }
+  return {
+    schemaVersion: manifest.schema_version,
+    excludePi: [...exclude],
+    exclusionReasons: Object.fromEntries(
+      exclude.map((name) => [name, exclusionReasons[name]]),
+    ),
+    extraDsh: [...extra],
+    release: { status: release.status, reason: release.reason ?? null },
+  };
 }
 
-export function dshBundlePlan(throughTierId = DEFAULT_AGGREGATE_TARGET) {
+export function dshBundlePlan(
+  throughTierId = DEFAULT_AGGREGATE_TARGET,
+  tierManifest = readTierManifest(),
+) {
   const target = throughTierId.toUpperCase();
   if (!ALLOWED_TARGETS.has(target)) {
     throw new Error("DSH bundle target must be T5 or T6");
   }
-  lockTarget = target;
-  const base = aggregateBundlePlan(readTierManifest(), target);
+  const base = aggregateBundlePlan(tierManifest, target);
   const manifest = readDshManifest();
 
+  const allPlugins = plugins();
+  const allByName = new Map(allPlugins.map((plugin) => [plugin.shortName, plugin]));
   const baseByName = new Map(base.plugins.map((plugin) => [plugin.shortName, plugin]));
   const exclude = new Set(manifest.excludePi);
   for (const name of manifest.excludePi) {
-    if (!baseByName.has(name)) {
+    if (!allByName.has(name)) {
       throw new Error(`DSH bundle excludes unknown ledger proposal: ${name}`);
     }
   }
-  const available = new Map(plugins().map((plugin) => [plugin.shortName, plugin]));
   const extras = manifest.extraDsh.map((name) => {
-    const plugin = available.get(name);
-    if (!plugin) throw new Error(`DSH bundle extra plugin not found: ${name}`);
-    if (baseByName.has(name)) {
+    if (allByName.has(name)) {
       throw new Error(`DSH bundle extra plugin duplicates a ledger proposal: ${name}`);
     }
-    return plugin;
+    const entryPath = join(ROOT, "dsh", "plugins", `${name}.mjs`);
+    if (!existsSync(entryPath) || !lstatSync(entryPath).isFile()) {
+      throw new Error(`DSH-native plugin entry not found: ${entryPath}`);
+    }
+    return { shortName: name, entryPath };
   });
 
-  const included = [
-    ...base.plugins.filter((plugin) => !exclude.has(plugin.shortName)),
-    ...extras,
-  ];
+  const included = base.plugins.filter((plugin) => !exclude.has(plugin.shortName));
+  const relevantExclusions = manifest.excludePi.filter((name) => baseByName.has(name));
+  const dshProductUseful = manifest.release.status === "product_useful";
   return {
     ...base,
     plugins: included,
     pluginTiers: { ...base.pluginTiers },
-    excludedPiProposals: manifest.excludePi,
+    piAggregateMaturity: base.maturity,
+    maturity: dshProductUseful ? "product_useful_dsh_aggregate" : "dsh_blocked_preview",
+    releasable: base.releasable && dshProductUseful,
+    dshRelease: manifest.release,
+    dshBlockers: dshProductUseful ? [] : [manifest.release.reason],
+    excludedPiProposals: relevantExclusions,
+    exclusionReasons: Object.fromEntries(
+      relevantExclusions.map((name) => [name, manifest.exclusionReasons[name]]),
+    ),
     extraDshPlugins: manifest.extraDsh,
+    dshPlugins: extras,
   };
 }
 
@@ -189,7 +245,17 @@ function entrySource(plan) {
     (plugin, index) =>
       `  [${JSON.stringify(plugin.shortName)}, extension${index}],`,
   );
-  return `${imports.join("\n")}
+  const dshImports = plan.dshPlugins.map(
+    (plugin, index) =>
+      `import dshExtension${index} from ${JSON.stringify(
+        moduleSpecifier(ENTRY_DIR, plugin.entryPath),
+      )};`,
+  );
+  const dshRecords = plan.dshPlugins.map(
+    (plugin, index) =>
+      `  [${JSON.stringify(plugin.shortName)}, dshExtension${index}],`,
+  );
+  return `${[...imports, ...dshImports].join("\n")}
 
 import { createPlugin } from ${JSON.stringify(
     moduleSpecifier(ENTRY_DIR, join(ROOT, "dsh", "plugin.mjs")),
@@ -199,7 +265,11 @@ const extensions = [
 ${records.join("\n")}
 ];
 
-export default createPlugin(extensions, ${JSON.stringify(DSH_PLUGIN_NAME)});
+const dshExtensions = [
+${dshRecords.join("\n")}
+];
+
+export default createPlugin(extensions, dshExtensions, ${JSON.stringify(DSH_PLUGIN_NAME)});
 `;
 }
 
@@ -254,7 +324,8 @@ function patchSource(plan) {
 #     flags:
 #       finance-currency: EUR
 # Environment variables (AGENT_CONTACT, TUSHARE_TOKEN, ALPACA_API_KEY_ID, ...)
-# are read from the process environment at call time; see CONFIGURATION.md.
+# are read from the DSH host process. Restart DSH after changing them; see
+# CONFIGURATION.md.
 
 - insert:
     - id: ${DSH_PLUGIN_NAME}
@@ -281,7 +352,9 @@ function configurationSource(plan) {
           "",
           "## Excluded Pi plugins",
           "",
-          ...excluded.map((name) => `- \`${name}\``),
+          ...excluded.map(
+            (name) => `- \`${name}\`: ${plan.exclusionReasons[name]}`,
+          ),
         ]
       : []),
     ...(extras.length > 0
@@ -293,12 +366,16 @@ function configurationSource(plan) {
         ]
       : []),
     "",
-    "## Environment variables read at call time",
+    "## Environment variables",
     "",
     ...names.map((name) => `- \`${name}\``),
     "",
-    "Credentials and provider entitlements are caller-owned runtime inputs and",
-    "are never read, written, or persisted by this bundle.",
+    "Variables are read from the DSH host process. Some adapters initialize",
+    "at plugin boot, so restart DSH after changing configuration.",
+    "",
+    "Credential values and provider entitlements are caller-owned runtime inputs.",
+    "They are read only from the host environment and are never embedded,",
+    "logged, written, or persisted by this bundle.",
   ];
   return `${lines.join("\n")}\n`;
 }
@@ -307,12 +384,12 @@ function readmeSource(plan) {
   const version = rootVersion();
   return `# @dsh-sparkles/dsh-sparkles
 
-One DeepSeek Harness bundle registering the complete pi-sparkles
-${plan.throughTierId} ledger: ${plan.plugins.length} read-only finance
-evidence tools (quotes, OHLCV, calendars, rules, fundamentals, SEC filings,
-portfolio, quant, macro, tape review, ...) as native Harness tools behind a
-single Pi-API compatibility facade. No plugin can place, route, cancel,
-replace, or otherwise mutate a paper or live order.
+One DeepSeek Harness preview registering ${plan.plugins.length} compatible
+pi-sparkles ${plan.throughTierId} plugin components as read-only finance tools
+behind a Pi-API compatibility shell. The Pi tier ledger remains authoritative
+only for Pi; DSH has its own release gate and this build is
+\`${plan.maturity}\`. No plugin can place, route, cancel, replace, or otherwise
+mutate a paper or live order.
 
 ## Install
 
@@ -335,17 +412,21 @@ AAPL" or "compare SMA/RSI/ATR for 600519.SH".
 
 ## Behavior notes
 
-- Pi-specific surfaces are excluded from this distribution (see CONFIGURATION.md
-  for the exact list); the TUI statusline/track-navigation plugin is not
-  shipped, and DSH-dedicated replacements are added separately over time.
+- Pi-specific or process-global state shells are excluded from this distribution
+  (see CONFIGURATION.md for the exact list and reason). Their pure Gleam/domain
+  cores remain shared; DSH-native per-agent shells use the separate
+  \`dsh/plugins/\` lane.
 - Tools register through \`ctx.tools\` and are validated against the DSH
   schema subset; the embedded Pi decoders still enforce the full argument
   contract (lengths, ranges, enums) at call time.
 - Commands register through \`ctx.commands\`; their text output is the command
   result.
-- Session persistence (journal/watchlist custom entries) is in-memory per
-  process; cross-restart persistence is not claimed.
-- \`hasUI\` is false: any remaining statusline/notification surfaces are inert.
+- Compatible custom entries are written to the invoking DSH agent's session
+  log. No extension-global synthetic session is used.
+- Pi notifications become DSH command/tool text. Unsupported Pi UI and host
+  effects fail explicitly instead of reporting placeholder success.
+- Pi inline base64 images are not DSH attachment references; the bridge keeps
+  text/structured chart output and omits the incompatible image block.
 - Provider identity, entitlement, and completeness are never authenticated by
   this bundle; providers and credentials stay caller-owned.
 
@@ -405,7 +486,11 @@ export async function buildDshBundle(throughTierId = DEFAULT_AGGREGATE_TARGET) {
     minify: false,
     sourcemap: "external",
     metafile: true,
-    external: ["pdfjs-dist", "pdfjs-dist/*"],
+    external: [
+      "pdfjs-dist",
+      "pdfjs-dist/*",
+      ...Object.keys(DSH_RUNTIME_PEERS).flatMap((name) => [name, `${name}/*`]),
+    ],
   });
   if (!result.success) {
     for (const log of result.logs) console.error(log);
@@ -416,7 +501,8 @@ export async function buildDshBundle(throughTierId = DEFAULT_AGGREGATE_TARGET) {
   const manifest = {
     name: PACKAGE_NAME,
     version,
-    description: `All-in-one DeepSeek Harness plugin for the pi-sparkles ${plan.throughTierId} finance evidence ledger (${plan.plugins.length} tools)`,
+    description: `DeepSeek Harness preview for ${plan.plugins.length} compatible pi-sparkles ${plan.throughTierId} plugin components`,
+    private: !plan.releasable,
     type: "module",
     main: "index.js",
     exports: {
@@ -434,10 +520,8 @@ export async function buildDshBundle(throughTierId = DEFAULT_AGGREGATE_TARGET) {
       "SHA256SUMS",
     ],
     dependencies: { "pdfjs-dist": PDFJS_VERSION },
-    peerDependencies: {
-      "@deepseek-ai/dsh-tools": "*",
-      "@deepseek-ai/dsh-commands": "*",
-    },
+    peerDependencies: DSH_RUNTIME_PEERS,
+    engines: { node: ">=22.19.0" },
     dsh: { bundle: { patch: "./cordis.patch.yml" } },
     license: "Apache-2.0",
   };
@@ -453,12 +537,21 @@ export async function buildDshBundle(throughTierId = DEFAULT_AGGREGATE_TARGET) {
     target: plan.throughTierId,
     pluginCount: plan.plugins.length,
     plugins: plan.plugins.map((plugin) => pluginRecord(plan, plugin)),
+    dshPlugins: plan.dshPlugins.map((plugin) => ({
+      shortName: plugin.shortName,
+      sourceSha256: sha256File(plugin.entryPath),
+    })),
     excludedPiProposals: plan.excludedPiProposals,
+    exclusionReasons: plan.exclusionReasons,
     extraDshPlugins: plan.extraDshPlugins,
     omittedProposals: plan.omittedProposals,
     partialImplementations: plan.partialImplementations,
     openBlockers: plan.openBlockers,
     maturity: plan.maturity,
+    piAggregateMaturity: plan.piAggregateMaturity,
+    dshRelease: plan.dshRelease,
+    dshBlockers: plan.dshBlockers,
+    publishable: plan.releasable,
     indexSha256: sha256File(join(OUTPUT_DIR, "index.js")),
   };
   writeJson(join(OUTPUT_DIR, "dsh-lock.json"), lock);
@@ -509,7 +602,11 @@ export function verifyDshBundle(directory, plan) {
   if (
     manifest.name !== DSH_PACKAGE_NAME ||
     manifest.dsh?.bundle?.patch !== "./cordis.patch.yml" ||
-    manifest.main !== "index.js"
+    manifest.main !== "index.js" ||
+    manifest.private !== !plan.releasable ||
+    manifest.engines?.node !== ">=22.19.0" ||
+    JSON.stringify(manifest.peerDependencies) !==
+      JSON.stringify(DSH_RUNTIME_PEERS)
   ) {
     throw new Error("DSH bundle manifest is inconsistent");
   }
@@ -523,9 +620,24 @@ export function verifyDshBundle(directory, plan) {
       JSON.stringify(plan.excludedPiProposals ?? []) ||
     JSON.stringify(lock.extraDshPlugins ?? []) !==
       JSON.stringify(plan.extraDshPlugins ?? []) ||
+    JSON.stringify(lock.exclusionReasons ?? {}) !==
+      JSON.stringify(plan.exclusionReasons ?? {}) ||
+    JSON.stringify(lock.dshRelease ?? {}) !==
+      JSON.stringify(plan.dshRelease ?? {}) ||
+    JSON.stringify(lock.dshBlockers ?? []) !==
+      JSON.stringify(plan.dshBlockers ?? []) ||
+    lock.maturity !== plan.maturity ||
+    lock.piAggregateMaturity !== plan.piAggregateMaturity ||
+    lock.publishable !== plan.releasable ||
+    !lockPluginsMatchPlan(lock.plugins, plan) ||
+    !lockDshPluginsMatchPlan(lock.dshPlugins, plan) ||
     lock.indexSha256 !== sha256File(join(root, "index.js"))
   ) {
     throw new Error("DSH bundle lock is inconsistent with the bundle content");
+  }
+  const declaredChecksums = readFileSync(join(root, "SHA256SUMS"), "utf8").trim();
+  if (declaredChecksums !== hashTree(root)) {
+    throw new Error("DSH bundle checksum inventory is incomplete or inconsistent");
   }
   return {
     directory: root,
@@ -536,6 +648,34 @@ export function verifyDshBundle(directory, plan) {
     maturity: lock.maturity,
     publishable: plan.releasable,
   };
+}
+
+function isSha256(value) {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+}
+
+function lockPluginsMatchPlan(records, plan) {
+  if (!Array.isArray(records) || records.length !== plan.plugins.length) return false;
+  return records.every((record, index) => {
+    const plugin = plan.plugins[index];
+    return (
+      record?.tierId === (plan.pluginTiers[plugin.shortName] ?? null) &&
+      record?.shortName === plugin.shortName &&
+      record?.gleamPackage === plugin.name &&
+      record?.version === plugin.version &&
+      isSha256(record?.sourceArtifactSha256)
+    );
+  });
+}
+
+function lockDshPluginsMatchPlan(records, plan) {
+  const plugins = plan.dshPlugins ?? [];
+  if (!Array.isArray(records) || records.length !== plugins.length) return false;
+  return records.every(
+    (record, index) =>
+      record?.shortName === plugins[index].shortName &&
+      isSha256(record?.sourceSha256),
+  );
 }
 
 if (import.meta.main) {

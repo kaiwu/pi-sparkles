@@ -191,13 +191,18 @@ describe("raw subset assertion (mirror dsh-tools rules)", () => {
     expect(assertRawSubset({ anyOf: [{ type: "string" }, { type: "null" }] })).not.toEqual([]);
   });
 
-  test("renderToolValue joins text content", () => {
+  test("renderToolValue returns DSH content blocks", () => {
     expect(
       renderToolValue({
         content: [{ type: "text", text: "one" }, { type: "text", text: "two" }],
         details: {},
       }),
-    ).toBe("one\ntwo");
-    expect(renderToolValue({ content: [], details: {} })).toBe("(no output)");
+    ).toEqual([
+      { type: "text", text: "one" },
+      { type: "text", text: "two" },
+    ]);
+    expect(renderToolValue({ content: [], details: {} })).toEqual([
+      { type: "text", text: "(no output)" },
+    ]);
   });
 });

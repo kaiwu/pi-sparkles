@@ -6,6 +6,7 @@ import { createPlugin } from "../../dsh/plugin.mjs";
 function fakeCtx() {
   const tools = [];
   const commands = [];
+  const listeners = new Map();
   return {
     tools: {
       register(definition) {
@@ -18,11 +19,56 @@ function fakeCtx() {
       },
     },
     logger: { info() {}, warn() {} },
-    on() {
-      return () => {};
+    on(event, handler) {
+      if (!listeners.has(event)) listeners.set(event, new Set());
+      listeners.get(event).add(handler);
+      return () => listeners.get(event)?.delete(handler);
+    },
+    async plugin(extension, config) {
+      if (typeof extension === "function") await extension(this, config);
+      else await extension.apply(this, config);
+    },
+    async __emit(event, payload) {
+      for (const handler of listeners.get(event) ?? []) await handler(payload);
     },
     __tools: tools,
     __commands: commands,
+  };
+}
+
+function fakeAgent(id = "agent-1") {
+  const events = [];
+  const followups = [];
+  const steers = [];
+  return {
+    id,
+    session: {
+      id: `session-${id}`,
+      header: { cwd: `/work/${id}` },
+      events,
+      append(type, data) {
+        const event = { type, data, seq: events.length, time: Date.now() };
+        events.push(event);
+        return event;
+      },
+    },
+    followup(message) {
+      followups.push(message);
+    },
+    steer(message) {
+      steers.push(message);
+    },
+    __followups: followups,
+    __steers: steers,
+  };
+}
+
+function toolRunContext(agent = fakeAgent(), callId = "call-1") {
+  return {
+    agent,
+    callId,
+    signal: new AbortController().signal,
+    concludeTurn() {},
   };
 }
 
@@ -64,12 +110,22 @@ describe("pi-api facade", () => {
     expect(tool.isConcurrencySafe).toBeTypeOf("function");
     expect(assertRawSubset(tool.output.schema)).toEqual([]);
     expect(tool.description).toContain("Supply every fact explicitly");
-    expect(tool.output.render({ ticker: "AAPL" }, { content: [{ type: "text", text: "hi" }] })).toBe("hi");
+    expect(
+      tool.output.render(
+        { ticker: "AAPL" },
+        { content: [{ type: "text", text: "hi" }] },
+      ),
+    ).toEqual([{ type: "text", text: "hi" }]);
 
-    const value = await tool.execute({ ticker: "AAPL" }, { signal: undefined });
+    const value = await tool.execute(
+      { ticker: "AAPL" },
+      toolRunContext(fakeAgent(), "quote-call-1"),
+    );
     expect(value.content[0].text).toBe("quote for AAPL");
     expect(seen.input).toEqual({ ticker: "AAPL" });
-    expect(seen.toolCallId).toBe("");
+    expect(seen.toolCallId).toBe("quote-call-1");
+    expect(seen.hasSignal).toBeTrue();
+    expect(seen.context.cwd).toBe("/work/agent-1");
   });
 
   test("tool rejection propagates as a thrown error", async () => {
@@ -83,21 +139,31 @@ describe("pi-api facade", () => {
         throw new Error("nope");
       },
     });
-    await expect(ctx.__tools[0].execute({}, {})).rejects.toThrow("nope");
+    await expect(
+      ctx.__tools[0].execute({}, toolRunContext()),
+    ).rejects.toThrow("nope");
   });
 
   test("registerCommand maps Pi handlers to the DSH CommandResult contract", async () => {
     const ctx = fakeCtx();
     const api = createPiApi({ ctx });
-    api.registerCommand("finance-track", { description: "switch track", handler: async (args) => {} });
-    api.sendUserMessage("switched to cn", { deliverAs: "steer" });
+    api.registerCommand("finance-track", {
+      description: "switch track",
+      handler: async (_args, context) => {
+        context.ui.notify("switched to cn", "info");
+      },
+    });
 
     expect(ctx.__commands).toHaveLength(1);
     const command = ctx.__commands[0];
     expect(command.name).toBe("finance-track");
     expect(command.description).toBe("switch track");
 
-    const result = await command.handler({ rawInput: "cn", signal: undefined });
+    const result = await command.handler({
+      agent: fakeAgent(),
+      rawInput: "cn",
+      signal: new AbortController().signal,
+    });
     expect(result).toEqual({ kind: "success", text: "switched to cn" });
   });
 
@@ -110,7 +176,11 @@ describe("pi-api facade", () => {
         throw new Error("broken");
       },
     });
-    const result = await ctx.__commands[0].handler({ rawInput: "" });
+    const result = await ctx.__commands[0].handler({
+      agent: fakeAgent(),
+      rawInput: "",
+      signal: new AbortController().signal,
+    });
     expect(result).toEqual({ kind: "error", text: "broken" });
   });
 
@@ -134,7 +204,7 @@ describe("pi-api facade", () => {
     }
   });
 
-  test("appendEntry feeds the synthetic sessionManager; getActiveTools lists tools", async () => {
+  test("appendEntry uses the invoking DSH session; getActiveTools lists tools", async () => {
     const ctx = fakeCtx();
     const api = createPiApi({ ctx });
     api.registerTool({
@@ -145,22 +215,130 @@ describe("pi-api facade", () => {
     });
     expect(api.getActiveTools()).toEqual(["alpha"]);
 
-    api.appendEntry("finance_track_status.active_track", { track: "cn" });
-    // Read the shared store back through the synthetic session manager that
-    // command/tool callbacks receive.
+    const agent = fakeAgent();
     let captured;
     api.registerCommand("probe", {
       description: "probe",
       handler: async (_, commandContext) => {
+        api.appendEntry("finance_cache.receipt", { track: "cn" });
         captured = commandContext;
       },
     });
-    await ctx.__commands.at(-1).handler({ rawInput: "" });
+    await ctx.__commands.at(-1).handler({
+      agent,
+      rawInput: "",
+      signal: new AbortController().signal,
+    });
     const entries = captured.sessionManager.getBranch();
     expect(entries).toHaveLength(1);
-    expect(entries[0].customType).toBe("finance_track_status.active_track");
+    expect(entries[0].customType).toBe("finance_cache.receipt");
     expect(entries[0].data).toEqual({ track: "cn" });
     expect(entries[0].type).toBe("custom");
+    expect(agent.session.events[0].type).toBe("pi-sparkles/custom");
+    expect(captured.cwd).toBe("/work/agent-1");
+  });
+
+  test("sendUserMessage queues on the exact invocation agent", async () => {
+    const ctx = fakeCtx();
+    const api = createPiApi({ ctx });
+    api.registerCommand("queue", {
+      description: "queue work",
+      handler: async () => {
+        api.sendUserMessage("later", { deliverAs: "followUp" });
+        api.sendUserMessage("now", { deliverAs: "steer" });
+      },
+    });
+    const agent = fakeAgent("queue-agent");
+    const result = await ctx.__commands[0].handler({
+      agent,
+      rawInput: "",
+      signal: new AbortController().signal,
+    });
+    expect(result).toEqual({ kind: "success" });
+    expect(agent.__followups[0]).toMatchObject({
+      role: "user",
+      content: [{ type: "text", text: "later" }],
+      source: { kind: "plugin", plugin: "dsh-sparkles" },
+    });
+    expect(agent.__steers[0].content[0].text).toBe("now");
+  });
+
+  test("parallel tool notifications remain invocation-local", async () => {
+    const ctx = fakeCtx();
+    const api = createPiApi({ ctx });
+    let releaseFirst;
+    const firstPaused = new Promise((resolve) => {
+      releaseFirst = resolve;
+    });
+    api.registerTool({
+      name: "parallel_probe",
+      description: "parallel",
+      parameters: { type: "object", properties: {}, additionalProperties: true },
+      executionMode: "parallel",
+      execute: async (_id, input, _signal, _updates, context) => {
+        context.ui.notify(input.label, "info");
+        if (input.wait) await firstPaused;
+        return { content: [{ type: "text", text: input.label }], details: {} };
+      },
+    });
+    const first = ctx.__tools[0].execute(
+      { label: "first", wait: true },
+      toolRunContext(fakeAgent("first"), "first-call"),
+    );
+    const second = await ctx.__tools[0].execute(
+      { label: "second", wait: false },
+      toolRunContext(fakeAgent("second"), "second-call"),
+    );
+    releaseFirst();
+    const firstResult = await first;
+    expect(second.content.map((block) => block.text)).toEqual(["second", "second"]);
+    expect(firstResult.content.map((block) => block.text)).toEqual(["first", "first"]);
+  });
+
+  test("Pi inline images are omitted instead of forged as DSH image blocks", async () => {
+    const ctx = fakeCtx();
+    const api = createPiApi({ ctx });
+    api.registerTool({
+      name: "chart",
+      description: "chart",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      execute: async () => ({
+        content: [
+          { type: "text", text: "chart rows" },
+          { type: "image", data: "ZmFrZQ==", mimeType: "image/png" },
+        ],
+        details: { points: [1, 2] },
+      }),
+    });
+    const result = await ctx.__tools[0].execute({}, toolRunContext());
+    expect(result).toEqual({
+      content: [{ type: "text", text: "chart rows" }],
+      details: { points: [1, 2] },
+    });
+  });
+
+  test("Pi terminate results conclude the DSH turn without leaking schema fields", async () => {
+    const ctx = fakeCtx();
+    const api = createPiApi({ ctx });
+    api.registerTool({
+      name: "terminal",
+      description: "terminal",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+      execute: async () => ({
+        content: [{ type: "text", text: "done" }],
+        details: {},
+        terminate: true,
+      }),
+    });
+    let concluded = false;
+    const run = toolRunContext();
+    run.concludeTurn = () => {
+      concluded = true;
+    };
+    const result = await ctx.__tools[0].execute({}, run);
+    expect(concluded).toBeTrue();
+    expect(result.terminate).toBeUndefined();
+    expect(result.content).toEqual([{ type: "text", text: "done" }]);
   });
 
   test("createPlugin guards duplicate named registrations", async () => {
@@ -178,7 +356,7 @@ describe("pi-api facade", () => {
     await expect(plugin.apply(ctx, {})).rejects.toThrow(/Registration collision for registerTool 'same_tool'/);
   });
 
-  test("createPlugin runs extensions and fires session_start", async () => {
+  test("createPlugin follows DSH agent session lifecycle", async () => {
     const ctx = fakeCtx();
     const started = [];
     const extension = (api) => {
@@ -192,8 +370,27 @@ describe("pi-api facade", () => {
       return Promise.resolve(undefined);
     };
     const plugin = createPlugin([["only", extension]]);
+    expect(plugin.inject).toEqual(["tools", "commands", "agents"]);
     await plugin.apply(ctx, {});
     expect(ctx.__tools).toHaveLength(1);
+    expect(started).toEqual([]);
+    await ctx.__emit("agent/session-start", {
+      agent: fakeAgent(),
+      source: "startup",
+    });
     expect(started).toEqual(["started"]);
+  });
+
+  test("unsupported Pi host effects fail explicitly", () => {
+    const api = createPiApi({ ctx: fakeCtx() });
+    expect(() => api.registerShortcut("x", {})).toThrow(
+      "Pi API registerShortcut is not supported",
+    );
+    expect(() => api.on("before_agent_start", () => {})).toThrow(
+      "Pi API on('before_agent_start') is not supported",
+    );
+    expect(() => api.appendEntry("outside", {})).toThrow(
+      "requires an active DSH agent/session invocation",
+    );
   });
 });

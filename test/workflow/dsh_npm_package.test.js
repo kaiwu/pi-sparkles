@@ -12,6 +12,7 @@ import { join } from "node:path";
 import {
   DSH_OUTPUT_DIR,
   DSH_PACKAGE_NAME,
+  DSH_RUNTIME_PEERS,
 } from "../../scripts/dsh-bundle.js";
 import {
   assertDshNpmPublishable,
@@ -61,11 +62,18 @@ function fixturePlan(root, { throughTierId = "T6", releasable = true } = {}) {
     omittedProposals: [],
     partialImplementations: [],
     openBlockers: [],
+    dshBlockers: releasable ? [] : ["fixture blocker"],
     excludedExtraPackages: [],
     releasable,
     maturity: releasable
       ? "product_useful_aggregate"
       : "blocked_inventory_preview",
+    piAggregateMaturity: "product_useful_aggregate",
+    dshRelease: {
+      status: releasable ? "product_useful" : "preview",
+      reason: releasable ? null : "fixture blocker",
+    },
+    dshPlugins: [],
     packageName: `dsh-sparkles-${throughTierId.toLowerCase()}-fixture`,
     packageVersion: "0.1.0",
     outputDirectory: join(root, "bundle"),
@@ -97,6 +105,9 @@ function writeFixtureBundle(plan) {
         version: plan.packageVersion,
         type: "module",
         main: "index.js",
+        private: !plan.releasable,
+        engines: { node: ">=22.19.0" },
+        peerDependencies: DSH_RUNTIME_PEERS,
         dsh: { bundle: { patch: "./cordis.patch.yml" } },
       },
       null,
@@ -111,13 +122,44 @@ function writeFixtureBundle(plan) {
         package: { name: DSH_PACKAGE_NAME, version: plan.packageVersion },
         target: plan.throughTierId,
         pluginCount: plan.plugins.length,
-        plugins: [],
+        plugins: [
+          {
+            tierId: plan.throughTierId,
+            shortName: "fixture",
+            gleamPackage: "pi_sparkles_fixture",
+            version: "0.1.0",
+            sourceArtifactSha256: "0".repeat(64),
+            provider: null,
+          },
+        ],
+        dshPlugins: [],
+        excludedPiProposals: [],
+        exclusionReasons: {},
+        extraDshPlugins: [],
+        dshRelease: plan.dshRelease,
+        dshBlockers: plan.dshBlockers,
+        maturity: plan.maturity,
+        piAggregateMaturity: plan.piAggregateMaturity,
+        publishable: plan.releasable,
         indexSha256: sha256(indexSource),
       },
       null,
       2,
     )}\n`,
   );
+  const checksums = [
+    "CONFIGURATION.md",
+    "README.md",
+    "cordis.patch.yml",
+    "dsh-lock.json",
+    "index.js",
+    "index.js.map",
+    "package.json",
+  ]
+    .map((name) => `${sha256(readFileSync(join(directory, name)))}  ${name}`)
+    .sort()
+    .join("\n");
+  writeFileSync(join(directory, "SHA256SUMS"), `${checksums}\n`);
 }
 
 async function buildFixture(plan) {
@@ -134,18 +176,25 @@ describe("dsh-sparkles npm packaging", () => {
     const manifest = readTierManifest();
     const t6 = dshNpmPackagePlan(manifest, "T6");
     expect(t6.npmPackageName).toBe("@dsh-sparkles/dsh-sparkles");
-    expect(t6.plugins).toHaveLength(134);
+    expect(t6.plugins).toHaveLength(131);
     expect(t6.plugins.some((plugin) => plugin.shortName === "finance_track_status")).toBeFalse();
-    expect(t6.excludedPiProposals).toEqual(["finance_track_status"]);
+    expect(t6.excludedPiProposals).toEqual([
+      "finance_track_status",
+      "swing_workbench",
+      "portfolio",
+      "watchlist",
+    ]);
     expect(t6.extraDshPlugins).toEqual([]);
     expect(t6.omittedProposals).toEqual([]);
     expect(t6.partialImplementations).toEqual([]);
     expect(t6.openBlockers).toEqual([]);
-    expect(t6.releasable).toBeTrue();
+    expect(t6.maturity).toBe("dsh_blocked_preview");
+    expect(t6.dshRelease.status).toBe("preview");
+    expect(t6.releasable).toBeFalse();
 
     const t5 = dshNpmPackagePlan(manifest, "T5");
-    expect(t5.plugins).toHaveLength(123);
-    expect(t5.releasable).toBeTrue();
+    expect(t5.plugins).toHaveLength(120);
+    expect(t5.releasable).toBeFalse();
   });
 
   test("packs a content-locked tarball with the dsh.bundle manifest", async () => {
@@ -175,6 +224,9 @@ describe("dsh-sparkles npm packaging", () => {
     expect(manifest.dshSparkles).toEqual({
       aggregateThrough: "T6",
       maturity: "product_useful_aggregate",
+      piAggregateMaturity: "product_useful_aggregate",
+      dshReleaseStatus: "product_useful",
+      dshBlockerCount: 0,
       pluginCount: 1,
       omittedProposalCount: 0,
       partialImplementationCount: 0,
@@ -186,8 +238,9 @@ describe("dsh-sparkles npm packaging", () => {
     });
     expect(manifest.dependencies).toEqual({ "pdfjs-dist": "6.2.108" });
     expect(manifest.peerDependencies).toEqual({
-      "@deepseek-ai/dsh-tools": "*",
-      "@deepseek-ai/dsh-commands": "*",
+      "@deepseek-ai/dsh-agent": "0.1.0-rc.6",
+      "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
+      "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
     });
     expect(manifest.scripts).toBeUndefined();
     expect(manifest.publishConfig).toEqual({

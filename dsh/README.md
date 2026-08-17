@@ -1,91 +1,83 @@
-# DSH all-in-one plugin (builder + adapter)
+# DSH all-in-one plugin (builder + compatibility shell)
 
-This directory is the DeepSeek Harness half of pi-sparkles. It builds an
-all-in-one **Harness plugin** from the compiled Pi plugin artifacts without
-touching the Pi builder/bundler (`scripts/build.js`,
-`scripts/aggregate-bundle.js`) or the tier ledger.
+This directory is the DeepSeek Harness lane of pi-sparkles. It builds a DSH
+Cordis plugin from compatible compiled Pi effect shells without changing the
+Pi builder, aggregate, tier ledger, or maturity. Shared finance behavior stays
+in the existing pure Gleam/domain modules; only host effects are adapted.
 
-- `scripts/dsh-bundle.js` — the bundler (`bun run dsh:bundle`).
-- `scripts/dsh-npm-package.js` — the parallel npm line (`bun run dsh:npm:pack`).
-- `scripts/dsh-verify.js` — validates the schema bridge against the real
-  `@deepseek-ai/dsh-tools` implementation (`bun run dsh:verify`).
-- `dsh/bundle.json` — the DSH inventory: which Pi ledger proposals are excluded
-  and which DSH-dedicated plugins are added.
-- `dsh/ROADMAP.md` — the planned DSH-dedicated plugins (browser statusline
-  counterpart and finance diagrams/plots).
-- `dsh/schema-translate.mjs` — Pi JSON Schema → the raw JSON-Schema subset
-  dsh-tools accepts for tool `parameters`/`output`.
-- `dsh/pi-api.mjs` — the Pi `ExtensionApi` facade over Harness Cordis services.
-- `dsh/plugin.mjs` — the Cordis plugin factory that mounts every included
-  extension.
+- `scripts/dsh-bundle.js` builds the bundle (`bun run dsh:bundle`).
+- `scripts/dsh-npm-package.js` builds the separate npm preview.
+- `scripts/dsh-verify.js` validates schemas and executes the generated bundle
+  through the installed DSH runtime (`bun run dsh:verify`).
+- `dsh/bundle.json` owns DSH release status, Pi-shell exclusions, reasons, and
+  future DSH-native entries.
+- `dsh/pi-api.mjs` maps the supported Pi effect surface to DSH.
+- `dsh/plugins/` is reserved for DSH-native Cordis shells; it is separate from
+  Pi `plugins/` and is empty today.
 
-## Inventory: ledger minus Pi-specific plugins plus DSH extras
+## Inventory and release boundary
 
-The DSH distribution is not the raw 135-proposal ledger. `dsh/bundle.json`
-declares the difference:
+The effective inventory is `Pi tier closure − excluded Pi shells + DSH-native
+shells`. The current T6 preview contains 131 compatible Pi plugin components.
+Four Pi shells are excluded, with normative reasons in `bundle.json`:
 
-```json
-{ "schema_version": 1, "exclude_pi": ["finance_track_status"], "extra_dsh": [] }
-```
+- `finance_track_status`: Pi TUI/system-prompt navigation needs a DSH-native
+  per-agent surface.
+- `swing_workbench` and `watchlist`: their Pi shells use session-tree lifecycle
+  and extension-global mutable state.
+- `portfolio`: its Pi shell owns one extension-global imported snapshot.
 
-- `exclude_pi` lists Pi ledger proposals whose surface is Pi-specific (the TUI
-  statusline / track-navigation plugin is the first and only entry). They stay
-  in the Pi product; the DSH bundle omits them and their commands/tools.
-- `extra_dsh` lists future DSH-dedicated plugin packages (new `plugins/<name>/`
-  directories) that are added on top of the filtered ledger.
+Loading those state shells once at DSH process scope would mix independent
+agents. Their pure cores remain available for native, session-scoped DSH shells.
+An `extra_dsh` entry resolves only to `dsh/plugins/<name>.mjs`; it can never
+silently pull a Pi plugin into the DSH-only lane.
 
-The effective inventory is `ledger − exclude_pi + extra_dsh` (currently 134
-plugins). Exclusions and extras are recorded in `dsh-lock.json` and the npm
-manifest's `dshSparkles` section, so the packed package is always explicit
-about what it ships.
+DSH maturity is independent from Pi maturity. `dsh_release.status` is currently
+`preview`, so both T5 and T6 npm outputs are private blocked previews even when
+the corresponding Pi aggregate is ProductUseful. Promotion requires a DSH role
+acceptance lane and completion or explicit product disposition of the excluded
+host shells.
 
-## How it works
+## Host mapping
 
-Each compiled Pi plugin (`dist/<plugin>/index.js`) is a self-contained ESM
-bundle whose default export is `extension(api)`. The `api` argument is the Pi
-extension API. Across the included ledger artifacts that surface is small and
-bounded: `registerTool`, `registerCommand`, `on`, `appendEntry`,
-`getActiveTools`, `registerFlag`, `getFlag`, `sendUserMessage`, and `events`.
-
-`dsh/pi-api.mjs` implements that surface over the Harness:
-
-| Pi API | Harness mapping |
+| Pi surface | DSH behavior |
 | --- | --- |
-| `registerTool({name, description, parameters, execute, ...})` | `ctx.tools.register(...)`; `parameters` translated to the dsh-tools raw JSON-Schema subset, `output` fixed to `{ content, details }` with a text renderer, `execute` bridged `(args, exec) → (toolCallId, input, signal, updates, context)` |
-| `registerCommand(name, {description, handler})` | `ctx.commands.register(...)`; the Pi handler runs and its `sendUserMessage` output becomes the DSH `CommandResult` success text |
-| `registerFlag` / `getFlag` | registered defaults, overridable by the bundle `config.flags` map and `PI_SPARKLES_FLAG_<NAME>` env vars |
-| `on("session_start", ...)` | fired once at plugin apply with `{ reason: "startup" }` |
-| `on("session_shutdown", ...)` | fired on context dispose |
-| `on("before_agent_start", ...)` | never fired (DSH owns its system prompt) |
-| `appendEntry` / session reads | a shared in-memory custom-entry store exposed through the synthetic `context.sessionManager` |
-| `events` | a local bus (track-change events stay plugin-local) |
-| ui/session/prompt/model surfaces | explicit no-ops (`hasUI: false`) |
+| tools | Registered with `ctx.tools`; actual DSH call ID, signal, and agent are forwarded. Pi results are normalized to canonical JSON and `output.render` returns `ContentBlock[]`. |
+| commands | Registered with `ctx.commands`; Pi UI notifications become command result text. |
+| queued user messages | Routed to the invoking agent's `followup` or `steer` inbox. |
+| custom entries/session reads | Stored in and projected from the invoking DSH agent's session log. |
+| session lifecycle | Pi start/shutdown hooks follow `agent/session-start` and `agent/disposed`. |
+| flags | Defaults may be overridden by bundle `config.flags` or `PI_SPARKLES_FLAG_<NAME>`. |
+| unsupported Pi effects | Fail explicitly; they never return placeholder success. |
 
-The Pi-side decoders embedded in each bundle still enforce the full argument
-contract (lengths, ranges, enums) when a tool runs, so dropping unsupported
-schema keywords only loosens the model-facing argument schema, never the
-runtime validation.
+DSH images are attachment references, while Pi chart images are inline base64
+blocks. The bridge therefore retains chart text and structured details but
+omits the incompatible Pi image block. A future DSH-native chart shell can mint
+host attachments and browser presentation.
 
-## Build and install
+Provider HTTP does not depend on a Pi fetch helper. The shared
+`finance_http` transport uses standard `globalThis.fetch`, AbortSignal,
+redirect rejection, response budgets, and timeouts, which are available in the
+pinned Node 22.19+ host. Provider credentials come only from the DSH process
+environment. Some adapters initialize at plugin boot, so restart DSH after
+changing variables.
+
+## Build and verify
 
 ```sh
-bun run dsh:bundle                      # T6 (T1–T6), ledger minus exclude_pi
-bun run dsh:bundle -- T5                # prior release boundary
-bun run dsh:verify                      # schema bridge vs real dsh-tools
-bun run dsh:npm:pack                    # content-lock + pack, never publish
+bun run dsh:bundle
+bun run dsh:verify
+bun run dsh:npm:preview:verify
 dsh plugin --profile <name> add ./dist/dsh/dsh-sparkles
+dsh --profile <name> --dump-config
 ```
 
-Output: `dist/dsh/dsh-sparkles/` — an npm bundle with `dsh.bundle.patch`,
-`cordis.patch.yml`, a content lock, `CONFIGURATION.md`, and `SHA256SUMS`.
-The entry is a self-contained ~22 MB single file; its only runtime dependency
-is `pdfjs-dist` (declared, installed into the profile by pnpm).
+`bun test test/dsh test/workflow/dsh_npm_package.test.js` covers the adapter,
+parallel invocation isolation, lifecycle/session mapping, image projection,
+release gate, locks, and npm inventory. `bun run dsh:verify` uses the installed
+DSH rc.6 implementation to validate schemas, mount the generated entrypoint,
+and execute `finance_capabilities` through the real ToolRuntime.
 
-## Verification
-
-`bun test test/dsh test/workflow/dsh_npm_package.test.js` runs the mirror unit
-and npm workflow tests; `bun run dsh:verify` runs the real dsh-tools validator
-over the translator. A real boot (`dsh plugin --profile headless add ... &&
-dsh --profile headless`) loads every included extension and registers their
-tools, commands, flags, and providers without error; set
-`DSH_PI_SPARKLES_DEBUG=1` to trace loading.
+The generated package pins its tested DSH service peers to `0.1.0-rc.6`, pins
+`pdfjs-dist`, requires Node 22.19+, carries exact locks/checksums, and contains
+no lifecycle scripts or credential values.

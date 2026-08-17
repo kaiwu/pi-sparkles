@@ -89,7 +89,12 @@ export function translateValueSchema(schema) {
         const required = new Set(Array.isArray(schema.required) ? schema.required : []);
         const properties = {};
         for (const [name, child] of Object.entries(schema.properties)) {
-          properties[name] = translateValueSchema(child);
+          Object.defineProperty(properties, name, {
+            value: translateValueSchema(child),
+            enumerable: true,
+            configurable: true,
+            writable: true,
+          });
         }
         result.properties = properties;
         if (required.size > 0) result.required = [...required];
@@ -172,14 +177,15 @@ export const OUTPUT_SCHEMA = {
   required: ["content"],
 };
 
-/** Render a bridged tool value to the model-visible text. */
+/** Render a bridged tool value to DSH model-visible content blocks. */
 export function renderToolValue(value) {
   const content = Array.isArray(value?.content) ? value.content : [];
-  const text = content
+  const blocks = content
     .filter((item) => item?.type === "text" && typeof item.text === "string")
-    .map((item) => item.text)
-    .join("\n");
-  return text.length === 0 ? "(no output)" : text;
+    .map((item) => ({ type: "text", text: item.text }));
+  return blocks.length === 0
+    ? [{ type: "text", text: "(no output)" }]
+    : blocks;
 }
 
 /** Walk a translated schema and confirm only supported keys remain. */

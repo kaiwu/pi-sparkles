@@ -39,6 +39,7 @@ import {
   DSH_OUTPUT_DIR,
   DSH_PACKAGE_NAME,
   DSH_PLUGIN_NAME,
+  DSH_RUNTIME_PEERS,
   buildDshBundle,
   dshBundlePlan,
   verifyDshBundle,
@@ -49,10 +50,7 @@ import { readTierManifest } from "./tiers.js";
 const DSH_NPM_RELEASE_SCHEMA_VERSION = 1;
 const DSH_NPM_PACKAGE_NAME = DSH_PACKAGE_NAME;
 const DSH_NPM_REGISTRY = "https://registry.npmjs.org/";
-const DSH_PEERS = {
-  "@deepseek-ai/dsh-tools": "*",
-  "@deepseek-ai/dsh-commands": "*",
-};
+const DSH_PEERS = DSH_RUNTIME_PEERS;
 const DSH_NPM_PACKAGE_FILES = [
   "CHANGELOG.md",
   "CONFIGURATION.md",
@@ -136,8 +134,11 @@ function dshPackageReadme(plan) {
 Turn [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) into a
 read-only finance evidence assistant for mainland China, Hong Kong, and US
 markets. This is the DeepSeek Harness distribution of
-[pi-sparkles](https://github.com/kaiwu/pi-sparkles): all ${plan.plugins.length}
-tools of the ${plan.throughTierId} ledger registered as native Harness tools.
+[pi-sparkles](https://github.com/kaiwu/pi-sparkles): ${plan.plugins.length}
+compatible ${plan.throughTierId} plugin components registered as native Harness
+tools. This package is a \`${plan.maturity}\` and is ${
+    plan.releasable ? "publishable" : "not publishable yet"
+  }.
 
 ## Install
 
@@ -166,8 +167,7 @@ SEC fundamentals and cite the evidence\`.
 
 ## Setup
 
-The only required variable is a contact address identifying your requests to
-public data services:
+Public-data adapters that identify callers require a contact address:
 
 \`\`\`sh
 AGENT_CONTACT="you@example.com"
@@ -175,23 +175,27 @@ AGENT_CONTACT="you@example.com"
 
 Optional provider credentials: \`TUSHARE_TOKEN\` (CN), \`ALPACA_API_KEY_ID\` and
 \`ALPACA_API_SECRET_KEY\` (US), \`OPENFIGI_API_KEY\`, \`TWELVE_DATA_API_KEY\`,
-and \`FRED_API_KEY\`. Credentials stay in your runtime environment and are never
-read, written, or persisted by this package.
+and \`FRED_API_KEY\`. Credentials are read only from your runtime environment;
+they are never written, logged, or persisted by this package. Restart DSH after
+changing environment configuration because some adapters initialize at boot.
 
 ## Boundaries
 
-dsh-sparkles ships the Pi ledger minus the Pi-specific plugins listed in
-\`CONFIGURATION.md\` (the TUI statusline/track-navigation plugin is excluded;
-DSH-dedicated replacements are added separately). It is read-only: no plugin can
+dsh-sparkles ships the Pi ledger minus the Pi-specific or process-global state
+shells listed in \`CONFIGURATION.md\`. Their pure cores remain reusable, while
+DSH-native per-agent replacements belong in a separate bundle lane. It is
+read-only: no plugin can
 place, route, cancel, replace, or otherwise mutate a paper or live order.
 Provider identity, entitlement, and completeness are never authenticated by
 this package; providers, gateways,
 SDKs, credentials, and live certification are caller-owned runtime inputs.
-Session persistence is in-memory per process. It is not investment, legal,
-accounting, or tax advice. See \`CONFIGURATION.md\` for the source and
+Compatible custom entries use the invoking DSH agent's own session log. Pi
+inline images are omitted because DSH images require host attachment references;
+their text and structured details remain available. It is not investment,
+legal, accounting, or tax advice. See \`CONFIGURATION.md\` for the source and
 configuration reference.
 
-Version ${version} · ${plan.throughTierId} · ${plan.plugins.length} tools
+Version ${version} · ${plan.throughTierId} · ${plan.plugins.length} plugin components
 `;
 }
 
@@ -204,7 +208,7 @@ function dshNpmManifest(plan) {
     name: DSH_NPM_PACKAGE_NAME,
     version: plan.packageVersion,
     description:
-      "All-in-one DeepSeek Harness finance plugin: pi-sparkles quotes, filings, fundamentals, portfolio, quant, and tape review as native tools",
+      "DeepSeek Harness finance plugin: compatible pi-sparkles evidence tools with an independently gated DSH host shell",
     private: !plan.releasable,
     type: "module",
     main: "./index.js",
@@ -236,6 +240,10 @@ function dshNpmManifest(plan) {
     dshSparkles: {
       aggregateThrough: plan.throughTierId,
       maturity: plan.maturity,
+      piAggregateMaturity: plan.piAggregateMaturity ?? plan.maturity,
+      dshReleaseStatus: plan.dshRelease?.status ??
+        (plan.releasable ? "product_useful" : "preview"),
+      dshBlockerCount: (plan.dshBlockers ?? []).length,
       pluginCount: plan.plugins.length,
       omittedProposalCount: plan.omittedProposals.length,
       partialImplementationCount: plan.partialImplementations.length,
@@ -265,6 +273,12 @@ function dshReleaseLock(plan, packageDirectory) {
     package: { name: DSH_NPM_PACKAGE_NAME, version: plan.packageVersion },
     throughTierId: plan.throughTierId,
     maturity: plan.maturity,
+    piAggregateMaturity: plan.piAggregateMaturity ?? plan.maturity,
+    dshRelease: plan.dshRelease ?? {
+      status: plan.releasable ? "product_useful" : "preview",
+      reason: null,
+    },
+    dshBlockers: plan.dshBlockers ?? [],
     publishable: plan.releasable,
     pluginCount: plan.plugins.length,
     excludedPiProposals: plan.excludedPiProposals ?? [],
@@ -346,9 +360,7 @@ export function dshNpmPackagePlan(
   manifest,
   throughTierId = DEFAULT_AGGREGATE_TARGET,
 ) {
-  // dshBundlePlan re-reads the tier manifest itself; the `manifest` argument
-  // mirrors the Pi packager's signature for callers that already hold one.
-  const bundle = dshBundlePlan(throughTierId);
+  const bundle = dshBundlePlan(throughTierId, manifest);
   return {
     ...bundle,
     npmPackageName: DSH_NPM_PACKAGE_NAME,
@@ -391,6 +403,11 @@ export function verifyDshNpmPackageDirectory(directory, expectedPlan) {
     manifest.engines?.node !== ">=22.19.0" ||
     manifest.dependencies?.["pdfjs-dist"] !== expectedPdfVersion ||
     JSON.stringify(manifest.peerDependencies) !== JSON.stringify(DSH_PEERS) ||
+    lock.maturity !== manifest.dshSparkles?.maturity ||
+    lock.piAggregateMaturity !== manifest.dshSparkles?.piAggregateMaturity ||
+    lock.dshRelease?.status !== manifest.dshSparkles?.dshReleaseStatus ||
+    (lock.dshBlockers ?? []).length !==
+      manifest.dshSparkles?.dshBlockerCount ||
     manifest.scripts !== undefined ||
     lock.lifecycleScriptsIncluded !== false ||
     lock.credentialValuesIncluded !== false ||
@@ -409,6 +426,13 @@ export function verifyDshNpmPackageDirectory(directory, expectedPlan) {
   if (
     bundleLock.target !== lock.throughTierId ||
     bundleLock.pluginCount !== lock.pluginCount ||
+    bundleLock.maturity !== lock.maturity ||
+    bundleLock.piAggregateMaturity !== lock.piAggregateMaturity ||
+    JSON.stringify(bundleLock.dshRelease ?? {}) !==
+      JSON.stringify(lock.dshRelease ?? {}) ||
+    JSON.stringify(bundleLock.dshBlockers ?? []) !==
+      JSON.stringify(lock.dshBlockers ?? []) ||
+    bundleLock.publishable !== lock.publishable ||
     bundleLock.indexSha256 !== sha256File(join(root, "index.js")) ||
     lock.sourceBundle.bundleSha256 !== sha256File(join(root, "index.js")) ||
     lock.sourceBundle.dshLockSha256 !== sha256File(join(root, "dsh-lock.json")) ||
@@ -426,6 +450,13 @@ export function verifyDshNpmPackageDirectory(directory, expectedPlan) {
       lock.pluginCount !== expectedPlan.plugins.length ||
       manifest.dshSparkles?.aggregateThrough !== expectedPlan.throughTierId ||
       manifest.dshSparkles?.maturity !== expectedPlan.maturity ||
+      manifest.dshSparkles?.piAggregateMaturity !==
+        (expectedPlan.piAggregateMaturity ?? expectedPlan.maturity) ||
+      manifest.dshSparkles?.dshReleaseStatus !==
+        (expectedPlan.dshRelease?.status ??
+          (expectedPlan.releasable ? "product_useful" : "preview")) ||
+      manifest.dshSparkles?.dshBlockerCount !==
+        (expectedPlan.dshBlockers ?? []).length ||
       manifest.dshSparkles?.pluginCount !== expectedPlan.plugins.length ||
       manifest.dshSparkles?.omittedProposalCount !== expectedPlan.omittedProposals.length ||
       manifest.dshSparkles?.partialImplementationCount !==
@@ -716,7 +747,7 @@ export async function buildDshNpmRelease(
     outputDirectory ?? plan.npmOutputDirectory,
   );
   console.log(
-    `${summary.throughTierId} dsh-sparkles npm package: ${summary.tarball} (${summary.pluginCount} tools${summary.publishable ? ", publish-ready" : ", blocked preview"})`,
+    `${summary.throughTierId} dsh-sparkles npm package: ${summary.tarball} (${summary.pluginCount} plugin components${summary.publishable ? ", publish-ready" : ", blocked preview"})`,
   );
   return summary;
 }
@@ -812,7 +843,7 @@ const loaded = await import(pathToFileURL(process.argv[1]).href);
 const plugin = loaded.default;
 if (typeof plugin?.apply !== "function") throw new Error("entrypoint has no apply");
 if (plugin.name !== "dsh-sparkles") throw new Error("unexpected plugin name: " + plugin.name);
-if (JSON.stringify(plugin.inject) !== JSON.stringify(["tools", "commands"])) throw new Error("unexpected inject: " + JSON.stringify(plugin.inject));`,
+if (JSON.stringify(plugin.inject) !== JSON.stringify(["tools", "commands", "agents"])) throw new Error("unexpected inject: " + JSON.stringify(plugin.inject));`,
           entrypoint,
         ],
         { cwd: installation },

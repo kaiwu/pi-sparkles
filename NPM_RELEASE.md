@@ -109,36 +109,41 @@ pi install npm:@pi-sparkles/pi-sparkles@0.1.5
 
 # DeepSeek Harness release — @dsh-sparkles/dsh-sparkles
 
-The DeepSeek Harness distribution is a separate npm identity built from the
-same T1–T6 ledger. It is an npm bundle whose manifest declares
-`dsh.bundle.patch`, installed with `dsh plugin`:
+The DeepSeek Harness distribution is a separate npm identity and release gate.
+It reuses compatible T1–T6 functional cores/effect shells, declares
+`dsh.bundle.patch`, and is installed with `dsh plugin`:
 
 ```sh
 bun run dsh:bundle                      # dist/dsh/dsh-sparkles (all-in-one plugin)
 bun run dsh:npm:pack                    # content-lock and pack the tarball, never publish
-bun run dsh:npm:release:verify          # workflow tests + install smoke + publish dry-run + registry check
-dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles
+bun run dsh:verify                      # real schema + generated ToolRuntime execution
+bun run dsh:npm:preview:verify          # allowed private-preview gate
+dsh plugin --profile <name> add ./dist/dsh/dsh-sparkles
 ```
 
 The packed package has one self-contained entrypoint registering the included
 tools through `ctx.tools` and the finance commands through `ctx.commands`. The
-inventory is the Pi ledger minus the Pi-specific plugins listed in
-`dsh/bundle.json` (`exclude_pi`, currently the TUI statusline plugin) plus any
-future `extra_dsh` plugins; the exact excluded/extra lists are recorded in
-`dsh-lock.json` and the manifest's `dshSparkles` section. It declares
-`@deepseek-ai/dsh-tools` and `@deepseek-ai/dsh-commands` as `"*"` peer ranges,
-pins `pdfjs-dist` for the CN PDF CMap runtime resolution, carries the
+inventory is the Pi ledger minus the Pi-specific or DSH-unsafe state shells
+listed with reasons in `dsh/bundle.json`, plus DSH-native Cordis entries from
+the isolated `dsh/plugins/` lane. The exact excluded/extra lists are recorded
+in `dsh-lock.json` and the manifest's `dshSparkles` section. It pins the tested
+`@deepseek-ai/dsh-agent`, `@deepseek-ai/dsh-tools`, and
+`@deepseek-ai/dsh-commands` peers to `0.1.0-rc.6`, pins `pdfjs-dist` for the CN
+PDF CMap runtime resolution, requires Node 22.19+, carries the
 `dsh.bundle.patch` manifest and a content lock (`dsh-lock.json` +
 `release-lock.json` + inner/outer `SHA256SUMS`), and has no lifecycle scripts
 or credential values. The install smoke installs the exact tarball into a clean
 npm prefix, imports the entrypoint to verify its Cordis plugin shape, and
 composes it in an isolated `DSH_HOME` profile with the real `dsh` CLI.
 
-Publication is identical in spirit to the Pi line: an npm name/version is
-immutable, the first publication is an authenticated maintainer action, and
-packaging/verification never publish. The explicit first-publish command is:
+The DSH manifest is currently `preview`: four Pi host shells are excluded and
+the DSH role acceptance lane/native session-scoped replacements are incomplete.
+Therefore T5 and T6 pack only as private blocked previews; the publish dry-run,
+registry check, and real publication gate refuse them. Do not run an npm
+publish command until `dsh_release.status` is independently promoted to
+`product_useful` with its acceptance evidence. Packaging/verification never
+publish.
 
 ```sh
-npm publish ./dist/dsh/npm/t6/dsh-sparkles-dsh-sparkles-0.1.5.tgz --access public
+bun run dsh:npm:release:verify          # intentionally refuses while preview
 ```
-

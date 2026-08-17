@@ -1,38 +1,13 @@
 // Pi ExtensionApi facade over DeepSeek Harness services.
 //
-// Every pi-sparkles plugin bundle is a self-contained Pi extension whose
-// `extension(api)` factory calls a small, bounded Pi API surface (verified
-// across all 135 ledger artifacts):
-//
-//   registerTool, registerCommand, on, appendEntry, getActiveTools,
-//   registerFlag, getFlag, sendUserMessage, events
-//
-// plus the remainder of the pi_gleam binding (sendMessage, setSessionName,
-// setLabel, exec, setModel, ...) that no current plugin calls at runtime but
-// the facade still implements so the full binding can never throw.
-//
-// This module maps that surface onto DeepSeek Harness Cordis services
-// (`ctx.tools`, `ctx.commands`) and degrades the rest to bounded,
-// documented behavior:
-//
-//   - tools      -> ctx.tools.register(defineTool-shape definition) with the
-//                   Pi parameters schema translated to the DSH author dialect
-//                   (schema-translate.mjs) and results rendered to text;
-//   - commands   -> ctx.commands.register with Pi handlers wrapped to return
-//                   the DSH CommandResult contract; sendUserMessage calls made
-//                   inside the handler become the command's success text;
-//   - flags      -> registered defaults, overridable via the bundle config
-//                   `flags` map (and the PI_SPARKLES_FLAG_<NAME> env var);
-//   - events     -> a local bus; `session_start` fires once at plugin apply so
-//                   plugins initialize with defaults, `session_shutdown` fires
-//                   when the root context is disposed, `before_agent_start` is
-//                   never fired (DSH owns its system prompt);
-//   - appendEntry -> a shared in-memory custom-entry store that the synthetic
-//                   sessionManager exposes (getBranch/getEntries), so
-//                   append/read stays coherent inside one process; persistence
-//                   across restarts is not claimed;
-//   - ui/session/prompt surfaces -> explicit no-ops (hasUI is false).
+// This is deliberately a compatibility shell, not a second implementation of
+// finance behavior. Included Pi extensions keep using their compiled Gleam
+// functional cores while host-owned effects are mapped onto the exact DSH
+// invocation, agent, and session. Pi-only effects fail explicitly so a future
+// plugin cannot appear to work by falling through a synthetic no-op.
 
+import { AsyncLocalStorage } from "node:async_hooks";
+import { randomUUID } from "node:crypto";
 import {
   OUTPUT_SCHEMA,
   renderToolValue,
@@ -41,7 +16,7 @@ import {
 
 const SESSION_START = "session_start";
 const SESSION_SHUTDOWN = "session_shutdown";
-const BEFORE_AGENT_START = "before_agent_start";
+const DSH_CUSTOM_EVENT = "pi-sparkles/custom";
 
 /** A minimal EventBus matching pi_gleam's `events(api)` contract. */
 class EventBus {
@@ -69,292 +44,387 @@ class EventBus {
   }
 }
 
-/** Build the synthetic Pi Context handed to plugin callbacks. */
-function syntheticContext({ signal, sessionStore, bus } = {}) {
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function unsupported(name) {
+  throw new Error(`dsh-sparkles: Pi API ${name} is not supported by the DSH adapter`);
+}
+
+function currentAgent(storage, operation) {
+  const agent = storage.getStore()?.agent;
+  if (!agent?.session) {
+    throw new Error(
+      `dsh-sparkles: ${operation} requires an active DSH agent/session invocation`,
+    );
+  }
+  return agent;
+}
+
+function customEntries(agent) {
+  const events = Array.isArray(agent?.session?.events)
+    ? agent.session.events
+    : [...(agent?.session?.events ?? [])];
+  return events
+    .filter(
+      (event) =>
+        event?.type === DSH_CUSTOM_EVENT &&
+        isRecord(event.data) &&
+        typeof event.data.customType === "string",
+    )
+    .map((event) => ({
+      type: "custom",
+      id: `dsh:${String(agent.session.id)}:${String(event.seq)}`,
+      parentId: null,
+      timestamp: new Date(event.time).toISOString(),
+      customType: event.data.customType,
+      data: event.data.data,
+    }));
+}
+
+function invocationUi(storage) {
+  const notify = (message, kind = "info") => {
+    const invocation = storage.getStore();
+    if (!invocation) {
+      throw new Error("dsh-sparkles: UI notification occurred outside a DSH invocation");
+    }
+    invocation.notifications.push({ message: String(message), kind: String(kind) });
+  };
+  const reject = (name) => () => unsupported(`ui.${name}`);
+  return {
+    notify,
+    select: reject("select"),
+    confirm: reject("confirm"),
+    input: reject("input"),
+    setStatus: reject("setStatus"),
+    setWorkingMessage: reject("setWorkingMessage"),
+    setWorkingVisible: reject("setWorkingVisible"),
+    setHiddenThinkingLabel: reject("setHiddenThinkingLabel"),
+    setWidget: reject("setWidget"),
+    setTitle: reject("setTitle"),
+    pasteToEditor: reject("pasteToEditor"),
+    setEditorText: reject("setEditorText"),
+    getEditorText: reject("getEditorText"),
+    editor: reject("editor"),
+    setTheme: reject("setTheme"),
+    getAllThemes: reject("getAllThemes"),
+    getToolsExpanded: reject("getToolsExpanded"),
+    setToolsExpanded: reject("setToolsExpanded"),
+  };
+}
+
+/** Build the Pi Context handed to one exact DSH invocation or lifecycle hook. */
+function bridgedContext({ storage, signal, bus }) {
+  const agent = storage.getStore()?.agent;
+  const session = agent?.session;
+  const cwd = session?.header?.cwd ?? process.cwd();
   const sessionManager = {
-    getCwd: () => process.cwd(),
-    getSessionDir: () => process.cwd(),
-    getSessionId: () => "dsh-sparkles",
+    getCwd: () => cwd,
+    getSessionDir: () => cwd,
+    getSessionId: () => (session ? String(session.id) : "dsh-unbound"),
     getSessionFile: () => null,
-    getLeafId: () => null,
-    getEntries: () => sessionStore.getEntries(),
-    getBranch: () => sessionStore.getBranch(),
-    buildContextEntries: () => sessionStore.getBranch(),
+    getLeafId: () => (session?.events?.length ? `dsh:${String(session.id)}:${session.events.at(-1).seq}` : null),
+    getEntries: () => (agent ? customEntries(agent) : []),
+    getBranch: () => (agent ? customEntries(agent) : []),
+    buildContextEntries: () => (agent ? customEntries(agent) : []),
   };
   return {
-    cwd: process.cwd(),
+    cwd,
     mode: "dsh",
-    hasUI: false,
-    ui: undefined,
+    hasUI: true,
+    ui: invocationUi(storage),
     signal,
     sessionManager,
     events: bus,
-    isIdle: () => true,
-    isProjectTrusted: () => true,
-    hasPendingMessages: () => false,
-    getSystemPrompt: () => "",
+    isIdle: () => unsupported("context.isIdle"),
+    isProjectTrusted: () => false,
+    hasPendingMessages: () => unsupported("context.hasPendingMessages"),
+    getSystemPrompt: () => unsupported("context.getSystemPrompt"),
     getContextUsage: () => null,
-    scopedModels: undefined,
-    abort: () => {},
-    shutdown: () => {},
-    compact: () => {},
-    waitForIdle: async () => {},
-    newSession: async () => {},
-    fork: async () => {},
-    navigateTree: async () => {},
-    switchSession: async () => {},
-    reload: async () => {},
+    scopedModels: [],
+    abort: () => unsupported("context.abort"),
+    shutdown: () => unsupported("context.shutdown"),
+    compact: () => unsupported("context.compact"),
+    waitForIdle: async () => unsupported("context.waitForIdle"),
+    newSession: async () => unsupported("context.newSession"),
+    fork: async () => unsupported("context.fork"),
+    navigateTree: async () => unsupported("context.navigateTree"),
+    switchSession: async () => unsupported("context.switchSession"),
+    reload: async () => unsupported("context.reload"),
   };
 }
 
-/** Shared in-memory custom-entry store (entry shape matches Pi's decoder). */
-class SessionStore {
-  #entries = [];
-
-  append(customType, data) {
-    const id = `pi-sparkles-${this.#entries.length + 1}`;
-    const entry = {
-      type: "custom",
-      id,
-      parentId: null,
-      timestamp: new Date().toISOString(),
-      customType,
-      data,
-    };
-    this.#entries.push(entry);
-    return entry;
-  }
-
-  getBranch() {
-    return [...this.#entries];
-  }
-
-  getEntries() {
-    return [...this.#entries];
-  }
+function messageForDsh(content) {
+  return Object.freeze({
+    id: randomUUID(),
+    role: "user",
+    content: Object.freeze([{ type: "text", text: String(content) }]),
+    source: Object.freeze({ kind: "plugin", plugin: "dsh-sparkles" }),
+  });
 }
 
-/** Track one in-flight sendUserMessage capture inside a command/tool call. */
-class MessageCapture {
-  #messages = [];
+function notificationText(notifications) {
+  const text = notifications.map(({ message }) => message).join("\n");
+  return text.length > 0 ? text : undefined;
+}
 
-  push(content) {
-    this.#messages.push(content);
+/**
+ * Normalize a Pi ToolResult to the JSON value owned by the DSH tool schema.
+ * Pi's inline base64 image blocks are not DSH ImageBlocks (which reference a
+ * host attachment), so they are intentionally omitted. The accompanying text
+ * and structured details remain available; a native DSH chart shell can add
+ * attachment-backed presentation later.
+ */
+export function normalizeToolResult(value, notifications = []) {
+  if (!isRecord(value) || !Array.isArray(value.content)) {
+    throw new TypeError("dsh-sparkles: Pi tool returned an invalid ToolResult");
   }
-
-  take() {
-    const text = this.#messages.join("\n");
-    this.#messages = [];
-    return text.length === 0 ? undefined : text;
+  const content = [];
+  for (const block of value.content) {
+    if (!isRecord(block) || typeof block.type !== "string") {
+      throw new TypeError("dsh-sparkles: Pi tool returned an invalid content block");
+    }
+    if (block.type === "text" && typeof block.text === "string") {
+      content.push({ type: "text", text: block.text });
+    } else if (
+      block.type !== "image" ||
+      typeof block.data !== "string" ||
+      typeof block.mimeType !== "string"
+    ) {
+      throw new TypeError(
+        `dsh-sparkles: Pi content block '${block.type}' has no safe DSH projection`,
+      );
+    }
   }
+  for (const { message } of notifications) {
+    content.push({ type: "text", text: message });
+  }
+  return {
+    content,
+    ...(Object.hasOwn(value, "details") ? { details: value.details } : {}),
+  };
 }
 
 /**
  * Create the Pi ExtensionApi facade backed by a DSH Cordis context.
  * @param {object} options
- * @param {object} options.ctx - the Cordis context (services: tools, commands).
+ * @param {object} options.ctx - Cordis context with tools and commands.
  * @param {object} [options.config] - bundle config ({ flags?: Record<string,string> }).
- * @param {(message: string) => void} [options.log] - diagnostic sink.
+ * @param {(message: string, error?: unknown) => void} [options.log] - diagnostics.
  */
 export function createPiApi({ ctx, config = {}, log = console.warn }) {
   const flags = new Map();
   const configFlags = isRecord(config.flags) ? config.flags : {};
   const registeredToolNames = [];
   const bus = new EventBus();
-  const sessionStore = new SessionStore();
-  const capture = new MessageCapture();
+  const invocations = new AsyncLocalStorage();
   const sessionStart = new Set();
   const sessionShutdown = new Set();
-  const beforeAgentStart = new Set();
-  const otherEvents = new Map();
 
   const flagNameEnv = (name) =>
     `PI_SPARKLES_FLAG_${name.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase()}`;
+  const invocationContext = (signal) =>
+    bridgedContext({ storage: invocations, signal, bus });
+  const runWithAgent = (agent, signal, action) =>
+    invocations.run({ agent, signal, notifications: [] }, action);
 
   const api = {
-    // ── tools ───────────────────────────────────────────────────────────────
     registerTool(definition) {
       if (!isRecord(definition) || typeof definition.name !== "string") {
         throw new TypeError("dsh-sparkles: registerTool requires a definition with a name");
       }
       const { name, description = "", promptSnippet = "", parameters, execute } = definition;
-      const params = translateParameters(parameters);
       const tool = {
         name,
         description:
           typeof promptSnippet === "string" && promptSnippet.length > 0
             ? `${description}\n\n${promptSnippet}`
             : description,
-        parameters: params,
+        parameters: translateParameters(parameters),
         output: {
           schema: OUTPUT_SCHEMA,
-          render: (args, value) => renderToolValue(value),
+          render: (_args, value) => renderToolValue(value),
         },
-        ...definition.executionMode === "parallel"
+        ...(definition.executionMode === "parallel"
           ? { isConcurrencySafe: () => true }
-          : {},
+          : {}),
         async execute(args, exec) {
           if (typeof execute !== "function") {
             throw new Error(`dsh-sparkles: tool ${name} has no execute callback`);
           }
-          const context = syntheticContext({
-            signal: exec?.signal,
-            sessionStore,
-            bus,
-          });
-          const value = await execute("", args, exec?.signal, noopUpdates, context);
-          const sent = capture.take();
-          if (sent !== undefined && isRecord(value)) {
-            return { ...value, content: [...(value.content ?? []), { type: "text", text: sent }] };
+          if (exec?.callId === undefined || exec?.signal === undefined) {
+            throw new Error(`dsh-sparkles: tool ${name} requires a DSH ToolRunContext`);
           }
-          return value;
+          return runWithAgent(exec.agent, exec.signal, async () => {
+            const value = await execute(
+              String(exec.callId),
+              args,
+              exec.signal,
+              noopUpdates,
+              invocationContext(exec.signal),
+            );
+            if (value?.terminate === true) exec.concludeTurn?.();
+            return normalizeToolResult(value, invocations.getStore().notifications);
+          });
         },
       };
       ctx.tools.register(tool);
       registeredToolNames.push(name);
     },
 
-    // ── commands ────────────────────────────────────────────────────────────
     registerCommand(name, { description, handler } = {}) {
+      if (typeof handler !== "function") {
+        throw new TypeError(`dsh-sparkles: command ${name} has no handler`);
+      }
       ctx.commands.register({
         name,
         description,
         handler: async (invocation) => {
-          let text;
           try {
-            await handler(invocation?.rawInput ?? "", syntheticContext({ signal: invocation?.signal, sessionStore, bus }));
-            text = capture.take();
+            return await runWithAgent(invocation?.agent, invocation?.signal, async () => {
+              await handler(
+                invocation?.rawInput ?? "",
+                invocationContext(invocation?.signal),
+              );
+              const text = notificationText(invocations.getStore().notifications);
+              return { kind: "success", ...(text !== undefined ? { text } : {}) };
+            });
           } catch (error) {
             return {
               kind: "error",
               text: error instanceof Error ? error.message : String(error),
             };
           }
-          return { kind: "success", ...(text !== undefined ? { text } : {}) };
         },
       });
     },
 
-    registerShortcut() {},
+    registerShortcut() {
+      unsupported("registerShortcut");
+    },
 
-    // ── flags ───────────────────────────────────────────────────────────────
     registerFlag(name, { description, type = "string", default: defaultValue } = {}) {
       flags.set(name, { description, type, default: defaultValue });
     },
 
     getFlag(name) {
       const envName = flagNameEnv(name);
-      if (typeof process !== "undefined" && process.env?.[envName] !== undefined) {
-        return process.env[envName];
-      }
+      if (process.env?.[envName] !== undefined) return process.env[envName];
       if (Object.hasOwn(configFlags, name)) return configFlags[name];
-      const flag = flags.get(name);
-      return flag?.default;
+      return flags.get(name)?.default;
     },
 
-    // ── session / entries ───────────────────────────────────────────────────
     appendEntry(customType, data) {
-      sessionStore.append(customType, data);
+      const agent = currentAgent(invocations, "appendEntry");
+      agent.session.append(DSH_CUSTOM_EVENT, { customType, data });
     },
 
-    sendUserMessage(content, { deliverAs } = {}) {
-      capture.push(String(content));
+    sendUserMessage(content, { deliverAs = "followUp" } = {}) {
+      const agent = currentAgent(invocations, "sendUserMessage");
+      const message = messageForDsh(content);
+      if (deliverAs === "followUp") agent.followup(message);
+      else if (deliverAs === "steer") agent.steer(message);
+      else throw new Error(`dsh-sparkles: unsupported Pi delivery mode '${deliverAs}'`);
     },
 
-    sendMessage() {},
-
-    setSessionName() {},
+    sendMessage() {
+      unsupported("sendMessage");
+    },
+    setSessionName() {
+      unsupported("setSessionName");
+    },
     getSessionName() {
-      return undefined;
+      unsupported("getSessionName");
     },
-    setLabel() {},
-    clearLabel() {},
+    setLabel() {
+      unsupported("setLabel");
+    },
+    clearLabel() {
+      unsupported("clearLabel");
+    },
 
     getActiveTools() {
       return [...registeredToolNames];
     },
-    setActiveTools() {},
+    setActiveTools() {
+      unsupported("setActiveTools");
+    },
     getAllTools() {
-      return [];
+      unsupported("getAllTools");
     },
     getCommands() {
-      return [];
+      unsupported("getCommands");
     },
-
     getThinkingLevel() {
-      return "medium";
+      unsupported("getThinkingLevel");
     },
-    setThinkingLevel() {},
-    setModel() {
-      return Promise.resolve(true);
+    setThinkingLevel() {
+      unsupported("setThinkingLevel");
+    },
+    async setModel() {
+      unsupported("setModel");
     },
 
-    // ── events ──────────────────────────────────────────────────────────────
     events: bus,
 
     on(event, handler) {
       if (typeof handler !== "function") return () => {};
-      if (event === SESSION_START) sessionStart.add(handler);
-      else if (event === SESSION_SHUTDOWN) sessionShutdown.add(handler);
-      else if (event === BEFORE_AGENT_START) beforeAgentStart.add(handler);
-      else {
-        if (!otherEvents.has(event)) otherEvents.set(event, new Set());
-        otherEvents.get(event).add(handler);
-      }
-      return () => {
-        sessionStart.delete(handler);
-        sessionShutdown.delete(handler);
-        beforeAgentStart.delete(handler);
-        otherEvents.get(event)?.delete(handler);
-      };
+      let listeners;
+      if (event === SESSION_START) listeners = sessionStart;
+      else if (event === SESSION_SHUTDOWN) listeners = sessionShutdown;
+      else unsupported(`on('${event}')`);
+      listeners.add(handler);
+      return () => listeners.delete(handler);
     },
 
-    registerProvider() {},
-    unregisterProvider() {},
-
-    registerMessageRenderer() {},
-    registerEntryRenderer() {},
-    registerMarkdownTransformer() {},
-
+    registerProvider() {
+      unsupported("registerProvider");
+    },
+    unregisterProvider() {
+      unsupported("unregisterProvider");
+    },
+    registerMessageRenderer() {
+      unsupported("registerMessageRenderer");
+    },
+    registerEntryRenderer() {
+      unsupported("registerEntryRenderer");
+    },
+    registerMarkdownTransformer() {
+      unsupported("registerMarkdownTransformer");
+    },
     exec() {
-      return Promise.resolve({ stdout: "", stderr: "", code: 0, killed: false });
+      unsupported("exec");
     },
 
-    // ── plugin-controlled startup/shutdown hooks ────────────────────────────
-    _fireSessionStart() {
-      const context = syntheticContext({ sessionStore, bus });
-      for (const handler of sessionStart) {
-        runEventHook("session_start", handler, { reason: "startup" }, context, log);
-      }
+    async _fireSessionStart(agent, reason = "startup") {
+      await runWithAgent(agent, undefined, async () => {
+        const context = invocationContext(undefined);
+        for (const handler of sessionStart) {
+          await runEventHook("session_start", handler, { reason }, context, log);
+        }
+      });
     },
 
-    _fireSessionShutdown() {
-      const context = syntheticContext({ sessionStore, bus });
-      for (const handler of sessionShutdown) {
-        runEventHook("session_shutdown", handler, { reason: "shutdown" }, context, log);
-      }
+    async _fireSessionShutdown(agent, reason = "quit") {
+      await runWithAgent(agent, undefined, async () => {
+        const context = invocationContext(undefined);
+        for (const handler of sessionShutdown) {
+          await runEventHook("session_shutdown", handler, { reason }, context, log);
+        }
+      });
     },
   };
 
   return api;
 }
 
-/** Invoke one Pi event hook, absorbing both sync throws and promise rejections. */
-function runEventHook(event, handler, payload, context, log) {
+async function runEventHook(event, handler, payload, context, log) {
   try {
-    const result = handler(payload, context);
-    if (result !== undefined && typeof result?.then === "function") {
-      result.catch((error) => {
-        log(`[dsh-sparkles] ${event} handler rejected:`, error);
-      });
-    }
+    await handler(payload, context);
   } catch (error) {
-    log(`[dsh-sparkles] ${event} handler threw:`, error);
+    log(`[dsh-sparkles] ${event} handler failed:`, error);
   }
-}
-
-function isRecord(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function noopUpdates() {}

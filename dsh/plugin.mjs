@@ -3,10 +3,11 @@
 // The bundler (scripts/dsh-bundle.js) generates an entry that imports every
 // compiled Pi plugin bundle and calls createPlugin with the ordered
 // `[shortName, extensionFactory]` list. The resulting Cordis plugin mounts a
-// Pi ExtensionApi facade (pi-api.mjs) over the Harness `ctx`, runs every
-// extension factory once, and fires the `session_start` hook so plugins
-// initialize with defaults. Registration collisions are detected per plugin
-// with the same named-registration guard the Pi aggregate uses.
+// Pi ExtensionApi facade (pi-api.mjs) over the Harness `ctx` and runs every
+// extension factory once. Pi session lifecycle hooks follow DSH agent/session
+// events; they are never synthesized at process/plugin scope. Registration
+// collisions are detected per plugin with the same named-registration guard
+// the Pi aggregate uses.
 
 import { createPiApi } from "./pi-api.mjs";
 
@@ -52,17 +53,30 @@ function scopedApi(api, pluginName, registrations) {
  * Build the Cordis plugin object.
  * @param {Array<[string, (api: object) => Promise<void>]>} extensions
  *   ordered `[pluginShortName, extensionFactory]` entries.
+ * @param {Array<[string, object|Function]>|string} dshExtensionsOrName
+ *   DSH-native Cordis plugins, or the plugin name for the legacy two-argument form.
  * @param {string} pluginName - Cordis plugin name.
  * @returns the Cordis plugin `{ name, inject, apply }`.
  */
-export function createPlugin(extensions, pluginName = "dsh-sparkles") {
+export function createPlugin(
+  extensions,
+  dshExtensionsOrName = [],
+  pluginName = "dsh-sparkles",
+) {
+  const dshExtensions = Array.isArray(dshExtensionsOrName)
+    ? dshExtensionsOrName
+    : [];
+  const resolvedPluginName =
+    typeof dshExtensionsOrName === "string"
+      ? dshExtensionsOrName
+      : pluginName;
   const debug = typeof process !== "undefined" && process.env?.DSH_PI_SPARKLES_DEBUG === "1";
   const trace = (...args) => {
     if (debug) console.error("[dsh-sparkles]", ...args);
   };
   return {
-    name: pluginName,
-    inject: ["tools", "commands"],
+    name: resolvedPluginName,
+    inject: ["tools", "commands", "agents"],
     async apply(ctx, config) {
       const registrations = new Map();
       const api = createPiApi({ ctx, config: config ?? {} });
@@ -73,18 +87,32 @@ export function createPlugin(extensions, pluginName = "dsh-sparkles") {
         trace(`loading ${shortName}`);
         await extension(scopedApi(api, shortName, registrations));
       }
-      ctx.on("dispose", () => {
-        try {
-          api._fireSessionShutdown();
-        } catch {
-          // shutdown hooks are best-effort
+      for (const [shortName, extension] of dshExtensions) {
+        if (
+          typeof extension !== "function" &&
+          (typeof extension !== "object" || extension === null)
+        ) {
+          throw new Error(`${shortName} has no DSH Cordis plugin export`);
         }
+        trace(`loading DSH-native ${shortName}`);
+        const dshConfig = config?.dsh;
+        const extensionConfig =
+          typeof dshConfig === "object" &&
+          dshConfig !== null &&
+          Object.hasOwn(dshConfig, shortName)
+            ? dshConfig[shortName]
+            : {};
+        await ctx.plugin(extension, extensionConfig);
+      }
+      ctx.on("agent/session-start", async ({ agent, source }) => {
+        const reason = source === "resume" ? "resume" : "startup";
+        await api._fireSessionStart(agent, reason);
       });
-      // Pi fires session_start when a session begins; in DSH the plugin owns a
-      // single logical session per process, so fire once after registration.
-      api._fireSessionStart();
+      ctx.on("agent/disposed", async ({ agent }) => {
+        await api._fireSessionShutdown(agent, "quit");
+      });
       trace(
-        `registered ${registrations.size} named registrations from ${extensions.length} extensions`,
+        `registered ${registrations.size} named registrations from ${extensions.length} Pi extensions and ${dshExtensions.length} DSH-native extensions`,
       );
     },
   };

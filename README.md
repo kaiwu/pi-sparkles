@@ -160,8 +160,9 @@ index: [plugins/README.md](plugins/README.md). Binding surface:
 | `bun run aggregate:build -- [T5\|T6]` | one Pi entrypoint; T6 is T1–T6 |
 | `bun run npm:pack -- [T5\|T6]` | all-in-one npm tarball, no publish |
 | `bun run dsh:bundle -- [T5\|T6]` | all-in-one DeepSeek Harness plugin (dist/dsh/dsh-sparkles) |
-| `bun run dsh:verify` | schema bridge vs the real dsh-tools validator |
+| `bun run dsh:verify` | schema + generated-bundle execution against the installed DSH runtime |
 | `bun run dsh:npm:pack -- [T5\|T6]` | `@dsh-sparkles/dsh-sparkles` npm tarball, no publish |
+| `bun run dsh:npm:preview:verify` | DSH adapter tests + private npm install/real-runtime smoke |
 | `bun run check` | format and warnings-as-errors for every package |
 | `bun run build [-- name]` | diagnostic plugin bundle |
 | `bun run test:unit [-- name]` | Gleam tests |

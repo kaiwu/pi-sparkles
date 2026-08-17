@@ -5,6 +5,18 @@ follow Semantic Versioning. The exact tier, plugin inventory, maturity, and
 content hashes remain authoritative in each tarball's `dsh-lock.json` and
 `release-lock.json`.
 
+## Unreleased
+
+- Correct DSH tool rendering to return `ContentBlock[]`, forward real call IDs
+  and cancellation, and normalize Pi inline images without forging DSH
+  attachment references.
+- Isolate concurrent invocations and bind queued messages, custom entries, cwd,
+  and lifecycle to the exact DSH agent/session.
+- Exclude the Pi-global `watchlist`, `swing_workbench`, and `portfolio` shells;
+  keep their functional cores reusable for DSH-native per-agent shells.
+- Add an independent blocked-preview release gate, exact rc.6 service peers,
+  stronger bundle locks/checksums, and real ToolRuntime execution verification.
+
 ## 0.1.5 - 2026-08-15
 
 - First DeepSeek Harness distribution of the pi-sparkles T1–T6 ledger: the
