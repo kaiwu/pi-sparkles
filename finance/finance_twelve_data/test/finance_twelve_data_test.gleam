@@ -14,6 +14,13 @@ pub fn main() -> Nil {
 pub fn access_is_opaque_and_authorization_is_secret_test() {
   finance_twelve_data.access("short")
   |> should.equal(Error(finance_twelve_data.InvalidApiKey))
+  let assert Ok(demo) = finance_twelve_data.access("demo")
+  let assert Ok(demo_request) = request.statistics(demo, "AAPL", "XNGS")
+  http_request.headers(demo_request)
+  |> should.equal([
+    http_request.Header("accept", "application/json", http_request.Public),
+    http_request.Header("authorization", "apikey demo", http_request.Secret),
+  ])
   let assert Ok(access) = finance_twelve_data.access("test-api-key-123")
   let assert Ok(value) = request.profile(access, "AAPL", "XNGS")
   http_request.origin(value) |> should.equal("https://api.twelvedata.com")

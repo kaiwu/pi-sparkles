@@ -157,6 +157,15 @@ describe("finance track status binding", () => {
       "A failed optional enrichment is terminal for that dimension",
     );
     expect(result.systemPrompt).toContain(
+      "do not call generic web search in parallel with the controlled acquisition",
+    );
+    expect(result.systemPrompt).toContain(
+      "do not replace it with generic web search, web snippets, browsing, model memory, or an unrequested provider",
+    );
+    expect(result.systemPrompt).toContain(
+      "only when the user explicitly requests them as a distinct source path",
+    );
+    expect(result.systemPrompt).toContain(
       "cn_stock_symbol_search exact-code mode requires a caller-proven venue and TUSHARE_TOKEN",
     );
     expect(result.systemPrompt).toContain(

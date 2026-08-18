@@ -160,7 +160,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     "hk_disclosure_search",
     "HK disclosure search",
     "Search HKEXnews listed-company titles after resolving the exact current-security stock ID; return bounded initial-page metadata and exact PDF identities",
-    "Find Hong Kong issuer announcements and reports without guessing an HKEXnews stock ID",
+    "Find Hong Kong issuer announcements and reports without guessing an HKEXnews stock ID; if this controlled source fails, preserve the result as unavailable instead of substituting generic web evidence",
     tool.parameters(disclosure_schema(), disclosure_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {

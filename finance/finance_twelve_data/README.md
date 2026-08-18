@@ -28,8 +28,12 @@ those omissions and must not turn a matching MIC into exchange proof.
 
 The profile endpoint requires a Twelve Data Grow individual or Venture business
 plan or above. The statistics endpoint requires Pro individual or Venture
-business or above. Access, redistribution, and entitlement remain governed by
-the caller's Twelve Data subscription.
+business or above. Twelve Data's literal public `demo` key is accepted only as
+the provider's trial credential; the live compatibility lane uses it with the
+documented `AAPL` trial symbol against these exact production paths and full
+decoders. That proves current request/response compatibility for the trial
+symbol, not general symbol entitlement. Access, redistribution, and entitlement
+remain governed by the caller's Twelve Data subscription.
 
 ## Sources
 

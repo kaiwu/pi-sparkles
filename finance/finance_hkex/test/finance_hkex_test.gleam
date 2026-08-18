@@ -95,12 +95,18 @@ pub fn public_security_lookup_is_bounded_jsonp_and_exact_test() {
   let assert Ok(query) = security_search.query("00700")
   let assert Ok(request_value) = request.security_prefix(access, query)
   let fixture =
-    "pi_sparkles({\"more\":\"1\",\"stockInfo\":[{\"stockId\":7609,\"code\":\"00700\",\"name\":\"TENCENT\"}]});"
+    "callback({\"more\":\"1\",\"stockInfo\":[{\"stockId\":7609,\"code\":\"00700\",\"name\":\"TENCENT\"}]});"
   let assert Ok([security]) = security_search.decode(fixture)
   let assert Ok(page) = security_search.decode_page(fixture)
 
   http_request.path(request_value) |> should.equal("/search/prefix.do")
   http_request.maximum_response_bytes(request_value) |> should.equal(2_000_000)
+  http_request.query(request_value)
+  |> list.any(fn(parameter) {
+    parameter
+    == http_request.QueryParameter("callback", "callback", http_request.Public)
+  })
+  |> should.be_true
   http_request.query(request_value)
   |> list.any(fn(parameter) {
     parameter
@@ -334,9 +340,9 @@ pub fn board_meeting_decoder_rejects_semantic_and_header_drift_test() {
 
 pub fn current_security_reference_binds_exact_response_and_unknown_claims_test() {
   let fixture =
-    "pi_sparkles({\"more\":\"1\",\"stockInfo\":[{\"stockId\":7609,\"code\":\"00700\",\"name\":\"TENCENT\"}]});"
+    "callback({\"more\":\"1\",\"stockInfo\":[{\"stockId\":7609,\"code\":\"00700\",\"name\":\"TENCENT\"}]});"
   let changed_fixture =
-    "pi_sparkles({\"more\":\"1\",\"stockInfo\":[{\"stockId\":7609,\"code\":\"00700\",\"name\":\"TENCENT HOLDINGS\"}]});"
+    "callback({\"more\":\"1\",\"stockInfo\":[{\"stockId\":7609,\"code\":\"00700\",\"name\":\"TENCENT HOLDINGS\"}]});"
   let assert Ok(query) = security_search.query("00700")
   let assert Ok(response_value) = text_response(fixture)
   let assert Ok(changed_response) = text_response(changed_fixture)
@@ -351,7 +357,7 @@ pub fn current_security_reference_binds_exact_response_and_unknown_claims_test()
   |> should.equal("1")
   current_security_reference.source_reference(reference)
   |> should.equal(
-    "https://www1.hkexnews.hk/search/prefix.do?callback=pi_sparkles&lang=EN&type=A&name=00700&market=SEHK",
+    "https://www1.hkexnews.hk/search/prefix.do?callback=callback&lang=EN&type=A&name=00700&market=SEHK",
   )
   current_security_reference.response_byte_length(reference)
   |> should.equal(string.byte_size(fixture))
@@ -395,7 +401,7 @@ pub fn title_search_preserves_identity_document_and_initial_page_gap_test() {
 pub fn discovery_decoders_reject_wrappers_and_identity_mismatch_test() {
   security_search.query("700")
   |> should.equal(Error(security_search.InvalidCode))
-  security_search.decode("callback({\"more\":\"1\",\"stockInfo\":[]});")
+  security_search.decode("pi_sparkles({\"more\":\"1\",\"stockInfo\":[]});")
   |> should.equal(Error(security_search.InvalidJsonp))
   let assert Ok(plan) = title_search.plan(7609, "00700", 10)
   title_search.decode(

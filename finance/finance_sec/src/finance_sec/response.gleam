@@ -124,9 +124,9 @@ fn recent_columns_decoder() -> decode.Decoder(RecentColumns) {
 }
 
 fn cik_decoder() -> decode.Decoder(Cik) {
-  decode.int
+  decode.string
   |> decode.then(fn(value) {
-    case finance_sec.cik_from_int(value) {
+    case finance_sec.cik(value) {
       Ok(cik) -> decode.success(cik)
       Error(_) -> {
         let assert Ok(placeholder) = finance_sec.cik_from_int(0)
@@ -134,6 +134,18 @@ fn cik_decoder() -> decode.Decoder(Cik) {
       }
     }
   })
+  |> decode.one_of(or: [
+    decode.int
+    |> decode.then(fn(value) {
+      case finance_sec.cik_from_int(value) {
+        Ok(cik) -> decode.success(cik)
+        Error(_) -> {
+          let assert Ok(placeholder) = finance_sec.cik_from_int(0)
+          decode.failure(placeholder, "valid SEC CIK")
+        }
+      }
+    }),
+  ])
 }
 
 fn compare_company(left: Company, right: Company) -> order.Order {

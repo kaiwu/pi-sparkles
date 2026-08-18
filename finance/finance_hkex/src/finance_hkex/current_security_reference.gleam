@@ -202,7 +202,9 @@ fn policy(query_value: Query) -> snapshot.Policy {
 fn exact_source_reference(query_value: Query) -> String {
   request.origin
   <> request.security_prefix_path
-  <> "?callback=pi_sparkles&lang=EN&type=A&name="
+  <> "?callback="
+  <> security_search.callback
+  <> "&lang=EN&type=A&name="
   <> security_search.query_code(query_value)
   <> "&market=SEHK"
 }

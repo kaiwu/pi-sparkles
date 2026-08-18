@@ -6,8 +6,8 @@ import pi/schema
 import pi/tool
 import pi_sparkles_stock_technicals/decode
 import pi_sparkles_stock_technicals/domain
-import pi_sparkles_stock_technicals/handoff
 import pi_sparkles_stock_technicals/return_comparison
+import pi_sparkles_stock_technicals_handoff as handoff
 
 pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
   register_sma(api)

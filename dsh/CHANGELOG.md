@@ -7,6 +7,17 @@ content hashes remain authoritative in each tarball's `dsh-lock.json` and
 
 ## Unreleased
 
+## 0.1.7 - 2026-08-18
+
+- Consume the shared provider-compatibility fixes, including exact Alpaca
+  one-sided quote availability and the current HKEX, SEC, CAPCO, and Twelve
+  Data response contracts, through the same compiled finance cores and Pi
+  shells used by the DSH bridge.
+- Pin and verify the complete DSH service peer graph against
+  `@deepseek-ai/dsh@0.1.0-rc.7` while retaining per-agent state ownership,
+  persisted-session restoration, browser slots, and the independent DSH
+  ProductUseful gate.
+
 ## 0.1.6 - 2026-08-18
 
 - Add the responsive keyed `chart_ohlcv` browser card: inline SVG

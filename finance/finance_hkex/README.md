@@ -10,8 +10,8 @@ pages, preserving the page date and every raw meeting date, short name, printed
 code, purpose, and period row. The normalized five-digit code is additive; the
 printed code remains controlling source data.
 Discovery, documents, the workbook, and recent listings use separate
-path-allowlisted runtimes. Security JSONP must use the pinned callback before
-JSON decoding; title-search and recent-listing HTML must satisfy fixture-tested
+path-allowlisted runtimes. Security JSONP must use the provider's pinned literal
+`callback` before JSON decoding; title-search and recent-listing HTML must satisfy fixture-tested
 identity, table, update-date, and row markers. The adapter exposes at most the
 initial 100 rendered title rows and retains the site's total/truncation receipt.
 

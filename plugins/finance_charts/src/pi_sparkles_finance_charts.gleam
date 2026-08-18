@@ -2,7 +2,7 @@ import gleam/javascript/promise.{type Promise}
 import pi
 import pi/tool
 import pi_sparkles_finance_charts/effect/terminal
-import pi_sparkles_finance_charts/tool_surface
+import pi_sparkles_finance_charts_tool_surface as tool_surface
 
 /// Pi owns the Unicode terminal renderer. The DSH bundle imports the sibling
 /// headless extension and never loads this TUI component.

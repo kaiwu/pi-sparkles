@@ -151,7 +151,11 @@ pub fn security_prefix(
   query: SecurityQuery,
 ) -> Result(request.Request, RequestError) {
   use base <- result.try(discovery_get(access, security_prefix_path, 2_000_000))
-  use callback <- result.try(public_query(base, "callback", "pi_sparkles"))
+  use callback <- result.try(public_query(
+    base,
+    "callback",
+    security_search.callback,
+  ))
   use language <- result.try(public_query(callback, "lang", "EN"))
   use active <- result.try(public_query(language, "type", "A"))
   use named <- result.try(public_query(

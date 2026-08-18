@@ -3,7 +3,7 @@ import gleam/dict.{type Dict}
 import gleam/dynamic/decode
 import gleam/json
 import gleam/list
-import gleam/option.{type Option, None}
+import gleam/option.{type Option, None, Some}
 import gleam/order
 import gleam/string
 
@@ -129,8 +129,12 @@ fn company_concept_decoder() -> decode.Decoder(CompanyConcept) {
   use entity_name <- decode.field("entityName", decode.string)
   use taxonomy_value <- decode.field("taxonomy", decode.string)
   use tag_value <- decode.field("tag", decode.string)
-  use label <- decode.field("label", decode.string)
-  use description <- decode.optional_field("description", "", decode.string)
+  use label <- decode.field("label", nullable_string_decoder())
+  use description <- decode.optional_field(
+    "description",
+    "",
+    nullable_string_decoder(),
+  )
   use units <- decode.field(
     "units",
     decode.dict(decode.string, decode.list(of: fact_decoder())),
@@ -157,8 +161,12 @@ fn company_concept_decoder() -> decode.Decoder(CompanyConcept) {
 }
 
 fn raw_concept_decoder() -> decode.Decoder(RawConcept) {
-  use label <- decode.field("label", decode.string)
-  use description <- decode.optional_field("description", "", decode.string)
+  use label <- decode.field("label", nullable_string_decoder())
+  use description <- decode.optional_field(
+    "description",
+    "",
+    nullable_string_decoder(),
+  )
   use units <- decode.field(
     "units",
     decode.dict(decode.string, decode.list(of: fact_decoder())),
@@ -201,6 +209,16 @@ fn fact_value_decoder() -> decode.Decoder(FactValue) {
 fn scalar_string_decoder() -> decode.Decoder(String) {
   decode.at(["__finance_sec_number__"], decode.string)
   |> decode.one_of(or: [decode.string])
+}
+
+fn nullable_string_decoder() -> decode.Decoder(String) {
+  decode.optional(decode.string)
+  |> decode.map(fn(value) {
+    case value {
+      Some(value) -> value
+      None -> ""
+    }
+  })
 }
 
 fn optional_string_field(

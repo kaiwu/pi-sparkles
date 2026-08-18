@@ -5,6 +5,24 @@ here. Versions follow Semantic Versioning. The exact selected tier, plugin
 inventory, maturity, and content hashes remain authoritative in each tarball's
 `release-lock.json` and `aggregate-lock.json`.
 
+## 0.1.7 - 2026-08-18
+
+- Audit all 45 concrete provider request constructors with bounded live,
+  same-request contract, or exact entitlement evidence; keep the unusually
+  rate-limited Tushare calls one-shot and credential-redacted.
+- Accept HKEXnews' current literal `callback(...)` JSONP wrapper, current SEC
+  string CIK and nullable concept-label shapes, and Twelve Data's official
+  production-host `demo` credential without generic web-search fallback.
+- Preserve Alpaca's closed-session blank-exchange/zero-value no-side sentinel
+  as an explicitly unavailable quote side instead of rejecting the response or
+  presenting zero as a tradable price. The shared typed snapshot is used by
+  both Pi and DSH.
+- Keep `pdfjs-dist` external to Pi bundles so CAPCO's production PDF decoder can
+  resolve its packaged runtime assets.
+- Require controlled provider failures to remain terminal unless the caller
+  explicitly requests a distinct fallback, and require every shared product
+  change to review both Pi and DSH host legs.
+
 ## 0.1.6 - 2026-08-18
 
 - Present Sparkles as one shared finance product with separate host-native npm

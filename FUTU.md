@@ -57,6 +57,32 @@ are plausible inputs. The bounded live baselines recorded below are blocker
 evidence, but their explicit unknowns do not resolve the blocker or constitute
 ProductUseful evidence.
 
+## OpenD listener and rights recheck — passed 2026-08-18 China time
+
+A caller-started OpenD `10.10.7008` was confirmed listening only on
+`127.0.0.1:11111`. The external `FTWebSocket` bridge was started on
+`127.0.0.1:33333` against the exact OpenD PID solely for one current-session
+all-track quote-right recheck. The JavaScript SDK reached the bridge, but its
+initialization callback returned `login_rejected`. In accordance with the
+no-retry rule, the run stopped before protocol `1005` was sent. It made zero
+rights, subscription, history, snapshot, or trade requests and consumed no
+subscription unit. The bridge was stopped immediately; caller-owned OpenD was
+left running.
+
+After the operator explicitly confirmed successful login/readiness, one new
+human-reviewed attempt used the same bounded bridge and exact allowlisted
+protocol. SDK initialization succeeded and the sole protocol-1005 rights
+request returned Level 1 for XSHG and XSHE and Level 2 for XHKG and the generic
+US market surface. The run again made zero subscription, history, snapshot, or
+trade calls, with no retry or reconnect. The bridge was stopped immediately and
+caller-owned OpenD was left running.
+
+This proves current OpenD authentication and the four permission enums. It does
+not establish feed composition, transaction completeness, MIC authentication,
+price, licence, retention, redistribution, sequence/reset/replay semantics, or
+correction/cancel/bust lineage. Those limitations and the separately recorded
+ticker baselines below remain controlling.
+
 ## Futu-first multi-track decision — 2026-08-13
 
 Use Futu as the first explicitly selected real-time transaction-ticker/tape provider for

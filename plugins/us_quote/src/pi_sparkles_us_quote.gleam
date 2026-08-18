@@ -229,6 +229,7 @@ fn limitations(feed: query.Feed) -> List(String) {
     },
     "alpaca_symbol_is_not_authoritative_listing_identity",
     "provider_size_semantics_not_normalized",
+    "provider_may_report_one_side_as_currently_unavailable",
     "freshness_and_latency_not_proven",
     "market_session_not_inferred",
     "redistribution_not_granted_by_plugin",
@@ -238,7 +239,7 @@ fn limitations(feed: query.Feed) -> List(String) {
 
 fn render(
   plan: query.LatestQuoteQuery,
-  value: Observation(finance_quote.Quote),
+  value: Observation(finance_quote.Snapshot),
 ) -> String {
   let quote = value.value
   "US track | Alpaca "
@@ -246,15 +247,15 @@ fn render(
   <> " latest best bid/ask | "
   <> query.quote_symbol(plan)
   <> " | bid "
-  <> finance_quote.raw(finance_quote.price(finance_quote.bid(quote)))
+  <> side_summary(finance_quote.snapshot_bid(quote))
   <> " ask "
-  <> finance_quote.raw(finance_quote.price(finance_quote.ask(quote)))
+  <> side_summary(finance_quote.snapshot_ask(quote))
   <> " USD | freshness unknown"
 }
 
 fn result_json(
   plan: query.LatestQuoteQuery,
-  observed: Observation(finance_quote.Quote),
+  observed: Observation(finance_quote.Snapshot),
   request_id: Option(String),
 ) -> json.Json {
   let value = observed.value
@@ -266,11 +267,14 @@ fn result_json(
         #("route", json.string("direct")),
         #("feed", json.string(query.feed_name(query.quote_feed(plan)))),
         #("symbol", json.string(query.quote_symbol(plan))),
-        #("quoteType", json.string("best_bid_ask_within_selected_feed")),
-        #("currency", json.string(currency.code(finance_quote.currency(value)))),
+        #("quoteType", json.string("latest_quote_with_side_availability")),
+        #(
+          "currency",
+          json.string(currency.code(finance_quote.snapshot_currency(value))),
+        ),
         #(
           "providerTimestamp",
-          json.string(finance_quote.source_timestamp(value)),
+          json.string(finance_quote.snapshot_source_timestamp(value)),
         ),
         #(
           "asOfUnixMilliseconds",
@@ -288,13 +292,33 @@ fn result_json(
             #("reference", json.string(source.reference(observed.source))),
           ]),
         ),
-        #("bid", side_json(finance_quote.bid(value))),
-        #("ask", side_json(finance_quote.ask(value))),
+        #("bid", available_side_json(finance_quote.snapshot_bid(value))),
+        #("ask", available_side_json(finance_quote.snapshot_ask(value))),
+        #(
+          "sideAvailability",
+          json.object([
+            #(
+              "bid",
+              json.string(side_availability(finance_quote.snapshot_bid(value))),
+            ),
+            #(
+              "ask",
+              json.string(side_availability(finance_quote.snapshot_ask(value))),
+            ),
+          ]),
+        ),
+        #(
+          "providerSideSentinels",
+          json.object([
+            #("bid", unavailable_side_json(finance_quote.snapshot_bid(value))),
+            #("ask", unavailable_side_json(finance_quote.snapshot_ask(value))),
+          ]),
+        ),
         #(
           "conditionCodes",
-          json.array(finance_quote.conditions(value), json.string),
+          json.array(finance_quote.snapshot_conditions(value), json.string),
         ),
-        #("tape", json.string(finance_quote.tape(value))),
+        #("tape", json.string(finance_quote.snapshot_tape(value))),
         #("sizeUnit", json.string("provider_reported_unverified")),
         #("freshness", json.string("unknown")),
         #("latency", json.string("unknown")),
@@ -308,6 +332,43 @@ fn result_json(
       ],
     ),
   )
+}
+
+fn side_summary(value: finance_quote.SideAvailability) -> String {
+  case value {
+    finance_quote.AvailableSide(side) ->
+      finance_quote.raw(finance_quote.price(side))
+    finance_quote.UnavailableSide(_, _, _) -> "unavailable"
+  }
+}
+
+fn available_side_json(value: finance_quote.SideAvailability) -> json.Json {
+  case value {
+    finance_quote.AvailableSide(side) -> side_json(side)
+    finance_quote.UnavailableSide(_, _, _) -> json.null()
+  }
+}
+
+fn side_availability(value: finance_quote.SideAvailability) -> String {
+  case value {
+    finance_quote.AvailableSide(_) -> "available"
+    finance_quote.UnavailableSide(_, _, _) -> "unavailable"
+  }
+}
+
+fn unavailable_side_json(value: finance_quote.SideAvailability) -> json.Json {
+  case value {
+    finance_quote.AvailableSide(_) -> json.null()
+    finance_quote.UnavailableSide(exchange_lexeme, price, size) ->
+      json.object([
+        #("reason", json.string("provider_reported_no_current_side")),
+        #("exchangeLexeme", json.string(exchange_lexeme)),
+        #("rawPrice", json.string(finance_quote.raw(price))),
+        #("normalizedPrice", decimal_json(price)),
+        #("rawSize", json.string(finance_quote.raw(size))),
+        #("normalizedSize", decimal_json(size)),
+      ])
+  }
 }
 
 fn side_json(value: finance_quote.Side) -> json.Json {

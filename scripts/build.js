@@ -14,6 +14,8 @@ export const HOST_EXTERNALS = [
   "@earendil-works/pi-ai",
   "@earendil-works/pi-ai/*",
   "@earendil-works/pi-tui",
+  "pdfjs-dist",
+  "pdfjs-dist/*",
   "typebox",
   "typebox/*",
 ];

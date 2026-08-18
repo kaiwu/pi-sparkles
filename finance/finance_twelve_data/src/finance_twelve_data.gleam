@@ -15,7 +15,7 @@ pub type AccessError {
 /// Keep the caller's Twelve Data credential opaque and out of result values.
 pub fn access(api_key: String) -> Result(Access, AccessError) {
   case
-    string.length(api_key) >= 8
+    { api_key == "demo" || string.length(api_key) >= 8 }
     && string.length(api_key) <= 200
     && string.trim(api_key) == api_key
     && {

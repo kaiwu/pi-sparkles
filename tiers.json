@@ -297,7 +297,7 @@
     {
       "id": "T6",
       "name": "Three-track day trader and execution-review product",
-      "status": "product_useful",
+      "status": "verifying",
       "depends_on": ["T1", "T3", "T4"],
       "track_profile": "One composed day-trader acceptance profile with mandatory, separately labelled cn, hk, and us transaction-tape capability-packet legs. Shared workflow laws run once while each fixture-backed track leg independently proves exact market identity, rights declarations, clocks, sequence, conditions, coverage, receipt binding, failure/recovery projection, and unsupported venues. Providers, gateways, SDKs, credentials, and live-provider certification are explicit caller-owned runtime dependencies outside the distribution; no track leg is inferred from another and no provider-by-track matrix is created.",
       "product_outcome": "A CN, HK, or US day trader can inspect an exact bounded transaction-tape packet supplied by an explicit external provider capability, run the shared session workflow, plan and simulate action locally, review applicable read-only account and externally executed order/fill evidence, evaluate supplied track-owned compliance rules, export a non-executable handoff, and reconcile imported or read-only receipts. Every plugin result retains its exact track, venue, provider/feed declaration, entitlement, clocks, conditions, limitations, and content receipt while stating that provider identity and completeness are not authenticated by the package. No plugin bundles or invokes OpenD, a provider SDK, credentials, or a provider adapter; no Pi plugin acquires a stock quote, bid, offer, or order book; and no Pi plugin can place, route, cancel, replace, or otherwise mutate any paper or live order.",

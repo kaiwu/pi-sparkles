@@ -7,9 +7,13 @@ const requests = [];
 
 const quote =
   '{"quotes":{"AAPL":{"ap":189.1200,"as":4,"ax":"V","bp":189.1000,"bs":7,"bx":"V","c":["R"],"t":"2024-08-06T19:59:59.123456789Z","z":"C"}}}';
+const quoteWithoutAsk =
+  '{"quotes":{"AAPL":{"ap":0,"as":0,"ax":" ","bp":290.54,"bs":40,"bx":"V","c":["R"],"t":"2026-08-17T20:00:02.436902433Z","z":"C"}}}';
+let responseBody;
 
 beforeEach(() => {
   requests.length = 0;
+  responseBody = quote;
   process.env.ALPACA_API_KEY_ID = "test-key-id";
   process.env.ALPACA_API_SECRET_KEY = "test-secret-key";
   process.env.AGENT_CONTACT = "market-data@example.test";
@@ -17,7 +21,7 @@ beforeEach(() => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
     requests.push({ url, headers });
-    return new Response(quote, {
+    return new Response(responseBody, {
       status: 200,
       headers: {
         "content-type": "application/json",
@@ -75,7 +79,7 @@ describe("US Alpaca latest quote boundary", () => {
     expect(result.details.feed).toBe("sip");
     expect(result.details.currency).toBe("USD");
     expect(result.details.quoteType).toBe(
-      "best_bid_ask_within_selected_feed",
+      "latest_quote_with_side_availability",
     );
     expect(result.details.bid).toEqual({
       exchange: "V",
@@ -86,6 +90,14 @@ describe("US Alpaca latest quote boundary", () => {
     });
     expect(result.details.ask.rawPrice).toBe("189.1200");
     expect(result.details.ask.normalizedPrice).toBe("189.12");
+    expect(result.details.sideAvailability).toEqual({
+      bid: "available",
+      ask: "available",
+    });
+    expect(result.details.providerSideSentinels).toEqual({
+      bid: null,
+      ask: null,
+    });
     expect(result.details.conditionCodes).toEqual(["R"]);
     expect(result.details.tape).toBe("C");
     expect(result.details.sizeUnit).toBe("provider_reported_unverified");
@@ -111,5 +123,31 @@ describe("US Alpaca latest quote boundary", () => {
     expect(requests[0].headers.get("user-agent")).toContain(
       "market-data@example.test",
     );
+  });
+
+  test("preserves a provider no-ask sentinel without presenting zero as a quote", async () => {
+    responseBody = quoteWithoutAsk;
+    const tools = await harness();
+    const result = await execute(tools.get("us_stock_quote"), {
+      symbol: "AAPL",
+      feed: "iex",
+    });
+
+    expect(result.details.bid.rawPrice).toBe("290.54");
+    expect(result.details.ask).toBeNull();
+    expect(result.details.sideAvailability).toEqual({
+      bid: "available",
+      ask: "unavailable",
+    });
+    expect(result.details.providerSideSentinels.ask).toEqual({
+      reason: "provider_reported_no_current_side",
+      exchangeLexeme: " ",
+      rawPrice: "0",
+      normalizedPrice: "0",
+      rawSize: "0",
+      normalizedSize: "0",
+    });
+    expect(result.content[0].text).toContain("ask unavailable");
+    expect(requests).toHaveLength(1);
   });
 });

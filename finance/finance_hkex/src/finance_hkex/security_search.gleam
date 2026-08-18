@@ -5,6 +5,8 @@ import gleam/list
 import gleam/result
 import gleam/string
 
+pub const callback = "callback"
+
 pub opaque type Security {
   Security(stock_id: Int, code: String, name: String)
 }
@@ -47,7 +49,7 @@ pub fn decode(body: String) -> Result(List(Security), DecodeError) {
 
 pub fn decode_page(body: String) -> Result(Page, DecodeError) {
   let value = string.trim(body)
-  let prefix = "pi_sparkles("
+  let prefix = callback <> "("
   let suffix = ");"
   case
     string.starts_with(value, prefix),

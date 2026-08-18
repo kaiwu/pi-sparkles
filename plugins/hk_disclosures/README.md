@@ -17,7 +17,8 @@ The adapter is caller-identified, HTTPS-only, host/path allowlisted,
 one-request-per-second, one-in-flight, cancellation-aware, retry-bounded, and
 20-second bounded for discovery; the separate Full List request is bounded to
 30 seconds and 2 MB, and the recent-listing page to 30 seconds and 4 MB.
-Security JSONP is unwrapped only for the pinned callback and decoded as JSON.
+Security JSONP is unwrapped only for the provider's pinned literal `callback`
+and decoded as JSON.
 Title-search and recent-listing HTML are fixture-tested against semantic
 markers, and exact document paths are revalidated by `finance_hkex`.
 

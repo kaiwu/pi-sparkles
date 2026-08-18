@@ -34,8 +34,10 @@ judgment.
 Set `TWELVE_DATA_API_KEY` to the caller's own credential. Current Twelve Data
 documentation prices `/profile` at 10 API credits and requires Grow individual
 or Venture business access or above. `/statistics` costs 50 credits and requires
-Pro individual or Venture business access or above. Requests are serialized and
-are not automatically retried.
+Pro individual or Venture business access or above. The provider's literal
+`demo` key may be used with its documented `AAPL` trial symbol to validate these
+same production paths and decoders, but it does not establish broader symbol or
+plan entitlement. Requests are serialized and are not automatically retried.
 
 All tests use local provider-shaped fixtures. The normal test suite makes no
 live requests and consumes no Twelve Data credits.

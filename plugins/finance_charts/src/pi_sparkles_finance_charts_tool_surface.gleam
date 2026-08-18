@@ -4,7 +4,7 @@ import pi/schema
 import pi/tool
 import pi_sparkles_finance_charts/decode
 import pi_sparkles_finance_charts/domain
-import pi_sparkles_finance_charts/handoff
+import pi_sparkles_finance_charts_handoff as handoff
 
 pub fn prompt_snippet() -> String {
   "After history returns seriesReceipt, pass seriesReceipt, maximumBars, and any indicatorReceipts; omit context, series, and indicators and never copy OHLCV rows or indicator points into this call. Omit trades, gaps, and inputOmissions when none are supplied. Omit fallbackMaximumRows unless a shorter text fallback is required; it defaults to 50, is limited to 1 through 50, and is unrelated to maximumBars. Use direct context plus series plus indicators only for external data with no active-session receipts"

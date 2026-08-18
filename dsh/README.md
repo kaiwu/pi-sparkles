@@ -65,7 +65,7 @@ or Pi package metadata.
 | Pi statusline | `setStatus`/`clearStatus` append whole-value DSH status events; `finance_track_overlay` folds them into `piSparklesStatus`. |
 | browser status | The package's `dsh.client` entry registers the draggable, keyboard-movable `pi-sparkles-finance-track` badge in `shell.overlay`; double-click or Home resets its position. |
 | browser charts | `chart_ohlcv` adds bounded `output.presentationMeta`; the package client registers a keyed `tool.call.toolview` card that renders responsive SVG inline in the transcript. |
-| persisted event vocabulary | The generated rc.6 entry contributes `pi-sparkles/custom` and `pi-sparkles/status` to DSH's exported process-wide catalog before a cold session load, so required Sparkles state is readable after restart. |
+| persisted event vocabulary | The generated rc.7 entry contributes `pi-sparkles/custom` and `pi-sparkles/status` to DSH's exported process-wide catalog before a cold session load, so required Sparkles state is readable after restart. |
 | finance routing prompt | Exported once by the Gleam track module and contributed as an agent-scoped DSH system-prompt section. |
 | flags | Defaults may be overridden by bundle `config.flags` or `PI_SPARKLES_FLAG_<NAME>`. |
 | unsupported Pi effects | Fail explicitly; they never return placeholder success. |
@@ -95,11 +95,11 @@ dsh --profile <name> --dump-config
 `bun test test/dsh test/workflow/dsh_npm_package.test.js` covers the adapter,
 parallel invocation isolation, per-agent state ownership, lifecycle/session
 mapping, overlay component/projection, inline chart metadata/card, release gate, locks,
-and npm inventory. `bun run dsh:verify` uses the installed DSH rc.6
+and npm inventory. `bun run dsh:verify` uses the installed DSH rc.7
 implementation to create two real agent scopes, expose all 244 effective tools,
 verify the shared prompt and track projection, and prove that a watchlist
 mutation cannot leak to the second agent.
 
-The generated package pins its tested DSH service peers to `0.1.0-rc.6`, pins
+The generated package pins its tested DSH service peers to `0.1.0-rc.7`, pins
 `pdfjs-dist`, requires Node 22.19+, carries exact locks/checksums, and contains
 no lifecycle scripts or credential values.

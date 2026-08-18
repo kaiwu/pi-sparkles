@@ -162,7 +162,7 @@ describe("CN/HK official disclosure boundaries", () => {
   test("HK resolves stock ID before preserving bounded title rows", async () => {
     const calls = [];
     const securityFixture =
-      'pi_sparkles({"more":"1","stockInfo":[{"stockId":7609,"code":"00700","name":"TENCENT"}]});';
+      'callback({"more":"1","stockInfo":[{"stockId":7609,"code":"00700","name":"TENCENT"}]});';
     const fullListFixture = hkexFullListFixture();
     const recentListingFixture = hkexRecentListingFixture();
     globalThis.fetch = async (url, init) => {
@@ -416,6 +416,7 @@ describe("CN/HK official disclosure boundaries", () => {
     });
     expect(calls).toHaveLength(2);
     expect(calls[0].url).toContain("/search/prefix.do?");
+    expect(calls[0].url).toContain("callback=callback");
     expect(calls[1].url).toContain("/search/titlesearch.xhtml?");
     for (const call of calls) {
       expect(call.init.headers.get("user-agent")).toBe(

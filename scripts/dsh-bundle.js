@@ -55,15 +55,15 @@ const DSH_MANIFEST_SCHEMA_VERSION = 4;
 const PDFJS_VERSION = "6.2.108";
 const PLUGIN_SHORT_NAME = /^[a-z][a-z0-9_]*$/;
 export const DSH_RUNTIME_PEERS = {
-  "@deepseek-ai/dsh-agent": "0.1.0-rc.6",
-  "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
-  "@deepseek-ai/dsh-client-ui-layout": "0.1.0-rc.6",
-  "@deepseek-ai/dsh-client-ui-tool": "0.1.0-rc.6",
-  "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
-  "@deepseek-ai/dsh-session": "0.1.0-rc.6",
-  "@deepseek-ai/dsh-session-projection": "0.1.0-rc.6",
-  "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.6",
-  "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
+  "@deepseek-ai/dsh-agent": "0.1.0-rc.7",
+  "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.7",
+  "@deepseek-ai/dsh-client-ui-layout": "0.1.0-rc.7",
+  "@deepseek-ai/dsh-client-ui-tool": "0.1.0-rc.7",
+  "@deepseek-ai/dsh-commands": "0.1.0-rc.7",
+  "@deepseek-ai/dsh-session": "0.1.0-rc.7",
+  "@deepseek-ai/dsh-session-projection": "0.1.0-rc.7",
+  "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.7",
+  "@deepseek-ai/dsh-tools": "0.1.0-rc.7",
 };
 
 /** Every file the DSH bundle emits; the npm packager consumes this inventory. */
@@ -530,7 +530,7 @@ AAPL" or "compare SMA/RSI/ATR for 600519.SH".
   the badge or move it with arrow keys when it covers content; double-click or
   press Home to reset it.
 - The package contributes its required \`pi-sparkles/custom\` and
-  \`pi-sparkles/status\` types to DSH rc.6's process-wide persisted-event
+  \`pi-sparkles/status\` types to DSH rc.7's process-wide persisted-event
   catalog before cold session loading, so scoped state and the overlay survive
   a host restart.
 - Tools register through \`ctx.tools\` and are validated against the DSH

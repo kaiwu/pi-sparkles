@@ -1,6 +1,6 @@
 {
   "name": "pi-sparkles",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -28,6 +28,7 @@
     "test:aggregate:pi": "bun scripts/test-aggregate-pi.js",
     "test:live:tutor": "bun scripts/test-live-tutor.js",
     "test:live:sec": "bun scripts/test-live-sec.js",
+    "test:live:providers": "bun scripts/test-live-provider-calls.js",
     "probe:live:futu:us": "bun scripts/futu-us-ticker-probe.js --live",
     "probe:live:futu:us:rights": "bun scripts/futu-us-rights-probe.js --live",
     "probe:live:futu:cn": "bun scripts/futu-cn-ticker-probe.js --live",

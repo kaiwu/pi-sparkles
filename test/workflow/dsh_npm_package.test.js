@@ -216,7 +216,7 @@ describe("dsh-sparkles npm packaging", () => {
     expect(t6.omittedProposals).toEqual([]);
     expect(t6.partialImplementations).toEqual([]);
     expect(t6.openBlockers).toEqual([]);
-    expect(t6.packageVersion).toBe("0.1.6");
+    expect(t6.packageVersion).toBe("0.1.7");
     expect(t6.maturity).toBe("product_useful_dsh_aggregate");
     expect(t6.dshRelease).toMatchObject({
       status: "product_useful",
@@ -289,15 +289,15 @@ describe("dsh-sparkles npm packaging", () => {
     });
     expect(manifest.dependencies).toEqual({ "pdfjs-dist": "6.2.108" });
     expect(manifest.peerDependencies).toEqual({
-      "@deepseek-ai/dsh-agent": "0.1.0-rc.6",
-      "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
-      "@deepseek-ai/dsh-client-ui-layout": "0.1.0-rc.6",
-      "@deepseek-ai/dsh-client-ui-tool": "0.1.0-rc.6",
-      "@deepseek-ai/dsh-commands": "0.1.0-rc.6",
-      "@deepseek-ai/dsh-session": "0.1.0-rc.6",
-      "@deepseek-ai/dsh-session-projection": "0.1.0-rc.6",
-      "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.6",
-      "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
+      "@deepseek-ai/dsh-agent": "0.1.0-rc.7",
+      "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.7",
+      "@deepseek-ai/dsh-client-ui-layout": "0.1.0-rc.7",
+      "@deepseek-ai/dsh-client-ui-tool": "0.1.0-rc.7",
+      "@deepseek-ai/dsh-commands": "0.1.0-rc.7",
+      "@deepseek-ai/dsh-session": "0.1.0-rc.7",
+      "@deepseek-ai/dsh-session-projection": "0.1.0-rc.7",
+      "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.7",
+      "@deepseek-ai/dsh-tools": "0.1.0-rc.7",
     });
     expect(manifest.scripts).toBeUndefined();
     expect(manifest.publishConfig).toEqual({

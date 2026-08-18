@@ -12,8 +12,8 @@ pub type NormalizationError {
   InvalidBidSize
   InvalidAskPrice
   InvalidAskSize
-  InvalidBidSide(finance_quote.SideError)
-  InvalidAskSide(finance_quote.SideError)
+  InvalidBidSide(finance_quote.SideAvailabilityError)
+  InvalidAskSide(finance_quote.SideAvailabilityError)
   InvalidQuote(finance_quote.QuoteError)
   InvalidSource(source.SourceError)
   InvalidObservation(finance_quote.ObservationError)
@@ -23,7 +23,7 @@ pub fn quote(
   plan: LatestQuoteQuery,
   value: alpaca_quotes.RawQuote,
   retrieved_at: Instant,
-) -> Result(Observation(finance_quote.Quote), NormalizationError) {
+) -> Result(Observation(finance_quote.Snapshot), NormalizationError) {
   use bid_price <- result.try(
     finance_quote.exact(alpaca_quotes.bid_price(value))
     |> result.map_error(fn(_) { InvalidBidPrice }),
@@ -41,16 +41,24 @@ pub fn quote(
     |> result.map_error(fn(_) { InvalidAskSize }),
   )
   use bid <- result.try(
-    finance_quote.side(alpaca_quotes.bid_exchange(value), bid_price, bid_size)
+    finance_quote.side_availability(
+      alpaca_quotes.bid_exchange(value),
+      bid_price,
+      bid_size,
+    )
     |> result.map_error(InvalidBidSide),
   )
   use ask <- result.try(
-    finance_quote.side(alpaca_quotes.ask_exchange(value), ask_price, ask_size)
+    finance_quote.side_availability(
+      alpaca_quotes.ask_exchange(value),
+      ask_price,
+      ask_size,
+    )
     |> result.map_error(InvalidAskSide),
   )
   let assert Ok(usd) = currency.from_code("USD")
   use normalized <- result.try(
-    finance_quote.quote(
+    finance_quote.snapshot(
       alpaca_quotes.timestamp(value),
       alpaca_quotes.at(value),
       usd,
@@ -67,7 +75,7 @@ pub fn quote(
     |> result.map_error(InvalidSource),
   )
   let assert Ok(zone) = time.timezone("America/New_York")
-  finance_quote.observe(
+  finance_quote.observe_snapshot(
     normalized,
     retrieved_at: retrieved_at,
     timezone: zone,

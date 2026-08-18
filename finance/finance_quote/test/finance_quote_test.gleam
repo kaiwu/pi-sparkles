@@ -54,6 +54,23 @@ pub fn negative_values_fail_and_crossed_quotes_are_retained_test() {
   |> should.equal("190")
 }
 
+pub fn provider_no_side_sentinel_is_explicit_and_exact_test() {
+  let assert Ok(unavailable) =
+    finance_quote.side_availability(" ", exact("0"), exact("0"))
+  let assert finance_quote.UnavailableSide(exchange, price, size) = unavailable
+  exchange |> should.equal(" ")
+  finance_quote.raw(price) |> should.equal("0")
+  finance_quote.raw(size) |> should.equal("0")
+
+  finance_quote.side_availability(" ", exact("1"), exact("0"))
+  |> should.equal(Error(finance_quote.InvalidUnavailableSide))
+
+  let assert Ok(available) =
+    finance_quote.side_availability("V", exact("189.12"), exact("4"))
+  let assert finance_quote.AvailableSide(side) = available
+  finance_quote.exchange(side) |> should.equal("V")
+}
+
 pub fn provider_mismatch_and_future_quote_fail_closed_test() {
   let value = quote("189.10", "7", "189.12", "4")
   let assert Ok(source_ref) =

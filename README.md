@@ -7,22 +7,22 @@ the browser. Both distributions reuse the same Gleam functional cores while
 keeping host registration, session ownership, presentation, packaging, and
 release maturity separate.
 
-**0.1.6** is the current shared release for both npm packages. The Pi and DSH
-distributions are independently ProductUseful T1–T6 releases covering the same
-135 ledger components through separate host-native entrypoints. No component
-can place, route, cancel, replace, or otherwise mutate a paper or live order.
+The Pi and DSH distributions are independently ProductUseful T1–T6 releases
+covering the same 135 ledger components through separate host-native
+entrypoints. No component can place, route, cancel, replace, or otherwise
+mutate a paper or live order.
 
 | Host | npm package | Host-native output | Release state |
 | --- | --- | --- | --- |
-| Pi | [`@pi-sparkles/pi-sparkles@0.1.6`](https://www.npmjs.com/package/@pi-sparkles/pi-sparkles) | terminal components, including responsive colored Unicode OHLCV charts | Published · ProductUseful T1–T6 |
-| DSH | [`@dsh-sparkles/dsh-sparkles@0.1.6`](https://www.npmjs.com/package/@dsh-sparkles/dsh-sparkles) | browser slots, session projections, and responsive inline SVG OHLCV charts | Published · ProductUseful T1–T6 |
+| Pi | [`@pi-sparkles/pi-sparkles`](https://www.npmjs.com/package/@pi-sparkles/pi-sparkles) | terminal components, including responsive colored Unicode OHLCV charts | Published · ProductUseful T1–T6 |
+| DSH | [`@dsh-sparkles/dsh-sparkles`](https://www.npmjs.com/package/@dsh-sparkles/dsh-sparkles) | browser slots, session projections, and responsive inline SVG OHLCV charts | Published · ProductUseful T1–T6 |
 
 ## Install and start
 
 Pi:
 
 ```sh
-pi install npm:@pi-sparkles/pi-sparkles@0.1.6
+pi install npm:@pi-sparkles/pi-sparkles@latest
 export AGENT_CONTACT="ops@example.com"
 pi --finance-track cn
 ```
@@ -30,7 +30,7 @@ pi --finance-track cn
 DeepSeek Harness:
 
 ```sh
-dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles@0.1.6
+dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles@latest
 export AGENT_CONTACT="ops@example.com"
 dsh --profile <name>
 ```
@@ -45,7 +45,7 @@ provider fetch. A missing adapter is allowed and never triggers fallback.
 | Tiers | T1–T6 ProductUseful in independent Pi and DSH lanes · 0 open Pi blockers · [tiers.json](tiers.json) |
 | Inventory | 135 ledger plugins · 142 Gleam plugin packages · 77 finance libraries |
 | Tracks | closed `cn` / `hk` / `us` |
-| Tested with | Pi `0.84.1` · DSH `0.1.0-rc.6` · Gleam `1.18.0` · Bun `1.3.14` |
+| Tested with | Pi `0.84.1` · DSH `0.1.0-rc.7` · Gleam `1.18.0` · Bun `1.3.14` |
 
 The seven packages excluded from the aggregate (`hello`, `lifecycle`,
 `safety_gate`, `cn_setup`, `hk_setup`, `cn_fundamentals`, `hk_fundamentals`)

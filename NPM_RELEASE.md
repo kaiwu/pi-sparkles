@@ -52,7 +52,7 @@ release verification load the T6 all-in-one aggregate entrypoint once so all
 The loader rejects earlier-tier and per-plugin target overrides.
 
 The T5 selection remains the historical 0.1.4 boundary. T6 is ProductUseful
-with zero omissions, partials, or blockers and is selected for version 0.1.6.
+with zero omissions, partials, or blockers and is selected for version 0.1.7.
 
 ## Local consumer verification
 
@@ -63,7 +63,7 @@ provider variable from the child environment, and asks plain Pi to load the
 entrypoint with `--list-models`. For a manual equivalent:
 
 ```sh
-npm install ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.6.tgz
+npm install ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.7.tgz
 pi --no-extensions \
   --extension ./node_modules/@pi-sparkles/pi-sparkles/index.js \
   --list-models
@@ -95,7 +95,7 @@ because a trusted-publisher relationship cannot be attached until the package
 exists. The explicit command is:
 
 ```sh
-npm publish ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.6.tgz --access public
+npm publish ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.7.tgz --access public
 ```
 
 Publishing changes external state and is never performed by builds, tests, or
@@ -107,9 +107,9 @@ protected GitHub `npm` environment if review approval is required.
 After publication, verify the registry artifact and install through Pi:
 
 ```sh
-npm view @pi-sparkles/pi-sparkles@0.1.6 \
+npm view @pi-sparkles/pi-sparkles@0.1.7 \
   name version dist.integrity repository --json
-pi install npm:@pi-sparkles/pi-sparkles@0.1.6
+pi install npm:@pi-sparkles/pi-sparkles@0.1.7
 ```
 
 ---
@@ -136,7 +136,7 @@ per DSH agent. DSH-only Cordis entries remain in the isolated `dsh/plugins/`
 lane. The exact excluded/scoped/extra lists are recorded in `dsh-lock.json` and
 the manifest's `dshSparkles` section. It pins the tested agent, tool, command,
 system-prompt, session-projection, client-runtime, and UI-layout peers to
-`0.1.0-rc.6`, pins `pdfjs-dist` for the CN PDF CMap runtime resolution,
+`0.1.0-rc.7`, pins `pdfjs-dist` for the CN PDF CMap runtime resolution,
 requires Node 22.19+, carries the
 `dsh.bundle.patch` manifest and a content lock (`dsh-lock.json` +
 `release-lock.json` + inner/outer `SHA256SUMS`), and has no lifecycle scripts
@@ -154,21 +154,21 @@ Packaging and verification never publish.
 bun run dsh:npm:release:verify
 ```
 
-That gate builds the exact 0.1.6 tarball, installs it without synthesizing a
+That gate builds the exact 0.1.7 tarball, installs it without synthesizing a
 standalone DSH host, composes it in an isolated profile using the installed
-tested `0.1.0-rc.6` runtime, runs `npm publish --dry-run`, and confirms that the
+tested `0.1.0-rc.7` runtime, runs `npm publish --dry-run`, and confirms that the
 version is unused. The reviewed artifact is:
 
 ```text
-dist/dsh/npm/t6/dsh-sparkles-dsh-sparkles-0.1.6.tgz
+dist/dsh/npm/t6/dsh-sparkles-dsh-sparkles-0.1.7.tgz
 ```
 
 After explicit publication authorization, publish that exact tarball and then
 verify it through DSH:
 
 ```sh
-npm publish ./dist/dsh/npm/t6/dsh-sparkles-dsh-sparkles-0.1.6.tgz --access public
-npm view @dsh-sparkles/dsh-sparkles@0.1.6 \
+npm publish ./dist/dsh/npm/t6/dsh-sparkles-dsh-sparkles-0.1.7.tgz --access public
+npm view @dsh-sparkles/dsh-sparkles@0.1.7 \
   name version dist.integrity repository --json
-dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles@0.1.6
+dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles@0.1.7
 ```

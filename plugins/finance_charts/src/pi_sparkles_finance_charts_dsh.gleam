@@ -1,7 +1,7 @@
 import gleam/javascript/promise.{type Promise}
 import pi
 import pi/tool
-import pi_sparkles_finance_charts/tool_surface
+import pi_sparkles_finance_charts_tool_surface as tool_surface
 
 /// DSH owns browser presentation through its keyed SVG tool-result card. This
 /// sibling registers only the headless structured chart tool and has no import

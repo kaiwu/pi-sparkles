@@ -128,6 +128,13 @@ product inventory. The tier ledger and ProductUseful status govern Pi only;
 aggregate, or package must never imply that DSH is releasable, and a DSH build
 or test must never change `tiers.json` or promote a tier.
 
+For every bug report, diagnosis, behavior change, or regression involving
+shared product inventory, always inspect both the plain Pi leg and the DSH leg.
+First classify whether the cause is in the host-neutral core/shared Pi shell or
+in a host adapter, then add or run proportionate checks for both hosts. A pass,
+failure, or live observation in one host never proves the other host's result;
+do not call an issue Pi-only or DSH-only without evidence from both legs.
+
 Classify every loadable component into exactly one DSH ownership mode:
 
 - A host-compatible, stateless Pi shell stays in `plugins/<name>/` and may be
@@ -458,8 +465,16 @@ visual browser QA when a browser instance is available. These DSH diagnostics
 do not substitute for either the Pi tier gate or the independent DSH role lane.
 Provider plugin unit tests use fixtures or scripted transports, never live
 network calls, real sleeps, ambient credentials, or mutable shared caches.
-The normal sole live-provider lane is the explicit `bun run test:live:sec`
-runner. The temporary `bun run probe:live:futu:us`,
+[`PROVIDER_CALLS.md`](PROVIDER_CALLS.md) must enumerate every concrete provider
+operation and record exact pass/fail/credential/entitlement status. The
+explicit `bun run test:live:providers` command is the bounded, read-only,
+non-retrying lane for the non-metered current-request and decoder checks; the
+normal SEC live lane remains `bun run test:live:sec`. Both must redact secrets
+and must never treat an authentication rejection, fixture, alternate host, or
+different endpoint as response conformance. Metered or unusually rate-limited
+providers require an explicit provider selection and caller-owned credential
+file; stop that provider leg on the first quota or rate-limit response. The
+temporary `bun run probe:live:futu:us`,
 `bun run probe:live:futu:cn`, `bun run probe:live:futu:hk` ticker,
 `bun run probe:live:futu:us:rights`, and `bun run probe:live:futu:rights`
 entitlement lanes, plus the one-shot

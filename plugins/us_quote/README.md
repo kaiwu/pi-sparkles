@@ -17,7 +17,11 @@ The plugin supplies its fixed outbound product label.
 
 The tool preserves exact provider JSON tokens for bid/ask prices and sizes,
 along with provider time, exchange codes, condition codes, tape, selected feed,
-request ID, and source reference. It reports size units as
+request ID, and source reference. When Alpaca reports a blank exchange with
+zero price and size for one currently unavailable side, the result keeps that
+provider sentinel separately and returns `null` for the absent side; it never
+presents the zero as a tradable quote. Blank exchanges with non-zero facts fail
+closed. The tool reports size units as
 `provider_reported_unverified`, freshness and latency as unknown, and grants no
 redistribution right. IEX is not consolidated SIP coverage; SIP availability
 and recency depend on the credential holder's subscription.

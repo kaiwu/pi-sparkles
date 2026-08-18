@@ -58,9 +58,10 @@ pub fn ticker_and_submission_fixtures_decode_test() {
   company.ticker |> should.equal("AAPL")
   finance_sec.cik_value(company.cik) |> should.equal("0000320193")
   let submissions =
-    "{\"cik\":320193,\"name\":\"Apple Inc.\",\"tickers\":[\"AAPL\"],\"exchanges\":[\"Nasdaq\"],\"filings\":{\"recent\":{\"accessionNumber\":[\"0000320193-25-000079\"],\"filingDate\":[\"2025-08-01\"],\"reportDate\":[\"2025-06-28\"],\"form\":[\"10-Q\"],\"primaryDocument\":[\"aapl-20250628.htm\"]}}}"
+    "{\"cik\":\"0000320193\",\"name\":\"Apple Inc.\",\"tickers\":[\"AAPL\"],\"exchanges\":[\"Nasdaq\"],\"filings\":{\"recent\":{\"accessionNumber\":[\"0000320193-25-000079\"],\"filingDate\":[\"2025-08-01\"],\"reportDate\":[\"2025-06-28\"],\"form\":[\"10-Q\"],\"primaryDocument\":[\"aapl-20250628.htm\"],\"core_type\":[\"10-Q\"],\"isXBRLNumeric\":[1]}}}"
   let assert Ok(value) = response.decode_submissions(submissions)
   value.name |> should.equal("Apple Inc.")
+  finance_sec.cik_value(value.cik) |> should.equal("0000320193")
   value.recent |> list.length |> should.equal(1)
 }
 
@@ -78,6 +79,15 @@ pub fn xbrl_company_facts_preserve_exact_values_and_duplicates_test() {
   let assert [first, _] = unit.facts
   first.value |> should.equal(xbrl.Numeric("9007199254740993.100"))
   first.fiscal_year |> should.equal(Some("2024"))
+}
+
+pub fn company_facts_preserve_concepts_with_provider_null_labels_test() {
+  let fixture =
+    "{\"cik\":320193,\"entityName\":\"Apple Inc.\",\"facts\":{\"us-gaap\":{\"EffectiveIncomeTaxRateReconciliationFdiiAmount\":{\"label\":null,\"description\":null,\"units\":{\"USD\":[]}}}}}"
+  let assert Ok(value) = xbrl.decode_company_facts(fixture)
+  let assert [concept] = value.concepts
+  concept.label |> should.equal("")
+  concept.description |> should.equal("")
 }
 
 pub fn company_concept_request_and_fixture_are_typed_test() {
