@@ -64,8 +64,8 @@ browser client renders it inline without an overlay or attachment.
 ### Client half
 
 - A keyed `tool.call.toolview` renderer owns only `chart_ohlcv`.
-- Browser-native inline SVG supports container-proportional latest-suffix
-  display, earlier/later pan, zoom, and reset from persisted result metadata.
+- Browser-native inline SVG opens at the full returned range and supports
+  earlier/later pan, zoom, and full-range reset from persisted result metadata.
 
 Client discovery through an installed DSH profile, resize/interaction checks,
 session replay, and visual browser QA are complete. The feature does not change

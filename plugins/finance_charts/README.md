@@ -32,6 +32,9 @@ shell resolves only matching entries on the active session, rehashes their
 content, and proves every indicator belongs to the selected OHLCV series. The
 model does not copy bars or ordered indicator points into `chart_ohlcv`, which
 keeps a 60- or 240-session chart request small enough to execute reliably.
+Empty `trades`, `gaps`, and `inputOmissions` may be omitted;
+`fallbackMaximumRows` also may be omitted and defaults to 50 independently of
+`maximumBars`.
 
 ## Rendering boundary
 
@@ -43,8 +46,9 @@ aggregates, interpolates, changes interval, or infers gaps.
 
 The Unicode chart is ordinary inline tool output, not an overlay, image, file,
 or attachment. It uses Pi's active theme for track-aware candle colors,
-one-column `│`/`█`/`▮` Unicode candles, five useful price ticks, proportional
-three-row `▂`…`█` volume, and unit-separated lower-indicator panes. Exact decimal strings and source
+one-column `│` wicks and eighth-row `▁`…`█` candle bodies with a connected
+zero-width vertical overlay, five useful price ticks, proportional
+three-row `▁`…`█` volume across 24 eighth-row heights, and unit-separated lower-indicator panes. Exact decimal strings and source
 facts in structured details remain controlling; terminal coordinates are not
 a new observation, analytics result, or evidence claim. DSH consumes the same
 validated result but owns a separate inline browser renderer described in

@@ -5,21 +5,25 @@ here. Versions follow Semantic Versioning. The exact selected tier, plugin
 inventory, maturity, and content hashes remain authoritative in each tarball's
 `release-lock.json` and `aggregate-lock.json`.
 
-## 0.1.6 - 2026-08-17
+## 0.1.6 - 2026-08-18
 
 - Present Sparkles as one shared finance product with separate host-native npm
   distributions for Pi and DeepSeek Harness, rather than as a Pi-only project.
 - Add responsive ordinary-output OHLCV charts: colored terminal Unicode for Pi
   and a keyed inline SVG tool-result card for the DSH browser, with exact
   textual and structured fallbacks retained.
-- Render Pi candles with compact one-column `│`/`█`/`▮` Unicode geometry,
-  sparse price ticks, proportional `▂`…`█` volume, and unit-separated lower
-  panes. RSI and ATR can coexist without sharing a scale; tiny volume does not
-  collapse into a dot/circle/underscore baseline. Theme-native CN versus HK/US
-  colors require no embedded ANSI palette.
+- Render Pi candles with compact one-column eighth-row `▁`…`█` body precision
+  and a zero-width vertical wick overlay, sparse price ticks, proportional
+  `▁`…`█` volume, and unit-separated lower panes. RSI and ATR can coexist
+  without sharing a scale; tiny non-zero volume retains the smallest bar.
+  Theme-native CN versus HK/US colors require no embedded ANSI palette or
+  Braille glyphs.
 - Pass short, active-session OHLCV and indicator receipts into `chart_ohlcv`,
   eliminating model-side copies of dozens of bars or ordered indicator points
   that could truncate the tool arguments before execution.
+- Let receipt-driven chart calls omit empty trades, gaps, input omissions, and
+  the text fallback row cap; these now default to empty lists and 50 rows,
+  independently of the requested 1-through-240 bar chart span.
 - Pass session-bound, content-verified OHLCV receipts into SMA, RSI, and ATR so
   the model no longer re-emits hundreds of bars, and restore their compact Pi
   result renderer so successful indicators occupy one collapsed terminal line.

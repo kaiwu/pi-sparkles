@@ -7,7 +7,7 @@ import pi_sparkles_finance_charts/domain
 import pi_sparkles_finance_charts/handoff
 
 pub fn prompt_snippet() -> String {
-  "After history returns seriesReceipt, pass only seriesReceipt, maximumBars, indicatorReceipts, trades, gaps, inputOmissions, and fallbackMaximumRows; omit context, series, and indicators and never copy OHLCV rows or indicator points into this call. Use direct context plus series plus indicators only for external data with no active-session receipts"
+  "After history returns seriesReceipt, pass seriesReceipt, maximumBars, and any indicatorReceipts; omit context, series, and indicators and never copy OHLCV rows or indicator points into this call. Omit trades, gaps, and inputOmissions when none are supplied. Omit fallbackMaximumRows unless a shorter text fallback is required; it defaults to 50, is limited to 1 through 50, and is unrelated to maximumBars. Use direct context plus series plus indicators only for external data with no active-session receipts"
 }
 
 pub fn parameters() -> tool.Parameters(decode.Request) {
@@ -72,22 +72,31 @@ fn chart_schema() -> schema.Schema {
       "indicators",
       schema.array(indicator_schema()) |> schema.with_array_length(0, 4),
     ),
-    schema.Required(
+    schema.Optional(
       "trades",
-      schema.array(trade_schema()) |> schema.with_array_length(0, 240),
+      schema.array(trade_schema())
+        |> schema.with_array_length(0, 240)
+        |> schema.described("Optional explicit trade markers; omit when none"),
     ),
-    schema.Required(
+    schema.Optional(
       "gaps",
-      schema.array(gap_schema()) |> schema.with_array_length(0, 240),
+      schema.array(gap_schema())
+        |> schema.with_array_length(0, 240)
+        |> schema.described("Optional explicit gap markers; omit when none"),
     ),
-    schema.Required(
+    schema.Optional(
       "inputOmissions",
       schema.array(bounded_string(1, 1000))
-        |> schema.with_array_length(0, 240),
+        |> schema.with_array_length(0, 240)
+        |> schema.described("Optional explicit input omissions; omit when none"),
     ),
-    schema.Required(
+    schema.Optional(
       "fallbackMaximumRows",
-      schema.integer() |> schema.with_number_range(1.0, 50.0),
+      schema.integer()
+        |> schema.with_number_range(1.0, 50.0)
+        |> schema.described(
+          "Optional text-table row cap from 1 through 50; defaults to 50 and is unrelated to maximumBars",
+        ),
     ),
   ])
 }

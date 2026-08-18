@@ -130,13 +130,26 @@ pub fn chart_ohlcv() -> decoder.Decoder(Request) {
     None,
     decoder.optional(decoder.list(of: indicator_decoder())),
   )
-  use trades <- decoder.field("trades", decoder.list(of: trade_decoder()))
-  use gaps <- decoder.field("gaps", decoder.list(of: gap_decoder()))
-  use input_omissions <- decoder.field(
+  use trades <- decoder.optional_field(
+    "trades",
+    [],
+    decoder.list(of: trade_decoder()),
+  )
+  use gaps <- decoder.optional_field(
+    "gaps",
+    [],
+    decoder.list(of: gap_decoder()),
+  )
+  use input_omissions <- decoder.optional_field(
     "inputOmissions",
+    [],
     decoder.list(of: decoder.string),
   )
-  use fallback_maximum_rows <- decoder.field("fallbackMaximumRows", decoder.int)
+  use fallback_maximum_rows <- decoder.optional_field(
+    "fallbackMaximumRows",
+    50,
+    decoder.int,
+  )
   case
     series_receipt,
     maximum_bars,

@@ -248,7 +248,7 @@ research, the only setup is a contact address used to identify requests to publi
 data services:
 
 \`\`\`sh
-AGENT_CONTACT="you@example.com" pi --finance-track=cn
+AGENT_CONTACT="you@example.com" pi --finance-track cn
 \`\`\`
 
 Choose \`cn\`, \`hk\`, or \`us\`. You can switch later with \`/cn-track\`,
@@ -297,7 +297,7 @@ Example:
 AGENT_CONTACT="you@example.com" \\
 ALPACA_API_KEY_ID="..." \\
 ALPACA_API_SECRET_KEY="..." \\
-pi --finance-track=us
+pi --finance-track us
 \`\`\`
 
 Your credentials stay in your runtime environment. Sparkles for Pi does not add them

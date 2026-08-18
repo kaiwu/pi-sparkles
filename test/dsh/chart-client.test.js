@@ -130,8 +130,20 @@ function findByKey(node, key) {
   return undefined;
 }
 
+function findByTitle(node, title) {
+  if (node === null || node === undefined || typeof node !== "object") return undefined;
+  if (!Array.isArray(node) && node.props?.title === title) return node;
+  const children = Array.isArray(node) ? node : node.children;
+  if (!Array.isArray(children)) return findByTitle(children, title);
+  for (const child of children) {
+    const match = findByTitle(child, title);
+    if (match !== undefined) return match;
+  }
+  return undefined;
+}
+
 describe("DSH inline finance chart client", () => {
-  test("registers the exact keyed tool view and renders a latest width-proportional suffix", () => {
+  test("registers the exact keyed tool view and opens each result at its full returned range", () => {
     const React = fakeReact();
     const entry = loadChartComponent(React);
     expect(entry.definition).toMatchObject({
@@ -146,24 +158,23 @@ describe("DSH inline finance chart client", () => {
     expect(rendered.props).toMatchObject({
       role: "figure",
       "data-dsh-sparkles-chart": "inline",
-      "data-visible-bars": "72",
+      "data-visible-bars": "100",
     });
-    expect(rendered.props["aria-label"]).toContain("D029 through D100");
-    expect(textContent(rendered)).toContain("72/100 bars");
+    expect(rendered.props["aria-label"]).toContain("D001 through D100");
+    expect(textContent(rendered)).toContain("100/100 bars");
     expect(textContent(rendered)).toContain("Exact table output");
 
-    rendered.props.ref.current = {
-      getBoundingClientRect() {
-        return { width: 300 };
-      },
-    };
-    React.begin();
-    entry.component({ block: chartBlock() });
+    findByTitle(rendered, "Show fewer bars").props.onClick();
     React.begin();
     rendered = entry.component({ block: chartBlock() });
-    expect(rendered.props["data-visible-bars"]).toBe("25");
-    expect(rendered.props["aria-label"]).toContain("D076 through D100");
-    expect(textContent(rendered)).toContain("75 earlier hidden");
+    expect(rendered.props["data-visible-bars"]).toBe("70");
+    expect(rendered.props["aria-label"]).toContain("D031 through D100");
+
+    React.begin();
+    rendered = entry.component({ block: chartBlock(240) });
+    expect(rendered.props["data-visible-bars"]).toBe("240");
+    expect(rendered.props["aria-label"]).toContain("D001 through D240");
+    expect(textContent(rendered)).toContain("240/240 bars");
   });
 
   test("keeps malformed metadata inline as ordinary text output", () => {

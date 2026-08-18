@@ -45,11 +45,13 @@ truncates `details.bars`.
 History tools persist a versioned OHLCV handoff on the active session. SMA,
 RSI, and ATR persist separate content-bound chart handoffs containing their
 ordered outputs. A normal chart request therefore contains only
-`seriesReceipt`, `maximumBars`, up to four `indicatorReceipts`, and small
-annotation fields. The chart shell resolves and rehashes those entries, checks
-that every indicator belongs to the same series, and never asks the model to
-copy bars or points. Direct caller-supplied arrays remain available only for
-external evidence that has no active-session handoff.
+`seriesReceipt`, `maximumBars`, and up to four `indicatorReceipts`. Empty trade,
+gap, and omission annotations may be omitted. The text fallback row cap may
+also be omitted and defaults to 50; it is independent of `maximumBars`. The
+chart shell resolves and rehashes those entries, checks that every indicator
+belongs to the same series, and never asks the model to copy bars or points.
+Direct caller-supplied arrays remain available only for external evidence that
+has no active-session handoff.
 
 ## Pi terminal renderer
 
@@ -73,12 +75,16 @@ time. It never changes the interval or synthesizes observations. The header
 always reports the exact visible start/end dates, `shown/total`, and the count
 of earlier hidden bars.
 
-The compact chart restores the proven one-column terminal geometry: `│` wicks,
-`█` bodies, `▮` bodies whose numeric open/close quantize to one row, and `━`
-for an exact doji. Price labels appear only at five useful ticks instead of on
-every row. Volume occupies an independent three-row panel and uses fractional
-columns from `▂` through `█`; nonzero volume never becomes a dot, circle,
-underscore, or `▁` baseline. Price overlays never erase candle bodies. Lower
+The compact chart uses one-column terminal geometry: `│` wicks, proportional
+`▁` through `█` candle bodies at eighth-row precision, and `━` for an exact
+doji. This retains small open/close differences that would collapse when both
+endpoints quantize to the same whole row. A zero-width Unicode vertical overlay
+keeps the wick connected through fractional body cells without widening the
+chart or switching to Braille. Price labels appear only at five
+useful ticks instead of on every row. Volume occupies an independent three-row panel and uses all 24
+linear eighth-row heights from `▁` through `█`; zero remains blank, while the
+smallest nonzero projection is `▁`, never a dot, circle, or underscore. Price
+overlays never erase candle bodies. Lower
 indicators are grouped into independent panes by exact unit, so RSI and ATR do
 not share a scale. `B`/`S` mark trades and `┊` marks supplied gaps. Pi's active
 theme supplies every color; no raw ANSI palette is embedded. Mainland China
@@ -111,18 +117,13 @@ inside the transcript at the result's normal position. The card reads only the
 current result block's persisted `meta`; it does not use process-global or
 session-global chart state.
 
-The card observes its own plot container with `ResizeObserver`. Its automatic
-capacity is:
-
-```text
-max(1, floor((container_width - price_scale_gutter) / 9))
-```
-
-and it selects the latest contiguous suffix. Width growth reveals earlier bars
-and width shrinkage hides earlier bars. The exact range disclosure follows the
-same rule as Pi. Pointer/keyboard pan or zoom may temporarily override the
-automatic range; a Reset control reapplies the proportional latest-suffix
-range. A renderer failure leaves the exact textual tool output available.
+The card opens each result at its full returned range, so replacing a 60-bar
+result with a 240-bar result immediately expands the x-axis to all 240 bars.
+The SVG scales responsively with its container. Pointer/keyboard pan or zoom
+may select a smaller contiguous window for detail; a Reset control restores the
+full returned range. Manual view state is bound to the result's instrument and
+date range, so it cannot leak into a later result. A renderer failure leaves
+the exact textual tool output available.
 
 The browser view uses semantic HTML/SVG owned by the DSH client entrypoint. It
 shows candlesticks, volume, supplied price overlays, trade markers, and explicit
@@ -160,7 +161,7 @@ chronology, gaps, omissions, and deterministic structured results. Pi binding
 tests prove no image output, custom component registration, width-bounded
 Unicode, CN/HK/US theme palettes, monotonic visible capacity, latest-suffix
 anchoring, expanded fallback, and cancellation. DSH tests prove presentation metadata is added only for the exact
-chart schema, keyed slot registration, inline card rendering, proportional
-resize behavior, malformed-metadata fallback, and client discovery/package
+chart schema, keyed slot registration, full-range initial rendering, result-bound
+pan/zoom state, malformed-metadata fallback, and client discovery/package
 locking, including independent RSI/ATR panes. Installed DSH verification executes a representative chart call and
 checks that its settled result event exposes the expected metadata.

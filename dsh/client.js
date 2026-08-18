@@ -160,7 +160,6 @@ function FinanceTrackOverlay(props) {
 }
 var CHART_META_SCHEMA = "pi-sparkles/dsh-finance-chart-meta";
 var CHART_PRICE_GUTTER = 72;
-var CHART_SLOT_WIDTH = 9;
 var CHART_UP_COLOR = "#20b486";
 var CHART_DOWN_COLOR = "#ef5b5b";
 var CHART_FLAT_COLOR = "#94a3b8";
@@ -198,10 +197,6 @@ function blockText(block) {
     .map(function (item) { return item.text; })
     .join("\\n");
 }
-function chartCapacity(width, total) {
-  var usable = Math.max(CHART_SLOT_WIDTH, width - CHART_PRICE_GUTTER);
-  return Math.max(1, Math.min(total, Math.floor(usable / CHART_SLOT_WIDTH)));
-}
 function chartNumber(value) {
   var absolute = Math.abs(value);
   if (absolute !== 0 && (absolute >= 10000000 || absolute < 0.0001)) return value.toExponential(2);
@@ -225,29 +220,9 @@ function DshFinanceChart(props) {
   var block = props.block;
   var model = chartModel(block);
   var ref = React.useRef(null);
-  var widthState = React.useState(720);
-  var width = widthState[0];
-  var setWidth = widthState[1];
   var manualState = React.useState(null);
   var manual = manualState[0];
   var setManual = manualState[1];
-  React.useEffect(function () {
-    var node = ref.current;
-    if (!node || typeof window.ResizeObserver !== "function") return undefined;
-    function update(candidate) {
-      var next = Math.max(1, Math.floor(candidate));
-      setWidth(function (previous) { return previous === next ? previous : next; });
-    }
-    var rect = node.getBoundingClientRect();
-    if (rect.width > 0) update(rect.width);
-    var observer = new window.ResizeObserver(function (entries) {
-      var entry = entries && entries[0];
-      var next = entry && entry.contentRect ? entry.contentRect.width : node.getBoundingClientRect().width;
-      if (next > 0) update(next);
-    });
-    observer.observe(node);
-    return function () { observer.disconnect(); };
-  }, []);
   if (block && block.kind !== "tool-result") {
     return React.createElement("div", {
       role: "status",
@@ -262,9 +237,10 @@ function DshFinanceChart(props) {
       style: { padding: "8px 10px", whiteSpace: "pre-wrap", fontFamily: "var(--dsw-font-mono, ui-monospace, monospace)" }
     }, blockText(block) || "Chart metadata is unavailable.");
   }
-  var automatic = chartCapacity(width, model.bars.length);
-  var count = manual === null ? automatic : Math.max(1, Math.min(model.bars.length, manual.count));
-  var end = manual === null ? model.bars.length : Math.max(count, Math.min(model.bars.length, manual.end));
+  var rangeKey = JSON.stringify([model.instrumentId, model.bars.length, model.bars[0].date, model.bars[model.bars.length - 1].date]);
+  var activeManual = manual !== null && manual.rangeKey === rangeKey ? manual : null;
+  var count = activeManual === null ? model.bars.length : Math.max(1, Math.min(model.bars.length, activeManual.count));
+  var end = activeManual === null ? model.bars.length : Math.max(count, Math.min(model.bars.length, activeManual.end));
   var start = Math.max(0, end - count);
   var visible = model.bars.slice(start, end);
   var directionPalette = chartDirectionPalette(model.track);
@@ -376,14 +352,14 @@ function DshFinanceChart(props) {
   var last = visible[visible.length - 1].date;
   function setView(nextEnd, nextCount) {
     var boundedCount = Math.max(1, Math.min(model.bars.length, nextCount));
-    setManual({ count: boundedCount, end: Math.max(boundedCount, Math.min(model.bars.length, nextEnd)) });
+    setManual({ rangeKey: rangeKey, count: boundedCount, end: Math.max(boundedCount, Math.min(model.bars.length, nextEnd)) });
   }
   var controls = React.createElement("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap" } },
     React.createElement("button", { type: "button", onClick: function () { setView(end - Math.max(1, Math.floor(count / 3)), count); }, disabled: start === 0, title: "Earlier bars" }, "←"),
     React.createElement("button", { type: "button", onClick: function () { setView(end + Math.max(1, Math.floor(count / 3)), count); }, disabled: end === model.bars.length, title: "Later bars" }, "→"),
     React.createElement("button", { type: "button", onClick: function () { setView(end, Math.max(1, Math.floor(count * 0.7))); }, disabled: count === 1, title: "Show fewer bars" }, "+"),
     React.createElement("button", { type: "button", onClick: function () { setView(end, Math.min(model.bars.length, Math.ceil(count * 1.4))); }, disabled: count === model.bars.length, title: "Show more bars" }, "−"),
-    React.createElement("button", { type: "button", onClick: function () { setManual(null); }, disabled: manual === null }, "Reset")
+    React.createElement("button", { type: "button", onClick: function () { setManual(null); }, disabled: activeManual === null }, "Reset")
   );
   var exactText = blockText(block);
   return React.createElement("section", {

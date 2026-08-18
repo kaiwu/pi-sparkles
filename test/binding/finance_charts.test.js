@@ -271,12 +271,14 @@ describe("finance charts bundled boundary", () => {
       seriesReceipt: fixture.receipt,
       maximumBars: 2,
       indicatorReceipts: [fixture.indicatorReceipt],
-      trades: [],
-      gaps: [],
-      inputOmissions: [],
-      fallbackMaximumRows: 2,
     };
     expect(Buffer.byteLength(JSON.stringify(request))).toBeLessThan(400);
+
+    const required = tools.get("chart_ohlcv").parameters.required ?? [];
+    expect(required).not.toContain("trades");
+    expect(required).not.toContain("gaps");
+    expect(required).not.toContain("inputOmissions");
+    expect(required).not.toContain("fallbackMaximumRows");
 
     const result = await execute(
       tools.get("chart_ohlcv"),
@@ -293,6 +295,9 @@ describe("finance charts bundled boundary", () => {
       calculationReceipt: hash("3"),
     });
     expect(result.details.inputOmissions).toEqual([]);
+    expect(result.details.trades).toEqual([]);
+    expect(result.details.gaps).toEqual([]);
+    expect(result.details.structuredFallback.omittedRows).toBe(0);
   });
 
   test("retains exact decimals and mandatory structured fallback", async () => {
@@ -369,9 +374,9 @@ describe("finance charts bundled boundary", () => {
     expect(narrowLines[2]).toContain("26/30 bars");
     expect(narrowLines[2]).toContain("4 earlier hidden");
     expect(narrowLines.every((line) => visibleWidth(line) <= 36)).toBeTrue();
-    expect(narrowLines.join("\n")).toContain("legend █/▮ rise");
+    expect(narrowLines.join("\n")).toContain("legend ▁…█ rise");
     expect(narrowLines.join("\n")).toContain("│");
-    expect(narrowLines.join("\n")).toMatch(/[█▮━│]/u);
+    expect(narrowLines.join("\n")).toMatch(/[▁▂▃▄▅▆▇█━│]/u);
     expect(narrowLines.join("\n")).not.toMatch(/[\u2801-\u28ff]/u);
 
     const wide = definition.renderResult(
@@ -388,13 +393,13 @@ describe("finance charts bundled boundary", () => {
     expect(wideLines.join("\n")).not.toContain("\u001b[");
   });
 
-  test("renders small volume as proportional columns, not a dot baseline", async () => {
+  test("renders volume with proportional eighth-row heights", async () => {
     const tools = await harness();
     const definition = tools.get("chart_ohlcv");
     const value = input();
     value.series[0].volume = "1";
-    value.series[1].volume = "1000";
-    value.series[2].volume = "0";
+    value.series[1].volume = "500";
+    value.series[2].volume = "1000";
     value.indicators = [];
     value.trades = [];
     value.gaps = [];
@@ -407,11 +412,107 @@ describe("finance charts bundled boundary", () => {
     );
     const lines = component.render(80);
     const volumeStart = lines.findIndex((line) => line.includes("VOL"));
-    const volume = lines.slice(volumeStart, volumeStart + 3).join("\n");
+    const volumeRows = lines.slice(volumeStart, volumeStart + 3);
+    const glyphUnits = new Map([
+      [" ", 0],
+      ["▁", 1],
+      ["▂", 2],
+      ["▃", 3],
+      ["▄", 4],
+      ["▅", 5],
+      ["▆", 6],
+      ["▇", 7],
+      ["█", 8],
+    ]);
+    const renderedUnits = [0, 1, 2].map((column) =>
+      volumeRows.reduce(
+        (total, row) => total + glyphUnits.get(Array.from(row)[10 + column]),
+        0,
+      )
+    );
 
     expect(volumeStart).toBeGreaterThan(0);
-    expect(volume).toMatch(/[▂▃▄▅▆▇█]/u);
-    expect(volume).not.toMatch(/[·●_▁]/u);
+    expect(renderedUnits).toEqual([1, 12, 24]);
+    expect(volumeRows.join("\n")).not.toMatch(/[·●_]/u);
+  });
+
+  test("renders candle bodies with proportional eighth-row heights", async () => {
+    const tools = await harness();
+    const definition = tools.get("chart_ohlcv");
+    const value = input();
+    value.series = [
+      {
+        date: "2026-08-12",
+        sessionType: "regular",
+        open: "2.000",
+        high: "2.390",
+        low: "1.635",
+        close: "2.000",
+        volume: "28899076",
+      },
+      {
+        date: "2026-08-13",
+        sessionType: "regular",
+        open: "1.856",
+        high: "1.881",
+        low: "1.809",
+        close: "1.812",
+        volume: "40287224",
+      },
+      {
+        date: "2026-08-14",
+        sessionType: "regular",
+        open: "1.832",
+        high: "1.837",
+        low: "1.785",
+        close: "1.814",
+        volume: "31499191",
+      },
+      {
+        date: "2026-08-17",
+        sessionType: "regular",
+        open: "1.812",
+        high: "1.888",
+        low: "1.811",
+        close: "1.888",
+        volume: "42269337",
+      },
+    ];
+    value.indicators = [];
+    value.trades = [];
+    value.gaps = [];
+    const result = await execute(definition, value);
+    const component = definition.renderResult(
+      result,
+      { expanded: false },
+      {},
+      { lastComponent: null },
+    );
+    const priceRows = component.render(80).slice(3, 13);
+    const glyphUnits = new Map([
+      [" ", 0],
+      ["│", 0],
+      ["━", 0],
+      ["▁", 1],
+      ["▂", 2],
+      ["▃", 3],
+      ["▄", 4],
+      ["▅", 5],
+      ["▆", 6],
+      ["▇", 7],
+      ["█", 8],
+    ]);
+    const renderedUnits = [1, 2, 3].map((column) =>
+      priceRows.reduce(
+        (total, row) =>
+          total + glyphUnits.get(Array.from(row.replaceAll("\u20d2", ""))[10 + column]),
+        0,
+      )
+    );
+
+    expect(renderedUnits).toEqual([4, 2, 7]);
+    expect(priceRows.join("\n")).toContain("\u20d2");
+    expect(visibleWidth(`▄\u20d2`)).toBe(1);
   });
 
   test("renders RSI and ATR in independent exact-unit lower panes", async () => {
@@ -456,7 +557,7 @@ describe("finance charts bundled boundary", () => {
       { lastComponent: null },
     );
     const rendered = component.render(100).join("\n");
-    expect(rendered).toContain("legend █/▮ rise");
+    expect(rendered).toContain("legend ▁…█ rise");
     expect(rendered).toMatch(/[╱╲─]/u);
     expect(rendered).toContain("┤");
     expect(rendered).toContain("| Date | Session | Open | High | Low | Close | Volume |");
@@ -495,10 +596,10 @@ describe("finance charts bundled boundary", () => {
       const rendered = component.render(80);
 
       expect(calls.some(({ tone, text }) =>
-        tone === upTone && /[█▮━│]/u.test(text),
+        tone === upTone && /[▁▂▃▄▅▆▇█━│]/u.test(text),
       )).toBeTrue();
       expect(calls.some(({ tone, text }) =>
-        tone === downTone && /[█▮━│]/u.test(text),
+        tone === downTone && /[▁▂▃▄▅▆▇█━│]/u.test(text),
       )).toBeTrue();
       expect(rendered.some((line) => line.includes("\u001b["))).toBeTrue();
       expect(rendered.every((line) => visibleWidth(line) <= 76)).toBeTrue();

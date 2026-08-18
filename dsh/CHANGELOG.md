@@ -7,11 +7,16 @@ content hashes remain authoritative in each tarball's `dsh-lock.json` and
 
 ## Unreleased
 
-## 0.1.6 - 2026-08-17
+## 0.1.6 - 2026-08-18
 
 - Add the responsive keyed `chart_ohlcv` browser card: inline SVG
   candlesticks, volume, supplied indicators/trades/gaps, width-proportional
-  latest-suffix selection, pan/zoom/reset controls, and exact text fallback.
+  layout, pan/zoom/reset controls, and exact text fallback. Each result opens
+  at its full returned date range, and stale manual zoom cannot constrain the
+  next result.
+- Let receipt-driven chart calls omit empty trades, gaps, input omissions, and
+  the text fallback row cap; these default to empty lists and 50 rows without
+  constraining the requested 1-through-240 bar chart span.
 - Apply market-native direction colors: red-up/green-down for Mainland China,
   green-up/red-down for Hong Kong and the United States, and neutral gray for
   flat candles, with a matching per-track legend.

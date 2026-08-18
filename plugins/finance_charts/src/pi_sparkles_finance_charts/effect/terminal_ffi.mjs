@@ -3,10 +3,12 @@ import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 const AXIS_WIDTH = 10;
 const SLOT_WIDTH = 1;
 const PRICE_ROWS = 10;
+const PRICE_SUBROW_UNITS = 8;
 const VOLUME_ROWS = 3;
 const MIN_CHART_WIDTH = AXIS_WIDTH + SLOT_WIDTH;
 const CONTENT_MARGIN = 4;
 const INDICATOR_TONES = ["accent", "warning", "thinkingText", "success"];
+const WICK_OVERLAY = "\u20d2";
 
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -69,12 +71,39 @@ function rowFor(value, minimum, maximum, rows) {
   );
 }
 
-const VOLUME_GLYPHS = [null, "▂", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
+const LOWER_BLOCK_GLYPHS = [null, "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
 
 function volumeGlyph(cellRow, units, rows) {
   const unitsBelow = (rows - cellRow - 1) * 8;
   const filled = Math.max(0, Math.min(8, units - unitsBelow));
-  return VOLUME_GLYPHS[filled];
+  return LOWER_BLOCK_GLYPHS[filled];
+}
+
+function candleBodyUnits(open, close, minimum, maximum) {
+  if (open === close || maximum === minimum) return 0;
+  return Math.max(
+    1,
+    Math.round(
+      (Math.abs(close - open) / (maximum - minimum)) *
+      (PRICE_ROWS - 1) * PRICE_SUBROW_UNITS,
+    ),
+  );
+}
+
+function putCandleBody(matrix, column, bottomRow, units, tone) {
+  let remaining = units;
+  for (let row = bottomRow; row >= 0 && remaining > 0; row -= 1) {
+    const filled = Math.min(PRICE_SUBROW_UNITS, remaining);
+    put(
+      matrix,
+      row,
+      column,
+      `${LOWER_BLOCK_GLYPHS[filled]}${WICK_OVERLAY}`,
+      tone,
+      3,
+    );
+    remaining -= filled;
+  }
 }
 
 function cells(rows, columns) {
@@ -232,14 +261,16 @@ function priceChart(details, visible, plotWidth, theme, palette) {
     for (let row = Math.min(high, low); row <= Math.max(high, low); row += 1) {
       put(matrix, row, x, "│", tone, 1);
     }
-    const bodyTop = Math.min(open, close);
-    const bodyBottom = Math.max(open, close);
-    if (bodyTop === bodyBottom) {
-      put(matrix, bodyTop, x, bar.close === bar.open ? "━" : "▮", tone, 3);
+    if (bar.close === bar.open) {
+      put(matrix, open, x, `━${WICK_OVERLAY}`, tone, 3);
     } else {
-      for (let row = bodyTop; row <= bodyBottom; row += 1) {
-        put(matrix, row, x, "█", tone, 3);
-      }
+      putCandleBody(
+        matrix,
+        x,
+        Math.max(open, close),
+        candleBodyUnits(bar.open, bar.close, minimum, maximum),
+        tone,
+      );
     }
   }
   for (const trade of details.trades ?? []) {
@@ -264,7 +295,7 @@ function volumeChart(visible, plotWidth, theme, palette) {
   for (const [index, bar] of visible.entries()) {
     const units = maximum === 0 || bar.volume === 0
       ? 0
-      : Math.max(2, Math.round((bar.volume / maximum) * VOLUME_ROWS * 8));
+      : Math.max(1, Math.round((bar.volume / maximum) * VOLUME_ROWS * 8));
     const tone = bar.sessionType === "half_day"
       ? "accent"
       : directionTone(bar, palette);
@@ -379,13 +410,13 @@ function legendLines(theme, palette) {
   return [
     [
       "legend ",
-      paint(theme, palette.up, "█/▮ rise"),
+      paint(theme, palette.up, "▁…█ rise"),
       "  ",
-      paint(theme, palette.down, "█/▮ fall"),
+      paint(theme, palette.down, "▁…█ fall"),
       "  ",
       paint(theme, palette.flat, "█ flat"),
       "  ",
-      paint(theme, "muted", "│ wick ▂…█ volume"),
+      paint(theme, "muted", "│ wick ▁…█ volume"),
     ].join(""),
     [
       "       ",
