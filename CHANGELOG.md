@@ -5,6 +5,26 @@ here. Versions follow Semantic Versioning. The exact selected tier, plugin
 inventory, maturity, and content hashes remain authoritative in each tarball's
 `release-lock.json` and `aggregate-lock.json`.
 
+## 0.1.8 - 2026-08-19
+
+- Add credential-free official SSE acquisition for the exact reviewed STAR 50
+  (`sse` / `000688`) current constituent list and aggregate industry
+  composition, with complete 50-member validation, provider order, effective
+  dates, request receipts, and explicit HK/US `track_partial` boundaries.
+- Keep Tushare's heavily rate- and entitlement-limited `stock_basic` adapter as
+  an optional, user-accepted stock-identity fallback only. It is never a first
+  route, automatic prerequisite, or index resolver.
+- Correct CN/HK feature coverage to measure the actually installed product
+  surfaces, and carry the same current readiness calculation through Pi and
+  per-agent DSH status projections.
+- Register canonical active-session `seriesReceipt` handoffs from CN and HK
+  OHLCV producers and from US OHLCV when an exact caller-proven XNYS/XNAS MIC
+  is present. Gap/acquisition digests can no longer masquerade as series
+  receipts for SMA, RSI, ATR, or charts.
+- Tighten sampled index analysis and receipt recovery: avoid quote-plus-history
+  double fetches, invented per-stock classifications, copied internal rows,
+  scripted hashes, and repeated consumer calls after a missing handoff.
+
 ## 0.1.7 - 2026-08-18
 
 - Audit all 45 concrete provider request constructors with bounded live,

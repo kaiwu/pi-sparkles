@@ -7,6 +7,21 @@ content hashes remain authoritative in each tarball's `dsh-lock.json` and
 
 ## Unreleased
 
+## 0.1.8 - 2026-08-19
+
+- Consume the shared credential-free SSE STAR 50 constituent/composition
+  acquisition and explicit CN-supported/HK-US-`track_partial` applicability
+  result without introducing a DSH-only finance implementation.
+- Expose Tushare configuration only as an optional, user-accepted stock
+  identity fallback in the per-agent runtime guidance; never select it first,
+  use it for indices, or require it for ordinary market data.
+- Project current installation-aware CN/HK/US readiness from each agent's real
+  global/scoped tool union instead of retaining stale host-shell gaps.
+- Preserve canonical OHLCV `seriesReceipt` entries in the exact invoking DSH
+  session so indicators and the inline chart consume short, content-verified
+  handoffs. Cross-agent reuse, gap-digest substitution, copied-row recovery,
+  and scripted instruction hashes remain rejected.
+
 ## 0.1.7 - 2026-08-18
 
 - Consume the shared provider-compatibility fixes, including exact Alpaca
