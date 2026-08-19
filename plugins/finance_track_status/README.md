@@ -74,6 +74,16 @@ probing, benchmark/sector code guessing, and duplicate short/long history window
 separate from unavailable fund-flow, constituent-breadth, causal-rotation,
 theme, stabilization, top, and reversal claims.
 
+For a name-only instrument, the same policy forbids reconstructing venue/code
+from model memory and selects identity discovery only when an installed tool's
+instrument scope and provider prerequisites are satisfied. Tushare
+`cn_stock_symbol_search` is a heavily rate- and entitlement-limited fallback
+stock-listing adapter. It is never the first route or selected automatically.
+An applicable credential-free installed path is preferred; Tushare may be
+offered or called only after that path is unavailable and the user explicitly
+requests or accepts the fallback. It does not cover benchmark or sector indices;
+an identity with no applicable configured path remains explicitly unresolved.
+
 The policy also records that provider-ranked movers acquisition is currently
 `track_partial` for HK and US; it never relabels or substitutes the CN page for
 another track. The return calculator itself remains shared across all three

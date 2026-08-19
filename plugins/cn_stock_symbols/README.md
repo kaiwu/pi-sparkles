@@ -35,6 +35,14 @@ permission rejection with no retry/fallback, never as invalid listing rows.
 Composition should reuse an already returned symbol receipt and must not fan out
 or issue code-to-name workaround calls.
 
+This heavily rate- and entitlement-limited Tushare adapter is a fallback only,
+never a universal identity prerequisite or first route. Prefer an applicable
+credential-free installed identity path. Offer or call Tushare only after that
+primary path is unavailable and the user explicitly requests or accepts the
+fallback, with its stock-listing scope, credential, and entitlement satisfied.
+Benchmark and sector indices are outside its `stock_basic` scope; if no
+configured adapter can prove an identity, it remains unresolved.
+
 `cn_stock_alias_history` requires an already resolved venue/code plus upstream
 identity-evidence reference and returns every `namechange` row with separate
 effective-start, effective-end, announcement-date, and original Chinese reason.

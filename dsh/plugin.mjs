@@ -80,7 +80,10 @@ function localDate() {
 }
 
 function dshRuntimeGuidance() {
-  return `DSH runtime date: ${localDate()}. Bound current daily-history requests at this date; never invoke a shell merely to discover today's date, and never request future bars. A daily-history limit caps returned rows, so choose a date window whose expected sessions fit the limit or raise the limit within the tool schema.`;
+  const tushareDiscovery = process.env?.TUSHARE_TOKEN?.trim()
+    ? "The heavily limited Tushare stock-listing identity fallback is configured in this DSH process; never use it first or automatically, and call it only after the primary path is unavailable and the user explicitly requests or accepts the fallback."
+    : "The optional Tushare stock-listing identity adapter is unavailable in this DSH process because TUSHARE_TOKEN is not configured; do not call it or guess the missing identity.";
+  return `DSH runtime date: ${localDate()}. ${tushareDiscovery} cn_stock_symbol_search covers stock listings only, not benchmark or sector indices. Bound current daily-history requests at this date; never invoke a shell merely to discover today's date, and never request future bars. A daily-history limit caps returned rows, so choose a date window whose expected sessions fit the limit or raise the limit within the tool schema.`;
 }
 
 function dshHome() {

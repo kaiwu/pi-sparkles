@@ -230,12 +230,17 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
       agent: first.agent,
       scope: first.agent,
     });
+    const expectedTushareGuidance = process.env.TUSHARE_TOKEN?.trim()
+      ? "The heavily limited Tushare stock-listing identity fallback is configured in this DSH process; never use it first or automatically, and call it only after the primary path is unavailable and the user explicitly requests or accepts the fallback."
+      : "The optional Tushare stock-listing identity adapter is unavailable in this DSH process because TUSHARE_TOKEN is not configured; do not call it or guess the missing identity.";
     if (
       !prompt.sections.some(
         (section) =>
           section.name === "pi-sparkles:finance-routing" &&
           section.text.includes("Pi Sparkles finance routing") &&
           section.text.includes("never invoke a shell merely to discover today's date") &&
+          section.text.includes("cn_stock_symbol_search covers stock listings only") &&
+          section.text.includes(expectedTushareGuidance) &&
           section.text.includes("priorOffset is one-based"),
       )
     ) {

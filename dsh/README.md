@@ -66,7 +66,7 @@ or Pi package metadata.
 | browser status | The package's `dsh.client` entry registers the draggable, keyboard-movable `pi-sparkles-finance-track` badge in `shell.overlay`; double-click or Home resets its position. |
 | browser charts | `chart_ohlcv` adds bounded `output.presentationMeta`; the package client registers a keyed `tool.call.toolview` card that renders responsive SVG inline in the transcript. |
 | persisted event vocabulary | The generated rc.7 entry contributes `pi-sparkles/custom` and `pi-sparkles/status` to DSH's exported process-wide catalog before a cold session load, so required Sparkles state is readable after restart. |
-| finance routing prompt | Exported once by the Gleam track module and contributed as an agent-scoped DSH system-prompt section. |
+| finance routing prompt | Exported once by the Gleam track module and contributed as an agent-scoped DSH system-prompt section. DSH reports whether the heavily limited Tushare stock-identity fallback is configured, without exposing the token; it is never the first route or automatic, requires user acceptance after the primary path is unavailable, and does not cover indices. |
 | flags | Defaults may be overridden by bundle `config.flags` or `PI_SPARKLES_FLAG_<NAME>`. |
 | unsupported Pi effects | Fail explicitly; they never return placeholder success. |
 

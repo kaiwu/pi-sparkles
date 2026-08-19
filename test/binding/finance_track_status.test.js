@@ -205,9 +205,29 @@ describe("finance track status binding", () => {
       "never translate it into fund flow, capital rotation, sector breadth, causal leadership, AI/theme exposure",
     );
     expect(result.systemPrompt).toContain(
-      "the absence of a code in the original wording does not by itself require symbol search",
+      "Never infer a mainland listing's exact venue or code from model memory",
     );
-    expect(result.systemPrompt).toContain("resolve the identity at most once");
+    expect(result.systemPrompt).toContain(
+      "use an applicable installed identity-discovery tool only when that tool covers the instrument kind",
+    );
+    expect(result.systemPrompt).toContain(
+      "heavily rate- and entitlement-limited optional Tushare stock_basic adapter",
+    );
+    expect(result.systemPrompt).toContain(
+      "Keep it only as a fallback option: never use it as the first route or invoke it automatically",
+    );
+    expect(result.systemPrompt).toContain(
+      "only after the primary identity path is unavailable and the user explicitly requests or accepts the Tushare fallback",
+    );
+    expect(result.systemPrompt).toContain(
+      "It is never a mandatory prerequisite",
+    );
+    expect(result.systemPrompt).toContain(
+      "If no applicable configured identity path can prove the identity, keep it unresolved",
+    );
+    expect(result.systemPrompt).toContain(
+      "otherwise report that controlled index discovery is unavailable",
+    );
     expect(result.systemPrompt).toContain(
       "CNINFO is never a prerequisite for quotes, OHLCV, or indicators",
     );

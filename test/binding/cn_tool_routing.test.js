@@ -24,12 +24,29 @@ describe("CN pre-invocation tool routing", () => {
     expect(search.description).toContain(
       "Exact-code mode requires a caller-proven sse, szse, or bse venue",
     );
+    expect(search.description).toContain(
+      "Heavily rate- and entitlement-limited Tushare stock_basic mainland stock-listing fallback",
+    );
+    expect(search.description).toContain(
+      "Never use as the first identity route or invoke automatically",
+    );
+    expect(search.description).toContain(
+      "after the primary path is unavailable and the user explicitly requests or accepts this fallback",
+    );
+    expect(search.description).toContain("never mandatory");
+    expect(search.description).toContain(
+      "does not resolve benchmark or sector indices",
+    );
     expect(search.description).toContain("TUSHARE_TOKEN");
     expect(search.promptSnippet).toContain(
       "Do not fan this single-query network tool across a result list",
     );
     expect(search.promptSnippet).toContain(
       "switch from code mode to name mode as a workaround",
+    );
+    expect(search.promptSnippet).toContain("use it for an index");
+    expect(search.promptSnippet).toContain(
+      "Prefer an applicable credential-free installed identity path",
     );
     expect(search.parameters.properties.queryKind.description).toContain(
       "code requires an explicit venue",

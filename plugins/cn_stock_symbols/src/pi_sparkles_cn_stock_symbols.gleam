@@ -37,8 +37,8 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "cn_stock_symbol_search",
     "CN stock symbol search",
-    "Tushare-backed mainland listing discovery. Use name mode only for genuine name discovery. Exact-code mode requires a caller-proven sse, szse, or bse venue in the same call; it cannot discover a venue from a bare code. TUSHARE_TOKEN and provider permission are required for either mode",
-    "Do not fan this single-query network tool across a result list or switch from code mode to name mode as a workaround for missing venue evidence. Known exact venue-plus-code market-data requests bypass it; no prefix, name match, or vendor field is upgraded to exchange-authenticated identity",
+    "Heavily rate- and entitlement-limited Tushare stock_basic mainland stock-listing fallback. Never use as the first identity route or invoke automatically. Offer or call only after the primary path is unavailable and the user explicitly requests or accepts this fallback. Exact-code mode requires a caller-proven sse, szse, or bse venue. This tool is never mandatory, does not resolve benchmark or sector indices, and requires TUSHARE_TOKEN plus provider permission",
+    "Prefer an applicable credential-free installed identity path. Do not fan this single-query network tool across a result list, use it for an index, or switch from code mode to name mode as a workaround for missing venue evidence. Known exact venue-plus-code market-data requests bypass it; no prefix, name match, or vendor field is upgraded to exchange-authenticated identity",
     tool.parameters(search_schema(), search_decoder()),
     tool.Parallel,
     fn(id, input, signal, _updates, _ctx) {
