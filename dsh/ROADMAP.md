@@ -32,7 +32,7 @@ The bundle manifest records the separation explicitly:
 - `scoped_pi`: excluded ledger shells re-instantiated per agent;
 - `extra_dsh`: DSH-native Cordis surfaces under `dsh/plugins/`.
 
-The real-runtime lane creates two installed-DSH agent scopes, checks the 244
+The real-runtime lane creates two installed-DSH agent scopes, checks the 246
 effective tools, commands and shared routing prompt, switches the track through
 the DSH command runtime, reads the overlay projection, and proves a watchlist
 mutation in one agent leaves the other at revision zero. The installed DSH web

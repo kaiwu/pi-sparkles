@@ -10,8 +10,11 @@ gleam = ">= 1.18.0"
 gleam_stdlib = ">= 0.69.0 and < 2.0.0"
 gleam_javascript = ">= 1.0.0 and < 2.0.0"
 gleam_json = ">= 3.1.0 and < 4.0.0"
+finance_http = { path = "../../finance/finance_http" }
 finance_local_import = { path = "../../finance/finance_local_import" }
+finance_provenance = { path = "../../finance/finance_provenance" }
 finance_research_contract = { path = "../../finance/finance_research_contract" }
+finance_sse_index = { path = "../../finance/finance_sse_index" }
 pi_gleam = { path = "../../pi_gleam" }
 
 [javascript]
@@ -21,6 +24,6 @@ runtime = "bun"
 tested_version = "0.83.0"
 
 [metadata.finance]
-provider = "bounded user-owned import with exact source metadata"
-access = "read-only local import"
+provider = "bounded user-owned import or Shanghai Stock Exchange public index service"
+access = "read-only local import or one-request public SSE constituent acquisition"
 track = "cn"

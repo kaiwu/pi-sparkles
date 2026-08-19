@@ -17,6 +17,7 @@ import finance_eastmoney/runtime
 import finance_http/response as http_response
 import finance_http/transport
 import finance_ohlcv
+import finance_ohlcv/series_handoff
 import finance_provenance/hash
 import finance_provenance/identity as provenance_identity
 import finance_track
@@ -27,7 +28,7 @@ import gleam/int
 import gleam/javascript/promise.{type Promise}
 import gleam/json
 import gleam/list
-import gleam/option.{Some}
+import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
 import pi
@@ -113,30 +114,48 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                         )
                       {
                         Error(message) -> tool.reject(message)
-                        Ok(#(receipt, digest)) -> {
-                          let details =
-                            result_json(
+                        Ok(#(receipt, digest)) ->
+                          case
+                            history_series_handoff(
                               input,
-                              query_plan,
                               outcome.history,
-                              batch,
                               retrieved_at,
                               receipt,
-                              digest,
                             )
-                          tool.text_result(
-                            model_content(
-                              render(input, outcome.history, batch),
-                              input,
-                              outcome.history,
-                              retrieved_at,
-                              receipt,
-                              digest,
-                            ),
-                            details,
-                          )
-                          |> promise.resolve
-                        }
+                          {
+                            Error(message) -> tool.reject(message)
+                            Ok(series_value) -> {
+                              pi.append_entry(
+                                api,
+                                series_handoff.event_type,
+                                raw.dynamic(series_handoff.encode(series_value)),
+                              )
+                              let details =
+                                result_json(
+                                  input,
+                                  query_plan,
+                                  outcome.history,
+                                  batch,
+                                  retrieved_at,
+                                  receipt,
+                                  digest,
+                                  series_value,
+                                )
+                              tool.text_result(
+                                model_content(
+                                  render(input, outcome.history, batch),
+                                  input,
+                                  outcome.history,
+                                  retrieved_at,
+                                  receipt,
+                                  digest,
+                                  series_value,
+                                ),
+                                details,
+                              )
+                              |> promise.resolve
+                            }
+                          }
                       }
                   }
                 }
@@ -519,9 +538,10 @@ fn model_content(
   retrieved_at: time.Instant,
   receipt: gap_receipt.Receipt,
   receipt_digest: provenance_identity.Sha256,
+  series_value: series_handoff.Handoff,
 ) -> String {
   summary
-  <> "\nComplete bounded daily rows follow as CSV. For requested indicators, call the installed Pi tools sma, rsi, and atr with these exact rows; do not write or execute a program and do not calculate the indicators yourself. Map close to sma/rsi observations and high,low,close to atr bars.\n"
+  <> "\nComplete bounded daily rows follow as CSV. This exact active-session series is already registered: for sma, rsi, atr, or chart_ohlcv pass only seriesReceipt with the requested calculation/chart fields. Never copy these rows into those installed tools, never use acquisitionReceipt or gapAssessmentReceiptDigest as seriesReceipt, and never manufacture an instructionRef or use a script for the handoff.\n"
   <> "track=cn;provider=eastmoney;venue="
   <> query.market_name(input.market)
   <> ";board="
@@ -538,6 +558,9 @@ fn model_content(
   <> provenance_identity.sha256_value(receipt_digest)
   <> ";acquisitionReceipt="
   <> provenance_identity.sha256_value(receipt_digest)
+  <> ";seriesReceipt="
+  <> series_handoff.receipt(series_value)
+  <> ";seriesHandoff=session_bound_v1_use_receipt_for_sma_rsi_atr_chart"
   <> ";sourceReference="
   <> gap_receipt.source_reference(receipt)
   <> "\ndate,open,high,low,close,volume,amount\n"
@@ -567,6 +590,7 @@ fn result_json(
   retrieved_at: time.Instant,
   receipt: gap_receipt.Receipt,
   receipt_digest: provenance_identity.Sha256,
+  series_value: series_handoff.Handoff,
 ) -> json.Json {
   json.object(
     list.append(track_json.result_fields(result_context(input)), [
@@ -627,6 +651,7 @@ fn result_json(
         "acquisitionReceipt",
         json.string(provenance_identity.sha256_value(receipt_digest)),
       ),
+      #("seriesReceipt", json.string(series_handoff.receipt(series_value))),
       #(
         "gapStates",
         json.array(
@@ -649,6 +674,54 @@ fn result_json(
       #("limitations", json.array(limitations(), json.string)),
     ]),
   )
+}
+
+fn history_series_handoff(
+  input: Input,
+  value: history.History,
+  retrieved_at: time.Instant,
+  receipt: gap_receipt.Receipt,
+) -> Result(series_handoff.Handoff, String) {
+  use mic <- result.try(case input.market {
+    query.CnSse -> Ok("XSHG")
+    query.CnSzse -> Ok("XSHE")
+    query.CnBse -> Ok("XBSE")
+    query.Hk -> Error("HK market cannot enter a CN OHLCV series handoff")
+  })
+  let bars =
+    history.bars(value)
+    |> list.map(fn(bar) {
+      series_handoff.Bar(
+        date: date_text(history.date(bar)),
+        open: history.open(bar),
+        high: history.high(bar),
+        low: history.low(bar),
+        close: history.close(bar),
+        volume: history.volume(bar),
+        amount: history.amount(bar),
+      )
+    })
+  series_handoff.new(
+    track: "cn",
+    instrument_id: history.code(value),
+    mic: mic,
+    timezone: "Asia/Shanghai",
+    source_language: "zh-CN",
+    price_unit: currency.code(input.declared_currency),
+    volume_unit: "provider_defined_unknown",
+    adjustment: "raw",
+    provider: "eastmoney",
+    source_reference: gap_receipt.source_reference(receipt),
+    retrieved_at_unix_milliseconds: time.unix_milliseconds(retrieved_at),
+    source_cutoff_unix_milliseconds: None,
+    entitlement: "public_web_local_analysis",
+    limitations: limitations(),
+    bars: bars,
+  )
+  |> result.map_error(fn(error) {
+    "CN OHLCV series handoff could not be created: "
+    <> series_handoff.error_message(error)
+  })
 }
 
 fn gap_assessment_receipt_json(

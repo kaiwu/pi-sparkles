@@ -28,3 +28,37 @@ information states, duplicate rejection, correction lineage, omissions,
 stable paging, compact summaries, and full record drill-down. It never reads
 credential values, searches directories, selects a source, or makes a market
 or investment judgment.
+
+## Current official SSE acquisition
+
+`cn_index_constituents` adds one bounded, credential-free acquisition path for
+the exact reviewed `sse` / `000688` identity. It makes one request to the
+Shanghai Stock Exchange public index service, requires the complete 50-member
+response, rejects duplicate or malformed listing identities and conflicting
+publication dates, and returns all members in provider order with a response
+hash and exact request count. This operation does not return weights, rebuild
+historical membership, enrich each stock, call Eastmoney, or fall back to
+Tushare. The existing content-bound import tools remain the point-in-time
+analysis path for broader index identities and historical manifests.
+
+`cn_index_industry_composition` is the separate official aggregate companion.
+For the same reviewed identity it returns the SSE effective date, sector member
+counts, and exact provider weight lexemes, while rejecting a composition whose
+counts do not cover all 50 members. It does not manufacture per-stock industry
+assignments, calculate returns, or claim causal attribution.
+
+## Track applicability review
+
+This slice was reviewed across every user-visible track; the CN result must not
+be relabelled or substituted:
+
+| Track | Status | Exact disposition |
+| --- | --- | --- |
+| `cn` | supported | Only the reviewed official SSE `000688` membership and aggregate industry-composition operations above. Other CN indices remain unsupported. |
+| `hk` | `track_partial` | Hang Seng Indexes Company publishes official factsheets and review notices, but no installed adapter yet proves a reviewed exact index identity, complete current membership, effective-date/correction semantics, or licence/redistribution policy. Existing HKEX security/disclosure tools do not prove index membership. |
+| `us` | `track_partial` | S&P DJI publishes official index pages with composition information, but no installed adapter yet proves a selected exact benchmark/administrator identity, complete current membership acquisition, listing/correction semantics, or licence/redistribution policy. SEC, OpenFIGI, and Alpaca tools do not prove index membership. |
+
+Candidate authority evidence was reviewed at the
+[Hang Seng Index factsheet](https://www.hsi.com.hk/static/uploads/contents/en/dl_centre/factsheets/hsie.pdf)
+and the [S&P 500 official index page](https://www.spglobal.com/spdji/en/indices/equity/sp-500/).
+Those pages are not silently used as runtime adapters.

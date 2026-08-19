@@ -442,6 +442,111 @@ describe("pi-api facade", () => {
     ).rejects.toThrow("No active-session OHLCV handoff matched seriesReceipt");
   });
 
+  test("CN OHLCV producer registers the exact DSH receipt consumed by SMA and chart", async () => {
+    const originalFetch = globalThis.fetch;
+    const originalContact = process.env.AGENT_CONTACT;
+    process.env.AGENT_CONTACT = "dsh-series@example.test";
+    globalThis.fetch = async () => new Response(
+      '{"rc":0,"data":{"code":"600519","name":"贵州茅台","klines":["2024-08-01,1350.6000,1358.98,1363.35,1346.00,36147,4898665275.00,1.28,0.62,8.38,0.29","2024-08-02,1358.98,1328.36,1360.00,1320.00,37450,5004070406.00,2.94,-2.25,-30.62,0.30"]}}',
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+
+    try {
+      const ctx = fakeCtx();
+      const api = createPiApi({ ctx });
+      for (const name of ["cn_ohlcv", "stock_technicals", "finance_charts"]) {
+        const artifact = resolve(import.meta.dir, `../../dist/${name}/index.js`);
+        const extension = await import(
+          `${artifact}?dsh-producer-series=${Date.now()}-${Math.random()}`
+        );
+        await extension.default(api);
+      }
+
+      const owner = fakeAgent("producer-owner");
+      const tool = (name) => ctx.__tools.find((definition) => definition.name === name);
+      const history = await tool("cn_stock_ohlcv").execute({
+        venue: "sse",
+        board: "main",
+        shareClass: "a_share",
+        code: "600519",
+        currency: "CNY",
+        startDate: "2024-08-01",
+        endDate: "2024-08-02",
+        limit: 2,
+      }, toolRunContext(owner, "cn-history"));
+
+      expect(history.details.seriesReceipt).toMatch(/^[0-9a-f]{64}$/);
+      expect(history.details.seriesReceipt).not.toBe(
+        history.details.acquisitionReceipt,
+      );
+      expect(owner.session.events).toHaveLength(1);
+      expect(owner.session.events[0]).toMatchObject({
+        type: DSH_CUSTOM_EVENT,
+        data: {
+          customType: "pi_sparkles_finance_ohlcv.series_handoff.v1",
+          data: {
+            track: "cn",
+            instrumentId: "600519",
+            mic: "XSHG",
+            acquisitionReceipt: history.details.seriesReceipt,
+          },
+        },
+      });
+
+      const smaArgs = {
+        seriesReceipt: history.details.seriesReceipt,
+        calculation: {
+          formulaVariant: "sma_v1",
+          period: 2,
+          windowVariant: "slot_window_v1",
+          parseablePolicy: "exclude_parseable_with_checks",
+          rounding: {
+            mode: "half_up",
+            policy: "per_step",
+            outputScale: 2,
+            intermediateScale: 6,
+          },
+        },
+        projection: { kind: "compact", priorOffset: 1 },
+      };
+      const sma = await tool("sma").execute(
+        smaArgs,
+        toolRunContext(owner, "cn-sma"),
+      );
+      expect(sma.details.latestValue.state).toBe("known");
+      expect(sma.details.chartHandoffReceipt).toMatch(/^[0-9a-f]{64}$/);
+
+      const chartArgs = {
+        seriesReceipt: history.details.seriesReceipt,
+        maximumBars: 2,
+        indicatorReceipts: [sma.details.chartHandoffReceipt],
+      };
+      const chartTool = tool("chart_ohlcv");
+      const chart = await chartTool.execute(
+        chartArgs,
+        toolRunContext(owner, "cn-chart"),
+      );
+      expect(chart.details.bars).toHaveLength(2);
+      expect(chart.details.indicators).toHaveLength(1);
+      expect(chartTool.output.presentationMeta(chartArgs, chart)).toMatchObject({
+        valid: true,
+        chart: { instrumentId: "600519", mic: "XSHG" },
+      });
+      expect(Buffer.byteLength(JSON.stringify(chartArgs))).toBeLessThan(400);
+
+      await expect(
+        tool("sma").execute(
+          smaArgs,
+          toolRunContext(fakeAgent("producer-other"), "other-cn-sma"),
+        ),
+      ).rejects.toThrow("No active-session OHLCV handoff matched seriesReceipt");
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalContact === undefined) delete process.env.AGENT_CONTACT;
+      else process.env.AGENT_CONTACT = originalContact;
+    }
+  });
+
   test("scoped status UI writes whole-value DSH session events", async () => {
     const ctx = fakeCtx();
     const api = createPiApi({

@@ -36,9 +36,20 @@ afterEach(() => {
 
 async function harness(name) {
   const tools = new Map();
+  tools.sessionEntries = [];
   const api = {
     registerTool(definition) {
       tools.set(definition.name, definition);
+    },
+    appendEntry(customType, data) {
+      tools.sessionEntries.push({
+        type: "custom",
+        id: `session-entry-${tools.sessionEntries.length + 1}`,
+        parentId: null,
+        timestamp: "2026-08-19T00:00:00.000Z",
+        customType,
+        data,
+      });
     },
   };
   const artifact = resolve(import.meta.dir, `../../dist/${name}/index.js`);
@@ -47,13 +58,13 @@ async function harness(name) {
   return tools;
 }
 
-async function execute(tool, input) {
+async function execute(tool, input, executionContext = { hasUI: false, ui: {} }) {
   return tool.execute(
     "eastmoney-ohlcv-query",
     input,
     new AbortController().signal,
     undefined,
-    { hasUI: false, ui: {} },
+    executionContext,
   );
 }
 
@@ -131,11 +142,9 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
     expect(result.content[0].text).toContain(
       "Complete bounded daily rows follow as CSV",
     );
+    expect(result.content[0].text).toContain("pass only seriesReceipt");
     expect(result.content[0].text).toContain(
-      "call the installed Pi tools sma, rsi, and atr",
-    );
-    expect(result.content[0].text).toContain(
-      "do not write or execute a program",
+      "never manufacture an instructionRef or use a script",
     );
     expect(result.content[0].text).toContain(
       "2024-08-01,1350.6000,1363.35,1346.00,1358.98,36147,4898665275.00",
@@ -179,6 +188,23 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
       },
     ]);
     expect(receipt.digest).toBe(receiptDigest(receipt));
+    expect(result.details.seriesReceipt).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.details.seriesReceipt).not.toBe(result.details.acquisitionReceipt);
+    expect(result.content[0].text).toContain(
+      `seriesReceipt=${result.details.seriesReceipt}`,
+    );
+    expect(tools.sessionEntries).toHaveLength(1);
+    expect(tools.sessionEntries[0]).toMatchObject({
+      customType: "pi_sparkles_finance_ohlcv.series_handoff.v1",
+      data: {
+        schema: "pi-sparkles/ohlcv-series-handoff",
+        schemaVersion: 1,
+        track: "cn",
+        instrumentId: "600519",
+        mic: "XSHG",
+        acquisitionReceipt: result.details.seriesReceipt,
+      },
+    });
 
     expect(requests).toHaveLength(1);
     expect(requests[0].url.hostname).toBe("push2his.eastmoney.com");
@@ -242,11 +268,9 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
     expect(result.content[0].text).toContain(
       "Complete bounded daily rows follow as CSV",
     );
+    expect(result.content[0].text).toContain("pass only seriesReceipt");
     expect(result.content[0].text).toContain(
-      "call the installed Pi tools sma, rsi, and atr",
-    );
-    expect(result.content[0].text).toContain(
-      "do not write or execute a program",
+      "never manufacture an instructionRef or use a script",
     );
     expect(result.content[0].text).toContain(
       "2024-08-01,370.200,375.000,368.600,372.400,15432100,5743210000.00",
@@ -312,6 +336,23 @@ describe("CN/HK Eastmoney OHLCV boundaries", () => {
       },
     ]);
     expect(receipt.digest).toBe(receiptDigest(receipt));
+    expect(result.details.seriesReceipt).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.details.seriesReceipt).not.toBe(result.details.acquisitionReceipt);
+    expect(result.content[0].text).toContain(
+      `seriesReceipt=${result.details.seriesReceipt}`,
+    );
+    expect(tools.sessionEntries).toHaveLength(1);
+    expect(tools.sessionEntries[0]).toMatchObject({
+      customType: "pi_sparkles_finance_ohlcv.series_handoff.v1",
+      data: {
+        schema: "pi-sparkles/ohlcv-series-handoff",
+        schemaVersion: 1,
+        track: "hk",
+        instrumentId: "00700",
+        mic: "XHKG",
+        acquisitionReceipt: result.details.seriesReceipt,
+      },
+    });
 
     expect(requests).toHaveLength(1);
     expect(requests[0].url.searchParams.get("secid")).toBe("116.00700");

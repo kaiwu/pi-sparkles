@@ -13,6 +13,13 @@ default or fallback feed. Requests always use `1Day`, USD, ascending order, and
 raw adjustment. Caller-visible page/bar budgets cap pagination, cancellation is
 propagated to every page, and repeated tokens fail closed.
 
+An optional exact caller-proven `mic` (`XNYS` or `XNAS`) enables the canonical
+active-session OHLCV handoff. When present, the tool appends
+`pi_sparkles_finance_ohlcv.series_handoff.v1` and returns `seriesReceipt` for
+`sma`, `rsi`, `atr`, and `chart_ohlcv`. Alpaca does not prove listing venue, so
+when `mic` is absent the receipt capability is explicitly `track_partial`; the
+gap digest is never substituted as a series receipt.
+
 Every result includes:
 
 - source and normalized OHLCV values, provider UTC timestamp, US session date,

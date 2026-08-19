@@ -142,6 +142,19 @@ describe("finance track status binding", () => {
       "Do not call cn_raw_vendor_history for 000688",
     );
     expect(result.systemPrompt).toContain(
+      "call cn_index_constituents exactly once with venue sse and code 000688",
+    );
+    expect(result.systemPrompt).toContain(
+      "also call cn_index_industry_composition exactly once with the same identity",
+    );
+    expect(result.systemPrompt).toContain("hk and us are track_partial");
+    expect(result.systemPrompt).toContain(
+      "Never relabel, reuse, or substitute the cn result across tracks",
+    );
+    expect(result.systemPrompt).toContain(
+      "do not ask the user to supply the member list, call Tushare, use generic web",
+    );
+    expect(result.systemPrompt).toContain(
       "do not probe benchmark codes through stock quote/history",
     );
     expect(result.systemPrompt).toContain(
@@ -256,6 +269,21 @@ describe("finance track status binding", () => {
     );
     expect(result.systemPrompt).toContain(
       "omit label and instructionRef entirely instead of copying display labels or null fields",
+    );
+    expect(result.systemPrompt).toContain(
+      "do not call quote and then history for the same sample",
+    );
+    expect(result.systemPrompt).toContain(
+      "do not assign any sampled stock to an industry",
+    );
+    expect(result.systemPrompt).toContain(
+      "Never substitute acquisitionReceipt, gapAssessmentReceiptDigest",
+    );
+    expect(result.systemPrompt).toContain(
+      "do not retry the same receipt across sma, rsi, atr, or chart_ohlcv",
+    );
+    expect(result.systemPrompt).toContain(
+      "US us_stock_ohlcv creates a seriesReceipt only",
     );
   });
 

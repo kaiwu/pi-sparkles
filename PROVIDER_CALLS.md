@@ -6,7 +6,7 @@ provenance, and caller-supplied import transports are not providers. The Futu
 T6 probes are listed separately because they are temporary acceptance lanes,
 not normal `finance_http` adapters.
 
-Status is from the bounded, read-only live audit on 2026-08-18. `decoded` means
+Status is from the bounded, read-only live audit on 2026-08-19. `decoded` means
 the built production plugin and its real decoder accepted the response.
 `contract` means the exact live response satisfied the package's bounded media
 or tabular-envelope contract but was not replayed through a product tool.
@@ -19,11 +19,11 @@ rejects a current provider value.
 
 | Coverage class | Calls | Meaning |
 | --- | ---: | --- |
-| Live production-decoded | 31 | Exact request and production decoder passed. |
+| Live production-decoded | 33 | Exact request and production decoder passed. |
 | Live response-contract | 6 | Exact public response passed media/signature/size checks. |
 | Live Tushare schema | 4 | Exact production body returned code 0, exact fields, and valid row widths; calls were not repeated through plugins because of the provider's unusually restrictive rate limits. |
 | Entitlement-blocked | 4 | The supplied free Tushare token is valid but provider code `40203` denies these APIs. |
-| **Total concrete calls** | **45** | Every call was either live-validated or reached an exact, named credential/entitlement boundary. |
+| **Total concrete calls** | **47** | Every call was either live-validated or reached an exact, named credential/entitlement boundary. |
 
 ## Concrete calls
 
@@ -64,6 +64,8 @@ rejects a current provider value.
 | SEC | `company_facts` | decoded | Public production API. Provider-null concept labels/descriptions remain empty/unknown rather than invalidating unrelated facts. |
 | SEC | `company_concept` | decoded | Public production API. |
 | SFC | `press_releases` — RSS | contract | Public production URL; XML media and byte bound passed. |
+| SSE | `constituents` — `/commonSoaQuery.do` | decoded, 50 rows | Public production URL; the shipped `cn_index_constituents` decoder accepted the complete `000688` manifest published 2026-08-19. No credential or Tushare fallback. |
+| SSE | `industry_composition` — `/commonSoaQuery.do` | decoded, 6 rows | Public production URL; the shipped `cn_index_industry_composition` decoder accepted aggregate sector counts covering all 50 members and exact weight lexemes effective 2026-08-18. |
 | Tushare | `stock_basic` | live schema, 1 row | Supplied mode-0600 `/tmp/tushare` free token; exact production request, no retry. |
 | Tushare | `daily` | live schema, 2 rows | Same free token. |
 | Tushare | `namechange` | live schema, 4 rows | Same free token. |
@@ -81,9 +83,21 @@ recheck is `bun run test:live:providers -- --check provider.operation`.
 lane. Neither command is part of normal tests, tier verification, packaging, or
 publication.
 
+## Current-index acquisition track applicability
+
+| Track | Status | Missing or controlling evidence |
+| --- | --- | --- |
+| `cn` | supported | Exact official SSE `000688` current membership and aggregate industry composition only. |
+| `hk` | `track_partial` | No reviewed exact index/administrator contract, complete-membership decoder, effective-date/correction contract, or licence/redistribution decision. |
+| `us` | `track_partial` | No selected exact benchmark/administrator contract, complete-membership acquisition/decoder, listing/correction contract, or licence/redistribution decision. |
+
+HK and US authority candidates were reviewed, but no provider call is listed or
+implied until its exact request and shipped decoder exist. CN evidence is never
+relabelled or substituted across tracks.
+
 ## Futu temporary live acceptance calls
 
-Futu is not one of the 45 normal request constructors. Its OpenD transaction-
+Futu is not one of the 47 normal request constructors. Its OpenD transaction-
 ticker and rights baselines predate this audit and are recorded in `FUTU.md`.
 On 2026-08-18 a newly started OpenD was confirmed listening on
 `127.0.0.1:11111`. The first bounded localhost WebSocket initialization was

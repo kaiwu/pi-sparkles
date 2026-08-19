@@ -1,6 +1,7 @@
 import finance_core/adjustment
 import finance_core/currency
 import finance_core/decimal
+import finance_core/identifier as core_identifier
 import finance_core/market
 import finance_core/observation.{type Observation}
 import finance_core/source
@@ -13,6 +14,7 @@ import finance_market_alpaca/query
 import finance_market_alpaca/request as provider_request
 import finance_market_alpaca/runtime
 import finance_ohlcv
+import finance_ohlcv/series_handoff
 import finance_provenance/hash
 import finance_provenance/identity
 import finance_track
@@ -37,6 +39,7 @@ import pi_sparkles_us_ohlcv/normalization
 pub type Input {
   Input(
     symbol: String,
+    mic: Option(String),
     start_date: time.Date,
     end_date: time.Date,
     as_of_date: time.Date,
@@ -123,29 +126,53 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
                         )
                       {
                         Error(message) -> tool.reject(message)
-                        Ok(#(receipt, digest)) -> {
-                          let details =
-                            result_json(
+                        Ok(#(receipt, digest)) ->
+                          case
+                            history_series_handoff(
+                              input,
                               query_plan,
                               batch,
-                              outcome,
                               retrieved_at,
                               receipt,
-                              digest,
                             )
-                          tool.text_result(
-                            model_content(
-                              render(query_plan, batch, outcome),
-                              query_plan,
-                              batch,
-                              retrieved_at,
-                              receipt,
-                              digest,
-                            ),
-                            details,
-                          )
-                          |> promise.resolve
-                        }
+                          {
+                            Error(message) -> tool.reject(message)
+                            Ok(series_value) -> {
+                              case series_value {
+                                Some(value) ->
+                                  pi.append_entry(
+                                    api,
+                                    series_handoff.event_type,
+                                    raw.dynamic(series_handoff.encode(value)),
+                                  )
+                                None -> Nil
+                              }
+                              let details =
+                                result_json(
+                                  input,
+                                  query_plan,
+                                  batch,
+                                  outcome,
+                                  retrieved_at,
+                                  receipt,
+                                  digest,
+                                  series_value,
+                                )
+                              tool.text_result(
+                                model_content(
+                                  render(query_plan, batch, outcome),
+                                  query_plan,
+                                  batch,
+                                  retrieved_at,
+                                  receipt,
+                                  digest,
+                                  series_value,
+                                ),
+                                details,
+                              )
+                              |> promise.resolve
+                            }
+                          }
                       }
                   }
                 }
@@ -443,6 +470,13 @@ fn input_schema() -> schema.Schema {
           "Exact uppercase Alpaca US stock symbol; not a company-name search",
         ),
     ),
+    schema.Optional(
+      "mic",
+      schema.string_enum(["XNYS", "XNAS"])
+        |> schema.described(
+          "Exact caller-proven listing MIC. Supply it when indicators or charts need a session-bound seriesReceipt; Alpaca does not prove this venue",
+        ),
+    ),
     schema.Required(
       "startDate",
       schema.string()
@@ -493,6 +527,7 @@ fn input_schema() -> schema.Schema {
 
 fn input_decoder() -> decode.Decoder(Input) {
   use symbol <- decode.field("symbol", decode.string)
+  use mic <- decode.optional_field("mic", None, decode.optional(decode.string))
   use start <- decode.field("startDate", decode.string)
   use end <- decode.field("endDate", decode.string)
   use as_of <- decode.field("asOf", decode.string)
@@ -501,10 +536,18 @@ fn input_decoder() -> decode.Decoder(Input) {
   use maximum_pages <- decode.optional_field("maxPages", 5, decode.int)
   use maximum_bars <- decode.optional_field("maxBars", 2000, decode.int)
   let assert Ok(placeholder) = time.date(1970, 1, 1)
-  case parse_date(start), parse_date(end), parse_date(as_of), parse_feed(feed) {
-    Ok(start_date), Ok(end_date), Ok(as_of_date), Ok(feed_value) ->
+  case
+    parse_mic(mic),
+    parse_date(start),
+    parse_date(end),
+    parse_date(as_of),
+    parse_feed(feed)
+  {
+    Ok(mic_value), Ok(start_date), Ok(end_date), Ok(as_of_date), Ok(feed_value)
+    ->
       decode.success(Input(
         symbol,
+        mic_value,
         start_date,
         end_date,
         as_of_date,
@@ -513,10 +556,11 @@ fn input_decoder() -> decode.Decoder(Input) {
         maximum_pages,
         maximum_bars,
       ))
-    _, _, _, _ ->
+    _, _, _, _, _ ->
       decode.failure(
         Input(
           "AAPL",
+          None,
           placeholder,
           placeholder,
           placeholder,
@@ -527,6 +571,15 @@ fn input_decoder() -> decode.Decoder(Input) {
         ),
         "valid US OHLCV dates and feed",
       )
+  }
+}
+
+fn parse_mic(value: Option(String)) -> Result(Option(String), Nil) {
+  case value {
+    None -> Ok(None)
+    Some("XNYS") -> Ok(Some("XNYS"))
+    Some("XNAS") -> Ok(Some("XNAS"))
+    Some(_) -> Error(Nil)
   }
 }
 
@@ -552,19 +605,26 @@ fn parse_date(value: String) -> Result(time.Date, Nil) {
   }
 }
 
-fn result_context(feed: query.Feed) -> track_context.Context {
+fn result_context(input: Input) -> track_context.Context {
   let assert Ok(zone) = time.timezone("America/New_York")
+  let venue_mic = case input.mic {
+    Some(value) -> {
+      let assert Ok(mic) = core_identifier.mic(value)
+      Some(mic)
+    }
+    None -> None
+  }
   let assert Ok(value) =
     track_context.new(
       track: finance_track.Us,
       market_scope: "us_stock_ohlcv",
-      venue_mic: None,
+      venue_mic: venue_mic,
       board: None,
       timezone: Some(zone),
       source_language: "en-US",
-      providers: ["alpaca", query.feed_name(feed)],
-      entitlement: entitlement(feed),
-      limitations: limitations(feed),
+      providers: ["alpaca", query.feed_name(input.feed)],
+      entitlement: entitlement(input.feed),
+      limitations: limitations(input.feed),
     )
   value
 }
@@ -615,9 +675,10 @@ fn model_content(
   retrieved_at: time.Instant,
   receipt: gap_receipt.Receipt,
   receipt_digest: identity.Sha256,
+  series_value: Option(series_handoff.Handoff),
 ) -> String {
   summary
-  <> "\nComplete bounded, exact de-duplicated daily rows follow as CSV. For requested indicators, call the installed Pi tools sma, rsi, and atr with these exact rows; do not write or execute a program and do not calculate the indicators yourself. Map close to sma/rsi observations and high,low,close to atr bars.\n"
+  <> series_handoff_instruction(series_value)
   <> "track=us;provider=alpaca;feed="
   <> query.feed_name(query.feed(plan))
   <> ";symbol="
@@ -628,6 +689,7 @@ fn model_content(
   <> identity.sha256_value(receipt_digest)
   <> ";acquisitionReceipt="
   <> identity.sha256_value(receipt_digest)
+  <> series_handoff_fields(series_value)
   <> ";sourceReference="
   <> gap_receipt.source_reference(receipt)
   <> "\ndate,provider_timestamp,open,high,low,close,volume,trade_count,vwap\n"
@@ -667,15 +729,17 @@ fn optional_exact_raw(value: Option(finance_ohlcv.ExactValue)) -> String {
 }
 
 fn result_json(
+  input: Input,
   plan: query.DailyBarsQuery,
   batch: finance_ohlcv.Batch,
   fetched: FetchOutcome,
   retrieved_at: time.Instant,
   receipt: gap_receipt.Receipt,
   receipt_digest: identity.Sha256,
+  series_value: Option(series_handoff.Handoff),
 ) -> json.Json {
   json.object(
-    list.append(track_json.result_fields(result_context(query.feed(plan))), [
+    list.append(track_json.result_fields(result_context(input)), [
       #("provider", json.string("alpaca")),
       #("route", json.string("direct")),
       #("feed", json.string(query.feed_name(query.feed(plan)))),
@@ -723,6 +787,11 @@ fn result_json(
         "acquisitionReceipt",
         json.string(identity.sha256_value(receipt_digest)),
       ),
+      #("seriesReceipt", case series_value {
+        Some(value) -> json.string(series_handoff.receipt(value))
+        None -> json.null()
+      }),
+      #("seriesHandoff", series_handoff_status_json(series_value)),
       #(
         "gapStates",
         json.array(
@@ -741,6 +810,95 @@ fn result_json(
       #("limitations", json.array(limitations(query.feed(plan)), json.string)),
     ]),
   )
+}
+
+fn history_series_handoff(
+  input: Input,
+  plan: query.DailyBarsQuery,
+  batch: finance_ohlcv.Batch,
+  retrieved_at: time.Instant,
+  receipt: gap_receipt.Receipt,
+) -> Result(Option(series_handoff.Handoff), String) {
+  case input.mic {
+    None -> Ok(None)
+    Some(mic) -> {
+      let bars =
+        finance_ohlcv.observations(batch)
+        |> list.map(fn(observation) {
+          let bar = observation.value
+          series_handoff.Bar(
+            date: date_text(finance_ohlcv.session_date(bar)),
+            open: finance_ohlcv.raw(finance_ohlcv.open(bar)),
+            high: finance_ohlcv.raw(finance_ohlcv.high(bar)),
+            low: finance_ohlcv.raw(finance_ohlcv.low(bar)),
+            close: finance_ohlcv.raw(finance_ohlcv.close(bar)),
+            volume: finance_ohlcv.raw(finance_ohlcv.volume(bar)),
+            amount: "unknown",
+          )
+        })
+      series_handoff.new(
+        track: "us",
+        instrument_id: query.symbol(plan),
+        mic: mic,
+        timezone: "America/New_York",
+        source_language: "en-US",
+        price_unit: "USD",
+        volume_unit: "shares",
+        adjustment: "raw",
+        provider: "alpaca",
+        source_reference: gap_receipt.source_reference(receipt),
+        retrieved_at_unix_milliseconds: time.unix_milliseconds(retrieved_at),
+        source_cutoff_unix_milliseconds: None,
+        entitlement: entitlement(query.feed(plan)),
+        limitations: list.append(limitations(query.feed(plan)), [
+          "provider_amount_unavailable_for_series_handoff",
+        ]),
+        bars: bars,
+      )
+      |> result.map(Some)
+      |> result.map_error(fn(error) {
+        "US OHLCV series handoff could not be created: "
+        <> series_handoff.error_message(error)
+      })
+    }
+  }
+}
+
+fn series_handoff_instruction(value: Option(series_handoff.Handoff)) -> String {
+  case value {
+    Some(_) ->
+      "\nComplete bounded, exact de-duplicated daily rows follow as CSV. This exact active-session series is already registered: for sma, rsi, atr, or chart_ohlcv pass only seriesReceipt with the requested calculation/chart fields. Never copy these rows into those installed tools, never use acquisitionReceipt or gapAssessmentReceiptDigest as seriesReceipt, and never manufacture an instructionRef or use a script for the handoff.\n"
+    None ->
+      "\nComplete bounded, exact de-duplicated daily rows follow as CSV. No session seriesReceipt was created because the request omitted an exact caller-proven XNYS or XNAS MIC and Alpaca does not prove listing venue. Never use acquisitionReceipt or gapAssessmentReceiptDigest as seriesReceipt and do not retry receipt-mode indicators or charts; retain this enrichment as unavailable unless exact MIC evidence is supplied in a new request.\n"
+  }
+}
+
+fn series_handoff_fields(value: Option(series_handoff.Handoff)) -> String {
+  case value {
+    Some(series_value) ->
+      ";seriesReceipt="
+      <> series_handoff.receipt(series_value)
+      <> ";seriesHandoff=session_bound_v1_use_receipt_for_sma_rsi_atr_chart"
+    None ->
+      ";seriesReceipt=unavailable;seriesHandoff=track_partial_missing_exact_mic"
+  }
+}
+
+fn series_handoff_status_json(
+  value: Option(series_handoff.Handoff),
+) -> json.Json {
+  case value {
+    Some(_) ->
+      json.object([
+        #("state", json.string("supported")),
+        #("reason", json.null()),
+      ])
+    None ->
+      json.object([
+        #("state", json.string("track_partial")),
+        #("reason", json.string("missing_exact_caller_proven_mic")),
+      ])
+  }
 }
 
 fn gap_assessment_receipt_json(

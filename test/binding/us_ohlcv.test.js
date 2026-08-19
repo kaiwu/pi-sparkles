@@ -41,9 +41,20 @@ afterEach(() => {
 
 async function harness() {
   const tools = new Map();
+  tools.sessionEntries = [];
   const api = {
     registerTool(definition) {
       tools.set(definition.name, definition);
+    },
+    appendEntry(customType, data) {
+      tools.sessionEntries.push({
+        type: "custom",
+        id: `session-entry-${tools.sessionEntries.length + 1}`,
+        parentId: null,
+        timestamp: "2026-08-19T00:00:00.000Z",
+        customType,
+        data,
+      });
     },
   };
   const module = await import(
@@ -70,6 +81,7 @@ describe("US Alpaca OHLCV boundary", () => {
 
     const result = await execute(tools.get("us_stock_ohlcv"), {
       symbol: "AAPL",
+      mic: "XNAS",
       startDate: "2024-08-01",
       endDate: "2024-08-05",
       asOf: "2024-08-06",
@@ -81,6 +93,7 @@ describe("US Alpaca OHLCV boundary", () => {
 
     expect(result.details.track).toBe("us");
     expect(result.details.trackContext.marketScope).toBe("us_stock_ohlcv");
+    expect(result.details.trackContext.venueMic).toBe("XNAS");
     expect(result.details.trackContext.timezone).toBe("America/New_York");
     expect(result.details.provider).toBe("alpaca");
     expect(result.details.feed).toBe("sip");
@@ -141,12 +154,25 @@ describe("US Alpaca OHLCV boundary", () => {
     expect(result.content[0].text).toContain(
       "Complete bounded, exact de-duplicated daily rows follow as CSV",
     );
+    expect(result.content[0].text).toContain("pass only seriesReceipt");
     expect(result.content[0].text).toContain(
-      "call the installed Pi tools sma, rsi, and atr",
+      "never manufacture an instructionRef or use a script",
     );
-    expect(result.content[0].text).toContain(
-      "do not write or execute a program",
-    );
+    expect(result.details.seriesReceipt).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.details.seriesReceipt).not.toBe(result.details.acquisitionReceipt);
+    expect(result.details.seriesHandoff.state).toBe("supported");
+    expect(tools.sessionEntries).toHaveLength(1);
+    expect(tools.sessionEntries[0]).toMatchObject({
+      customType: "pi_sparkles_finance_ohlcv.series_handoff.v1",
+      data: {
+        schema: "pi-sparkles/ohlcv-series-handoff",
+        schemaVersion: 1,
+        track: "us",
+        instrumentId: "AAPL",
+        mic: "XNAS",
+        acquisitionReceipt: result.details.seriesReceipt,
+      },
+    });
     expect(result.details.sourceReference).toBe(
       result.details.gapAssessmentReceipt.sourceReference,
     );
@@ -215,6 +241,18 @@ describe("US Alpaca OHLCV boundary", () => {
     expect(result.details.limitations).toContain(
       "iex_only_not_consolidated_us_volume",
     );
+    expect(result.details.seriesReceipt).toBeNull();
+    expect(result.details.seriesHandoff).toEqual({
+      state: "track_partial",
+      reason: "missing_exact_caller_proven_mic",
+    });
+    expect(result.content[0].text).toContain(
+      "No session seriesReceipt was created",
+    );
+    expect(result.content[0].text).toContain(
+      "Never use acquisitionReceipt or gapAssessmentReceiptDigest as seriesReceipt",
+    );
+    expect(tools.sessionEntries).toHaveLength(0);
   });
 });
 

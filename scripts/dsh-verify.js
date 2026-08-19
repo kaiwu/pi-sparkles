@@ -240,6 +240,10 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
           section.text.includes("Pi Sparkles finance routing") &&
           section.text.includes("never invoke a shell merely to discover today's date") &&
           section.text.includes("cn_stock_symbol_search covers stock listings only") &&
+          section.text.includes("call cn_index_constituents exactly once with venue sse and code 000688") &&
+          section.text.includes("also call cn_index_industry_composition exactly once with the same identity") &&
+          section.text.includes("hk and us are track_partial") &&
+          section.text.includes("Never relabel, reuse, or substitute the cn result across tracks") &&
           section.text.includes(expectedTushareGuidance) &&
           section.text.includes("priorOffset is one-based"),
       )

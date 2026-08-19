@@ -74,6 +74,29 @@ probing, benchmark/sector code guessing, and duplicate short/long history window
 separate from unavailable fund-flow, constituent-breadth, causal-rotation,
 theme, stabilization, top, and reversal claims.
 
+Current STAR 50 constituent-list requests route separately to
+`cn_index_constituents` exactly once with `sse` / `000688`. This is a
+credential-free official SSE acquisition, so the agent neither asks the user
+to supply the list nor reaches for Tushare or generic web. A composition-analysis
+request additionally calls `cn_index_industry_composition` once for the SSE's
+aggregate sector member counts and exact weight lexemes. The responses retain
+the SSE publication date, all 50 member identities in provider order, one
+content-bound receipt per request, and explicit scope limitations without
+per-stock classification fan-out or historical-membership reconstruction.
+The prompt and tool receipts also expose the completed applicability review:
+`cn` is supported only for exact `sse` / `000688`, while `hk` and `us` are
+`track_partial` pending reviewed authority-bound membership, timing/correction,
+and licence/redistribution contracts. No CN result is relabelled or substituted
+for either track.
+
+Current constituent-performance sampling uses the smallest disclosed sample
+needed, skips a quote-first/history-second double fetch, and never invents
+per-stock industry membership from an aggregate composition table. Across
+tracks, history/OHLCV consumers use only an exact returned `seriesReceipt` from
+the active session. Acquisition and gap digests are not receipt substitutes; a
+missing handoff ends that enrichment instead of triggering repeated indicator
+calls, copied-row direct mode, or a scripted `instructionRef`.
+
 For a name-only instrument, the same policy forbids reconstructing venue/code
 from model memory and selects identity discovery only when an installed tool's
 instrument scope and provider prerequisites are satisfied. Tushare

@@ -28,6 +28,12 @@ tool can verify and compose that copied receipt with independently supplied
 listing, 2026 venue-calendar, and status evidence. The digest is a content
 coherence check, not an Eastmoney signature or exchange proof.
 
+The same successful call separately appends the canonical
+`pi_sparkles_finance_ohlcv.series_handoff.v1` entry to the invoking Pi or DSH
+session and returns its exact `seriesReceipt`. `sma`, `rsi`, `atr`, and
+`chart_ohlcv` consume that short receipt without copying rows. The gap digest
+and the series receipt have different contracts and are never interchangeable.
+
 Runtime configuration:
 
 - `AGENT_CONTACT` (shared non-secret operator identity, for example `ops@example.com`)
