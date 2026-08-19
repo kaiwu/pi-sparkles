@@ -136,7 +136,7 @@ function requireSuccess(result, label) {
 function dshPackageReadme(plan) {
   const version = plan.packageVersion;
   const installSection = plan.releasable
-    ? `## Install
+    ? `## Quick start
 
 \`\`\`sh
 dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles@${version}
@@ -154,28 +154,22 @@ dsh plugin --profile <name> add ./dist/dsh/npm/${plan.throughTierId.toLowerCase(
   return `# Sparkles for DeepSeek Harness
 
 Turn [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) into a
-read-only finance evidence assistant for mainland China, Hong Kong, and US
-markets. This is the DSH distribution of
-[Sparkles](https://github.com/kaiwu/sparkles): ${componentCount(plan)} compatible
-${plan.throughTierId} plugin components registered as native Harness tools.
-Pi users should install the sibling
+finance research assistant for mainland China, Hong Kong, and US markets.
+
+This is the DSH distribution of
+[Sparkles](https://github.com/kaiwu/sparkles). Pi users should install the sibling
 [@pi-sparkles/pi-sparkles](https://www.npmjs.com/package/@pi-sparkles/pi-sparkles)
 package, which reuses the same finance cores but owns separate Pi lifecycle and
-terminal presentation. ${
-    plan.releasable
-      ? "The independent DSH T6 release gate is ProductUseful and this package is publishable."
-      : `This package is a \`${plan.maturity}\` and is not publishable yet.`
-  }
+terminal presentation.
 
-${installSection}
-
-The bundle patch layer is applied on the next \`dsh --profile <name>\` boot.
-Uninstall with \`dsh plugin --profile <name> remove @dsh-sparkles/dsh-sparkles\`.
+Ask about a stock or ETF in everyday language. DSH Sparkles brings current market
+data, price history, company filings, fundamentals, and financial calculations
+into the conversation.
 
 ## What it gives you
 
 - Current quotes and recent price history for supported CN, HK, and US sources.
-- SMA, RSI, and ATR trend/momentum/volatility analysis.
+- Trend, momentum, and volatility analysis with SMA, RSI, and ATR.
 - SEC, CNINFO, and HKEXnews filing and disclosure research.
 - Fundamental, valuation, portfolio-risk, scenario, event-study, and backtest
   calculations when the required data is available.
@@ -185,39 +179,64 @@ Uninstall with \`dsh plugin --profile <name> remove @dsh-sparkles/dsh-sparkles\`
 - Clear source, timestamp, currency, freshness, and data-limit context in answers.
 - Responsive inline SVG OHLCV charts rendered as ordinary DSH tool output.
 
-Ask about a stock or ETF in everyday language, for example \`get a current quote
-for AAPL\`, \`compare SMA/RSI/ATR for 600519.SH\`, or \`summarize AAPL's latest
-SEC fundamentals and cite the evidence\`.
+DSH automatically looks up current evidence for questions about price, trend,
+buying now, or when to sell. You do not need to ask it to "use tools" first.
 
-## Setup
+${installSection}
+The bundle patch layer is applied on the next \`dsh --profile <name>\` boot.
+Uninstall with \`dsh plugin --profile <name> remove @dsh-sparkles/dsh-sparkles\`.
 
-Public-data adapters that identify callers require a contact address:
+For most mainland China and Hong Kong quote/history research, and for SEC filing
+research, the only setup is a contact address used to identify requests to public
+data services:
 
 \`\`\`sh
-AGENT_CONTACT="you@example.com"
+AGENT_CONTACT="you@example.com" dsh --profile <name>
 \`\`\`
 
-Optional provider credentials: \`TUSHARE_TOKEN\` (CN), \`ALPACA_API_KEY_ID\` and
-\`ALPACA_API_SECRET_KEY\` (US), \`OPENFIGI_API_KEY\`, \`TWELVE_DATA_API_KEY\`,
-and \`FRED_API_KEY\`. Credentials are read only from your runtime environment;
-they are never written, logged, or persisted by this package. Restart DSH after
-changing environment configuration because some adapters initialize at boot.
+Then ask naturally:
+
+- \`Get a current quote for AAPL.\`
+- \`分析一下科创50ETF的走势\`
+- \`588000 如果现在买，什么时候卖比较好？\`
+- \`分析腾讯 00700.HK 最近半年的趋势、动量和波动\`
+- \`Summarize AAPL's latest SEC fundamentals and cite the evidence.\`
+- \`Compare this portfolio with its benchmark and explain the largest risks.\`
+
+## Optional data-service setup
+
+The package loads without provider credentials. Add only the services you want;
+you do not need every variable below.
+
+| Variable | What it enables |
+| --- | --- |
+| \`AGENT_CONTACT\` | Identified access to supported public services, including Eastmoney, CNINFO, SEC, and HKEXnews. Use one email address everywhere. |
+| \`TUSHARE_TOKEN\` | Optional, rate- and entitlement-limited mainland China stock-identity fallback. It is never required or the first route. Tushare permissions and points apply. |
+| \`ALPACA_API_KEY_ID\`, \`ALPACA_API_SECRET_KEY\` | Optional Alpaca US prices, bars, news, corporate actions, and assets. Feed permissions apply. |
+| \`OPENFIGI_API_KEY\` | Optional OpenFIGI identity mapping. |
+| \`TWELVE_DATA_API_KEY\` | Optional Twelve Data company profiles. |
+| \`FRED_API_KEY\` | Optional FRED macroeconomic series. |
+
+Example:
+
+\`\`\`sh
+AGENT_CONTACT="you@example.com" \\
+ALPACA_API_KEY_ID="..." \\
+ALPACA_API_SECRET_KEY="..." \\
+dsh --profile <name>
+\`\`\`
+
+Credentials stay in your runtime environment; this package does not write, log,
+or persist them. Restart DSH after changing environment configuration because
+some adapters initialize at boot.
 
 ## Boundaries
 
-Sparkles for DSH keeps Pi-only global shells out of the DSH lane, then instantiates
-their existing Gleam cores once per DSH agent. Finance track status is rendered
-by a DSH \`shell.overlay\` client surface over a session projection. It is
-read-only: no plugin can
-place, route, cancel, replace, or otherwise mutate a paper or live order.
-Provider identity, entitlement, and completeness are never authenticated by
-this package; providers, gateways,
-SDKs, credentials, and live certification are caller-owned runtime inputs.
-Compatible custom entries use the invoking DSH agent's own session log. Pi
-inline images are omitted because DSH images require host attachment references;
-their text and structured details remain available. It is not investment,
-legal, accounting, or tax advice. See \`CONFIGURATION.md\` for the source and
-configuration reference.
+Sparkles for DSH is read-only research software: it cannot place, change, or
+cancel broker orders. External providers, gateways, SDKs, credentials, and
+entitlements remain caller-owned; Sparkles never silently selects or falls back
+to another provider. It is not investment, legal, accounting, or tax advice.
+See \`CONFIGURATION.md\` for the complete source and configuration reference.
 
 Version ${version} · ${plan.throughTierId} · ${componentCount(plan)} plugin components
 `;

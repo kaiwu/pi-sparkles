@@ -317,9 +317,19 @@ describe("dsh-sparkles npm packaging", () => {
       join(plan.npmOutputDirectory, "package", "README.md"),
       "utf8",
     );
-    expect(packageReadme).toContain("## Install");
+    expect(packageReadme).toContain("## Quick start");
     expect(packageReadme).toContain("dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles");
+    expect(packageReadme).toContain("| Variable | What it enables |");
+    expect(packageReadme).toContain("| `AGENT_CONTACT` |");
+    expect(packageReadme).toContain("| `TUSHARE_TOKEN` |");
+    expect(packageReadme).toContain("- `Get a current quote for AAPL.`");
+    expect(packageReadme).toContain(
+      "- `Summarize AAPL's latest SEC fundamentals and cite the evidence.`",
+    );
     expect(packageReadme).toContain("## Boundaries");
+    expect(packageReadme).toContain("read-only research software");
+    expect(packageReadme).not.toContain("shell.overlay");
+    expect(packageReadme).not.toContain("Pi inline images");
     expect(packageReadme).toContain("https://github.com/kaiwu/sparkles");
     expect(packageReadme).toContain("@pi-sparkles/pi-sparkles");
     expect(packageReadme).toContain("This is the DSH distribution");
