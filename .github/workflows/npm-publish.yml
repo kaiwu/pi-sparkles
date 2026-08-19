@@ -3,14 +3,6 @@ name: Publish Sparkles npm packages
 on:
   workflow_dispatch:
     inputs:
-      dist_tag:
-        description: npm distribution tag
-        required: true
-        default: latest
-        type: choice
-        options:
-          - latest
-          - next
       confirmation:
         description: Type publish to authorize the registry mutation
         required: true
@@ -94,7 +86,10 @@ jobs:
           if-no-files-found: error
 
       - name: Publish the Pi package through npm trusted publishing
-        run: npm publish "${{ steps.tarballs.outputs.pi_path }}" --tag "${{ inputs.dist_tag }}" --access public --ignore-scripts
+        run: npm publish "${{ steps.tarballs.outputs.pi_path }}" --tag latest --access public --ignore-scripts
 
       - name: Publish the DSH package through npm trusted publishing
-        run: npm publish "${{ steps.tarballs.outputs.dsh_path }}" --tag "${{ inputs.dist_tag }}" --access public --ignore-scripts
+        run: npm publish "${{ steps.tarballs.outputs.dsh_path }}" --tag latest --access public --ignore-scripts
+
+      - name: Verify both latest tags
+        run: bun run npm:release:latest -- all --check

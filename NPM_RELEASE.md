@@ -88,29 +88,40 @@ An npm name/version is immutable. Before preparing another release:
 2. update `CHANGELOG.md`;
 3. commit, create the matching `v<version>` tag, and rebuild from that tag;
 4. run `bun run npm:release:verify`; and
-5. publish the exact content-locked tarball, never the repository root.
+5. publish the exact content-locked tarball, never the repository root; and
+6. explicitly move that package's `latest` dist-tag to the published version
+   and verify the tag from the registry.
 
 The first registry publication must be performed by an authenticated maintainer
 because a trusted-publisher relationship cannot be attached until the package
 exists. The explicit command is:
 
 ```sh
-npm publish ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.8.tgz --access public
+npm publish ./dist/npm/t6/pi-sparkles-pi-sparkles-0.1.8.tgz --tag latest --access public
+bun run npm:release:latest -- pi
 ```
 
 Publishing changes external state and is never performed by builds, tests, or
 packaging commands. After the first publication, configure the npm package's
 trusted publisher for `.github/workflows/npm-publish.yml`, then prefer that
-manual, tag-bound OIDC workflow over a long-lived automation token. Configure a
-protected GitHub `npm` environment if review approval is required.
+manual, tag-bound OIDC workflow over a long-lived automation token. The
+workflow always publishes both packages with `--tag latest` and finishes with a
+registry assertion for both tags; it has no alternate dist-tag input. Configure
+a protected GitHub `npm` environment if review approval is required.
 
 After publication, verify the registry artifact and install through Pi:
 
 ```sh
 npm view @pi-sparkles/pi-sparkles@0.1.8 \
   name version dist.integrity repository --json
+npm view @pi-sparkles/pi-sparkles dist-tags.latest
 pi install npm:@pi-sparkles/pi-sparkles@0.1.8
 ```
+
+`npm:release:latest` is an authenticated, registry-mutating command. It first
+proves that the exact root-package version exists, runs `npm dist-tag add`, and
+then requires `@latest` to resolve to that version. `--check` performs only the
+final read-only assertions.
 
 ---
 
@@ -167,8 +178,23 @@ After explicit publication authorization, publish that exact tarball and then
 verify it through DSH:
 
 ```sh
-npm publish ./dist/dsh/npm/t6/dsh-sparkles-dsh-sparkles-0.1.8.tgz --access public
+npm publish ./dist/dsh/npm/t6/dsh-sparkles-dsh-sparkles-0.1.8.tgz --tag latest --access public
+bun run npm:release:latest -- dsh
 npm view @dsh-sparkles/dsh-sparkles@0.1.8 \
   name version dist.integrity repository --json
+npm view @dsh-sparkles/dsh-sparkles dist-tags.latest
 dsh plugin --profile <name> add @dsh-sparkles/dsh-sparkles@0.1.8
 ```
+
+For a coordinated release where both independently verified host packages use
+the root version, publish both exact tarballs and finish with:
+
+```sh
+bun run npm:release:latest -- all
+```
+
+The `all` mode preflights both exact package versions before changing either
+tag, updates the Pi and DSH tags separately, and verifies both registry values.
+A coordinated release is incomplete until this command succeeds. It is never
+called by build, package, or verification gates because those commands must not
+mutate the registry.

@@ -47,6 +47,7 @@
     "tier:verify": "bun scripts/tier.js verify",
     "npm:pack": "bun scripts/npm-package.js",
     "npm:release:verify": "bun test test/workflow/aggregate_bundle.test.js test/workflow/npm_package.test.js && bun scripts/npm-package.js T6 --install-smoke --publish-dry-run --check-registry",
+    "npm:release:latest": "bun scripts/npm-release-latest.js",
     "dsh:bundle": "bun scripts/dsh-bundle.js",
     "dsh:verify": "bun scripts/dsh-verify.js",
     "dsh:npm:pack": "bun scripts/dsh-npm-package.js",
