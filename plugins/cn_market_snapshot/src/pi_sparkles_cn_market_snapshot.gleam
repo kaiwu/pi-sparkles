@@ -64,7 +64,7 @@ pub fn extension(api: pi.ExtensionApi) -> Promise(Nil) {
     api,
     "cn_market_overview",
     "Acquire current Shanghai/Shenzhen market overview",
-    "Fetch one bounded Eastmoney batch containing four reviewed CN benchmark snapshots plus provider index-associated SSE/SZSE breadth counts, exact numeric lexemes, a content receipt, and explicit evidence gaps",
+    "Fetch one bounded Eastmoney batch containing five reviewed CN benchmark snapshots, including the SSE STAR 50, plus provider index-associated SSE/SZSE breadth counts, exact numeric lexemes, a content receipt, and explicit evidence gaps",
     "Use this for today's overall Shanghai/Shenzhen market request. It replaces index calls to cn_raw_vendor_quote/history and does not justify intraday-ordering, fund-flow, sector-rotation, full-membership, or turnover-trend claims",
     tool.parameters(schema.object([]), decode.success(Nil)),
     tool.Parallel,

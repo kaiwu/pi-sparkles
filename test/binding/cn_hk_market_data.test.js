@@ -416,6 +416,21 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
     expect(history.details.instrumentKind).toBe("benchmark_index");
     expect(requests).toHaveLength(1);
 
+    const star50 = await execute(tools.get("cn_raw_vendor_history"), {
+      venue: "sse",
+      code: "000688",
+      instrumentKind: "benchmark_index",
+      startDate: "2026-08-01",
+      endDate: "2026-08-05",
+      limit: 10,
+    });
+    expect(star50.details).toMatchObject({
+      track: "cn",
+      code: "000688",
+      instrumentKind: "benchmark_index",
+    });
+    expect(requests).toHaveLength(2);
+
     await expect(
       execute(tools.get("cn_raw_vendor_quote"), {
         venue: "sse",
@@ -451,7 +466,7 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
         endDate: "2026-08-05",
       }),
     ).rejects.toMatchObject({ code: "unsupported_sector_identity" });
-    expect(requests).toHaveLength(1);
+    expect(requests).toHaveLength(2);
 
     const sector = await execute(tools.get("cn_raw_vendor_history"), {
       venue: "sse",
@@ -462,7 +477,7 @@ describe("isolated CN/HK Eastmoney market-data boundaries", () => {
       limit: 10,
     });
     expect(sector.details.instrumentKind).toBe("sector_index");
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(3);
   });
 
   test("HK never assumes currency and retains its five-digit market ID", async () => {

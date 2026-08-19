@@ -268,19 +268,6 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
     }
     scopedCounterparts = true;
 
-    await ctx.commands.execute(
-      first.agent,
-      "/cn-track",
-      new AbortController().signal,
-    );
-    const status = ctx.sessionProjections.snapshot(first.agent.session)
-      .values.piSparklesStatus?.values?.["finance-track"];
-    if (typeof status !== "string" || !status.startsWith("CN · CNY ·")) {
-      failures.push(`finance track overlay projection is invalid: ${String(status)}`);
-    } else {
-      overlayProjection = true;
-    }
-
     const executeFor = (agent, name, args, callId) =>
       ctx.tools.execute({
         agent,
@@ -289,6 +276,63 @@ export async function verifyAgainstDshTools({ log = console.log } = {}) {
         name,
         arguments: args,
       });
+    const trackStatuses = [
+      [
+        "cn",
+        "CN · CNY · Asia/Shanghai · src:65% · feat:80%",
+        ["raw_fundamentals", "normalized_fundamentals"],
+      ],
+      [
+        "hk",
+        "HK · HKD · Asia/Hong_Kong · src:70% · feat:70%",
+        [
+          "raw_fundamentals",
+          "normalized_fundamentals",
+          "reproducible_derivations",
+        ],
+      ],
+      ["us", "US · USD · America/New_York · src:80% · feat:100%", []],
+    ];
+    for (const [track, expectedStatus, expectedGaps] of trackStatuses) {
+      await ctx.commands.execute(
+        first.agent,
+        `/${track}-track`,
+        new AbortController().signal,
+      );
+      const status = ctx.sessionProjections.snapshot(first.agent.session)
+        .values.piSparklesStatus?.values?.["finance-track"];
+      if (status !== expectedStatus) {
+        failures.push(
+          `finance track overlay projection is invalid for ${track}: ${String(status)}`,
+        );
+      }
+      const trackStatus = await executeFor(
+        first.agent,
+        "finance_track_status",
+        {},
+        `dsh-verify-finance-track-status-${track}`,
+      );
+      if (
+        trackStatus.value?.details?.featureCoveragePercentage !==
+          100 - expectedGaps.length * 10 ||
+        JSON.stringify(
+          trackStatus.value?.details?.featureCoverage?.missingRequirements,
+        ) !== JSON.stringify(expectedGaps)
+      ) {
+        failures.push(
+          `finance track feature coverage is stale for ${track}: ${JSON.stringify(trackStatus.value?.details?.featureCoverage)}`,
+        );
+      }
+    }
+    await ctx.commands.execute(
+      first.agent,
+      "/cn-track",
+      new AbortController().signal,
+    );
+    overlayProjection = !failures.some((failure) =>
+      failure.startsWith("finance track overlay projection is invalid"),
+    );
+
     await executeFor(
       first.agent,
       "watchlist_add",

@@ -70,7 +70,7 @@ pub fn cn_overview(
 }
 
 pub fn cn_overview_secids(_query: CnOverviewQuery) -> String {
-  "1.000001,0.399001,0.399006,1.000300"
+  "1.000001,0.399001,0.399006,1.000300,1.000688"
 }
 
 pub fn cn_movers(

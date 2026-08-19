@@ -25,8 +25,8 @@ core. Cancellation and byte limits are enforced by the import capability.
 ## Acquisition-backed current overview
 
 `cn_market_overview` performs one bounded, non-fallback Eastmoney batch request
-for the reviewed 上证指数, 深证成指, 创业板指, and 沪深300 identities. It retains
-exact JSON numeric lexemes, four benchmark snapshots, provider index-associated
+for the reviewed 上证指数, 深证成指, 创业板指, 沪深300, and 科创50 identities. It retains
+exact JSON numeric lexemes, five benchmark snapshots, provider index-associated
 SSE/SZSE advancing/declining/unchanged counts, provider-reported amounts, a
 content SHA-256 receipt, retrieval time, rights facts, and typed failures.
 

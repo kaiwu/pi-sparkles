@@ -14,7 +14,7 @@ const originalFetch = globalThis.fetch;
 const requests = [];
 
 const overviewBody =
-  '{"rc":0,"data":{"total":4,"diff":[{"f2":392718,"f3":1,"f4":22,"f5":499525613,"f6":990371924237.7,"f12":"000001","f13":1,"f14":"上证指数","f15":393264,"f16":390370,"f17":393002,"f18":392696,"f104":1012,"f105":1254,"f106":85},{"f2":1435431,"f3":45,"f4":6487,"f5":642557319,"f6":1152471301164.9692,"f12":"399001","f13":0,"f14":"深证成指","f15":1438418,"f16":1420399,"f17":1433541,"f18":1428944,"f104":1338,"f105":1499,"f106":95},{"f2":362630,"f3":112,"f4":4026,"f5":199294854,"f6":556471146251.9,"f12":"399006","f13":0,"f14":"创业板指","f15":363303,"f16":357861,"f17":361019,"f18":358604,"f104":753,"f105":612,"f106":36},{"f2":466588,"f3":4,"f4":193,"f5":178430696,"f6":549769606284.4,"f12":"000300","f13":1,"f14":"沪深300","f15":467671,"f16":463713,"f17":467298,"f18":466395,"f104":108,"f105":186,"f106":6}]}}';
+  '{"rc":0,"data":{"total":5,"diff":[{"f2":392718,"f3":1,"f4":22,"f5":499525613,"f6":990371924237.7,"f12":"000001","f13":1,"f14":"上证指数","f15":393264,"f16":390370,"f17":393002,"f18":392696,"f104":1012,"f105":1254,"f106":85},{"f2":1435431,"f3":45,"f4":6487,"f5":642557319,"f6":1152471301164.9692,"f12":"399001","f13":0,"f14":"深证成指","f15":1438418,"f16":1420399,"f17":1433541,"f18":1428944,"f104":1338,"f105":1499,"f106":95},{"f2":362630,"f3":112,"f4":4026,"f5":199294854,"f6":556471146251.9,"f12":"399006","f13":0,"f14":"创业板指","f15":363303,"f16":357861,"f17":361019,"f18":358604,"f104":753,"f105":612,"f106":36},{"f2":466588,"f3":4,"f4":193,"f5":178430696,"f6":549769606284.4,"f12":"000300","f13":1,"f14":"沪深300","f15":467671,"f16":463713,"f17":467298,"f18":466395,"f104":108,"f105":186,"f106":6},{"f2":123456,"f3":-607,"f4":-7970,"f5":100000000,"f6":250000000000,"f12":"000688","f13":1,"f14":"科创50","f15":131426,"f16":122000,"f17":130000,"f18":131426,"f104":12,"f105":38,"f106":0}]}}';
 
 beforeEach(() => {
   requests.length = 0;
@@ -103,7 +103,7 @@ describe("acquisition-backed CN market overview", () => {
     expect(requests).toHaveLength(1);
     expect(requests[0].url.pathname).toBe("/api/qt/ulist.np/get");
     expect(requests[0].url.searchParams.get("secids")).toBe(
-      "1.000001,0.399001,0.399006,1.000300",
+      "1.000001,0.399001,0.399006,1.000300,1.000688",
     );
     expect(result.details).toMatchObject({
       track: "cn",
@@ -113,7 +113,7 @@ describe("acquisition-backed CN market overview", () => {
       entitlement: "public_web_local_analysis",
       redistribution: "unknown",
     });
-    expect(result.details.benchmarks).toHaveLength(4);
+    expect(result.details.benchmarks).toHaveLength(5);
     expect(result.details.benchmarks[0]).toMatchObject({
       code: "000001",
       instrumentKind: "benchmark_index",
@@ -128,6 +128,12 @@ describe("acquisition-backed CN market overview", () => {
     expect(result.details.benchmarks[1].providerReportedAmount.raw).toBe(
       "1152471301164.9692",
     );
+    expect(result.details.benchmarks[4]).toMatchObject({
+      code: "000688",
+      name: "科创50",
+      scope: "sse_star_50_provider_scope",
+      changePercent: { state: "observed", raw: "-6.07", unit: "percent" },
+    });
     expect(result.details.marketBreadth).toMatchObject({
       state: "observed_provider_aggregate",
       completeness: "unknown",

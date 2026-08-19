@@ -54,7 +54,7 @@ pub fn assemble(
     )
   let digest = identity.sha256_value(content_sha256)
   let summary =
-    "CN track | Eastmoney SSE/SZSE provider overview | 4 benchmarks | breadth "
+    "CN track | Eastmoney SSE/SZSE provider overview | 5 benchmarks | breadth "
     <> int.to_string(combined.advanced)
     <> " advanced, "
     <> int.to_string(combined.declined)
@@ -311,6 +311,7 @@ fn benchmark_scope(code: String) -> String {
     "399001" -> "szse_component_provider_scope"
     "399006" -> "chinext_provider_scope"
     "000300" -> "csi300_cross_venue_provider_scope"
+    "000688" -> "sse_star_50_provider_scope"
     _ -> "unexpected_benchmark_scope"
   }
 }

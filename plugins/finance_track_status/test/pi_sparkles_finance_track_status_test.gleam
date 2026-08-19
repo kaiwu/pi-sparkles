@@ -94,6 +94,42 @@ pub fn sibling_track_tools_cannot_inflate_feature_coverage_test() {
   ])
 }
 
+pub fn released_inventory_exposes_only_real_cn_and_hk_gaps_test() {
+  let shared = ["list_sources"]
+  let cn =
+    readiness.inspect(finance_track.Cn, [
+      "cn_security_search",
+      "cn_market_calendar",
+      "cn_trading_rules",
+      "cn_disclosure_search",
+      "cn_stock_quote",
+      "cn_stock_history",
+      "cn_financial_metrics",
+      ..shared
+    ])
+  let hk =
+    readiness.inspect(finance_track.Hk, [
+      "hk_security_search",
+      "hk_market_calendar",
+      "hk_trading_rules",
+      "hk_disclosure_search",
+      "hk_stock_quote",
+      "hk_stock_history",
+      ..shared
+    ])
+
+  readiness.feature_percentage(cn) |> should.equal(80)
+  readiness.feature_gaps(cn)
+  |> should.equal(["raw_fundamentals", "normalized_fundamentals"])
+  readiness.feature_percentage(hk) |> should.equal(70)
+  readiness.feature_gaps(hk)
+  |> should.equal([
+    "raw_fundamentals",
+    "normalized_fundamentals",
+    "reproducible_derivations",
+  ])
+}
+
 pub fn gap_composition_depth_does_not_replace_acquisition_or_calendar_test() {
   let us = readiness.inspect(finance_track.Us, ["us_ohlcv_gap_assessment"])
 

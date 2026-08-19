@@ -60,8 +60,8 @@ pub fn decode(
     |> result.map_error(InvalidJson),
   )
   use _ <- result.try(case int.parse(payload.total) {
-    Ok(4) -> Ok(Nil)
-    _ -> Error(ProviderCountMismatch(4, payload.total))
+    Ok(5) -> Ok(Nil)
+    _ -> Error(ProviderCountMismatch(5, payload.total))
   })
   use _ <- result.try(validate_benchmarks(
     expected_benchmarks(),
@@ -222,7 +222,13 @@ fn number_decoder() -> decode.Decoder(String) {
 }
 
 fn expected_benchmarks() -> List(#(String, String)) {
-  [#("000001", "1"), #("399001", "0"), #("399006", "0"), #("000300", "1")]
+  [
+    #("000001", "1"),
+    #("399001", "0"),
+    #("399006", "0"),
+    #("000300", "1"),
+    #("000688", "1"),
+  ]
 }
 
 fn validate_benchmarks(

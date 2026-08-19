@@ -123,9 +123,27 @@ describe("plain Pi tier packaging", () => {
         "only ProductUseful tiers can be packaged",
       );
     }
-    expect(() => tierPackagePlan(manifest, "T6")).toThrow(
-      "only ProductUseful tiers can be packaged",
-    );
+    const t6Tier = tierById(manifest, "T6");
+    if (t6Tier.status === "product_useful") {
+      const t6 = tierPackagePlan(manifest, "T6");
+      expect(t6.includedTiers.map((tier) => tier.id)).toEqual([
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T6",
+      ]);
+      expect(t6.plugins).toHaveLength(
+        t6.includedTiers.reduce(
+          (count, included) => count + included.proposals.length,
+          0,
+        ),
+      );
+    } else {
+      expect(() => tierPackagePlan(manifest, "T6")).toThrow(
+        "only ProductUseful tiers can be packaged",
+      );
+    }
   });
 
   test("orders dependency tiers before the selected product", () => {

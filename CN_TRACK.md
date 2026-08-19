@@ -69,17 +69,21 @@ disclosures, language, data rights, and provider contracts remain China-owned.
   by explicit A/H or Stock Connect tools. Existing SEC and US-fundamental
   slices belong to `us`.
 
-With all matching implemented tools installed, the current status receipt is:
+The current released T6 aggregate status receipt is:
 
 | Track | `src` evidence maturity | `feat` installed breadth | Covered feature families |
 | --- | ---: | ---: | --- |
-| `cn` | 65% | 100% | navigation, source registry, security identity, market calendar, effective rules, quote/history, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
-| `hk` | 70% | 100% | navigation, source registry, security identity, market calendar, effective rules, quote/history, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
+| `cn` | 65% | 80% | navigation, shared source registry, security identity, market calendar, effective rules, quote/history, disclosure discovery, reproducible derivations; raw and normalized fundamentals remain missing |
+| `hk` | 70% | 70% | navigation, shared source registry, security identity, market calendar, effective rules, quote/history, disclosure discovery; raw/normalized fundamentals and reproducible derivations remain missing |
 | `us` | 80% | 100% | navigation, source registry, security identity, market calendar, effective rules, quote/history, disclosure discovery, raw fundamentals, normalized fundamentals, reproducible derivations |
 
-This closes every requirement in the current three-track installed-feature
-denominator when each track's matching tools are loaded; US reaches 100% with
-the paired Alpaca quote/OHLCV, calendar, and current-rule tools. The independent
+The earlier CN/HK 100% development-load result depended on the Experimental
+`cn_fundamentals` and `hk_fundamentals` support shells. Product aggregates
+exclude those packages by design, so they cannot contribute to an installed
+release score. The current scorer counts the released shared source registry
+for all explicitly labelled tracks and the released CN exact financial
+calculator, while retaining the actual gaps above. US reaches 100% with the
+paired Alpaca quote/OHLCV, calendar, and current-rule tools. The independent
 calendar and rules tools are not an OHLCV gap join. Installed breadth does not
 claim complete statement/rule depth, authoritative identity, market-data
 entitlement, or 85% operational source maturity. The

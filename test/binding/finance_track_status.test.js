@@ -130,7 +130,16 @@ describe("finance track status binding", () => {
     expect(result.systemPrompt).toContain("base prompt");
     expect(result.systemPrompt).not.toMatch(/[^\x00-\x7F]/);
     expect(result.systemPrompt).toContain(
-      "call installed cn_market_overview once",
+      "call installed cn_market_overview exactly once",
+    );
+    expect(result.systemPrompt).toContain(
+      "the first evidence-acquisition step MUST contain only applicable installed Pi Sparkles tools",
+    );
+    expect(result.systemPrompt).toContain(
+      "including STAR 50 or index 000688",
+    );
+    expect(result.systemPrompt).toContain(
+      "Do not call cn_raw_vendor_history for 000688",
     );
     expect(result.systemPrompt).toContain(
       "do not probe benchmark codes through stock quote/history",
@@ -435,6 +444,65 @@ describe("finance track status binding", () => {
     expect(result.details.featureCoverage.criticalGaps).toEqual([
       "source_registry",
       "security_identity",
+    ]);
+  });
+
+  test("released inventory reports current CN and HK gaps without stale support-shell credit", async () => {
+    const activeTools = [
+      "finance_track_status",
+      "list_sources",
+      "cn_security_search",
+      "cn_market_calendar",
+      "cn_trading_rules",
+      "cn_disclosure_search",
+      "cn_stock_quote",
+      "cn_stock_history",
+      "cn_financial_metrics",
+      "hk_security_search",
+      "hk_market_calendar",
+      "hk_trading_rules",
+      "hk_disclosure_search",
+      "hk_stock_quote",
+      "hk_stock_history",
+    ];
+    const instance = await harness({ initial: "cn", activeTools });
+    const statuses = [];
+    const ctx = context(instance.entries, statuses);
+
+    await instance.handlers.get("session_start")(
+      { type: "session_start", reason: "startup" },
+      ctx,
+    );
+    expect(statuses.at(-1).text).toBe(
+      "CN · CNY · Asia/Shanghai · src:65% · feat:80%",
+    );
+    let result = await instance.tools.get("finance_track_status").execute(
+      "released-cn",
+      {},
+      new AbortController().signal,
+      undefined,
+      { hasUI: false, ui: {} },
+    );
+    expect(result.details.featureCoverage.missingRequirements).toEqual([
+      "raw_fundamentals",
+      "normalized_fundamentals",
+    ]);
+
+    await instance.commands.get("hk-track").handler("", ctx);
+    expect(statuses.at(-1).text).toBe(
+      "HK · HKD · Asia/Hong_Kong · src:70% · feat:70%",
+    );
+    result = await instance.tools.get("finance_track_status").execute(
+      "released-hk",
+      {},
+      new AbortController().signal,
+      undefined,
+      { hasUI: false, ui: {} },
+    );
+    expect(result.details.featureCoverage.missingRequirements).toEqual([
+      "raw_fundamentals",
+      "normalized_fundamentals",
+      "reproducible_derivations",
     ]);
   });
 });

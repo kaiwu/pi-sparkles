@@ -580,7 +580,8 @@ fn instrument_kind_name(value: InstrumentKind) -> String {
 
 fn reviewed_benchmark(market: query.Market, code: String) -> Bool {
   case market, code {
-    query.CnSse, "000001" | query.CnSse, "000300" -> True
+    query.CnSse, "000001" | query.CnSse, "000300" | query.CnSse, "000688" ->
+      True
     query.CnSzse, "399001" | query.CnSzse, "399006" -> True
     _, _ -> False
   }

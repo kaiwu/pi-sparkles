@@ -106,10 +106,19 @@ fn tool_contributions(
     finance_track.Cn ->
       []
       |> append_when(
-        has_any(active_tools, ["cn_authorities", "cn_capabilities"]),
-        contribution(track, "cn_source_registry", "cn_setup", [
-          "source_registry",
+        has_any(active_tools, [
+          "cn_authorities",
+          "cn_capabilities",
+          "list_sources",
         ]),
+        contribution(
+          track,
+          "cn_source_registry",
+          "finance_sources_or_cn_setup",
+          [
+            "source_registry",
+          ],
+        ),
       )
       |> append_when(
         list.contains(active_tools, "cn_security_search"),
@@ -154,18 +163,35 @@ fn tool_contributions(
         ]),
       )
       |> append_when(
-        list.contains(active_tools, "cn_stock_fundamental_metric"),
-        contribution(track, "cn_reproducible_derivations", "Eastmoney", [
-          "reproducible_derivations",
+        has_any(active_tools, [
+          "cn_stock_fundamental_metric",
+          "cn_financial_metrics",
         ]),
+        contribution(
+          track,
+          "cn_reproducible_derivations",
+          "CN_financial_calculation",
+          [
+            "reproducible_derivations",
+          ],
+        ),
       )
     finance_track.Hk ->
       []
       |> append_when(
-        has_any(active_tools, ["hk_authorities", "hk_capabilities"]),
-        contribution(track, "hk_source_registry", "hk_setup", [
-          "source_registry",
+        has_any(active_tools, [
+          "hk_authorities",
+          "hk_capabilities",
+          "list_sources",
         ]),
+        contribution(
+          track,
+          "hk_source_registry",
+          "finance_sources_or_hk_setup",
+          [
+            "source_registry",
+          ],
+        ),
       )
       |> append_when(
         list.contains(active_tools, "hk_security_search"),

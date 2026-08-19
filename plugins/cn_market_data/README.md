@@ -13,6 +13,9 @@ without I/O and direct users to `cn_market_overview` or `cn_sector_series`.
 Daily history accepts a reviewed benchmark only with
 `instrumentKind=benchmark_index` and a pinned CSI sector only with
 `instrumentKind=sector_index`; unreviewed index identities reject locally.
+The reviewed benchmark registry includes SSE STAR 50 / 科创50 (`000688`), while
+current-market requests for it belong to the single-batch `cn_market_overview`
+route.
 Eastmoney does not prove security kind, share class, currency, or index
 authority. History is daily, raw, and unadjusted
 (`fqt=0`) and preserves exact numeric response lexemes.
